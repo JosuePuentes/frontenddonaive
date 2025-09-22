@@ -65,7 +65,7 @@ const AgregarGastos: React.FC<{ onSubmitSuccess?: () => void }> = ({ onSubmitSuc
     try {
       // Enviar la fecha como string YYYY-MM-DD para evitar desfase de zona horaria
       // Enviar solo la primera imagen si el backend solo acepta una, o el array si acepta varias
-      const dataToSend = { ...formData, fecha: formData.fecha, imagenGasto: imagenesValidas[0], imagenesGasto: imagenesValidas };
+      const dataToSend = { ...formData, fecha: formData.fecha, imagenGasto: imagenesValidas[0], imagenesGasto: imagenesValidas, estado: "wait" };
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gastos`, {
         method: "POST",
         headers: {
