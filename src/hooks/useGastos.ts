@@ -53,8 +53,8 @@ export function useGastos(localidadId?: string) {
       const resGastos = await fetch(url);
       if (!resGastos.ok) throw new Error("Error al obtener gastos.");
       const dataGastos: Gasto[] = await resGastos.json();
-      console.log("Raw Gastos data from API:", dataGastos);
-      dataGastos.forEach(gasto => console.log(`Gasto ID: ${gasto._id}, Estado: ${gasto.estado}`)); // Added log for each expense's status
+      console.log("Raw Gastos data from API (length:", dataGastos.length, "):", dataGastos);
+      dataGastos.slice(0, 5).forEach(gasto => console.log(`Gasto ID: ${gasto._id}, Estado: ${gasto.estado}`)); // Log first 5 expenses' status
       setGastos(dataGastos);
       if (!id) {
         // Agrupar por localidad solo si no se filtra
