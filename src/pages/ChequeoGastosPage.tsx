@@ -21,6 +21,8 @@ const ChequeoGastosPage: React.FC = () => {
   const [localidadNombreSeleccionada, setLocalidadNombreSeleccionada] = useState("");
   const [confirmarEliminarGasto, setConfirmarEliminarGasto] = useState<string | null>(null); // Estado para la confirmación de eliminación
 
+  console.log("Gastos por Localidad (ChequeoGastosPage):", gastosPorLocalidad);
+
   const abrirModalGastos = (id: string, nombre: string) => {
     setLocalidadSeleccionadaId(id);
     setLocalidadNombreSeleccionada(nombre);
@@ -106,6 +108,7 @@ const ChequeoGastosPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
               {localidades.map((loc) => {
                 const gastosPendientes = (gastosPorLocalidad[loc.id] || []).filter((gasto) => gasto.estado === "wait").length;
+                console.log(`Localidad ${loc.nombre} (${loc.id}): ${gastosPendientes} gastos pendientes.`);
                 return (
                   <Card
                     key={loc.id}
@@ -148,6 +151,7 @@ const ChequeoGastosPage: React.FC = () => {
               ) : (
                 (gastosPorLocalidad[localidadSeleccionadaId] || []).filter((gasto) => gasto.estado === "wait").map((g, idx) => {
                   const gasto = g as any; // Forzar tipado flexible para acceder a divisa y tasa
+                  console.log("Gasto filtrado en modal:", gasto);
                   let montoUsd = gasto.monto;
                   let montoBs = gasto.monto;
                   if (gasto.divisa === "Bs" && gasto.tasa && Number(gasto.tasa) > 0) {
