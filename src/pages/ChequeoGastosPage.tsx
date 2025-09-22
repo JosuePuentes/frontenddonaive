@@ -107,7 +107,7 @@ const ChequeoGastosPage: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
               {localidades.map((loc) => {
-                const gastosPendientes = (gastosPorLocalidad[loc.id] || []).filter((gasto) => gasto.estado === "wait").length;
+                const gastosPendientes = (gastosPorLocalidad[loc.id] || []).filter((gasto) => gasto.estado !== "verified" && gasto.estado !== "denied").length;
                 console.log(`Localidad ${loc.nombre} (${loc.id}): ${gastosPendientes} gastos pendientes.`);
                 return (
                   <Card

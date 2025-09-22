@@ -48,7 +48,8 @@ export function useGastos(localidadId?: string) {
     setError(null);
     try {
       let url = `${API_BASE_URL}/gastos`;
-      if (id) url += `?localidad=${id}`;
+      url += `?estado=wait`;
+      if (id) url += `&localidad=${id}`;
       const resGastos = await fetch(url);
       if (!resGastos.ok) throw new Error("Error al obtener gastos.");
       const dataGastos: Gasto[] = await resGastos.json();
