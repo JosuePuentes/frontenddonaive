@@ -29,10 +29,33 @@ const ResumenFarmaciasVentas: React.FC = () => {
     cuentasActivasPorFarmacia,
     cuentasPagadasPorFarmacia,
     totalPagosPorFarmacia, // Este objeto ya contiene los totales por farmacia
-    farmacias
+    farmacias: farmaciasFromHook
   } = useResumenData();
 
   const { generateReport } = useReports();
+
+  // Cargar farmacias del usuario si no están disponibles en el hook
+  const [farmacias, setFarmacias] = useState<{ id: string; nombre: string }[]>(farmaciasFromHook || []);
+
+  React.useEffect(() => {
+    if (!farmaciasFromHook || farmaciasFromHook.length === 0) {
+      const usuarioRaw = localStorage.getItem("usuario");
+      if (usuarioRaw) {
+        try {
+          const usuario = JSON.parse(usuarioRaw);
+          const farmaciasObj = usuario.farmacias || {};
+          const farmaciasArr = Object.entries(farmaciasObj).map(
+            ([id, nombre]) => ({ id, nombre: String(nombre) })
+          );
+          setFarmacias(farmaciasArr);
+        } catch {
+          setFarmacias([]);
+        }
+      }
+    } else {
+      setFarmacias(farmaciasFromHook);
+    }
+  }, [farmaciasFromHook]);
 
   const handleGenerateReport = async (params: any) => {
     try {

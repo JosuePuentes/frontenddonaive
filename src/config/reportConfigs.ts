@@ -345,8 +345,8 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
         description: 'Resumen consolidado de ventas',
         module: 'ventas',
         formats: [
-          { type: 'pdf', label: 'PDF', icon: '📄' },
-          { type: 'excel', label: 'Excel', icon: '📊' }
+          { type: 'pdf' as const, label: 'PDF', icon: '📄' },
+          { type: 'excel' as const, label: 'Excel', icon: '📊' }
         ],
         filters: [
           {
