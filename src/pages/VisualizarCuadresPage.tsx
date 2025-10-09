@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { FaRegFileAlt } from "react-icons/fa";
 import CuadresModal from "@/components/CuadresModal";
 import CuadreDetalleModal from "@/components/CuadreDetalleModal";
+import { ReportButton } from "@/components/reports/ReportButton";
+import { useReports } from "@/hooks/useReports";
+import { cuadresReports } from "@/config/reportConfigs";
 import {
   Table,
   TableBody,
@@ -54,6 +57,7 @@ const VisualizarCuadresPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { generateReport, isGenerating } = useReports();
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     id: string | null;
@@ -179,6 +183,47 @@ const VisualizarCuadresPage: React.FC = () => {
     setConfirmDialog({ open: false, id: null, nuevoEstado: "" });
   };
 
+  const handleGenerateReport = async (params: any) => {
+    try {
+      // Preparar los datos del reporte basados en los cuadres filtrados
+      const reportData = {
+        headers: [
+          'Fecha',
+          'Farmacia', 
+          'Cajero',
+          'Turno',
+          'Ventas (Bs)',
+          'Gastos (Bs)',
+          'Diferencia (USD)',
+          'Estado'
+        ],
+        rows: cuadresFiltrados.map(cuadre => [
+          cuadre.dia?.slice(0, 10) || '',
+          cuadre.nombreFarmacia || '',
+          cuadre.cajero || '',
+          cuadre.turno || '',
+          (cuadre.totalBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+          (cuadre.devolucionesBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+          (cuadre.diferenciaUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+          cuadre.estado || ''
+        ]),
+        summary: {
+          totalRows: cuadresFiltrados.length,
+          totals: {
+            'Total Ventas (Bs)': cuadresFiltrados.reduce((acc, c) => acc + (c.totalBs || 0), 0),
+            'Total Gastos (Bs)': cuadresFiltrados.reduce((acc, c) => acc + (c.devolucionesBs || 0), 0),
+            'Total Diferencia (USD)': cuadresFiltrados.reduce((acc, c) => acc + (c.diferenciaUsd || 0), 0)
+          }
+        }
+      };
+
+      return await generateReport(params, reportData);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      throw error;
+    }
+  };
+
   // Aplicar filtros de turno, cajero y estado en el frontend
   const cuadresFiltrados: Cuadre[] = cuadres
     .filter((c) => {
@@ -293,6 +338,12 @@ const VisualizarCuadresPage: React.FC = () => {
               <FaRegFileAlt className="text-xl" />
               <span className="hidden sm:inline">Ver Cuadres</span>
             </button>
+            <ReportButton
+              module="Cuadres"
+              reports={cuadresReports}
+              onGenerateReport={handleGenerateReport}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            />
           </div>
         </div>
         <CuadresModal
