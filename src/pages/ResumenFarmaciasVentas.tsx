@@ -56,24 +56,52 @@ const ResumenFarmaciasVentas: React.FC = () => {
     try {
       const reportData = {
         headers: [
-          'Grupo',
-          'Total Ventas Bs',
-          'Total Ventas USD',
-          'Promedio Diario',
-          'Días'
+          'Farmacia',
+          'Total Ventas',
+          'Total Bs',
+          'Total USD',
+          'Efectivo USD',
+          'Zelle USD',
+          'Faltantes',
+          'Sobrantes',
+          'Pagos USD',
+          'Pagos Bs'
         ],
-        rows: sortedFarmacias.map(farmacia => [
-          farmacia.nombre,
-          (ventas[farmacia.id]?.totalBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
-          (ventas[farmacia.id]?.totalUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
-          ((ventas[farmacia.id]?.totalBs || 0) / Math.max(1, Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24)))).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
-          Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
-        ]),
+        rows: sortedFarmacias.map(farmacia => {
+          const pagosDelPeriodo = totalPagosPorFarmacia[farmacia.id] || {
+            pagosUsd: 0,
+            pagosBs: 0,
+            pagosGeneralUsd: 0,
+            abonosNoLiquidadosUsd: 0,
+            abonosNoLiquidadosEnUsd: 0,
+            abonosNoLiquidadosEnBs: 0,
+            montoOriginalFacturasUsd: 0,
+            diferencialPagosUsd: 0,
+          };
+
+          return [
+            farmacia.nombre,
+            (ventas[farmacia.id]?.totalVentas || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (ventas[farmacia.id]?.totalBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (ventas[farmacia.id]?.totalUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (ventas[farmacia.id]?.efectivoUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (ventas[farmacia.id]?.zelleUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (ventas[farmacia.id]?.faltantes || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (ventas[farmacia.id]?.sobrantes || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (pagosDelPeriodo.pagosUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (pagosDelPeriodo.pagosBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })
+          ];
+        }),
         summary: {
           totalRows: sortedFarmacias.length,
           totals: {
-            'Total Ventas Bs': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalBs || 0), 0),
-            'Total Ventas USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalUsd || 0), 0)
+            'Total Ventas': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalVentas || 0), 0),
+            'Total Bs': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalBs || 0), 0),
+            'Total USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalUsd || 0), 0),
+            'Total Efectivo USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.efectivoUsd || 0), 0),
+            'Total Zelle USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.zelleUsd || 0), 0),
+            'Total Faltantes': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.faltantes || 0), 0),
+            'Total Sobrantes': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.sobrantes || 0), 0)
           }
         }
       };
