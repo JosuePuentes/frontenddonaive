@@ -6,8 +6,8 @@ import { motion } from 'framer-motion';
 // Componente de cuenta regresiva para suscripción suspendida
 const CountdownTimer = () => {
     // Fecha de expiración fija global para todos los usuarios
-    // Cuenta regresiva de 12 horas desde ahora
-    const GLOBAL_EXPIRATION_DATE = '2024-12-20T02:00:00'; // 12 horas desde ahora
+    // 9 de octubre de 2025, 3:00 PM hora de Venezuela
+    const GLOBAL_EXPIRATION_DATE = '2025-10-09T15:00:00'; // 9 de octubre de 2025, 3:00 PM
     
     const getTimeLeft = () => {
         const expirationDate = new Date(GLOBAL_EXPIRATION_DATE);
