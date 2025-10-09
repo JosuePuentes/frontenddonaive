@@ -5,7 +5,23 @@ import { motion } from 'framer-motion';
 
 // Componente de cuenta regresiva para suscripción suspendida
 const CountdownTimer = () => {
-    const [timeLeft, setTimeLeft] = useState(12 * 60 * 60); // 12 horas en segundos
+    // Obtener el tiempo inicial desde localStorage o establecer 12 horas
+    const getInitialTime = () => {
+        const savedTime = localStorage.getItem('subscriptionCountdown');
+        if (savedTime) {
+            const savedTimestamp = parseInt(savedTime);
+            const now = Date.now();
+            const elapsed = Math.floor((now - savedTimestamp) / 1000);
+            const remaining = (12 * 60 * 60) - elapsed; // 12 horas menos el tiempo transcurrido
+            return Math.max(0, remaining);
+        } else {
+            // Primera vez: guardar timestamp actual
+            localStorage.setItem('subscriptionCountdown', Date.now().toString());
+            return 12 * 60 * 60; // 12 horas
+        }
+    };
+
+    const [timeLeft, setTimeLeft] = useState(getInitialTime);
 
     useEffect(() => {
         const timer = setInterval(() => {
