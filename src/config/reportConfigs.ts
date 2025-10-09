@@ -23,13 +23,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           {
             id: 'fecha',
             label: 'Fecha',
-            type: 'date',
+            type: 'date' as const,
             required: true
           },
           {
             id: 'farmacia',
             label: 'Farmacia',
-            type: 'select',
+            type: 'select' as const,
             options: farmaciaOptions
           }
         ],
@@ -57,19 +57,19 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           {
             id: 'fecha',
             label: 'Rango de Fechas',
-            type: 'dateRange',
+            type: 'dateRange' as const,
             required: true
           },
           {
             id: 'farmacia',
             label: 'Farmacia',
-            type: 'select',
+            type: 'select' as const,
             options: farmaciaOptions
           },
           {
             id: 'estado',
             label: 'Estado',
-            type: 'select',
+            type: 'select' as const,
             options: [
               { value: 'todos', label: 'Todos' },
               { value: 'pendiente', label: 'Pendiente' },
@@ -105,19 +105,19 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           {
             id: 'fecha',
             label: 'Fecha',
-            type: 'date',
+            type: 'date' as const,
             required: true
           },
           {
             id: 'farmacia',
             label: 'Farmacia',
-            type: 'select',
+            type: 'select' as const,
             options: farmaciaOptions
           },
           {
             id: 'categoria',
             label: 'Categoría',
-            type: 'select',
+            type: 'select' as const,
             options: [
               { value: 'todas', label: 'Todas las categorías' },
               { value: 'operativo', label: 'Operativo' },
@@ -153,18 +153,18 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           {
             id: 'farmacia',
             label: 'Farmacia',
-            type: 'select',
+            type: 'select' as const,
             options: farmaciaOptions
           },
           {
             id: 'proveedor',
             label: 'Proveedor',
-            type: 'text'
+            type: 'text' as const
           },
           {
             id: 'vencimiento',
             label: 'Vencimiento',
-            type: 'select',
+            type: 'select' as const,
             options: [
               { value: 'todos', label: 'Todos' },
               { value: 'vencidas', label: 'Vencidas' },
@@ -199,19 +199,19 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           {
             id: 'fecha',
             label: 'Rango de Fechas',
-            type: 'dateRange',
+            type: 'dateRange' as const,
             required: true
           },
           {
             id: 'farmacia',
             label: 'Farmacia',
-            type: 'select',
+            type: 'select' as const,
             options: farmaciaOptions
           },
           {
             id: 'cajero',
             label: 'Cajero',
-            type: 'text'
+            type: 'text' as const
           }
         ],
         columns: [
@@ -238,13 +238,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           {
             id: 'fecha',
             label: 'Rango de Fechas',
-            type: 'dateRange',
+            type: 'dateRange' as const,
             required: true
           },
           {
             id: 'farmacia',
             label: 'Farmacia',
-            type: 'select',
+            type: 'select' as const,
             options: farmaciaOptions
           }
         ],
@@ -274,19 +274,19 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           {
             id: 'fecha',
             label: 'Rango de Fechas',
-            type: 'dateRange',
+            type: 'dateRange' as const,
             required: true
           },
           {
             id: 'farmacia',
             label: 'Farmacia',
-            type: 'select',
+            type: 'select' as const,
             options: farmaciaOptions
           },
           {
             id: 'estado',
             label: 'Estado',
-            type: 'select',
+            type: 'select' as const,
             options: [
               { value: 'todos', label: 'Todos' },
               { value: 'pendiente', label: 'Pendiente' },
@@ -322,13 +322,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           {
             id: 'fecha',
             label: 'Rango de Fechas',
-            type: 'dateRange',
+            type: 'dateRange' as const,
             required: true
           },
           {
             id: 'farmacia',
             label: 'Farmacia',
-            type: 'select',
+            type: 'select' as const,
             options: farmaciaOptions
           }
         ],
@@ -354,13 +354,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           {
             id: 'fecha',
             label: 'Rango de Fechas',
-            type: 'dateRange',
+            type: 'dateRange' as const,
             required: true
           },
           {
             id: 'agrupacion',
             label: 'Agrupar por',
-            type: 'select',
+            type: 'select' as const,
             options: [
               { value: 'farmacia', label: 'Farmacia' },
               { value: 'dia', label: 'Día' },
