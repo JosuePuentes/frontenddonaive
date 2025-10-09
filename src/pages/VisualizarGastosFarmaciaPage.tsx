@@ -103,7 +103,7 @@ const VisualizarGastosFarmaciaPage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; gastoId: string | null; nuevoEstado: string }>({ open: false, gastoId: null, nuevoEstado: "" });
   const [imagenAmpliada, setImagenAmpliada] = useState<{imagenes: string[], index: number} | null>(null);
-  const { generateReport, isGenerating } = useReports();
+  const { generateReport } = useReports();
 
   const fetchGastos = async () => {
     setLoading(true);

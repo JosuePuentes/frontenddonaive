@@ -1,4 +1,4 @@
-import { ReportData, ReportParams } from '@/types/ReportTypes';
+import type { ReportData, ReportParams } from '@/types/ReportTypes';
 
 export class ReportGenerator {
   static async generatePDF(data: ReportData, title: string): Promise<void> {
@@ -18,7 +18,7 @@ export class ReportGenerator {
     // Implementación básica para Excel usando CSV
     // En un proyecto real, usarías una librería como xlsx
     
-    const csvContent = this.generateCSV(data);
+    const csvContent = this.generateCSVContent(data);
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);

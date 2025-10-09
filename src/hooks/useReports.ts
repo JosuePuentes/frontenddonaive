@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ReportParams, ReportData } from '@/types/ReportTypes';
+import type { ReportParams, ReportData } from '@/types/ReportTypes';
 import { ReportGenerator } from '@/lib/reportGenerator';
 
 export const useReports = () => {

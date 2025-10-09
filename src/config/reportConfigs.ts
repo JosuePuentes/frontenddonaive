@@ -1,4 +1,4 @@
-import { ReportConfig } from '@/types/ReportTypes';
+import type { ReportConfig } from '@/types/ReportTypes';
 
 export const cuadresReports: ReportConfig[] = [
   {

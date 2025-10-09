@@ -79,7 +79,7 @@ const VisualizarCuentasPorPagarPage: React.FC = () => {
   const [pagoMasivoError] = useState<string | null>(null);
   // Moneda seleccionada para conversión masiva (sincronizada con el modal)
   const [monedaConversion] = useState<'USD' | 'Bs'>('USD');
-  const { generateReport, isGenerating } = useReports();
+  const { generateReport } = useReports();
 
   // Reemplaza selectedCuentas y edicionCuentas por un solo state
   const [cuentasParaPagar, setCuentasParaPagar] = useState<any[]>(() => {

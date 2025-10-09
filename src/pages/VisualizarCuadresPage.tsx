@@ -57,7 +57,7 @@ const VisualizarCuadresPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const { generateReport, isGenerating } = useReports();
+  const { generateReport } = useReports();
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     id: string | null;

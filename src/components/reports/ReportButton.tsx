@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ReportConfig, ReportParams, ReportData } from '@/types/ReportTypes';
+import type { ReportConfig, ReportParams, ReportData } from '@/types/ReportTypes';
 import { ReportPreview } from './ReportPreview';
-import { FileText, Download, Calendar, Filter, Eye } from 'lucide-react';
+import { FileText, Filter, Eye } from 'lucide-react';
 
 interface ReportButtonProps {
   module: string;
