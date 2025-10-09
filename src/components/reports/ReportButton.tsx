@@ -188,7 +188,7 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
                         required={updatedFilter.required}
                       >
                         <option value="">Seleccionar...</option>
-                        {updatedFilter.options?.map((option) => (
+                        {updatedFilter.options?.map((option: any) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>

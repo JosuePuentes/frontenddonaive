@@ -15,9 +15,9 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
         description: 'Reporte de cuadres por día específico',
         module: 'cuadres',
         formats: [
-          { type: 'pdf', label: 'PDF', icon: '📄' },
-          { type: 'excel', label: 'Excel', icon: '📊' },
-          { type: 'csv', label: 'CSV', icon: '📋' }
+          { type: 'pdf' as const, label: 'PDF', icon: '📄' },
+          { type: 'excel' as const, label: 'Excel', icon: '📊' },
+          { type: 'csv' as const, label: 'CSV', icon: '📋' }
         ],
         filters: [
           {
@@ -49,9 +49,9 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
         description: 'Reporte de cuadres en un rango de fechas',
         module: 'cuadres',
         formats: [
-          { type: 'pdf', label: 'PDF', icon: '📄' },
-          { type: 'excel', label: 'Excel', icon: '📊' },
-          { type: 'csv', label: 'CSV', icon: '📋' }
+          { type: 'pdf' as const, label: 'PDF', icon: '📄' },
+          { type: 'excel' as const, label: 'Excel', icon: '📊' },
+          { type: 'csv' as const, label: 'CSV', icon: '📋' }
         ],
         filters: [
           {
@@ -97,9 +97,9 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
         description: 'Reporte de gastos por día específico',
         module: 'gastos',
         formats: [
-          { type: 'pdf', label: 'PDF', icon: '📄' },
-          { type: 'excel', label: 'Excel', icon: '📊' },
-          { type: 'csv', label: 'CSV', icon: '📋' }
+          { type: 'pdf' as const, label: 'PDF', icon: '📄' },
+          { type: 'excel' as const, label: 'Excel', icon: '📊' },
+          { type: 'csv' as const, label: 'CSV', icon: '📋' }
         ],
         filters: [
           {
@@ -145,9 +145,9 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
         description: 'Reporte de cuentas por pagar pendientes',
         module: 'cuentasPorPagar',
         formats: [
-          { type: 'pdf', label: 'PDF', icon: '📄' },
-          { type: 'excel', label: 'Excel', icon: '📊' },
-          { type: 'csv', label: 'CSV', icon: '📋' }
+          { type: 'pdf' as const, label: 'PDF', icon: '📄' },
+          { type: 'excel' as const, label: 'Excel', icon: '📊' },
+          { type: 'csv' as const, label: 'CSV', icon: '📋' }
         ],
         filters: [
           {
@@ -191,9 +191,9 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
         description: 'Reporte de comisiones por turno',
         module: 'comisiones',
         formats: [
-          { type: 'pdf', label: 'PDF', icon: '📄' },
-          { type: 'excel', label: 'Excel', icon: '📊' },
-          { type: 'csv', label: 'CSV', icon: '📋' }
+          { type: 'pdf' as const, label: 'PDF', icon: '📄' },
+          { type: 'excel' as const, label: 'Excel', icon: '📊' },
+          { type: 'csv' as const, label: 'CSV', icon: '📋' }
         ],
         filters: [
           {
@@ -230,9 +230,9 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
         description: 'Reporte de comisiones generales',
         module: 'comisiones',
         formats: [
-          { type: 'pdf', label: 'PDF', icon: '📄' },
-          { type: 'excel', label: 'Excel', icon: '📊' },
-          { type: 'csv', label: 'CSV', icon: '📋' }
+          { type: 'pdf' as const, label: 'PDF', icon: '📄' },
+          { type: 'excel' as const, label: 'Excel', icon: '📊' },
+          { type: 'csv' as const, label: 'CSV', icon: '📋' }
         ],
         filters: [
           {
@@ -266,9 +266,9 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
         description: 'Reporte de vales por farmacia',
         module: 'vales',
         formats: [
-          { type: 'pdf', label: 'PDF', icon: '📄' },
-          { type: 'excel', label: 'Excel', icon: '📊' },
-          { type: 'csv', label: 'CSV', icon: '📋' }
+          { type: 'pdf' as const, label: 'PDF', icon: '📄' },
+          { type: 'excel' as const, label: 'Excel', icon: '📊' },
+          { type: 'csv' as const, label: 'CSV', icon: '📋' }
         ],
         filters: [
           {
@@ -314,9 +314,9 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
         description: 'Reporte de ventas totales por farmacia',
         module: 'ventas',
         formats: [
-          { type: 'pdf', label: 'PDF', icon: '📄' },
-          { type: 'excel', label: 'Excel', icon: '📊' },
-          { type: 'csv', label: 'CSV', icon: '📋' }
+          { type: 'pdf' as const, label: 'PDF', icon: '📄' },
+          { type: 'excel' as const, label: 'Excel', icon: '📊' },
+          { type: 'csv' as const, label: 'CSV', icon: '📋' }
         ],
         filters: [
           {
