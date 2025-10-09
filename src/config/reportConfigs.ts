@@ -1,5 +1,3 @@
-import type { ReportConfig } from '@/types/ReportTypes';
-
 // Función para generar configuraciones de reportes con farmacias dinámicas
 export const generateReportConfigs = (farmacias: { id: string; nombre: string }[]) => {
   const farmaciaOptions = [
