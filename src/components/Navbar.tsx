@@ -10,13 +10,18 @@ const CountdownTimer = () => {
         const savedTime = localStorage.getItem('subscriptionCountdown');
         if (savedTime) {
             const remaining = parseInt(savedTime);
-            return Math.max(0, remaining);
-        } else {
-            // Primera vez: establecer 12 horas
-            const initialTime = 12 * 60 * 60; // 12 horas en segundos
-            localStorage.setItem('subscriptionCountdown', initialTime.toString());
-            return initialTime;
+            // Validar que el tiempo sea razonable (máximo 12 horas = 43200 segundos)
+            if (remaining > 0 && remaining <= 43200) {
+                return remaining;
+            } else {
+                // Si el valor es inválido, limpiar y reiniciar
+                localStorage.removeItem('subscriptionCountdown');
+            }
         }
+        // Primera vez o valor inválido: establecer 12 horas
+        const initialTime = 12 * 60 * 60; // 12 horas en segundos = 43200
+        localStorage.setItem('subscriptionCountdown', initialTime.toString());
+        return initialTime;
     };
 
     const [timeLeft, setTimeLeft] = useState(getInitialTime);
