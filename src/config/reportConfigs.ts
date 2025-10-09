@@ -34,13 +34,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           }
         ],
         columns: [
-          { id: 'farmacia', label: 'Farmacia', type: 'text', width: 120 },
-          { id: 'cajero', label: 'Cajero', type: 'text', width: 100 },
-          { id: 'fecha', label: 'Fecha', type: 'date', width: 100 },
-          { id: 'ventas', label: 'Ventas', type: 'currency', width: 100, align: 'right' },
-          { id: 'gastos', label: 'Gastos', type: 'currency', width: 100, align: 'right' },
-          { id: 'diferencia', label: 'Diferencia', type: 'currency', width: 100, align: 'right' },
-          { id: 'estado', label: 'Estado', type: 'text', width: 80 }
+          { id: 'farmacia', label: 'Farmacia', type: 'text' as const, width: 120 },
+          { id: 'cajero', label: 'Cajero', type: 'text' as const, width: 100 },
+          { id: 'fecha', label: 'Fecha', type: 'date' as const, width: 100 },
+          { id: 'ventas', label: 'Ventas', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'gastos', label: 'Gastos', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'diferencia', label: 'Diferencia', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'estado', label: 'Estado', type: 'text' as const, width: 80 }
         ]
       },
       {
@@ -79,13 +79,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           }
         ],
         columns: [
-          { id: 'farmacia', label: 'Farmacia', type: 'text', width: 120 },
-          { id: 'cajero', label: 'Cajero', type: 'text', width: 100 },
-          { id: 'fecha', label: 'Fecha', type: 'date', width: 100 },
-          { id: 'ventas', label: 'Ventas', type: 'currency', width: 100, align: 'right' },
-          { id: 'gastos', label: 'Gastos', type: 'currency', width: 100, align: 'right' },
-          { id: 'diferencia', label: 'Diferencia', type: 'currency', width: 100, align: 'right' },
-          { id: 'estado', label: 'Estado', type: 'text', width: 80 }
+          { id: 'farmacia', label: 'Farmacia', type: 'text' as const, width: 120 },
+          { id: 'cajero', label: 'Cajero', type: 'text' as const, width: 100 },
+          { id: 'fecha', label: 'Fecha', type: 'date' as const, width: 100 },
+          { id: 'ventas', label: 'Ventas', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'gastos', label: 'Gastos', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'diferencia', label: 'Diferencia', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'estado', label: 'Estado', type: 'text' as const, width: 80 }
         ]
       }
     ],
@@ -127,13 +127,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           }
         ],
         columns: [
-          { id: 'fecha', label: 'Fecha', type: 'date', width: 100 },
-          { id: 'farmacia', label: 'Farmacia', type: 'text', width: 120 },
-          { id: 'categoria', label: 'Categoría', type: 'text', width: 120 },
-          { id: 'descripcion', label: 'Descripción', type: 'text', width: 200 },
-          { id: 'monto', label: 'Monto', type: 'currency', width: 100, align: 'right' },
-          { id: 'usuario', label: 'Usuario', type: 'text', width: 100 },
-          { id: 'estado', label: 'Estado', type: 'text', width: 80 }
+          { id: 'fecha', label: 'Fecha', type: 'date' as const, width: 100 },
+          { id: 'farmacia', label: 'Farmacia', type: 'text' as const, width: 120 },
+          { id: 'categoria', label: 'Categoría', type: 'text' as const, width: 120 },
+          { id: 'descripcion', label: 'Descripción', type: 'text' as const, width: 200 },
+          { id: 'monto', label: 'Monto', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'usuario', label: 'Usuario', type: 'text' as const, width: 100 },
+          { id: 'estado', label: 'Estado', type: 'text' as const, width: 80 }
         ]
       }
     ],
@@ -173,13 +173,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           }
         ],
         columns: [
-          { id: 'farmacia', label: 'Farmacia', type: 'text', width: 120 },
-          { id: 'proveedor', label: 'Proveedor', type: 'text', width: 150 },
-          { id: 'numero_factura', label: 'N° Factura', type: 'text', width: 100 },
-          { id: 'fecha_emision', label: 'Fecha Emisión', type: 'date', width: 120 },
-          { id: 'fecha_vencimiento', label: 'Fecha Vencimiento', type: 'date', width: 120 },
-          { id: 'monto', label: 'Monto', type: 'currency', width: 100, align: 'right' },
-          { id: 'estado', label: 'Estado', type: 'text', width: 80 }
+          { id: 'farmacia', label: 'Farmacia', type: 'text' as const, width: 120 },
+          { id: 'proveedor', label: 'Proveedor', type: 'text' as const, width: 150 },
+          { id: 'numero_factura', label: 'N° Factura', type: 'text' as const, width: 100 },
+          { id: 'fecha_emision', label: 'Fecha Emisión', type: 'date' as const, width: 120 },
+          { id: 'fecha_vencimiento', label: 'Fecha Vencimiento', type: 'date' as const, width: 120 },
+          { id: 'monto', label: 'Monto', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'estado', label: 'Estado', type: 'text' as const, width: 80 }
         ]
       }
     ],
@@ -215,13 +215,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           }
         ],
         columns: [
-          { id: 'fecha', label: 'Fecha', type: 'date', width: 100 },
-          { id: 'farmacia', label: 'Farmacia', type: 'text', width: 120 },
-          { id: 'cajero', label: 'Cajero', type: 'text', width: 120 },
-          { id: 'turno', label: 'Turno', type: 'text', width: 80 },
-          { id: 'ventas', label: 'Ventas', type: 'currency', width: 100, align: 'right' },
-          { id: 'porcentaje_comision', label: '% Comisión', type: 'number', width: 100, align: 'center' },
-          { id: 'comision_calculada', label: 'Comisión', type: 'currency', width: 100, align: 'right' }
+          { id: 'fecha', label: 'Fecha', type: 'date' as const, width: 100 },
+          { id: 'farmacia', label: 'Farmacia', type: 'text' as const, width: 120 },
+          { id: 'cajero', label: 'Cajero', type: 'text' as const, width: 120 },
+          { id: 'turno', label: 'Turno', type: 'text' as const, width: 80 },
+          { id: 'ventas', label: 'Ventas', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'porcentaje_comision', label: '% Comisión', type: 'number' as const, width: 100, align: 'center' as const },
+          { id: 'comision_calculada', label: 'Comisión', type: 'currency' as const, width: 100, align: 'right' as const }
         ]
       },
       {
@@ -249,12 +249,12 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           }
         ],
         columns: [
-          { id: 'fecha', label: 'Fecha', type: 'date', width: 100 },
-          { id: 'farmacia', label: 'Farmacia', type: 'text', width: 120 },
-          { id: 'tipo_comision', label: 'Tipo Comisión', type: 'text', width: 120 },
-          { id: 'monto_base', label: 'Monto Base', type: 'currency', width: 100, align: 'right' },
-          { id: 'porcentaje', label: '% Comisión', type: 'number', width: 100, align: 'center' },
-          { id: 'comision_total', label: 'Comisión Total', type: 'currency', width: 100, align: 'right' }
+          { id: 'fecha', label: 'Fecha', type: 'date' as const, width: 100 },
+          { id: 'farmacia', label: 'Farmacia', type: 'text' as const, width: 120 },
+          { id: 'tipo_comision', label: 'Tipo Comisión', type: 'text' as const, width: 120 },
+          { id: 'monto_base', label: 'Monto Base', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'porcentaje', label: '% Comisión', type: 'number' as const, width: 100, align: 'center' as const },
+          { id: 'comision_total', label: 'Comisión Total', type: 'currency' as const, width: 100, align: 'right' as const }
         ]
       }
     ],
@@ -296,13 +296,13 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           }
         ],
         columns: [
-          { id: 'fecha', label: 'Fecha', type: 'date', width: 100 },
-          { id: 'farmacia', label: 'Farmacia', type: 'text', width: 120 },
-          { id: 'numero_vale', label: 'N° Vale', type: 'text', width: 100 },
-          { id: 'cliente', label: 'Cliente', type: 'text', width: 150 },
-          { id: 'monto', label: 'Monto', type: 'currency', width: 100, align: 'right' },
-          { id: 'estado', label: 'Estado', type: 'text', width: 80 },
-          { id: 'usuario', label: 'Usuario', type: 'text', width: 100 }
+          { id: 'fecha', label: 'Fecha', type: 'date' as const, width: 100 },
+          { id: 'farmacia', label: 'Farmacia', type: 'text' as const, width: 120 },
+          { id: 'numero_vale', label: 'N° Vale', type: 'text' as const, width: 100 },
+          { id: 'cliente', label: 'Cliente', type: 'text' as const, width: 150 },
+          { id: 'monto', label: 'Monto', type: 'currency' as const, width: 100, align: 'right' as const },
+          { id: 'estado', label: 'Estado', type: 'text' as const, width: 80 },
+          { id: 'usuario', label: 'Usuario', type: 'text' as const, width: 100 }
         ]
       }
     ],
@@ -333,12 +333,12 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           }
         ],
         columns: [
-          { id: 'fecha', label: 'Fecha', type: 'date', width: 100 },
-          { id: 'farmacia', label: 'Farmacia', type: 'text', width: 120 },
-          { id: 'ventas_bs', label: 'Ventas Bs', type: 'currency', width: 120, align: 'right' },
-          { id: 'ventas_usd', label: 'Ventas USD', type: 'currency', width: 120, align: 'right' },
-          { id: 'total_ventas', label: 'Total Ventas', type: 'currency', width: 120, align: 'right' },
-          { id: 'cantidad_transacciones', label: 'Transacciones', type: 'number', width: 100, align: 'center' }
+          { id: 'fecha', label: 'Fecha', type: 'date' as const, width: 100 },
+          { id: 'farmacia', label: 'Farmacia', type: 'text' as const, width: 120 },
+          { id: 'ventas_bs', label: 'Ventas Bs', type: 'currency' as const, width: 120, align: 'right' as const },
+          { id: 'ventas_usd', label: 'Ventas USD', type: 'currency' as const, width: 120, align: 'right' as const },
+          { id: 'total_ventas', label: 'Total Ventas', type: 'currency' as const, width: 120, align: 'right' as const },
+          { id: 'cantidad_transacciones', label: 'Transacciones', type: 'number' as const, width: 100, align: 'center' as const }
         ]
       },
       {
@@ -371,11 +371,11 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
           }
         ],
         columns: [
-          { id: 'grupo', label: 'Grupo', type: 'text', width: 150 },
-          { id: 'total_ventas_bs', label: 'Total Ventas Bs', type: 'currency', width: 120, align: 'right' },
-          { id: 'total_ventas_usd', label: 'Total Ventas USD', type: 'currency', width: 120, align: 'right' },
-          { id: 'promedio_diario', label: 'Promedio Diario', type: 'currency', width: 120, align: 'right' },
-          { id: 'cantidad_dias', label: 'Días', type: 'number', width: 80, align: 'center' }
+          { id: 'grupo', label: 'Grupo', type: 'text' as const, width: 150 },
+          { id: 'total_ventas_bs', label: 'Total Ventas Bs', type: 'currency' as const, width: 120, align: 'right' as const },
+          { id: 'total_ventas_usd', label: 'Total Ventas USD', type: 'currency' as const, width: 120, align: 'right' as const },
+          { id: 'promedio_diario', label: 'Promedio Diario', type: 'currency' as const, width: 120, align: 'right' as const },
+          { id: 'cantidad_dias', label: 'Días', type: 'number' as const, width: 80, align: 'center' as const }
         ]
       }
     ]
