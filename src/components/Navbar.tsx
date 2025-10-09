@@ -1,7 +1,45 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router'; // Ensure react-router-dom is used
-import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+// Componente de cuenta regresiva para suscripción suspendida
+const CountdownTimer = () => {
+    const [timeLeft, setTimeLeft] = useState(12 * 60 * 60); // 12 horas en segundos
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTimeLeft((prevTime) => {
+                if (prevTime <= 0) {
+                    clearInterval(timer);
+                    return 0;
+                }
+                return prevTime - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, []);
+
+    const formatTime = (seconds: number) => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <div className="flex flex-col items-center">
+            <div className="flex items-center gap-2 text-red-600 font-bold text-lg">
+                <Clock className="w-5 h-5" />
+                {formatTime(timeLeft)}
+            </div>
+            <div className="text-red-500 text-sm font-medium">
+                Pago Requerido
+            </div>
+        </div>
+    );
+};
 
 // Permisos y enlaces agrupados para una mejor organización visual
 const allLinks = [
@@ -144,6 +182,18 @@ const Navbar = () => {
                     <img src="/path/to/your/logo.png" alt="Donaive Logo" className="h-8 w-auto" onError={(e) => (e.currentTarget.style.display = 'none')} />
                     <span>DONAIVE</span>
                 </Link>
+
+                {/* Banner de Suscripción Suspendida */}
+                <div className="flex-1 flex justify-center">
+                    <div className="bg-red-50 border-2 border-red-200 rounded-lg px-6 py-3 shadow-md">
+                        <div className="text-center">
+                            <div className="text-red-600 font-bold text-lg mb-1">
+                                SUSCRIPCIÓN SE SUSPENDERÁ
+                            </div>
+                            <CountdownTimer />
+                        </div>
+                    </div>
+                </div>
 
                 {/* Desktop Menu (Dropdown) */}
                 <div className="hidden sm:flex items-center gap-6 relative" ref={dropdownRef}>
