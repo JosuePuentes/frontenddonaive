@@ -28,7 +28,8 @@ const ResumenFarmaciasVentas: React.FC = () => {
     gastosPorFarmacia,
     cuentasActivasPorFarmacia,
     cuentasPagadasPorFarmacia,
-    totalPagosPorFarmacia // Este objeto ya contiene los totales por farmacia
+    totalPagosPorFarmacia, // Este objeto ya contiene los totales por farmacia
+    cuadresPorFarmacia // Datos reales de cuadres por farmacia
   } = useResumenData();
 
   const { generateReport } = useReports();
@@ -54,27 +55,38 @@ const ResumenFarmaciasVentas: React.FC = () => {
 
   const handleGenerateReport = async (params: any) => {
     try {
-      // Función para calcular detalles del cuadre por farmacia
-      const calcularDetallesCuadre = (farmaciaId: string) => {
-        let sumaRecargaBs = 0;
-        let sumaPagomovilBs = 0;
-        let sumaEfectivoBs = 0;
-        let sumaDevolucionesBs = 0;
-        let sumaPuntoDebito = 0;
-        let sumaPuntoCredito = 0;
-
-        // Necesitamos acceso a los datos de cuadres
-        // Por ahora usamos datos simulados basados en los totales disponibles
-        const farmaciaData = ventas[farmaciaId] || {};
+      // Usar datos reales de cuadres por farmacia
+      const obtenerDetallesReales = (farmaciaId: string) => {
+        const cuadresFarmacia = cuadresPorFarmacia[farmaciaId] || [];
+        let sumaRecargaBs = 0,
+          sumaPagomovilBs = 0,
+          sumaEfectivoBs = 0,
+          sumaPuntoDebito = 0,
+          sumaPuntoCredito = 0,
+          sumaDevolucionesBs = 0;
         
-        // Distribuir el totalBs entre los diferentes métodos de pago
-        const totalBs = farmaciaData.totalBs || 0;
-        sumaEfectivoBs = Math.round(totalBs * 0.4); // 40% efectivo
-        sumaPagomovilBs = Math.round(totalBs * 0.3); // 30% pago móvil
-        sumaPuntoDebito = Math.round(totalBs * 0.15); // 15% punto débito
-        sumaPuntoCredito = Math.round(totalBs * 0.1); // 10% punto crédito
-        sumaRecargaBs = Math.round(totalBs * 0.05); // 5% recarga
-        sumaDevolucionesBs = Math.round(totalBs * 0.02); // 2% devoluciones
+        cuadresFarmacia.forEach((c) => {
+          if (c.estado !== "verified") return;
+          if (
+            (fechaInicio && c.dia < fechaInicio) ||
+            (fechaFin && c.dia > fechaFin)
+          )
+            return;
+          sumaRecargaBs += Number(c.recargaBs || 0);
+          sumaPagomovilBs += Number(c.pagomovilBs || 0);
+          sumaEfectivoBs += Number(c.efectivoBs || 0);
+          sumaDevolucionesBs += Number(c.devolucionesBs || 0);
+          if (Array.isArray(c.puntosVenta)) {
+            sumaPuntoDebito += c.puntosVenta.reduce(
+              (acc, pv) => acc + Number(pv.puntoDebito || 0),
+              0
+            );
+            sumaPuntoCredito += c.puntosVenta.reduce(
+              (acc, pv) => acc + Number(pv.puntoCredito || 0),
+              0
+            );
+          }
+        });
 
         return {
           sumaRecargaBs,
@@ -118,7 +130,7 @@ const ResumenFarmaciasVentas: React.FC = () => {
           };
 
           const farmaciaData = ventas[farmacia.id] || {};
-          const detallesCuadre = calcularDetallesCuadre(farmacia.id);
+          const detallesCuadre = obtenerDetallesReales(farmacia.id);
 
           return [
             farmacia.nombre,
