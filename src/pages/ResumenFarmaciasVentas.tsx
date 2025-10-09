@@ -85,16 +85,6 @@ const ResumenFarmaciasVentas: React.FC = () => {
             diferencialPagosUsd: 0,
           };
 
-          // Calcular detalles adicionales del cuadre para esta farmacia
-          let sumaRecargaBs = 0;
-          let sumaPagomovilBs = 0;
-          let sumaEfectivoBs = 0;
-          let sumaDevolucionesBs = 0;
-          let sumaPuntoDebito = 0;
-          let sumaPuntoCredito = 0;
-
-          // Aquí necesitaríamos acceso a los datos de cuadres por farmacia
-          // Por ahora usamos los datos disponibles en ventas[farmacia.id]
           const farmaciaData = ventas[farmacia.id] || {};
 
           return [
@@ -106,12 +96,12 @@ const ResumenFarmaciasVentas: React.FC = () => {
             (farmaciaData.zelleUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
             (farmaciaData.faltantes || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
             (farmaciaData.sobrantes || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
-            (farmaciaData.recargaBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
-            (farmaciaData.pagomovilBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
-            (farmaciaData.efectivoBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
-            (farmaciaData.puntoDebitoBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
-            (farmaciaData.puntoCreditoBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
-            (farmaciaData.devolucionesBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            'N/A', // Recarga Bs - no disponible en VentasFarmacia
+            'N/A', // Pago Móvil Bs - no disponible en VentasFarmacia
+            'N/A', // Efectivo Bs - no disponible en VentasFarmacia
+            'N/A', // Punto Débito Bs - no disponible en VentasFarmacia
+            'N/A', // Punto Crédito Bs - no disponible en VentasFarmacia
+            'N/A', // Devoluciones Bs - no disponible en VentasFarmacia
             (pagosDelPeriodo.pagosUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
             (pagosDelPeriodo.pagosBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })
           ];
@@ -125,11 +115,7 @@ const ResumenFarmaciasVentas: React.FC = () => {
             'Total Efectivo USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.efectivoUsd || 0), 0),
             'Total Zelle USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.zelleUsd || 0), 0),
             'Total Faltantes': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.faltantes || 0), 0),
-            'Total Sobrantes': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.sobrantes || 0), 0),
-            'Total Recarga Bs': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.recargaBs || 0), 0),
-            'Total Pago Móvil Bs': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.pagomovilBs || 0), 0),
-            'Total Efectivo Bs': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.efectivoBs || 0), 0),
-            'Total Devoluciones Bs': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.devolucionesBs || 0), 0)
+            'Total Sobrantes': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.sobrantes || 0), 0)
           }
         }
       };
