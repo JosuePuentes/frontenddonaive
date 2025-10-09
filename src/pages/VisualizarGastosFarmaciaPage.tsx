@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import ImageDisplay from "../components/upfile/ImageDisplay";
 import { ReportButton } from "@/components/reports/ReportButton";
 import { useReports } from "@/hooks/useReports";
-import { gastosReports } from "@/config/reportConfigs";
+import { generateReportConfigs } from '@/config/reportConfigs';
 import { animate, stagger } from 'animejs';
 
 interface Gasto {
@@ -292,8 +292,9 @@ const VisualizarGastosFarmaciaPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-red-700 text-center flex-1">Gestión de Gastos</h1>
           <ReportButton
             module="Gastos"
-            reports={gastosReports}
+            reports={generateReportConfigs(farmacias).gastosReports}
             onGenerateReport={handleGenerateReport}
+            farmacias={farmacias}
             className="bg-purple-600 hover:bg-purple-700 text-white"
           />
         </div>

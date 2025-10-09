@@ -4,7 +4,7 @@ import CuadresModal from "@/components/CuadresModal";
 import CuadreDetalleModal from "@/components/CuadreDetalleModal";
 import { ReportButton } from "@/components/reports/ReportButton";
 import { useReports } from "@/hooks/useReports";
-import { cuadresReports } from "@/config/reportConfigs";
+import { generateReportConfigs } from '@/config/reportConfigs';
 import {
   Table,
   TableBody,
@@ -340,8 +340,9 @@ const VisualizarCuadresPage: React.FC = () => {
             </button>
             <ReportButton
               module="Cuadres"
-              reports={cuadresReports}
+              reports={generateReportConfigs(farmacias).cuadresReports}
               onGenerateReport={handleGenerateReport}
+              farmacias={farmacias}
               className="bg-purple-600 hover:bg-purple-700 text-white"
             />
           </div>

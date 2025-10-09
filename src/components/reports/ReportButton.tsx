@@ -9,6 +9,7 @@ interface ReportButtonProps {
   module: string;
   reports: ReportConfig[];
   onGenerateReport: (params: ReportParams) => Promise<ReportData>;
+  farmacias?: { id: string; nombre: string }[];
   className?: string;
 }
 
@@ -16,6 +17,7 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
   module,
   reports,
   onGenerateReport,
+  farmacias = [],
   className = ""
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -77,6 +79,25 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
     }));
   };
 
+  // Función para obtener las opciones de farmacia actualizadas
+  const getFarmaciaOptions = () => {
+    return [
+      { value: 'todas', label: 'Todas las farmacias' },
+      ...farmacias.map(f => ({ value: f.id, label: f.nombre }))
+    ];
+  };
+
+  // Función para obtener el filtro actualizado con opciones de farmacia
+  const getUpdatedFilter = (filter: any) => {
+    if (filter.id === 'farmacia' && farmacias.length > 0) {
+      return {
+        ...filter,
+        options: getFarmaciaOptions()
+      };
+    }
+    return filter;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -122,50 +143,52 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
                 Filtros
               </label>
               <div className="space-y-3">
-                {selectedReport.filters.map((filter) => (
-                  <div key={filter.id}>
+                {selectedReport.filters.map((filter) => {
+                  const updatedFilter = getUpdatedFilter(filter);
+                  return (
+                  <div key={updatedFilter.id}>
                     <label className="text-xs text-muted-foreground mb-1 block">
-                      {filter.label} {filter.required && <span className="text-red-500">*</span>}
+                      {updatedFilter.label} {updatedFilter.required && <span className="text-red-500">*</span>}
                     </label>
                     
-                    {filter.type === 'date' && (
+                    {updatedFilter.type === 'date' && (
                       <input
                         type="date"
                         className="w-full p-2 border rounded-md"
-                        value={filters[filter.id] || ''}
-                        onChange={(e) => handleFilterChange(filter.id, e.target.value)}
-                        required={filter.required}
+                        value={filters[updatedFilter.id] || ''}
+                        onChange={(e) => handleFilterChange(updatedFilter.id, e.target.value)}
+                        required={updatedFilter.required}
                       />
                     )}
                     
-                    {filter.type === 'dateRange' && (
+                    {updatedFilter.type === 'dateRange' && (
                       <div className="flex gap-2">
                         <input
                           type="date"
                           className="flex-1 p-2 border rounded-md"
                           placeholder="Desde"
-                          value={filters[filter.id + '_from'] || ''}
-                          onChange={(e) => handleFilterChange(filter.id + '_from', e.target.value)}
+                          value={filters[updatedFilter.id + '_from'] || ''}
+                          onChange={(e) => handleFilterChange(updatedFilter.id + '_from', e.target.value)}
                         />
                         <input
                           type="date"
                           className="flex-1 p-2 border rounded-md"
                           placeholder="Hasta"
-                          value={filters[filter.id + '_to'] || ''}
-                          onChange={(e) => handleFilterChange(filter.id + '_to', e.target.value)}
+                          value={filters[updatedFilter.id + '_to'] || ''}
+                          onChange={(e) => handleFilterChange(updatedFilter.id + '_to', e.target.value)}
                         />
                       </div>
                     )}
                     
-                    {filter.type === 'select' && (
+                    {updatedFilter.type === 'select' && (
                       <select
                         className="w-full p-2 border rounded-md"
-                        value={filters[filter.id] || ''}
-                        onChange={(e) => handleFilterChange(filter.id, e.target.value)}
-                        required={filter.required}
+                        value={filters[updatedFilter.id] || ''}
+                        onChange={(e) => handleFilterChange(updatedFilter.id, e.target.value)}
+                        required={updatedFilter.required}
                       >
                         <option value="">Seleccionar...</option>
-                        {filter.options?.map((option) => (
+                        {updatedFilter.options?.map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
@@ -173,29 +196,30 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
                       </select>
                     )}
                     
-                    {filter.type === 'text' && (
+                    {updatedFilter.type === 'text' && (
                       <input
                         type="text"
                         className="w-full p-2 border rounded-md"
-                        placeholder={filter.label}
-                        value={filters[filter.id] || ''}
-                        onChange={(e) => handleFilterChange(filter.id, e.target.value)}
-                        required={filter.required}
+                        placeholder={updatedFilter.label}
+                        value={filters[updatedFilter.id] || ''}
+                        onChange={(e) => handleFilterChange(updatedFilter.id, e.target.value)}
+                        required={updatedFilter.required}
                       />
                     )}
                     
-                    {filter.type === 'number' && (
+                    {updatedFilter.type === 'number' && (
                       <input
                         type="number"
                         className="w-full p-2 border rounded-md"
-                        placeholder={filter.label}
-                        value={filters[filter.id] || ''}
-                        onChange={(e) => handleFilterChange(filter.id, e.target.value)}
-                        required={filter.required}
+                        placeholder={updatedFilter.label}
+                        value={filters[updatedFilter.id] || ''}
+                        onChange={(e) => handleFilterChange(updatedFilter.id, e.target.value)}
+                        required={updatedFilter.required}
                       />
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

@@ -7,7 +7,7 @@ import { useCuentasPorPagar } from "./useCuentasPorPagar";
 import EdicionCuentaModal from "./EdicionCuentaModal";
 import { ReportButton } from "@/components/reports/ReportButton";
 import { useReports } from "@/hooks/useReports";
-import { cuentasPorPagarReports } from "@/config/reportConfigs";
+import { generateReportConfigs } from '@/config/reportConfigs';
 
 // Importa el tipo Pago para tipar correctamente pagosAprobadosPorCuenta
 import type { Pago } from "./FilaCuentaPorPagar";
@@ -406,8 +406,9 @@ const VisualizarCuentasPorPagarPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-slate-800 text-center flex-1">Cuentas por Pagar</h1>
           <ReportButton
             module="Cuentas por Pagar"
-            reports={cuentasPorPagarReports}
+            reports={generateReportConfigs(farmacias).cuentasPorPagarReports}
             onGenerateReport={handleGenerateReport}
+            farmacias={farmacias}
             className="bg-purple-600 hover:bg-purple-700 text-white"
           />
         </div>
