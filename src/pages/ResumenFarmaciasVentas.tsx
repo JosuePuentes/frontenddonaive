@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import ResumeCardFarmacia from "@/components/ResumeCardFarmacia";
 import { useResumenData } from "@/hooks/useResumenData";
 import { ReportButton } from "@/components/reports/ReportButton";
@@ -28,34 +28,29 @@ const ResumenFarmaciasVentas: React.FC = () => {
     gastosPorFarmacia,
     cuentasActivasPorFarmacia,
     cuentasPagadasPorFarmacia,
-    totalPagosPorFarmacia, // Este objeto ya contiene los totales por farmacia
-    farmacias: farmaciasFromHook
+    totalPagosPorFarmacia // Este objeto ya contiene los totales por farmacia
   } = useResumenData();
 
   const { generateReport } = useReports();
 
-  // Cargar farmacias del usuario si no están disponibles en el hook
-  const [farmacias, setFarmacias] = useState<{ id: string; nombre: string }[]>(farmaciasFromHook || []);
+  // Cargar farmacias del usuario
+  const [farmacias, setFarmacias] = useState<{ id: string; nombre: string }[]>([]);
 
   React.useEffect(() => {
-    if (!farmaciasFromHook || farmaciasFromHook.length === 0) {
-      const usuarioRaw = localStorage.getItem("usuario");
-      if (usuarioRaw) {
-        try {
-          const usuario = JSON.parse(usuarioRaw);
-          const farmaciasObj = usuario.farmacias || {};
-          const farmaciasArr = Object.entries(farmaciasObj).map(
-            ([id, nombre]) => ({ id, nombre: String(nombre) })
-          );
-          setFarmacias(farmaciasArr);
-        } catch {
-          setFarmacias([]);
-        }
+    const usuarioRaw = localStorage.getItem("usuario");
+    if (usuarioRaw) {
+      try {
+        const usuario = JSON.parse(usuarioRaw);
+        const farmaciasObj = usuario.farmacias || {};
+        const farmaciasArr = Object.entries(farmaciasObj).map(
+          ([id, nombre]) => ({ id, nombre: String(nombre) })
+        );
+        setFarmacias(farmaciasArr);
+      } catch {
+        setFarmacias([]);
       }
-    } else {
-      setFarmacias(farmaciasFromHook);
     }
-  }, [farmaciasFromHook]);
+  }, []);
 
   const handleGenerateReport = async (params: any) => {
     try {
