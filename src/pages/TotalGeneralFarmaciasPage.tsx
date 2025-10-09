@@ -86,27 +86,32 @@ const TotalGeneralFarmaciasPage: React.FC = () => {
     try {
       const reportData = {
         headers: [
-          'Fecha',
-          'Farmacia',
-          'Ventas Bs',
-          'Ventas USD',
-          'Total Ventas',
-          'Transacciones'
+          'Métrica',
+          'Valor Bs',
+          'Valor USD',
+          'Descripción'
         ],
-        rows: farmacias.map(farmacia => [
-          new Date().toLocaleDateString('es-VE'),
-          farmacia.nombre,
-          formatBs(totalEfectivoBs + totalPuntosVentaDebitoBs + totalPuntosVentaCreditoBs + totalPagomovilBs),
-          `${formatCurrency(totalEfectivoUsd + totalZelleUsd)} USD`,
-          `${formatCurrency(totalGeneral || 0)}`,
-          'N/A' // No tenemos datos de transacciones específicas
-        ]),
+        rows: [
+          ['Total General', formatBs(totalGeneral || 0), formatCurrency(totalGeneral || 0), 'Total consolidado de ventas'],
+          ['Efectivo Bs', formatBs(totalEfectivoBs), 'N/A', 'Ventas en efectivo bolívares'],
+          ['Efectivo USD', 'N/A', formatCurrency(totalEfectivoUsd), 'Ventas en efectivo dólares'],
+          ['Zelle USD', 'N/A', formatCurrency(totalZelleUsd), 'Ventas por Zelle'],
+          ['Puntos Débito Bs', formatBs(totalPuntosVentaDebitoBs), 'N/A', 'Ventas con tarjeta débito'],
+          ['Puntos Crédito Bs', formatBs(totalPuntosVentaCreditoBs), 'N/A', 'Ventas con tarjeta crédito'],
+          ['Pago Móvil Bs', formatBs(totalPagomovilBs), 'N/A', 'Ventas por pago móvil'],
+          ['Total Gastos', 'N/A', formatCurrency(totalGastos), 'Gastos del período'],
+          ['Total Inventario', 'N/A', formatCurrency(totalInventario), 'Costo de inventario'],
+          ['Cuentas por Pagar', 'N/A', formatCurrency(totalCuentasPorPagar), 'Cuentas pendientes'],
+          ['Cuentas Pagadas', 'N/A', formatCurrency(totalCuentasPagadas), 'Cuentas pagadas']
+        ],
         summary: {
-          totalRows: farmacias.length,
+          totalRows: 11,
           totals: {
             'Total Ventas Bs': totalEfectivoBs + totalPuntosVentaDebitoBs + totalPuntosVentaCreditoBs + totalPagomovilBs,
             'Total Ventas USD': totalEfectivoUsd + totalZelleUsd,
-            'Total General': totalGeneral || 0
+            'Total General': totalGeneral || 0,
+            'Total Gastos': totalGastos,
+            'Total Inventario': totalInventario
           }
         }
       };
