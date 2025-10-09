@@ -5,39 +5,33 @@ import { motion } from 'framer-motion';
 
 // Componente de cuenta regresiva para suscripción suspendida
 const CountdownTimer = () => {
-    // Obtener el tiempo restante desde localStorage o establecer 12 horas
-    const getInitialTime = () => {
-        const savedTime = localStorage.getItem('subscriptionCountdown');
-        if (savedTime) {
-            const remaining = parseInt(savedTime);
-            // Validar que el tiempo sea razonable (máximo 12 horas = 43200 segundos)
-            if (remaining > 0 && remaining <= 43200) {
-                return remaining;
-            } else {
-                // Si el valor es inválido, limpiar y reiniciar
-                localStorage.removeItem('subscriptionCountdown');
-            }
+    // Calcular tiempo restante basado en timestamp fijo de expiración
+    const getTimeLeft = () => {
+        const expirationKey = 'subscriptionExpiration';
+        let expirationTime = localStorage.getItem(expirationKey);
+        
+        if (!expirationTime) {
+            // Primera vez: establecer expiración en 12 horas desde ahora
+            const now = Date.now();
+            const expiration = now + (12 * 60 * 60 * 1000); // 12 horas en milisegundos
+            localStorage.setItem(expirationKey, expiration.toString());
+            expirationTime = expiration.toString();
         }
-        // Primera vez o valor inválido: establecer 12 horas
-        const initialTime = 12 * 60 * 60; // 12 horas en segundos = 43200
-        localStorage.setItem('subscriptionCountdown', initialTime.toString());
-        return initialTime;
+        
+        const now = Date.now();
+        const expiration = parseInt(expirationTime);
+        const remainingMs = expiration - now;
+        const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+        
+        return remainingSeconds;
     };
 
-    const [timeLeft, setTimeLeft] = useState(getInitialTime);
+    const [timeLeft, setTimeLeft] = useState(getTimeLeft);
 
     useEffect(() => {
         const timer = setInterval(() => {
-            setTimeLeft((prevTime) => {
-                if (prevTime <= 0) {
-                    clearInterval(timer);
-                    return 0;
-                }
-                const newTime = prevTime - 1;
-                // Guardar el tiempo restante actualizado en localStorage
-                localStorage.setItem('subscriptionCountdown', newTime.toString());
-                return newTime;
-            });
+            const remaining = getTimeLeft();
+            setTimeLeft(remaining);
         }, 1000);
 
         return () => clearInterval(timer);
