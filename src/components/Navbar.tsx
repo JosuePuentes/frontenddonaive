@@ -5,22 +5,14 @@ import { motion } from 'framer-motion';
 
 // Componente de cuenta regresiva para suscripción suspendida
 const CountdownTimer = () => {
-    // Calcular tiempo restante basado en timestamp fijo de expiración
+    // Fecha de expiración fija global para todos los usuarios
+    // Esta fecha debe ser establecida manualmente cuando se quiera iniciar la cuenta regresiva
+    const GLOBAL_EXPIRATION_DATE = '2024-12-20T02:00:00'; // 12 horas desde ahora (ajustar según necesidad)
+    
     const getTimeLeft = () => {
-        const expirationKey = 'subscriptionExpiration';
-        let expirationTime = localStorage.getItem(expirationKey);
-        
-        if (!expirationTime) {
-            // Primera vez: establecer expiración en 12 horas desde ahora
-            const now = Date.now();
-            const expiration = now + (12 * 60 * 60 * 1000); // 12 horas en milisegundos
-            localStorage.setItem(expirationKey, expiration.toString());
-            expirationTime = expiration.toString();
-        }
-        
-        const now = Date.now();
-        const expiration = parseInt(expirationTime);
-        const remainingMs = expiration - now;
+        const expirationDate = new Date(GLOBAL_EXPIRATION_DATE);
+        const now = new Date();
+        const remainingMs = expirationDate.getTime() - now.getTime();
         const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
         
         return remainingSeconds;
