@@ -1,6 +1,9 @@
 import React from "react";
 import ResumeCardFarmacia from "@/components/ResumeCardFarmacia";
 import { useResumenData } from "@/hooks/useResumenData";
+import { ReportButton } from "@/components/reports/ReportButton";
+import { useReports } from "@/hooks/useReports";
+import { generateReportConfigs } from '@/config/reportConfigs';
 
 const ResumenFarmaciasVentas: React.FC = () => {
   const {
@@ -26,7 +29,43 @@ const ResumenFarmaciasVentas: React.FC = () => {
     cuentasActivasPorFarmacia,
     cuentasPagadasPorFarmacia,
     totalPagosPorFarmacia, // Este objeto ya contiene los totales por farmacia
+    farmacias
   } = useResumenData();
+
+  const { generateReport } = useReports();
+
+  const handleGenerateReport = async (params: any) => {
+    try {
+      const reportData = {
+        headers: [
+          'Grupo',
+          'Total Ventas Bs',
+          'Total Ventas USD',
+          'Promedio Diario',
+          'Días'
+        ],
+        rows: sortedFarmacias.map(farmacia => [
+          farmacia.nombre,
+          (ventas[farmacia.id]?.totalBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+          (ventas[farmacia.id]?.totalUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+          ((ventas[farmacia.id]?.totalBs || 0) / Math.max(1, Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24)))).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+          Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
+        ]),
+        summary: {
+          totalRows: sortedFarmacias.length,
+          totals: {
+            'Total Ventas Bs': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalBs || 0), 0),
+            'Total Ventas USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalUsd || 0), 0)
+          }
+        }
+      };
+
+      return await generateReport(params, reportData);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      throw error;
+    }
+  };
 
   if (loading) {
     return (
@@ -88,6 +127,13 @@ const ResumenFarmaciasVentas: React.FC = () => {
               Consulta un desglose detallado de las ventas de cada farmacia.
             </p>
           </div>
+          <ReportButton
+            module="Ventas"
+            reports={generateReportConfigs(farmacias).ventasReports}
+            onGenerateReport={handleGenerateReport}
+            farmacias={farmacias}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          />
           <div className="flex flex-col gap-3 w-full md:w-auto md:min-w-[400px]">
             <label
               htmlFor="fecha-inicio"

@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { ReportButton } from "@/components/reports/ReportButton";
+import { useReports } from "@/hooks/useReports";
+import { generateReportConfigs } from '@/config/reportConfigs';
 
 type CajeroEspecial = {
   cajero: string;
@@ -18,6 +21,60 @@ const ComisionesEspecialesPage: React.FC = () => {
   const [search, setSearch] = useState("");
   const [farmaciaFiltro, setFarmaciaFiltro] = useState<string>("");
   const [estadoFiltro, setEstadoFiltro] = useState<string>("");
+  const [farmacias, setFarmacias] = useState<{ id: string; nombre: string }[]>([]);
+  const { generateReport } = useReports();
+
+  // Cargar farmacias del usuario
+  React.useEffect(() => {
+    const usuarioRaw = localStorage.getItem("usuario");
+    if (usuarioRaw) {
+      try {
+        const usuario = JSON.parse(usuarioRaw);
+        const farmaciasObj = usuario.farmacias || {};
+        const farmaciasArr = Object.entries(farmaciasObj).map(
+          ([id, nombre]) => ({ id, nombre: String(nombre) })
+        );
+        setFarmacias(farmaciasArr);
+      } catch {
+        setFarmacias([]);
+      }
+    }
+  }, []);
+
+  const handleGenerateReport = async (params: any) => {
+    try {
+      const reportData = {
+        headers: [
+          'Fecha',
+          'Farmacia',
+          'Tipo Comisión',
+          'Monto Base',
+          '% Comisión',
+          'Comisión Total'
+        ],
+        rows: cajeros.map(cajero => [
+          `${startDate} - ${endDate}`,
+          farmacias.find(f => f.id === farmaciaFiltro)?.nombre || 'Todas',
+          'Comisión Especial',
+          (cajero.totalVentas || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+          `${(cajero.comisionPorcentaje || 0)}%`,
+          ((cajero.totalVentas || 0) * (cajero.comisionPorcentaje || 0) / 100).toLocaleString('es-VE', { minimumFractionDigits: 2 })
+        ]),
+        summary: {
+          totalRows: cajeros.length,
+          totals: {
+            'Total Ventas': cajeros.reduce((acc, c) => acc + (c.totalVentas || 0), 0),
+            'Total Comisiones': cajeros.reduce((acc, c) => acc + ((c.totalVentas || 0) * (c.comisionPorcentaje || 0) / 100), 0)
+          }
+        }
+      };
+
+      return await generateReport(params, reportData);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      throw error;
+    }
+  };
 
   const handleFetchComisiones = async () => {
     if (!startDate || !endDate) {
@@ -97,9 +154,18 @@ const ComisionesEspecialesPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold text-blue-800 mb-2 text-center">
-        Comisiones Especiales
-      </h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold text-blue-800 text-center flex-1">
+          Comisiones Especiales
+        </h1>
+        <ReportButton
+          module="Comisiones"
+          reports={generateReportConfigs(farmacias).comisionesReports}
+          onGenerateReport={handleGenerateReport}
+          farmacias={farmacias}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        />
+      </div>
       {Object.keys(farmaciasUsuario).length > 0 && (
         <div className="text-center text-sm text-gray-600 mb-4">
           Farmacia asignada: <span className="font-semibold text-blue-700">{Object.values(farmaciasUsuario).join(", ")}</span>
