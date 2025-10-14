@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router'; // Ensure react-router-dom is 
 import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-
 // Permisos y enlaces agrupados para una mejor organización visual
 const allLinks = [
     {
@@ -145,7 +144,6 @@ const Navbar = () => {
                     <img src="/path/to/your/logo.png" alt="Donaive Logo" className="h-8 w-auto" onError={(e) => (e.currentTarget.style.display = 'none')} />
                     <span>DONAIVE</span>
                 </Link>
-
 
                 {/* Desktop Menu (Dropdown) */}
                 <div className="hidden sm:flex items-center gap-6 relative" ref={dropdownRef}>
