@@ -145,6 +145,11 @@ const Navbar = () => {
                     <span>DONAIVE</span>
                 </Link>
 
+                {/* Centro - Proceso */}
+                <div className="flex-1 flex justify-center">
+                    <span className="text-xl font-bold text-gray-800">PROCESO</span>
+                </div>
+
                 {/* Desktop Menu (Dropdown) */}
                 <div className="hidden sm:flex items-center gap-6 relative" ref={dropdownRef}>
                     <button
