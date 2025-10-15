@@ -124,10 +124,13 @@ const Navbar = () => {
     }, [isMobileMenuOpen]);
 
     // Filter links based on user permissions
-    const accessibleLinks = allLinks.map(category => ({
-        ...category,
-        items: category.items.filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
-    })).filter(category => category.items.length > 0);
+    // For now, show all links if no user is logged in (for homepage visitors)
+    const accessibleLinks = permisosUsuario.length > 0 
+        ? allLinks.map(category => ({
+            ...category,
+            items: category.items.filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
+        })).filter(category => category.items.length > 0)
+        : allLinks; // Show all links for non-authenticated users
 
     const handleLogout = () => {
         localStorage.removeItem('token');
