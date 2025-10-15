@@ -33,6 +33,7 @@ import VisualizarPagos from "@/pages/pagosCPP/VisualizarPagos";
 import ModificarEstadoMeta from "@/pages/metas/ModificarEstadoMeta";
 
 import ModificacionCuadrePage from "@/pages/cuadres/modificarCuadre/ModificacionCuadrePage";
+import ModificarUsuarioPage from "@/pages/ModificarUsuarioPage";
 
 const AppRouter = () => (
   <Routes>
@@ -279,6 +280,14 @@ const AppRouter = () => (
       element={
         <PermissionRoute permiso="ver_cuadres_dia">
           <ValesPorFarmaciaPage />
+        </PermissionRoute>
+      }
+    />
+    <Route
+      path="/modificar-usuarios"
+      element={
+        <PermissionRoute permiso="acceso_admin">
+          <ModificarUsuarioPage />
         </PermissionRoute>
       }
     />
