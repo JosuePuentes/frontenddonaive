@@ -3,6 +3,13 @@ import { ArrowRight, TrendingUp, Globe, Shield, Users, Target, Zap } from 'lucid
 import { Link } from 'react-router';
 
 const HomePage: React.FC = () => {
+    const handleWhatsAppContact = () => {
+        const phoneNumber = '584146772709';
+        const message = 'Hola! Me interesa unirme a las empresas aliadas de Donaive.';
+        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
     return (
         <div className="min-h-screen bg-white">
             {/* Hero Section */}
@@ -43,7 +50,10 @@ const HomePage: React.FC = () => {
                                        Conoce Nuestros Servicios
                                        <ArrowRight className="inline-block ml-2" size={20} />
                                    </Link>
-                                   <button className="border-2 border-white text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white hover:text-slate-900 transition-all duration-300">
+                                   <button 
+                                       onClick={handleWhatsAppContact}
+                                       className="border-2 border-white text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white hover:text-slate-900 transition-all duration-300"
+                                   >
                                        Empresas Aliadas
                                    </button>
                                </motion.div>
@@ -238,7 +248,10 @@ const HomePage: React.FC = () => {
                             para así ser una distribución de cada empresa sólida.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                            <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                            <button 
+                                onClick={handleWhatsAppContact}
+                                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                            >
                                 <Users className="inline-block mr-2" size={20} />
                                 Únete a Nuestras Empresas Aliadas
                             </button>
