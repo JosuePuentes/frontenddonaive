@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link, useLocation } from 'react-router'; // Ensure react-router-dom is used
-import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users } from 'lucide-react';
+import { Link, useLocation } from 'react-router';
+import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // Permisos y enlaces agrupados para una mejor organización visual
@@ -125,10 +125,12 @@ const Navbar = () => {
     }, [isMobileMenuOpen]);
 
     // Filter links based on user permissions
-    const accessibleLinks = allLinks.map(category => ({
-        ...category,
-        items: category.items.filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
-    })).filter(category => category.items.length > 0);
+    const accessibleLinks = permisosUsuario.length > 0
+        ? allLinks.map(category => ({
+            ...category,
+            items: category.items.filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
+        })).filter(category => category.items.length > 0)
+        : [];
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -136,33 +138,53 @@ const Navbar = () => {
         window.location.href = '/login';
     };
 
+    const handleWhatsAppContact = () => {
+        const phoneNumber = '584146772709';
+        const message = 'Hola! Me interesa conocer más sobre los servicios de Donaive.';
+        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
     return (
-        <nav className="bg-white text-black shadow-lg px-4 py-3 sticky top-0 z-50">
+        <nav className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white shadow-lg px-4 py-2 sticky top-0 z-50">
             <div className="flex justify-between items-center max-w-7xl mx-auto">
                 {/* Logo / Brand Name */}
-                <Link to="/admin" className="text-2xl font-extrabold tracking-wide flex items-center gap-2 text-black">
-                    {/* Consider placing your actual logo image here */}
-                    <img src="/path/to/your/logo.png" alt="Donaive Logo" className="h-8 w-auto" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                    <span>DONAIVE</span>
+                <Link to="/" className="text-xl font-bold tracking-wide flex flex-col items-center gap-1 text-white hover:text-blue-300 transition-colors duration-200">
+                    <div className="flex items-center gap-3">
+                        <img 
+                            src="/logo.png" 
+                            alt="Donaive Logo" 
+                            className="h-12 w-12 object-contain"
+                        />
+                        <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">DONAIVE</span>
+                    </div>
+                    <span className="text-xs text-blue-200 font-medium">Futuro. Finanzas. Digital</span>
                 </Link>
 
-                {/* Centro - Proceso */}
-                <div className="flex-1 flex justify-center">
-                    <span className="text-xl font-bold text-gray-800">PROCESO</span>
-                </div>
+                {/* Desktop Menu */}
+                <div className="hidden sm:flex items-center gap-4 relative" ref={dropdownRef}>
+                    {/* Mostrar MÓDULOS solo si está logueado */}
+                    {usuario && accessibleLinks.length > 0 && (
+                        <button
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg text-blue-100 hover:text-white hover:bg-blue-800/50 transition-all duration-200"
+                            onClick={() => setIsDropdownOpen(prev => !prev)}
+                            aria-expanded={isDropdownOpen}
+                        >
+                            MÓDULOS
+                            <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : 'rotate-0'}`} />
+                        </button>
+                    )}
 
-                {/* Desktop Menu (Dropdown) */}
-                <div className="hidden sm:flex items-center gap-6 relative" ref={dropdownRef}>
                     <button
-                        className="flex items-center gap-2 px-4 text-2xl font-extrabold py-2 rounded-full text-black transition-all duration-200"
-                        onClick={() => setIsDropdownOpen(prev => !prev)}
-                        aria-expanded={isDropdownOpen}
+                        onClick={handleWhatsAppContact}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
                     >
-                        MODULOS
-                        <ChevronDown className={`w-5 h-5 transition-transform ${isDropdownOpen ? 'rotate-180' : 'rotate-0'}`} />
+                        <Phone className="w-4 h-4" />
+                        CONTACTO
                     </button>
 
-                    {isDropdownOpen && (
+                    {/* Dropdown de módulos solo si está logueado */}
+                    {usuario && isDropdownOpen && accessibleLinks.length > 0 && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -174,7 +196,7 @@ const Navbar = () => {
                                 {accessibleLinks.map(category => (
                                     <div key={category.category} className="mb-2">
                                         <h3 className="px-4 pt-3 pb-2 text-xs font-bold uppercase text-gray-700 flex items-center gap-2 border-b border-gray-100">
-                                            {category.icon && <category.icon className="w-4 h-4 text-gray-700" />} {/* Icons remain dark */}
+                                            {category.icon && <category.icon className="w-4 h-4 text-gray-700" />}
                                             {category.category}
                                         </h3>
                                         <ul className="pb-1">
@@ -185,8 +207,8 @@ const Navbar = () => {
                                                         onClick={() => setIsDropdownOpen(false)}
                                                         className={`block px-4 py-2 text-sm whitespace-nowrap transition-all duration-150 rounded mx-2 my-1
                                                             ${location.pathname === link.to
-                                                                ? 'text-black font-semibold bg-gray-100 hover:bg-gray-200' // Active link black on light gray
-                                                                : 'text-gray-800 hover:text-black hover:bg-gray-50' // Hover link black on very light gray
+                                                                ? 'text-black font-semibold bg-gray-100 hover:bg-gray-200'
+                                                                : 'text-gray-800 hover:text-black hover:bg-gray-50'
                                                             }`}
                                                     >
                                                         {link.label}
@@ -196,16 +218,14 @@ const Navbar = () => {
                                         </ul>
                                     </div>
                                 ))}
-                                {usuario && (
-                                    <div className="border-t border-gray-200 pt-2 mt-2">
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded mx-2 my-1 flex items-center gap-2"
-                                        >
-                                            <LogOut className="w-4 h-4" /> Cerrar sesión
-                                        </button>
-                                    </div>
-                                )}
+                                <div className="border-t border-gray-200 pt-2 mt-2">
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded mx-2 my-1 flex items-center gap-2"
+                                    >
+                                        <LogOut className="w-4 h-4" /> Cerrar sesión
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     )}
@@ -213,11 +233,11 @@ const Navbar = () => {
 
                 {/* Mobile Menu Button */}
                 <button
-                    className="sm:hidden bg-white text- p-2 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors duration-200"
+                    className="sm:hidden p-1.5 rounded-lg hover:bg-blue-800/50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200"
                     onClick={() => setIsMobileMenuOpen(prev => !prev)}
                     aria-label="Toggle mobile menu"
                 >
-                    {isMobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
+                    {isMobileMenuOpen ? <X className="w-5 h-5 text-white" /> : <Menu className="w-5 h-5 text-white" />}
                 </button>
             </div>
 
@@ -230,44 +250,58 @@ const Navbar = () => {
                     open: { opacity: 1, height: "auto", transition: { duration: 0.3 } },
                     closed: { opacity: 0, height: 0, transition: { duration: 0.3 } }
                 }}
-                className="sm:hidden mt-4 bg-gray-100 rounded-lg shadow-xl overflow-y-auto overflow-x-hidden max-h-[70vh]"
+                className="sm:hidden mt-4 bg-blue-900/20 backdrop-blur-sm rounded-lg shadow-xl overflow-y-auto overflow-x-hidden max-h-[70vh] border border-blue-800/30"
             >
                 <div className="p-4 custom-scrollbar">
-                    {accessibleLinks.map(category => (
-                        <div key={category.category} className="mb-4 last:mb-0">
-                            <h3 className="text-sm font-bold uppercase text-gray-600 mb-2 flex items-center gap-2">
-                                {category.icon && <category.icon className="w-4 h-4" />}
-                                {category.category}
-                            </h3>
-                            <ul className="space-y-1">
-                                {category.items.map(link => (
-                                    <li key={link.to}>
-                                        <Link
-                                            to={link.to}
-                                            onClick={() => setIsMobileMenuOpen(false)}
-                                            className={`block px-3 py-2 text-sm transition-all duration-150 rounded
-                                                ${location.pathname === link.to
-                                                    ? 'text-black font-semibold bg-gray-200' // Active link black on medium gray
-                                                    : 'text-gray-800 hover:text-black hover:bg-gray-50' // Default text gray, hover black on very light gray
-                                                }`}
-                                        >
-                                            {link.label}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ))}
-                    {usuario && (
-                        <div className="border-t border-gray-200 pt-4 mt-4">
-                            <button
-                                onClick={handleLogout}
-                                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded flex items-center gap-2"
-                            >
-                                <LogOut className="w-4 h-4" /> Cerrar sesión
-                            </button>
-                        </div>
+                    {/* Mostrar módulos solo si está logueado */}
+                    {usuario && accessibleLinks.length > 0 && (
+                        <>
+                            {accessibleLinks.map(category => (
+                                <div key={category.category} className="mb-4 last:mb-0">
+                                    <h3 className="text-sm font-bold uppercase text-blue-200 mb-2 flex items-center gap-2">
+                                        {category.icon && <category.icon className="w-4 h-4" />}
+                                        {category.category}
+                                    </h3>
+                                    <ul className="space-y-1">
+                                        {category.items.map(link => (
+                                            <li key={link.to}>
+                                                <Link
+                                                    to={link.to}
+                                                    onClick={() => setIsMobileMenuOpen(false)}
+                                                    className={`block px-3 py-2 text-sm transition-all duration-150 rounded
+                                                        ${location.pathname === link.to
+                                                            ? 'text-white font-semibold bg-blue-800/50'
+                                                            : 'text-blue-100 hover:text-white hover:bg-blue-800/30'
+                                                        }`}
+                                                >
+                                                    {link.label}
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))}
+                            <div className="border-t border-blue-800/30 pt-4 mt-4">
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 hover:text-red-300 rounded flex items-center gap-2"
+                                >
+                                    <LogOut className="w-4 h-4" /> Cerrar sesión
+                                </button>
+                            </div>
+                        </>
                     )}
+                    
+                    {/* Botón de Contacto WhatsApp en móvil */}
+                    <div className="border-t border-blue-800/30 pt-4 mt-4">
+                        <button
+                            onClick={handleWhatsAppContact}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all duration-200 shadow-md hover:shadow-lg mb-4"
+                        >
+                            <Phone className="w-4 h-4" />
+                            CONTACTO WHATSAPP
+                        </button>
+                    </div>
                 </div>
             </motion.div>
         </nav>

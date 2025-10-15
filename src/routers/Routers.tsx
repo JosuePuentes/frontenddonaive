@@ -5,6 +5,8 @@ import AboutPage from "@/pages/AboutPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import AdminPage from "@/pages/AdminPage";
 import LoginPage from "@/pages/LoginPage";
+import HomePage from "@/pages/HomePage";
+import ServicesPage from "@/pages/ServicesPage";
 import PrivateRoute from "./PrivateRoute";
 import PermissionRoute from "./PermissionRoute";
 import AgregarCuadrePage from "@/pages/AgregarCuadrePage";
@@ -38,14 +40,13 @@ import ModificarUsuarioPage from "@/pages/ModificarUsuarioPage";
 const AppRouter = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
-    <Route
-      path="/"
-      element={
-        <PrivateRoute>
-          <AdminPage />
-        </PrivateRoute>
-      }
-    />
+    <Route path="/" element={<HomePage />} />
+    <Route path="/servicios" element={<ServicesPage />} />
+    <Route path="/admin" element={
+      <PrivateRoute>
+        <AdminPage />
+      </PrivateRoute>
+    } />
     <Route path="/about" element={<AboutPage />} />
 
     <Route
@@ -126,14 +127,6 @@ const AppRouter = () => (
       element={
         <PermissionRoute permiso="ver_cuadres_dia">
           <CuadresPorFarmaciaPage />
-        </PermissionRoute>
-      }
-    />
-    <Route
-      path="/admin"
-      element={
-        <PermissionRoute permiso="acceso_admin">
-          <AdminPage />
         </PermissionRoute>
       }
     />
