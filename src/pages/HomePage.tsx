@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, TrendingUp, Globe, Shield, Users, Target, Zap } from 'lucide-react';
+import { Link } from 'react-router';
 
 const HomePage: React.FC = () => {
     return (
@@ -32,20 +33,20 @@ const HomePage: React.FC = () => {
                             asegurando que tu negocio sea financieramente sólido y tenga una presencia digital robusta.
                         </p>
                         
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 0.3 }}
-                            className="flex flex-col sm:flex-row gap-4 justify-center"
-                        >
-                            <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                                Conoce Nuestros Servicios
-                                <ArrowRight className="inline-block ml-2" size={20} />
-                            </button>
-                            <button className="border-2 border-white text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white hover:text-slate-900 transition-all duration-300">
-                                Empresas Aliadas
-                            </button>
-                        </motion.div>
+                               <motion.div
+                                   initial={{ opacity: 0, y: 20 }}
+                                   animate={{ opacity: 1, y: 0 }}
+                                   transition={{ duration: 0.8, delay: 0.3 }}
+                                   className="flex flex-col sm:flex-row gap-4 justify-center"
+                               >
+                                   <Link to="/servicios" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl inline-flex items-center justify-center">
+                                       Conoce Nuestros Servicios
+                                       <ArrowRight className="inline-block ml-2" size={20} />
+                                   </Link>
+                                   <button className="border-2 border-white text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white hover:text-slate-900 transition-all duration-300">
+                                       Empresas Aliadas
+                                   </button>
+                               </motion.div>
                     </motion.div>
                 </div>
                 

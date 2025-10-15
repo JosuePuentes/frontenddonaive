@@ -6,6 +6,7 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import AdminPage from "@/pages/AdminPage";
 import LoginPage from "@/pages/LoginPage";
 import HomePage from "@/pages/HomePage";
+import ServicesPage from "@/pages/ServicesPage";
 import PrivateRoute from "./PrivateRoute";
 import PermissionRoute from "./PermissionRoute";
 import AgregarCuadrePage from "@/pages/AgregarCuadrePage";
@@ -39,6 +40,7 @@ const AppRouter = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
     <Route path="/" element={<HomePage />} />
+    <Route path="/servicios" element={<ServicesPage />} />
     <Route path="/admin" element={
       <PrivateRoute>
         <AdminPage />
