@@ -136,29 +136,22 @@ const Navbar = () => {
     };
 
     return (
-        <nav className="bg-white text-black shadow-lg px-4 py-3 sticky top-0 z-50">
+        <nav className="bg-white text-black shadow-md px-4 py-2 sticky top-0 z-50">
             <div className="flex justify-between items-center max-w-7xl mx-auto">
                 {/* Logo / Brand Name */}
-                <Link to="/admin" className="text-2xl font-extrabold tracking-wide flex items-center gap-2 text-black">
-                    {/* Consider placing your actual logo image here */}
-                    <img src="/path/to/your/logo.png" alt="Donaive Logo" className="h-8 w-auto" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                    <span>DONAIVE</span>
+                <Link to="/" className="text-xl font-bold tracking-wide flex items-center gap-2 text-slate-900 hover:text-blue-600 transition-colors duration-200">
+                    <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">DONAIVE</span>
                 </Link>
 
-                {/* Centro - Proceso */}
-                <div className="flex-1 flex justify-center">
-                    <span className="text-xl font-bold text-gray-800">PROCESO</span>
-                </div>
-
                 {/* Desktop Menu (Dropdown) */}
-                <div className="hidden sm:flex items-center gap-6 relative" ref={dropdownRef}>
+                <div className="hidden sm:flex items-center gap-4 relative" ref={dropdownRef}>
                     <button
-                        className="flex items-center gap-2 px-4 text-2xl font-extrabold py-2 rounded-full text-black transition-all duration-200"
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                         onClick={() => setIsDropdownOpen(prev => !prev)}
                         aria-expanded={isDropdownOpen}
                     >
-                        MODULOS
-                        <ChevronDown className={`w-5 h-5 transition-transform ${isDropdownOpen ? 'rotate-180' : 'rotate-0'}`} />
+                        MÓDULOS
+                        <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : 'rotate-0'}`} />
                     </button>
 
                     {isDropdownOpen && (
@@ -212,11 +205,11 @@ const Navbar = () => {
 
                 {/* Mobile Menu Button */}
                 <button
-                    className="sm:hidden bg-white text- p-2 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors duration-200"
+                    className="sm:hidden p-1.5 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200"
                     onClick={() => setIsMobileMenuOpen(prev => !prev)}
                     aria-label="Toggle mobile menu"
                 >
-                    {isMobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
+                    {isMobileMenuOpen ? <X className="w-5 h-5 text-slate-700" /> : <Menu className="w-5 h-5 text-slate-700" />}
                 </button>
             </div>
 
