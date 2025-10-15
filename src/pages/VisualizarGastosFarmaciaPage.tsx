@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import ImageDisplay from "../components/upfile/ImageDisplay";
+import { ReportButton } from "@/components/reports/ReportButton";
+import { useReports } from "@/hooks/useReports";
+import { generateReportConfigs } from '@/config/reportConfigs';
 import { animate, stagger } from 'animejs';
 
 interface Gasto {
@@ -100,6 +103,7 @@ const VisualizarGastosFarmaciaPage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; gastoId: string | null; nuevoEstado: string }>({ open: false, gastoId: null, nuevoEstado: "" });
   const [imagenAmpliada, setImagenAmpliada] = useState<{imagenes: string[], index: number} | null>(null);
+  const { generateReport } = useReports();
 
   const fetchGastos = async () => {
     setLoading(true);
@@ -200,6 +204,44 @@ const VisualizarGastosFarmaciaPage: React.FC = () => {
     setConfirmDialog({ open: false, gastoId: null, nuevoEstado: "" });
   };
 
+  const handleGenerateReport = async (params: any) => {
+    try {
+      // Preparar los datos del reporte basados en los gastos filtrados
+      const reportData = {
+        headers: [
+          'Fecha',
+          'Farmacia',
+          'Categoría',
+          'Descripción',
+          'Monto',
+          'Usuario',
+          'Estado'
+        ],
+        rows: gastosFiltrados.map(gasto => [
+          formatFecha(gasto.fecha, gasto.fechaRegistro),
+          farmacias.find(f => f.id === gasto.localidad)?.nombre || gasto.localidad,
+          gasto.titulo,
+          gasto.descripcion,
+          `${gasto.monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })} ${gasto.divisa || ''}`,
+          'Usuario', // Aquí podrías agregar el campo de usuario si está disponible
+          gasto.estado
+        ]),
+        summary: {
+          totalRows: gastosFiltrados.length,
+          totals: {
+            'Total Bs': totalBs,
+            'Total USD': totalUSD
+          }
+        }
+      };
+
+      return await generateReport(params, reportData);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      throw error;
+    }
+  };
+
   const gastosFiltrados = gastos
     .filter(g => {
       // Si el filtro es "" (Todos), mostrar todos sin filtrar por estado
@@ -246,7 +288,16 @@ const VisualizarGastosFarmaciaPage: React.FC = () => {
   return (
     <div className="h-1 bg-slate-50 py-8">
       <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-red-700 mb-8 text-center">Gestión de Gastos</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-red-700 text-center flex-1">Gestión de Gastos</h1>
+          <ReportButton
+            module="Gastos"
+            reports={generateReportConfigs(farmacias).gastosReports}
+            onGenerateReport={handleGenerateReport}
+            farmacias={farmacias}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          />
+        </div>
         
         {error && (
           <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow" role="alert">

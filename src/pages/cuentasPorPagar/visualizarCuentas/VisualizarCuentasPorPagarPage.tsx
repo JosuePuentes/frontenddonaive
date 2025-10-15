@@ -5,6 +5,9 @@ import FiltrosCuentasPorPagar from "./FiltrosCuentasPorPagar";
 import TablaCuentasPorPagar from "./TablaCuentasPorPagar";
 import { useCuentasPorPagar } from "./useCuentasPorPagar";
 import EdicionCuentaModal from "./EdicionCuentaModal";
+import { ReportButton } from "@/components/reports/ReportButton";
+import { useReports } from "@/hooks/useReports";
+import { generateReportConfigs } from '@/config/reportConfigs';
 
 // Importa el tipo Pago para tipar correctamente pagosAprobadosPorCuenta
 import type { Pago } from "./FilaCuentaPorPagar";
@@ -76,6 +79,7 @@ const VisualizarCuentasPorPagarPage: React.FC = () => {
   const [pagoMasivoError] = useState<string | null>(null);
   // Moneda seleccionada para conversión masiva (sincronizada con el modal)
   const [monedaConversion] = useState<'USD' | 'Bs'>('USD');
+  const { generateReport } = useReports();
 
   // Reemplaza selectedCuentas y edicionCuentas por un solo state
   const [cuentasParaPagar, setCuentasParaPagar] = useState<any[]>(() => {
@@ -280,6 +284,44 @@ const VisualizarCuentasPorPagarPage: React.FC = () => {
     setConfirmDialog({ open: false, id: null, nuevoEstatus: "" });
   };
 
+  const handleGenerateReport = async (params: any) => {
+    try {
+      // Preparar los datos del reporte basados en las cuentas filtradas
+      const reportData = {
+        headers: [
+          'Farmacia',
+          'Proveedor',
+          'N° Factura',
+          'Fecha Emisión',
+          'Fecha Vencimiento',
+          'Monto',
+          'Estado'
+        ],
+        rows: cuentasFiltradas.map(cuenta => [
+          farmacias.find(f => f.id === cuenta.farmacia)?.nombre || cuenta.farmacia,
+          cuenta.proveedor,
+          cuenta.numeroFactura,
+          formatFecha(cuenta.fechaEmision),
+          formatFecha(cuenta.fechaEmision), // Aquí podrías calcular la fecha de vencimiento
+          `${cuenta.monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })} ${cuenta.divisa}`,
+          cuenta.estatus
+        ]),
+        summary: {
+          totalRows: cuentasFiltradas.length,
+          totals: {
+            'Total Bs': totalBs,
+            'Total USD': totalUSD
+          }
+        }
+      };
+
+      return await generateReport(params, reportData);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      throw error;
+    }
+  };
+
   const handlePagosDropdownOpen = (open: boolean, cuenta: CuentaPorPagar) => {
     if (open && !pagosAprobadosPorCuenta[cuenta._id]?.pagos) {
       setPagosAprobadosPorCuenta(prev => ({
@@ -360,7 +402,16 @@ const VisualizarCuentasPorPagarPage: React.FC = () => {
     // Contenedor principal con un fondo sutil para la página
     <div className="min-h-screen bg-slate-50 py-8">
       <div className="w-full max-w-screen-full mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-slate-800 mb-8 text-center">Cuentas por Pagar</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-slate-800 text-center flex-1">Cuentas por Pagar</h1>
+          <ReportButton
+            module="Cuentas por Pagar"
+            reports={generateReportConfigs(farmacias).cuentasPorPagarReports}
+            onGenerateReport={handleGenerateReport}
+            farmacias={farmacias}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          />
+        </div>
 
 
         {/* Mensajes de error/éxito con mejor estilo */}

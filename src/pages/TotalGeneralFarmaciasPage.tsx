@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import DashboardCard from "../components/DashboardCard";
+import { ReportButton } from "@/components/reports/ReportButton";
+import { useReports } from "@/hooks/useReports";
+import { generateReportConfigs } from '@/config/reportConfigs';
 
 // Reutilizamos las variantes de Framer Motion
 const containerVariants = {
@@ -57,6 +60,68 @@ const TotalGeneralFarmaciasPage: React.FC = () => {
   const [totalCuentasPagadas, setTotalCuentasPagadas] = useState<number>(0);
   const [totalCostoInventario, setTotalCostoInventario] = useState<number>(0);
   const [totalCostoInventarioRestante, setTotalCostoInventarioRestante] = useState<number>(0);
+
+  // Variables para reportes
+  const [farmacias, setFarmacias] = useState<{ id: string; nombre: string }[]>([]);
+  const { generateReport } = useReports();
+
+  // Cargar farmacias del usuario
+  React.useEffect(() => {
+    const usuarioRaw = localStorage.getItem("usuario");
+    if (usuarioRaw) {
+      try {
+        const usuario = JSON.parse(usuarioRaw);
+        const farmaciasObj = usuario.farmacias || {};
+        const farmaciasArr = Object.entries(farmaciasObj).map(
+          ([id, nombre]) => ({ id, nombre: String(nombre) })
+        );
+        setFarmacias(farmaciasArr);
+      } catch {
+        setFarmacias([]);
+      }
+    }
+  }, []);
+
+  const handleGenerateReport = async (params: any) => {
+    try {
+      const reportData = {
+        headers: [
+          'Métrica',
+          'Valor Bs',
+          'Valor USD',
+          'Descripción'
+        ],
+        rows: [
+          ['Total General', formatBs(totalGeneral || 0), formatCurrency(totalGeneral || 0), 'Total consolidado de ventas'],
+          ['Efectivo Bs', formatBs(totalEfectivoBs), 'N/A', 'Ventas en efectivo bolívares'],
+          ['Efectivo USD', 'N/A', formatCurrency(totalEfectivoUsd), 'Ventas en efectivo dólares'],
+          ['Zelle USD', 'N/A', formatCurrency(totalZelleUsd), 'Ventas por Zelle'],
+          ['Puntos Débito Bs', formatBs(totalPuntosVentaDebitoBs), 'N/A', 'Ventas con tarjeta débito'],
+          ['Puntos Crédito Bs', formatBs(totalPuntosVentaCreditoBs), 'N/A', 'Ventas con tarjeta crédito'],
+          ['Pago Móvil Bs', formatBs(totalPagomovilBs), 'N/A', 'Ventas por pago móvil'],
+          ['Total Gastos', 'N/A', formatCurrency(totalGastos), 'Gastos del período'],
+          ['Total Inventario', 'N/A', formatCurrency(totalInventario), 'Costo de inventario'],
+          ['Cuentas por Pagar', 'N/A', formatCurrency(totalCuentasPorPagar), 'Cuentas pendientes'],
+          ['Cuentas Pagadas', 'N/A', formatCurrency(totalCuentasPagadas), 'Cuentas pagadas']
+        ],
+        summary: {
+          totalRows: 11,
+          totals: {
+            'Total Ventas Bs': totalEfectivoBs + totalPuntosVentaDebitoBs + totalPuntosVentaCreditoBs + totalPagomovilBs,
+            'Total Ventas USD': totalEfectivoUsd + totalZelleUsd,
+            'Total General': totalGeneral || 0,
+            'Total Gastos': totalGastos,
+            'Total Inventario': totalInventario
+          }
+        }
+      };
+
+      return await generateReport(params, reportData);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      throw error;
+    }
+  };
 
   // Filtros de fecha
   const [fechaInicio, setFechaInicio] = useState<string>("");
@@ -212,12 +277,23 @@ const TotalGeneralFarmaciasPage: React.FC = () => {
       <div className="max-w-6xl w-full space-y-10">
         {/* Header Section */}
         <header className="text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-black leading-tight">
-            📊 Resumen de Ventas de Farmacias
-          </h1>
-          <p className="mt-2 text-xl text-gray-700">
-            Métricas consolidadas para el mes de <span className="font-semibold capitalize">{currentMonthName}</span>
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex-1">
+              <h1 className="text-4xl md:text-5xl font-extrabold text-black leading-tight">
+                📊 Resumen de Ventas de Farmacias
+              </h1>
+              <p className="mt-2 text-xl text-gray-700">
+                Métricas consolidadas para el mes de <span className="font-semibold capitalize">{currentMonthName}</span>
+              </p>
+            </div>
+            <ReportButton
+              module="Ventas"
+              reports={generateReportConfigs(farmacias).ventasReports}
+              onGenerateReport={handleGenerateReport}
+              farmacias={farmacias}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            />
+          </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha desde</label>

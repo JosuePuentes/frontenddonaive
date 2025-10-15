@@ -631,5 +631,6 @@ export function useResumenData() {
     cuentasActivasPorFarmacia,
     cuentasPagadasPorFarmacia: MontoFacturadoCuentasPagadasPorFarmacia,
     totalPagosPorFarmacia,
+    cuadresPorFarmacia, // Agregar acceso a los datos de cuadres
   };
 }

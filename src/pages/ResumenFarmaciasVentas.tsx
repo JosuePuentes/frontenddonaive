@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import ResumeCardFarmacia from "@/components/ResumeCardFarmacia";
 import { useResumenData } from "@/hooks/useResumenData";
+import { ReportButton } from "@/components/reports/ReportButton";
+import { useReports } from "@/hooks/useReports";
+import { generateReportConfigs } from '@/config/reportConfigs';
 
 const ResumenFarmaciasVentas: React.FC = () => {
   const {
@@ -26,7 +29,148 @@ const ResumenFarmaciasVentas: React.FC = () => {
     cuentasActivasPorFarmacia,
     cuentasPagadasPorFarmacia,
     totalPagosPorFarmacia, // Este objeto ya contiene los totales por farmacia
+    cuadresPorFarmacia // Datos reales de cuadres por farmacia
   } = useResumenData();
+
+  const { generateReport } = useReports();
+
+  // Cargar farmacias del usuario
+  const [farmacias, setFarmacias] = useState<{ id: string; nombre: string }[]>([]);
+
+  React.useEffect(() => {
+    const usuarioRaw = localStorage.getItem("usuario");
+    if (usuarioRaw) {
+      try {
+        const usuario = JSON.parse(usuarioRaw);
+        const farmaciasObj = usuario.farmacias || {};
+        const farmaciasArr = Object.entries(farmaciasObj).map(
+          ([id, nombre]) => ({ id, nombre: String(nombre) })
+        );
+        setFarmacias(farmaciasArr);
+      } catch {
+        setFarmacias([]);
+      }
+    }
+  }, []);
+
+  const handleGenerateReport = async (params: any) => {
+    try {
+      // Usar datos reales de cuadres por farmacia
+      const obtenerDetallesReales = (farmaciaId: string) => {
+        const cuadresFarmacia = cuadresPorFarmacia[farmaciaId] || [];
+        let sumaRecargaBs = 0,
+          sumaPagomovilBs = 0,
+          sumaEfectivoBs = 0,
+          sumaPuntoDebito = 0,
+          sumaPuntoCredito = 0,
+          sumaDevolucionesBs = 0;
+        
+        cuadresFarmacia.forEach((c) => {
+          if (c.estado !== "verified") return;
+          if (
+            (fechaInicio && c.dia < fechaInicio) ||
+            (fechaFin && c.dia > fechaFin)
+          )
+            return;
+          sumaRecargaBs += Number(c.recargaBs || 0);
+          sumaPagomovilBs += Number(c.pagomovilBs || 0);
+          sumaEfectivoBs += Number(c.efectivoBs || 0);
+          sumaDevolucionesBs += Number(c.devolucionesBs || 0);
+          if (Array.isArray(c.puntosVenta)) {
+            sumaPuntoDebito += c.puntosVenta.reduce(
+              (acc, pv) => acc + Number(pv.puntoDebito || 0),
+              0
+            );
+            sumaPuntoCredito += c.puntosVenta.reduce(
+              (acc, pv) => acc + Number(pv.puntoCredito || 0),
+              0
+            );
+          }
+        });
+
+        return {
+          sumaRecargaBs,
+          sumaPagomovilBs,
+          sumaEfectivoBs,
+          sumaDevolucionesBs,
+          sumaPuntoDebito,
+          sumaPuntoCredito
+        };
+      };
+
+      const reportData = {
+        headers: [
+          'Farmacia',
+          'Total Ventas',
+          'Total Bs',
+          'Total USD',
+          'Efectivo USD',
+          'Zelle USD',
+          'Faltantes',
+          'Sobrantes',
+          'Recarga Bs',
+          'Pago Móvil Bs',
+          'Efectivo Bs',
+          'Punto Débito Bs',
+          'Punto Crédito Bs',
+          'Devoluciones Bs',
+          'Pagos USD',
+          'Pagos Bs'
+        ],
+        rows: sortedFarmacias.map(farmacia => {
+          const pagosDelPeriodo = totalPagosPorFarmacia[farmacia.id] || {
+            pagosUsd: 0,
+            pagosBs: 0,
+            pagosGeneralUsd: 0,
+            abonosNoLiquidadosUsd: 0,
+            abonosNoLiquidadosEnUsd: 0,
+            abonosNoLiquidadosEnBs: 0,
+            montoOriginalFacturasUsd: 0,
+            diferencialPagosUsd: 0,
+          };
+
+          const farmaciaData = ventas[farmacia.id] || {};
+          const detallesCuadre = obtenerDetallesReales(farmacia.id);
+
+          return [
+            farmacia.nombre,
+            (farmaciaData.totalVentas || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (farmaciaData.totalBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (farmaciaData.totalUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (farmaciaData.efectivoUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (farmaciaData.zelleUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (farmaciaData.faltantes || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (farmaciaData.sobrantes || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            detallesCuadre.sumaRecargaBs.toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            detallesCuadre.sumaPagomovilBs.toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            detallesCuadre.sumaEfectivoBs.toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            detallesCuadre.sumaPuntoDebito.toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            detallesCuadre.sumaPuntoCredito.toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            detallesCuadre.sumaDevolucionesBs.toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (pagosDelPeriodo.pagosUsd || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 }),
+            (pagosDelPeriodo.pagosBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })
+          ];
+        }),
+        summary: {
+          totalRows: sortedFarmacias.length,
+          totals: {
+            'Total Ventas': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalVentas || 0), 0),
+            'Total Bs': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalBs || 0), 0),
+            'Total USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.totalUsd || 0), 0),
+            'Total Efectivo USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.efectivoUsd || 0), 0),
+            'Total Zelle USD': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.zelleUsd || 0), 0),
+            'Total Faltantes': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.faltantes || 0), 0),
+            'Total Sobrantes': sortedFarmacias.reduce((acc, f) => acc + (ventas[f.id]?.sobrantes || 0), 0)
+          }
+        }
+      };
+
+      return await generateReport(params, reportData);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      throw error;
+    }
+  };
 
   if (loading) {
     return (
@@ -88,6 +232,13 @@ const ResumenFarmaciasVentas: React.FC = () => {
               Consulta un desglose detallado de las ventas de cada farmacia.
             </p>
           </div>
+          <ReportButton
+            module="Ventas"
+            reports={generateReportConfigs(farmacias).ventasReports}
+            onGenerateReport={handleGenerateReport}
+            farmacias={farmacias}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          />
           <div className="flex flex-col gap-3 w-full md:w-auto md:min-w-[400px]">
             <label
               htmlFor="fecha-inicio"
