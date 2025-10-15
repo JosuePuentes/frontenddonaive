@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router'; // Ensure react-router-dom is used
-import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // Permisos y enlaces agrupados para una mejor organización visual
@@ -138,23 +138,38 @@ const Navbar = () => {
         window.location.href = '/login';
     };
 
+    const handleWhatsAppContact = () => {
+        const phoneNumber = '584146772709';
+        const message = 'Hola! Me interesa conocer más sobre los servicios de Donaive.';
+        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
     return (
-        <nav className="bg-white text-black shadow-md px-4 py-2 sticky top-0 z-50">
+        <nav className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white shadow-lg px-4 py-2 sticky top-0 z-50">
             <div className="flex justify-between items-center max-w-7xl mx-auto">
                 {/* Logo / Brand Name */}
-                <Link to="/" className="text-xl font-bold tracking-wide flex items-center gap-2 text-slate-900 hover:text-blue-600 transition-colors duration-200">
-                    <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">DONAIVE</span>
+                <Link to="/" className="text-xl font-bold tracking-wide flex items-center gap-2 text-white hover:text-blue-300 transition-colors duration-200">
+                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">DONAIVE</span>
                 </Link>
 
                 {/* Desktop Menu (Dropdown) */}
                 <div className="hidden sm:flex items-center gap-4 relative" ref={dropdownRef}>
                     <button
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg text-blue-100 hover:text-white hover:bg-blue-800/50 transition-all duration-200"
                         onClick={() => setIsDropdownOpen(prev => !prev)}
                         aria-expanded={isDropdownOpen}
                     >
                         MÓDULOS
                         <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : 'rotate-0'}`} />
+                    </button>
+
+                    <button
+                        onClick={handleWhatsAppContact}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
+                    >
+                        <Phone className="w-4 h-4" />
+                        CONTACTO
                     </button>
 
                     {isDropdownOpen && (
@@ -208,11 +223,11 @@ const Navbar = () => {
 
                 {/* Mobile Menu Button */}
                 <button
-                    className="sm:hidden p-1.5 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200"
+                    className="sm:hidden p-1.5 rounded-lg hover:bg-blue-800/50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200"
                     onClick={() => setIsMobileMenuOpen(prev => !prev)}
                     aria-label="Toggle mobile menu"
                 >
-                    {isMobileMenuOpen ? <X className="w-5 h-5 text-slate-700" /> : <Menu className="w-5 h-5 text-slate-700" />}
+                    {isMobileMenuOpen ? <X className="w-5 h-5 text-white" /> : <Menu className="w-5 h-5 text-white" />}
                 </button>
             </div>
 
@@ -225,12 +240,12 @@ const Navbar = () => {
                     open: { opacity: 1, height: "auto", transition: { duration: 0.3 } },
                     closed: { opacity: 0, height: 0, transition: { duration: 0.3 } }
                 }}
-                className="sm:hidden mt-4 bg-gray-100 rounded-lg shadow-xl overflow-y-auto overflow-x-hidden max-h-[70vh]"
+                className="sm:hidden mt-4 bg-blue-900/20 backdrop-blur-sm rounded-lg shadow-xl overflow-y-auto overflow-x-hidden max-h-[70vh] border border-blue-800/30"
             >
                 <div className="p-4 custom-scrollbar">
                     {accessibleLinks.map(category => (
                         <div key={category.category} className="mb-4 last:mb-0">
-                            <h3 className="text-sm font-bold uppercase text-gray-600 mb-2 flex items-center gap-2">
+                            <h3 className="text-sm font-bold uppercase text-blue-200 mb-2 flex items-center gap-2">
                                 {category.icon && <category.icon className="w-4 h-4" />}
                                 {category.category}
                             </h3>
@@ -242,8 +257,8 @@ const Navbar = () => {
                                             onClick={() => setIsMobileMenuOpen(false)}
                                             className={`block px-3 py-2 text-sm transition-all duration-150 rounded
                                                 ${location.pathname === link.to
-                                                    ? 'text-black font-semibold bg-gray-200' // Active link black on medium gray
-                                                    : 'text-gray-800 hover:text-black hover:bg-gray-50' // Default text gray, hover black on very light gray
+                                                    ? 'text-white font-semibold bg-blue-800/50' // Active link white on blue
+                                                    : 'text-blue-100 hover:text-white hover:bg-blue-800/30' // Default text blue-100, hover white on blue
                                                 }`}
                                         >
                                             {link.label}
@@ -253,11 +268,22 @@ const Navbar = () => {
                             </ul>
                         </div>
                     ))}
+                    {/* Botón de Contacto WhatsApp en móvil */}
+                    <div className="border-t border-blue-800/30 pt-4 mt-4">
+                        <button
+                            onClick={handleWhatsAppContact}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all duration-200 shadow-md hover:shadow-lg mb-4"
+                        >
+                            <Phone className="w-4 h-4" />
+                            CONTACTO WHATSAPP
+                        </button>
+                    </div>
+
                     {usuario && (
-                        <div className="border-t border-gray-200 pt-4 mt-4">
+                        <div className="border-t border-blue-800/30 pt-4 mt-4">
                             <button
                                 onClick={handleLogout}
-                                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded flex items-center gap-2"
+                                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 hover:text-red-300 rounded flex items-center gap-2"
                             >
                                 <LogOut className="w-4 h-4" /> Cerrar sesión
                             </button>
