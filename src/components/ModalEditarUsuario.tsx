@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Usuario, PERMISOS_DISPONIBLES, FARMACIAS_DISPONIBLES } from "../types/UsuarioTypes";
+import type { Usuario } from "../types/UsuarioTypes";
+import { PERMISOS_DISPONIBLES, FARMACIAS_DISPONIBLES } from "../types/UsuarioTypes";
 
 interface ModalEditarUsuarioProps {
   isOpen: boolean;

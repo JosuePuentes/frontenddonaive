@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Usuario } from "../types/UsuarioTypes";
+import type { Usuario } from "../types/UsuarioTypes";
 
 interface UseModificarUsuarioReturn {
   usuarios: Usuario[];

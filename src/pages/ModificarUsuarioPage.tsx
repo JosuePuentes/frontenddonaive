@@ -6,8 +6,8 @@ import { Input } from "../components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import ModalEditarUsuario from "../components/ModalEditarUsuario";
 import { useModificarUsuario } from "../hooks/useModificarUsuario";
-import { Search, Edit, Trash2, Eye, EyeOff, RefreshCw } from "lucide-react";
-import { Usuario } from "../types/UsuarioTypes";
+import { Search, Edit, Trash2, EyeOff, RefreshCw } from "lucide-react";
+import type { Usuario } from "../types/UsuarioTypes";
 
 const ModificarUsuarioPage: React.FC = () => {
   const {
