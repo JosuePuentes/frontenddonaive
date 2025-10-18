@@ -40,3 +40,5 @@ export type Permiso = typeof PERMISOS_DISPONIBLES[number];
 export type Farmacia = typeof FARMACIAS_DISPONIBLES[number];
 
 
+
+

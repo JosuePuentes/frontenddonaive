@@ -156,7 +156,7 @@ const Navbar = () => {
                             alt="Donaive Logo" 
                             className="h-12 w-12 object-contain"
                         />
-                        <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">DONAIVE</span>
+                        <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">donaive</span>
                     </div>
                     <span className="text-xs text-blue-200 font-medium">Futuro. Finanzas. Digital</span>
                 </Link>
