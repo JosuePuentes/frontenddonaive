@@ -68,7 +68,7 @@ const ModalAsignarPermisos: React.FC<ModalAsignarPermisosProps> = ({
               <Checkbox
                 id={permiso.id}
                 checked={permisosSeleccionados.includes(permiso.id)}
-                onCheckedChange={(checked) => handlePermisoChange(permiso.id, checked as boolean)}
+                onCheckedChange={(checked: boolean) => handlePermisoChange(permiso.id, checked)}
               />
               <div className="flex-1">
                 <label htmlFor={permiso.id} className="text-sm font-medium text-gray-900 cursor-pointer">
