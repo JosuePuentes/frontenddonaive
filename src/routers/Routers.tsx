@@ -36,10 +36,12 @@ import ModificarEstadoMeta from "@/pages/metas/ModificarEstadoMeta";
 
 import ModificacionCuadrePage from "@/pages/cuadres/modificarCuadre/ModificacionCuadrePage";
 import ModificarUsuarioPage from "@/pages/ModificarUsuarioPage";
+import RegisterPage from "@/pages/RegisterPage";
 
 const AppRouter = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
+    <Route path="/register" element={<RegisterPage />} />
     <Route path="/" element={<HomePage />} />
     <Route path="/servicios" element={<ServicesPage />} />
     <Route path="/admin" element={
