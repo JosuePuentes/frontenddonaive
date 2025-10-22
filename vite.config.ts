@@ -12,6 +12,7 @@ export default defineConfig({
     },
   },
   build: {
+    target: 'esnext',
     rollupOptions: {
       output: {
         format: 'es',
@@ -26,5 +27,8 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Opener-Policy': 'same-origin',
     }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom']
   }
 })
