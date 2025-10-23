@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+    import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';

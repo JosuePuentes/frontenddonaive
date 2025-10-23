@@ -19,3 +19,4 @@ RewriteRule ^(.*)$ /index.html [L]
 <FilesMatch "\.(ts|tsx)$">
     Header set Content-Type "application/javascript"
 </FilesMatch>
+
