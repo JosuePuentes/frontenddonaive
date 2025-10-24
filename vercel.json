@@ -1,5 +1,5 @@
 {
-  "name": "rapifarma-frontend",
+  "name": "frontenddonaive",
   "alias": ["www.donaive.com.ve", "donaive.com.ve"],
   "version": 2,
   "buildCommand": "npm run build",
