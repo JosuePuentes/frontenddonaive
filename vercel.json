@@ -1,4 +1,6 @@
 {
+  "name": "donaive-website",
+  "alias": ["www.donaive.com.ve", "donaive.com.ve"],
   "rewrites": [
     {
       "source": "/((?!api/).*)",
