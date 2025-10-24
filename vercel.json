@@ -1,5 +1,6 @@
 {
   "name": "rapifarma-frontend",
+  "alias": ["www.donaive.com.ve", "donaive.com.ve"],
   "version": 2,
   "builds": [
     {
