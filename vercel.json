@@ -1,6 +1,6 @@
 {
   "name": "frontenddonaive",
-  "alias": ["www.donaive.com.ve", "donaive.com.ve"],
+  "alias": ["www.donaive.com.ve"],
   "rewrites": [
     {
       "source": "/(.*)",
