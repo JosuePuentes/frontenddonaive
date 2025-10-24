@@ -20,3 +20,4 @@ RewriteRule ^(.*)$ /index.html [L]
     Header set Content-Type "application/javascript"
 </FilesMatch>
 
+
