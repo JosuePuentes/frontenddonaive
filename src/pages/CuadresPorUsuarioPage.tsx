@@ -33,7 +33,7 @@ const CuadresPorUsuarioPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold text-blue-800 mb-6 text-center">Cuadres por Farmacia</h1>
+      <h1 className="text-2xl font-bold text-blue-800 mb-6 text-center">Cuadres por Negocio</h1>
       {farmacias.length === 0 ? (
         <div className="text-center text-gray-500">No tienes farmacias asociadas.</div>
       ) : (
