@@ -280,7 +280,7 @@ const TotalGeneralFarmaciasPage: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex-1">
               <h1 className="text-4xl md:text-5xl font-extrabold text-black leading-tight">
-                📊 Resumen de Ventas de Farmacias
+                📊 Resumen de Ventas Total
               </h1>
               <p className="mt-2 text-xl text-gray-700">
                 Métricas consolidadas para el mes de <span className="font-semibold capitalize">{currentMonthName}</span>

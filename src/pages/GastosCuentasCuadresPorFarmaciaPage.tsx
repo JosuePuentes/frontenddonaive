@@ -81,6 +81,7 @@ const GastosCuentasCuadresPorFarmaciaPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-200 p-6">
       <div className="max-w-5xl mx-auto">
+        {/* Título principal del módulo */}
         <h1 className="text-4xl font-extrabold text-blue-900 mb-10 text-center drop-shadow">
           Resumen de Gestión de Finanzas
         </h1>
