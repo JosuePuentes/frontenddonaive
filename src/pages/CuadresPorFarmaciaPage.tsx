@@ -43,7 +43,7 @@ const CuadresPorFarmaciaPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-200 p-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-blue-900 mb-6 text-center">Cuadres por Farmacia</h1>
+        <h1 className="text-3xl font-bold text-blue-900 mb-6 text-center">Cuadres por Día</h1>
         {error && <div className="text-red-600 mb-4">{error}</div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {farmacias.map(farm => (
