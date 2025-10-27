@@ -226,7 +226,7 @@ const ResumenFarmaciasVentas: React.FC = () => {
           <div>
             <h1 className="text-3xl font-extrabold text-blue-800 mb-2">
               <i className="fas fa-chart-bar text-blue-500 mr-3"></i>
-              Resumen de Ventas por Farmacia
+              Resumen de Ventas por Negocio
             </h1>
             <p className="text-gray-600 text-md">
               Consulta un desglose detallado de las ventas de cada farmacia.
