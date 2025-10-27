@@ -105,7 +105,7 @@ const ValesPorFarmaciaPage: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-blue-900 tracking-tight drop-shadow-lg text-center sm:text-left">
-            Cuadres con Vales por Farmacia
+            Cuadres con Vales por Negocio
           </h1>
           <div className="flex flex-wrap gap-3 justify-center items-center">
             {farmacias.map(f => (
