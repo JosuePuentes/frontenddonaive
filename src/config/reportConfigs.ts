@@ -260,8 +260,8 @@ export const generateReportConfigs = (farmacias: { id: string; nombre: string }[
     valesReports: [
       {
         id: 'vales-farmacia',
-        title: 'Vales por Farmacia',
-        description: 'Reporte de vales por farmacia',
+        title: 'Vales por Negocio',
+        description: 'Reporte de vales por negocio',
         module: 'vales',
         formats: [
           { type: 'pdf' as const, label: 'PDF', icon: '📄' },

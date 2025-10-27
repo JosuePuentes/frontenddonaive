@@ -65,7 +65,7 @@ const allLinks = [
         items: [
             { to: '/register', label: 'Agregar Usuario', permiso: 'acceso_admin' },
             { to: '/modificar-usuarios', label: 'Modificación de Usuario', permiso: 'acceso_admin' },
-            { to: '/valesporfarmacia', label: 'Vales por Farmacia', permiso: 'ver_cuadres_dia' },
+            { to: '/valesporfarmacia', label: 'Vales por Negocio', permiso: 'ver_cuadres_dia' },
             { to: '/agregarinventariocosto', label: 'Agregar Costo Inv', permiso: 'acceso_admin' },
             { to: '/verinventarios', label: 'Ver Inventarios', permiso: 'acceso_admin' },
         ]
