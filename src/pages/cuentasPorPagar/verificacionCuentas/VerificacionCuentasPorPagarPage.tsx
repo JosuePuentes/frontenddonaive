@@ -118,7 +118,7 @@ const VerificacionCuentasPorPagarPage: React.FC = () => {
           </div>
         )}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-blue-800 mb-6">Farmacias</h2>
+          <h2 className="text-2xl font-bold text-blue-800 mb-6">Negocios</h2>
           {farmacias.length === 0 ? (
             <p className="text-center text-gray-500 text-lg mt-8">No hay farmacias disponibles para mostrar.</p>
           ) : (
