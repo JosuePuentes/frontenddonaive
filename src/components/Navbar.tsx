@@ -1,6 +1,6 @@
     import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Phone } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Phone, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // Permisos y enlaces agrupados para una mejor organización visual
@@ -85,6 +85,7 @@ const Navbar = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [permisosUsuario, setPermisosUsuario] = useState<string[]>([]);
     const [usuario, setUsuario] = useState<any>(null);
+    const [searchTerm, setSearchTerm] = useState<string>('');
     const location = useLocation();
     const dropdownRef = useRef<HTMLDivElement>(null);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -111,12 +112,14 @@ const Navbar = () => {
             // Close desktop dropdown
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsDropdownOpen(false);
+                setSearchTerm(''); // Limpiar búsqueda al cerrar
             }
             // Close mobile menu if open and click is outside the menu and not on the toggle button
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node) && isMobileMenuOpen) {
                 const mobileButton = document.querySelector('[aria-label="Toggle mobile menu"]');
                 if (mobileButton && !mobileButton.contains(event.target as Node)) {
                     setIsMobileMenuOpen(false);
+                    setSearchTerm(''); // Limpiar búsqueda al cerrar
                 }
             }
         };
@@ -125,6 +128,13 @@ const Navbar = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isMobileMenuOpen]);
 
+    // Limpiar búsqueda cuando se cierra el menú
+    useEffect(() => {
+        if (!isDropdownOpen && !isMobileMenuOpen) {
+            setSearchTerm('');
+        }
+    }, [isDropdownOpen, isMobileMenuOpen]);
+
     // Filter links based on user permissions
     const accessibleLinks = permisosUsuario.length > 0
         ? allLinks.map(category => ({
@@ -132,6 +142,18 @@ const Navbar = () => {
             items: category.items.filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
         })).filter(category => category.items.length > 0)
         : [];
+
+    // Filter links based on search term
+    const filteredLinks = searchTerm.trim() === ''
+        ? accessibleLinks
+        : accessibleLinks.map(category => ({
+            ...category,
+            items: category.items.filter(link => {
+                const matchesCategory = category.category.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesLabel = link.label.toLowerCase().includes(searchTerm.toLowerCase());
+                return matchesCategory || matchesLabel;
+            })
+        })).filter(category => category.items.length > 0);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -193,8 +215,27 @@ const Navbar = () => {
                             transition={{ duration: 0.15 }}
                             className="absolute right-0 top-full mt-3 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden"
                         >
+                            {/* Campo de búsqueda */}
+                            <div className="p-3 border-b border-gray-200 bg-gray-50">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar módulos..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
                             <div className="py-2 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                                {accessibleLinks.map(category => (
+                                {filteredLinks.length === 0 ? (
+                                    <div className="px-4 py-6 text-center text-gray-500 text-sm">
+                                        No se encontraron módulos que coincidan con "{searchTerm}"
+                                    </div>
+                                ) : (
+                                    filteredLinks.map(category => (
                                     <div key={category.category} className="mb-2">
                                         <h3 className="px-4 pt-3 pb-2 text-xs font-bold uppercase text-gray-700 flex items-center gap-2 border-b border-gray-100">
                                             {category.icon && <category.icon className="w-4 h-4 text-gray-700" />}
@@ -218,7 +259,8 @@ const Navbar = () => {
                                             ))}
                                         </ul>
                                     </div>
-                                ))}
+                                    ))}
+                                )}
                                 <div className="border-t border-gray-200 pt-2 mt-2">
                                     <button
                                         onClick={handleLogout}
@@ -254,10 +296,30 @@ const Navbar = () => {
                 className="sm:hidden mt-4 bg-blue-900/20 backdrop-blur-sm rounded-lg shadow-xl overflow-y-auto overflow-x-hidden max-h-[70vh] border border-blue-800/30"
             >
                 <div className="p-4 custom-scrollbar">
+                    {/* Campo de búsqueda móvil */}
+                    {usuario && accessibleLinks.length > 0 && (
+                        <div className="mb-4 pb-4 border-b border-blue-800/30">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-300" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar módulos..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-3 py-2 text-sm bg-blue-800/30 border border-blue-700/50 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+                    )}
                     {/* Mostrar módulos solo si está logueado */}
                     {usuario && accessibleLinks.length > 0 && (
                         <>
-                            {accessibleLinks.map(category => (
+                            {filteredLinks.length === 0 ? (
+                                <div className="px-4 py-6 text-center text-blue-200 text-sm">
+                                    No se encontraron módulos que coincidan con "{searchTerm}"
+                                </div>
+                            ) : (
+                                filteredLinks.map(category => (
                                 <div key={category.category} className="mb-4 last:mb-0">
                                     <h3 className="text-sm font-bold uppercase text-blue-200 mb-2 flex items-center gap-2">
                                         {category.icon && <category.icon className="w-4 h-4" />}
@@ -281,7 +343,8 @@ const Navbar = () => {
                                         ))}
                                     </ul>
                                 </div>
-                            ))}
+                            ))
+                            )}
                             <div className="border-t border-blue-800/30 pt-4 mt-4">
                                 <button
                                     onClick={handleLogout}
