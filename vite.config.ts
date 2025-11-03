@@ -21,8 +21,13 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]'
       },
       onwarn(warning, warn) {
-        // Suprimir warnings de API deprecada de Performance
-        if (warning.code === 'DEPRECATED_FEATURE' || warning.message?.includes('Deprecated API')) {
+        // Suprimir warnings de API deprecada de Performance y otros warnings comunes
+        if (
+          warning.code === 'DEPRECATED_FEATURE' || 
+          warning.message?.includes('Deprecated API') ||
+          warning.message?.includes('entry type') ||
+          warning.code === 'PLUGIN_WARNING'
+        ) {
           return;
         }
         warn(warning);
