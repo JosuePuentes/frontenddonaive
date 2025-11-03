@@ -236,30 +236,30 @@ const Navbar = () => {
                                     </div>
                                 ) : (
                                     filteredLinks.map(category => (
-                                    <div key={category.category} className="mb-2">
-                                        <h3 className="px-4 pt-3 pb-2 text-xs font-bold uppercase text-gray-700 flex items-center gap-2 border-b border-gray-100">
-                                            {category.icon && <category.icon className="w-4 h-4 text-gray-700" />}
-                                            {category.category}
-                                        </h3>
-                                        <ul className="pb-1">
-                                            {category.items.map(link => (
-                                                <li key={link.to}>
-                                                    <Link
-                                                        to={link.to}
-                                                        onClick={() => setIsDropdownOpen(false)}
-                                                        className={`block px-4 py-2 text-sm whitespace-nowrap transition-all duration-150 rounded mx-2 my-1
-                                                            ${location.pathname === link.to
-                                                                ? 'text-black font-semibold bg-gray-100 hover:bg-gray-200'
-                                                                : 'text-gray-800 hover:text-black hover:bg-gray-50'
-                                                            }`}
-                                                    >
-                                                        {link.label}
-                                                    </Link>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    ))}
+                                        <div key={category.category} className="mb-2">
+                                            <h3 className="px-4 pt-3 pb-2 text-xs font-bold uppercase text-gray-700 flex items-center gap-2 border-b border-gray-100">
+                                                {category.icon && <category.icon className="w-4 h-4 text-gray-700" />}
+                                                {category.category}
+                                            </h3>
+                                            <ul className="pb-1">
+                                                {category.items.map(link => (
+                                                    <li key={link.to}>
+                                                        <Link
+                                                            to={link.to}
+                                                            onClick={() => setIsDropdownOpen(false)}
+                                                            className={`block px-4 py-2 text-sm whitespace-nowrap transition-all duration-150 rounded mx-2 my-1
+                                                                ${location.pathname === link.to
+                                                                    ? 'text-black font-semibold bg-gray-100 hover:bg-gray-200'
+                                                                    : 'text-gray-800 hover:text-black hover:bg-gray-50'
+                                                                }`}
+                                                        >
+                                                            {link.label}
+                                                        </Link>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ))
                                 )}
                                 <div className="border-t border-gray-200 pt-2 mt-2">
                                     <button
