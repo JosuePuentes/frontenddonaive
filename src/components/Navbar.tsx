@@ -186,16 +186,36 @@ const Navbar = () => {
 
                 {/* Desktop Menu */}
                 <div className="hidden sm:flex items-center gap-4 relative" ref={dropdownRef}>
-                    {/* Mostrar MÓDULOS solo si está logueado */}
+                    {/* Mostrar MÓDULOS y campo de búsqueda solo si está logueado */}
                     {usuario && accessibleLinks.length > 0 && (
-                        <button
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg text-blue-100 hover:text-white hover:bg-blue-800/50 transition-all duration-200"
-                            onClick={() => setIsDropdownOpen(prev => !prev)}
-                            aria-expanded={isDropdownOpen}
-                        >
-                            MÓDULOS
-                            <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : 'rotate-0'}`} />
-                        </button>
+                        <>
+                            <button
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg text-blue-100 hover:text-white hover:bg-blue-800/50 transition-all duration-200"
+                                onClick={() => setIsDropdownOpen(prev => !prev)}
+                                aria-expanded={isDropdownOpen}
+                            >
+                                MÓDULOS
+                                <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : 'rotate-0'}`} />
+                            </button>
+                            {/* Campo de búsqueda al lado de MÓDULOS */}
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-300" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar módulos..."
+                                    value={searchTerm}
+                                    onChange={(e) => {
+                                        setSearchTerm(e.target.value);
+                                        // Abrir el dropdown automáticamente al escribir
+                                        if (e.target.value && !isDropdownOpen) {
+                                            setIsDropdownOpen(true);
+                                        }
+                                    }}
+                                    onFocus={() => setIsDropdownOpen(true)}
+                                    className="pl-10 pr-3 py-1.5 text-sm bg-blue-900/50 border border-blue-700/50 rounded-lg text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent w-48"
+                                />
+                            </div>
+                        </>
                     )}
 
                     <button
@@ -215,20 +235,6 @@ const Navbar = () => {
                             transition={{ duration: 0.15 }}
                             className="absolute right-0 top-full mt-3 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden"
                         >
-                            {/* Campo de búsqueda */}
-                            <div className="p-3 border-b border-gray-200 bg-gray-50">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar módulos..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        autoFocus
-                                    />
-                                </div>
-                            </div>
                             <div className="py-2 max-h-[80vh] overflow-y-auto custom-scrollbar">
                                 {filteredLinks.length === 0 ? (
                                     <div className="px-4 py-6 text-center text-gray-500 text-sm">
