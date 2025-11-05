@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import UploadInventarioExcel from "../components/UploadInventarioExcel";
+import ModificarItemInventarioModal from "../components/ModificarItemInventarioModal";
+import { Button } from "@/components/ui/button";
+import { Edit } from "lucide-react";
 
 interface Inventario {
   _id: string;
@@ -29,6 +32,8 @@ const VisualizarInventariosPage: React.FC = () => {
   const [fechaFin, setFechaFin] = useState<string>("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingEstado, setPendingEstado] = useState<{ id: string; nuevoEstado: string } | null>(null);
+  const [showModificarModal, setShowModificarModal] = useState(false);
+  const [inventarioSeleccionado, setInventarioSeleccionado] = useState<{ id: string; sucursalId: string } | null>(null);
 
   const fetchInventarios = async () => {
     setLoading(true);
@@ -104,6 +109,22 @@ const VisualizarInventariosPage: React.FC = () => {
   const handleCancelEstadoChange = () => {
     setShowConfirmModal(false);
     setPendingEstado(null);
+  };
+
+  const handleModificarItems = (inventarioId: string, sucursalId: string) => {
+    // Obtener el ID de sucursal desde el nombre de farmacia
+    const farmacia = farmacias.find(f => f.nombre === sucursalId || f.id === sucursalId);
+    setInventarioSeleccionado({
+      id: inventarioId,
+      sucursalId: farmacia?.id || sucursalId,
+    });
+    setShowModificarModal(true);
+  };
+
+  const handleCerrarModal = () => {
+    setShowModificarModal(false);
+    setInventarioSeleccionado(null);
+    fetchInventarios(); // Refrescar lista después de modificar
   };
 
   const inventariosFiltrados = inventarios
@@ -209,7 +230,7 @@ const VisualizarInventariosPage: React.FC = () => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-100">
                   <tr>
-                    {['Fecha', 'Farmacia', 'Costo', 'Usuario', 'Estado'].map(header => (
+                    {['Fecha de Cargo', 'Sucursal', 'Costo Inventario', 'Usuario', 'Estado', 'Acciones'].map(header => (
                       <th key={header} scope="col" className="px-5 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                         {header}
                       </th>
@@ -233,6 +254,17 @@ const VisualizarInventariosPage: React.FC = () => {
                             <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
                           ))}
                         </select>
+                      </td>
+                      <td className="px-5 py-4 whitespace-nowrap text-sm">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleModificarItems(i._id, i.farmacia)}
+                          className="flex items-center gap-1"
+                        >
+                          <Edit className="h-3 w-3" />
+                          Modificar Items
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -271,6 +303,17 @@ const VisualizarInventariosPage: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Modal de modificar items */}
+        {showModificarModal && inventarioSeleccionado && (
+          <ModificarItemInventarioModal
+            open={showModificarModal}
+            onClose={handleCerrarModal}
+            inventarioId={inventarioSeleccionado.id}
+            sucursalId={inventarioSeleccionado.sucursalId}
+            onSuccess={handleCerrarModal}
+          />
         )}
       </div>
     </div>

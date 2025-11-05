@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Upload, FileSpreadsheet, X, CheckCircle2 } from "lucide-react";
-import * as XLSX from "xlsx";
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -58,8 +57,11 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
 
     // Leer y parsear el archivo
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
+        // Importación dinámica de xlsx para evitar problemas de build
+        const XLSXModule = await import("xlsx");
+        const XLSX = XLSXModule.default || XLSXModule;
         const data = event.target?.result;
         const workbook = XLSX.read(data, { type: "binary" });
         const firstSheetName = workbook.SheetNames[0];

@@ -99,14 +99,29 @@ const Navbar = () => {
 
     // Effect for handling user data and permissions from localStorage
     useEffect(() => {
-        const storedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
-        setUsuario(storedUsuario);
-        setPermisosUsuario(storedUsuario?.permisos || []);
+        try {
+            const storedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+            setUsuario(storedUsuario);
+            // Asegurar que permisosUsuario siempre sea un array
+            const permisos = storedUsuario?.permisos;
+            setPermisosUsuario(Array.isArray(permisos) ? permisos : []);
+        } catch (error) {
+            console.error('Error al parsear usuario:', error);
+            setUsuario(null);
+            setPermisosUsuario([]);
+        }
 
         const handleStorageChange = () => {
-            const updatedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
-            setUsuario(updatedUsuario);
-            setPermisosUsuario(updatedUsuario?.permisos || []);
+            try {
+                const updatedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+                setUsuario(updatedUsuario);
+                const permisos = updatedUsuario?.permisos;
+                setPermisosUsuario(Array.isArray(permisos) ? permisos : []);
+            } catch (error) {
+                console.error('Error al parsear usuario:', error);
+                setUsuario(null);
+                setPermisosUsuario([]);
+            }
         };
 
         window.addEventListener('storage', handleStorageChange);
@@ -143,24 +158,38 @@ const Navbar = () => {
     }, [isDropdownOpen, isMobileMenuOpen]);
 
     // Filter links based on user permissions
-    const accessibleLinks = (Array.isArray(permisosUsuario) && permisosUsuario.length > 0)
-        ? allLinks.map(category => ({
-            ...category,
-            items: (Array.isArray(category.items) ? category.items : []).filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
-        })).filter(category => Array.isArray(category.items) && category.items.length > 0)
+    // Asegurar que permisosUsuario sea un array
+    const permisosArray = Array.isArray(permisosUsuario) ? permisosUsuario : [];
+    
+    // Asegurar que allLinks sea un array
+    const linksArray = Array.isArray(allLinks) ? allLinks : [];
+    
+    const accessibleLinks = permisosArray.length > 0
+        ? linksArray.map(category => {
+            // Asegurar que category.items sea un array
+            const categoryItems = Array.isArray(category?.items) ? category.items : [];
+            return {
+                ...category,
+                items: categoryItems.filter(link => !link?.permiso || permisosArray.includes(link.permiso))
+            };
+        }).filter(category => Array.isArray(category?.items) && category.items.length > 0)
         : [];
 
     // Filter links based on search term
     const filteredLinks = searchTerm.trim() === ''
         ? accessibleLinks
-        : accessibleLinks.map(category => ({
-            ...category,
-            items: (Array.isArray(category.items) ? category.items : []).filter(link => {
-                const matchesCategory = category.category.toLowerCase().includes(searchTerm.toLowerCase());
-                const matchesLabel = link.label.toLowerCase().includes(searchTerm.toLowerCase());
-                return matchesCategory || matchesLabel;
-            })
-        })).filter(category => Array.isArray(category.items) && category.items.length > 0);
+        : accessibleLinks.map(category => {
+            // Asegurar que category.items sea un array
+            const categoryItems = Array.isArray(category?.items) ? category.items : [];
+            return {
+                ...category,
+                items: categoryItems.filter(link => {
+                    const matchesCategory = String(category?.category || '').toLowerCase().includes(searchTerm.toLowerCase());
+                    const matchesLabel = String(link?.label || '').toLowerCase().includes(searchTerm.toLowerCase());
+                    return matchesCategory || matchesLabel;
+                })
+            };
+        }).filter(category => Array.isArray(category?.items) && category.items.length > 0);
 
     const handleLogout = () => {
         localStorage.removeItem('token');

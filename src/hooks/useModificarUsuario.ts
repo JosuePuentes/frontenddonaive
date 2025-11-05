@@ -56,8 +56,23 @@ export const useModificarUsuario = (): UseModificarUsuarioReturn => {
       }
       
       const data = await response.json();
-      // Asegurar que siempre sea un array
-      setUsuarios(Array.isArray(data) ? data : []);
+      
+      // Manejar diferentes formatos de respuesta del backend
+      let usuariosArray: any[] = [];
+      
+      if (Array.isArray(data)) {
+        usuariosArray = data;
+      } else if (data && Array.isArray(data.usuarios)) {
+        usuariosArray = data.usuarios;
+      } else if (data && Array.isArray(data.data)) {
+        usuariosArray = data.data;
+      } else if (data && typeof data === 'object') {
+        // Si es un objeto, intentar convertir las claves en array
+        usuariosArray = Object.values(data);
+      }
+      
+      console.log(`Usuarios cargados: ${usuariosArray.length}`);
+      setUsuarios(usuariosArray);
     } catch (err) {
       let errorMessage = "Error al obtener usuarios";
       

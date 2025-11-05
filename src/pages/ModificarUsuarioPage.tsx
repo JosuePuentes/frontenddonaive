@@ -104,12 +104,21 @@ const ModificarUsuarioPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto py-6 px-4">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-800 mb-2">
-          Gestión de Usuarios
-        </h1>
-        <p className="text-gray-600">
-          Administra usuarios, permisos y accesos a farmacias
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-blue-800 mb-2">
+              Gestión de Usuarios
+            </h1>
+            <p className="text-gray-600">
+              Administra usuarios, permisos y accesos a farmacias
+            </p>
+          </div>
+          {!loading && usuariosArray.length > 0 && (
+            <div className="text-sm text-gray-500">
+              Total: <span className="font-semibold text-blue-600">{usuariosArray.length}</span> {usuariosArray.length === 1 ? 'usuario' : 'usuarios'}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Barra de búsqueda y controles */}

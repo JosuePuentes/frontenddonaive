@@ -14,6 +14,9 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
+    commonjsOptions: {
+      include: [/xlsx/, /node_modules/],
+    },
     rollupOptions: {
       output: {
         format: 'es',
@@ -27,7 +30,8 @@ export default defineConfig({
           warning.code === 'DEPRECATED_FEATURE' || 
           warning.message?.includes('Deprecated API') ||
           warning.message?.includes('entry type') ||
-          warning.code === 'PLUGIN_WARNING'
+          warning.code === 'PLUGIN_WARNING' ||
+          warning.code === 'UNRESOLVED_IMPORT'
         ) {
           return;
         }
