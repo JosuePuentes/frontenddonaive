@@ -50,7 +50,8 @@ export const useModificarUsuario = (): UseModificarUsuarioReturn => {
       }
       
       const data = await response.json();
-      setUsuarios(data);
+      // Asegurar que siempre sea un array
+      setUsuarios(Array.isArray(data) ? data : []);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al obtener usuarios";
       setError(errorMessage);

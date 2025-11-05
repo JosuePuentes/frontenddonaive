@@ -66,15 +66,32 @@ const ModificarUsuarioPage: React.FC = () => {
     }
   };
 
-  const filtrarUsuarios = usuarios.filter(usuario =>
-    usuario.correo.toLowerCase().includes(busqueda.toLowerCase()) ||
-    Object.values(usuario.farmacias).some(farmacia =>
-      farmacia.toLowerCase().includes(busqueda.toLowerCase())
-    ) ||
-    usuario.permisos.some(permiso =>
-      permiso.toLowerCase().includes(busqueda.toLowerCase())
-    )
-  );
+  // Asegurar que usuarios sea un array antes de filtrar
+  const usuariosArray = Array.isArray(usuarios) ? usuarios : [];
+  
+  const filtrarUsuarios = usuariosArray.filter(usuario => {
+    if (!usuario) return false;
+    
+    const busquedaLower = busqueda.toLowerCase();
+    const correoMatch = usuario.correo?.toLowerCase().includes(busquedaLower) || false;
+    
+    // Validar farmacias
+    const farmacias = usuario.farmacias || {};
+    const farmaciasArray = typeof farmacias === 'object' ? Object.values(farmacias) : [];
+    const farmaciaMatch = Array.isArray(farmaciasArray) 
+      ? farmaciasArray.some(farmacia => 
+          String(farmacia || '').toLowerCase().includes(busquedaLower)
+        )
+      : false;
+    
+    // Validar permisos
+    const permisosArray = Array.isArray(usuario.permisos) ? usuario.permisos : [];
+    const permisoMatch = permisosArray.some(permiso =>
+      String(permiso || '').toLowerCase().includes(busquedaLower)
+    );
+    
+    return correoMatch || farmaciaMatch || permisoMatch;
+  });
 
   const obtenerColorPermiso = (permiso: string) => {
     if (permiso.includes("admin")) return "bg-red-100 text-red-800";
@@ -198,11 +215,14 @@ const ModificarUsuarioPage: React.FC = () => {
                     <div>
                       <h4 className="font-medium text-gray-700 mb-2">Farmacias Asignadas:</h4>
                       <div className="flex flex-wrap gap-2">
-                        {Object.entries(usuario.farmacias).map(([id, nombre]) => (
-                          <Badge key={id} variant="secondary">
-                            {nombre}
-                          </Badge>
-                        ))}
+                        {usuario.farmacias && typeof usuario.farmacias === 'object' 
+                          ? Object.entries(usuario.farmacias).map(([id, nombre]) => (
+                              <Badge key={id} variant="secondary">
+                                {String(nombre || '')}
+                              </Badge>
+                            ))
+                          : <span className="text-gray-500 text-sm">No hay farmacias asignadas</span>
+                        }
                       </div>
                     </div>
 
@@ -210,14 +230,17 @@ const ModificarUsuarioPage: React.FC = () => {
                     <div>
                       <h4 className="font-medium text-gray-700 mb-2">Permisos:</h4>
                       <div className="flex flex-wrap gap-2">
-                        {usuario.permisos.map((permiso) => (
-                          <Badge
-                            key={permiso}
-                            className={obtenerColorPermiso(permiso)}
-                          >
-                            {permiso.replace(/_/g, " ")}
-                          </Badge>
-                        ))}
+                        {Array.isArray(usuario.permisos) && usuario.permisos.length > 0
+                          ? usuario.permisos.map((permiso) => (
+                              <Badge
+                                key={permiso}
+                                className={obtenerColorPermiso(String(permiso))}
+                              >
+                                {String(permiso).replace(/_/g, " ")}
+                              </Badge>
+                            ))
+                          : <span className="text-gray-500 text-sm">No hay permisos asignados</span>
+                        }
                       </div>
                     </div>
                   </div>
