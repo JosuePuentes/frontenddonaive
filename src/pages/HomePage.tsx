@@ -19,13 +19,33 @@ const HomePage: React.FC = () => {
                     backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
                 
-                <div className="relative z-10 max-w-7xl mx-auto px-6">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8 }}
-                        className="text-left"
-                    >
+                {/* Imagen de fondo con desvanecido - lado derecho */}
+                <div className="absolute right-0 top-0 bottom-0 w-1/2 md:w-2/5 opacity-30 pointer-events-none">
+                    <div className="relative h-full w-full">
+                        <img 
+                            src="/hero-image.png" 
+                            alt="Finanzas y Tecnología Global" 
+                            className="w-full h-full object-cover object-right"
+                            style={{
+                                maskImage: 'linear-gradient(to left, black 0%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to left, black 0%, transparent 100%)'
+                            }}
+                        />
+                        {/* Overlay adicional para desvanecido más suave */}
+                        <div className="absolute inset-0 bg-gradient-to-l from-slate-900 via-transparent to-transparent"></div>
+                    </div>
+                </div>
+                
+                <div className="relative z-10 max-w-7xl mx-auto px-6 w-full">
+                    <div className="flex flex-col lg:flex-row items-start gap-8">
+                        {/* Contenido de texto - lado izquierdo */}
+                        <div className="flex-1 lg:max-w-2xl">
+                            <motion.div
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.8 }}
+                                className="text-left"
+                            >
                         <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 leading-tight">
                             <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                                 DONAIVE
@@ -55,7 +75,9 @@ const HomePage: React.FC = () => {
                                        Empresas Aliadas
                                    </button>
                                </motion.div>
-                    </motion.div>
+                            </motion.div>
+                        </div>
+                    </div>
                 </div>
                 
                 {/* Floating Elements */}
