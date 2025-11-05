@@ -143,11 +143,11 @@ const Navbar = () => {
     }, [isDropdownOpen, isMobileMenuOpen]);
 
     // Filter links based on user permissions
-    const accessibleLinks = permisosUsuario.length > 0
+    const accessibleLinks = (Array.isArray(permisosUsuario) && permisosUsuario.length > 0)
         ? allLinks.map(category => ({
             ...category,
-            items: category.items.filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
-        })).filter(category => category.items.length > 0)
+            items: (Array.isArray(category.items) ? category.items : []).filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
+        })).filter(category => Array.isArray(category.items) && category.items.length > 0)
         : [];
 
     // Filter links based on search term
@@ -155,12 +155,12 @@ const Navbar = () => {
         ? accessibleLinks
         : accessibleLinks.map(category => ({
             ...category,
-            items: category.items.filter(link => {
+            items: (Array.isArray(category.items) ? category.items : []).filter(link => {
                 const matchesCategory = category.category.toLowerCase().includes(searchTerm.toLowerCase());
                 const matchesLabel = link.label.toLowerCase().includes(searchTerm.toLowerCase());
                 return matchesCategory || matchesLabel;
             })
-        })).filter(category => category.items.length > 0);
+        })).filter(category => Array.isArray(category.items) && category.items.length > 0);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
