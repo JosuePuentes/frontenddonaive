@@ -78,12 +78,12 @@ export const ModalEditarUsuario: React.FC<ModalEditarUsuarioProps> = ({
   };
 
   const handleGuardar = async () => {
-    if (!usuarioEditado.correo.trim()) {
+    if (!usuarioEditado.correo || !usuarioEditado.correo.trim()) {
       setError("El correo es requerido");
       return;
     }
     
-    if (!usuarioEditado.contraseña.trim()) {
+    if (!usuarioEditado.contraseña || !usuarioEditado.contraseña.trim()) {
       setError("La contraseña es requerida");
       return;
     }
