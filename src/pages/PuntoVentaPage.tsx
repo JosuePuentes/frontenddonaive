@@ -460,8 +460,26 @@ const PuntoVentaPage: React.FC = () => {
     return (
       <>
         {/* Modal de selección de sucursal */}
-        <Dialog open={showSucursalModal} onOpenChange={setShowSucursalModal}>
-          <DialogContent>
+        <Dialog 
+          open={showSucursalModal} 
+          onOpenChange={(open) => {
+            // No permitir cerrar el modal sin seleccionar una sucursal
+            if (!open && !sucursalSeleccionada) {
+              return;
+            }
+            setShowSucursalModal(open);
+          }}
+        >
+          <DialogContent 
+            onInteractOutside={(e) => {
+              // Prevenir cerrar al hacer clic fuera
+              e.preventDefault();
+            }}
+            onEscapeKeyDown={(e) => {
+              // Prevenir cerrar con ESC
+              e.preventDefault();
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Seleccionar Sucursal</DialogTitle>
             </DialogHeader>
@@ -480,8 +498,26 @@ const PuntoVentaPage: React.FC = () => {
         </Dialog>
 
         {/* Modal de selección de cajero */}
-        <Dialog open={showCajeroModal} onOpenChange={setShowCajeroModal}>
-          <DialogContent>
+        <Dialog 
+          open={showCajeroModal} 
+          onOpenChange={(open) => {
+            // No permitir cerrar el modal sin seleccionar un cajero
+            if (!open && !cajeroSeleccionado) {
+              return;
+            }
+            setShowCajeroModal(open);
+          }}
+        >
+          <DialogContent
+            onInteractOutside={(e) => {
+              // Prevenir cerrar al hacer clic fuera
+              e.preventDefault();
+            }}
+            onEscapeKeyDown={(e) => {
+              // Prevenir cerrar con ESC
+              e.preventDefault();
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Seleccionar Cajero</DialogTitle>
             </DialogHeader>
@@ -517,6 +553,7 @@ const PuntoVentaPage: React.FC = () => {
                   setShowCajeroModal(false);
                   setShowSucursalModal(true);
                   setSucursalSeleccionada(null);
+                  setCajeroSeleccionado(null);
                 }}
                 variant="outline"
                 className="flex-1"
