@@ -33,8 +33,8 @@ const HomePage: React.FC = () => {
                         </h1>
                         <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed">
                             Transformamos y potenciamos los resultados de tu empresa con una combinación única de 
-                            <span className="text-yellow-300 font-semibold"> asesoría financiera</span> y 
-                            <span className="text-yellow-300 font-semibold"> desarrollo web</span>
+                            <span className="text-green-800 font-semibold"> asesoría financiera</span> y 
+                            <span className="text-green-800 font-semibold"> desarrollo web</span>
                         </p>
                         <p className="text-lg text-gray-300 mb-12 max-w-3xl">
                             Mejoramos tus procesos, estandarizamos operaciones y disminuimos riesgos al 100%, 
@@ -264,15 +264,15 @@ const HomePage: React.FC = () => {
                         
                         <div className="grid md:grid-cols-3 gap-8 mt-16">
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-yellow-400 mb-2">100%</div>
+                                <div className="text-3xl font-bold text-green-800 mb-2">100%</div>
                                 <div className="text-blue-200">Reducción de Riesgos</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-yellow-400 mb-2">∞</div>
+                                <div className="text-3xl font-bold text-green-800 mb-2">∞</div>
                                 <div className="text-blue-200">Crecimiento Continuo</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-yellow-400 mb-2">24/7</div>
+                                <div className="text-3xl font-bold text-green-800 mb-2">24/7</div>
                                 <div className="text-blue-200">Soporte Estratégico</div>
                             </div>
                         </div>
