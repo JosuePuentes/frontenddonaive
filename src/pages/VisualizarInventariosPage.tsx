@@ -200,9 +200,6 @@ const VisualizarInventariosPage: React.FC = () => {
           ["NOTA: Los items detallados del inventario no están disponibles."],
           ["Contacte al administrador para obtener el detalle completo."],
         ];
-
-        const XLSXModule2 = await import("xlsx");
-        const XLSX2 = (XLSXModule2.default || XLSXModule2) as any;
         
         const ws = XLSX2.utils.aoa_to_sheet(data);
         const wb = XLSX2.utils.book_new();
@@ -210,7 +207,7 @@ const VisualizarInventariosPage: React.FC = () => {
 
         const fechaFormateada = fecha.replace(/-/g, "");
         const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;
-        (XLSXModule2 as any).writeFile(wb, nombreArchivo);
+        XLSX2.writeFile(wb, nombreArchivo);
       } catch (exportErr: any) {
         setError(`Error al exportar: ${err.message}. ${exportErr.message}`);
       }
