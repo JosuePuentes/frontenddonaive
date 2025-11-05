@@ -81,7 +81,7 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
           String(h || "").toLowerCase().trim()
         );
 
-        // Buscar índices de columnas
+        // Buscar índices de columnas - TODAS son requeridas
         const codigoIdx = headers.findIndex((h) =>
           ["codigo", "código", "code"].includes(h)
         );
@@ -91,20 +91,28 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
         const marcaIdx = headers.findIndex((h) =>
           ["marca", "brand"].includes(h)
         );
-        const existenciaIdx = headers.findIndex((h) =>
-          ["existencia", "stock", "cantidad", "cant"].includes(h)
-        );
         const costoIdx = headers.findIndex((h) =>
           ["costo", "cost", "precio_costo", "precio costo"].includes(h)
         );
         const precioIdx = headers.findIndex((h) =>
           ["precio", "price", "precio_venta", "precio venta"].includes(h)
         );
+        const existenciaIdx = headers.findIndex((h) =>
+          ["existencia", "stock", "cantidad", "cant"].includes(h)
+        );
 
-        // Validar que existan las columnas requeridas
-        if (codigoIdx === -1 || descripcionIdx === -1 || existenciaIdx === -1 || costoIdx === -1 || precioIdx === -1) {
+        // Validar que existan TODAS las columnas requeridas (ninguna es opcional)
+        if (codigoIdx === -1 || descripcionIdx === -1 || marcaIdx === -1 || costoIdx === -1 || precioIdx === -1 || existenciaIdx === -1) {
+          const faltantes = [];
+          if (codigoIdx === -1) faltantes.push("CODIGO");
+          if (descripcionIdx === -1) faltantes.push("DESCRIPCION");
+          if (marcaIdx === -1) faltantes.push("MARCA");
+          if (costoIdx === -1) faltantes.push("COSTO");
+          if (precioIdx === -1) faltantes.push("PRECIO");
+          if (existenciaIdx === -1) faltantes.push("EXISTENCIA");
+          
           setError(
-            "El archivo Excel debe contener las columnas: codigo, descripcion, existencia, costo, precio. Marca es opcional."
+            `El archivo Excel debe contener TODAS las columnas requeridas. Faltan: ${faltantes.join(", ")}. El formato debe ser: CODIGO, DESCRIPCION, MARCA, COSTO, PRECIO, EXISTENCIA`
           );
           return;
         }
@@ -117,14 +125,21 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
 
           const codigo = String(row[codigoIdx] || "").trim();
           const descripcion = String(row[descripcionIdx] || "").trim();
-
-          // Validar que tenga código y descripción
-          if (!codigo || !descripcion) continue;
-
-          const marca = marcaIdx !== -1 ? String(row[marcaIdx] || "").trim() : "";
-          const existencia = parseFloat(String(row[existenciaIdx] || 0)) || 0;
+          const marca = String(row[marcaIdx] || "").trim();
           const costo = parseFloat(String(row[costoIdx] || 0)) || 0;
           const precio = parseFloat(String(row[precioIdx] || 0)) || 0;
+          const existencia = parseFloat(String(row[existenciaIdx] || 0)) || 0;
+
+          // Validar que TODOS los campos estén presentes (ninguno es opcional)
+          if (!codigo || !descripcion || !marca) {
+            // Saltar filas incompletas
+            continue;
+          }
+
+          // Validar que los números sean válidos
+          if (isNaN(costo) || isNaN(precio) || isNaN(existencia)) {
+            continue;
+          }
 
           productosParsed.push({
             codigo,
@@ -254,8 +269,9 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Columnas requeridas: codigo, descripcion, existencia, costo, precio
-              (marca es opcional)
+              <strong>Formato requerido:</strong> CODIGO, DESCRIPCION, MARCA, COSTO, PRECIO, EXISTENCIA
+              <br />
+              <span className="text-red-600">Todas las columnas son obligatorias</span>
             </p>
           </div>
         </div>
@@ -271,9 +287,10 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
                   <tr className="border-b">
                     <th className="text-left p-1">Código</th>
                     <th className="text-left p-1">Descripción</th>
-                    <th className="text-right p-1">Existencia</th>
+                    <th className="text-left p-1">Marca</th>
                     <th className="text-right p-1">Costo</th>
                     <th className="text-right p-1">Precio</th>
+                    <th className="text-right p-1">Existencia</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -281,14 +298,15 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
                     <tr key={idx} className="border-b">
                       <td className="p-1">{p.codigo}</td>
                       <td className="p-1">{p.descripcion}</td>
-                      <td className="text-right p-1">{p.existencia}</td>
+                      <td className="p-1">{p.marca}</td>
                       <td className="text-right p-1">{p.costo.toFixed(2)}</td>
                       <td className="text-right p-1">{p.precio.toFixed(2)}</td>
+                      <td className="text-right p-1">{p.existencia}</td>
                     </tr>
                   ))}
                   {productos.length > 5 && (
                     <tr>
-                      <td colSpan={5} className="text-center p-1 text-gray-500">
+                      <td colSpan={6} className="text-center p-1 text-gray-500">
                         ... y {productos.length - 5} más
                       </td>
                     </tr>

@@ -40,10 +40,21 @@
 - `productos` (array, requerido): Array de objetos producto con:
   - `codigo` (string, requerido): Código del producto
   - `descripcion` (string, requerido): Descripción/nombre del producto
-  - `marca` (string, opcional): Marca del producto
+  - `marca` (string, requerido): Marca del producto (TODAS las columnas son obligatorias)
   - `existencia` (number, requerido): Cantidad en stock
   - `costo` (number, requerido): Costo del producto
   - `precio` (number, requerido): Precio de venta del producto
+
+**Formato del Excel:**
+El archivo Excel debe tener exactamente estas columnas en este orden:
+1. **CODIGO** (obligatorio)
+2. **DESCRIPCION** (obligatorio)
+3. **MARCA** (obligatorio)
+4. **COSTO** (obligatorio)
+5. **PRECIO** (obligatorio)
+6. **EXISTENCIA** (obligatorio)
+
+**IMPORTANTE:** Todas las columnas son obligatorias. No se aceptan valores vacíos.
 
 **Response (200 OK):**
 ```json
@@ -62,10 +73,12 @@
 - `404 Not Found`: Si la sucursal no existe
 
 **Validaciones:**
-- Todos los productos deben tener código, descripción, existencia, costo y precio
+- Todos los productos deben tener código, descripción, marca, existencia, costo y precio (TODOS obligatorios)
+- La marca no puede estar vacía
 - La existencia debe ser un número positivo o cero
-- El costo y precio deben ser números positivos
+- El costo y precio deben ser números positivos (mayor que 0)
 - El código debe ser único por sucursal (si ya existe, actualizar; si no, crear)
+- Si algún campo está vacío o inválido, se debe rechazar el producto o toda la operación según tu lógica de negocio
 
 ---
 
