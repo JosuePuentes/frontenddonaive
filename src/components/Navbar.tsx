@@ -208,7 +208,7 @@ const Navbar = () => {
         <nav className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white shadow-lg px-4 py-2 sticky top-0 z-50">
             <div className="flex justify-between items-center max-w-7xl mx-auto">
                 {/* Logo / Brand Name */}
-                <Link to="/" className="text-xl font-bold tracking-wide flex flex-col items-center gap-1 text-white hover:text-blue-300 transition-colors duration-200">
+                <Link to="/" className="text-xl font-bold tracking-wide flex flex-col items-start gap-1 text-white hover:text-blue-300 transition-colors duration-200 -ml-2">
                     <div className="flex items-center gap-3">
                         <img 
                             src="/logo.png" 
