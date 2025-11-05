@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import UploadInventarioExcel from "../components/UploadInventarioExcel";
 
 interface Inventario {
   _id: string;
@@ -121,6 +122,12 @@ const VisualizarInventariosPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 py-8">
       <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-slate-800 mb-8 text-center">Inventarios Registrados</h1>
+        
+        {/* Componente para subir inventario desde Excel */}
+        <UploadInventarioExcel
+          sucursales={farmacias}
+          onSuccess={fetchInventarios}
+        />
         {error && (
           <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow" role="alert">
             <p className="font-bold">Error</p>
