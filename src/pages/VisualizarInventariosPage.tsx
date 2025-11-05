@@ -180,12 +180,12 @@ const VisualizarInventariosPage: React.FC = () => {
       const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;
 
       // Descargar
-      (XLSXModule as any).writeFile(wb, nombreArchivo);
-    } catch (err: any) {
-      // Si falla, intentar exportar solo la información básica del inventario
-      try {
-        const XLSXModule = await import("xlsx");
-        const XLSX = XLSXModule.default || XLSXModule;
+      XLSX.writeFile(wb, nombreArchivo);
+      } catch (err: any) {
+        // Si falla, intentar exportar solo la información básica del inventario
+        try {
+          const XLSXModule2 = await import("xlsx");
+          const XLSX2 = (XLSXModule2.default || XLSXModule2) as any;
 
         const inventario = inventarios.find(i => i._id === inventarioId);
         if (!inventario) throw new Error("Inventario no encontrado");
@@ -226,7 +226,7 @@ const VisualizarInventariosPage: React.FC = () => {
 
       // Importar xlsx dinámicamente
       const XLSXModule = await import("xlsx");
-      const XLSX = XLSXModule.default || XLSXModule;
+      const XLSX = (XLSXModule.default || XLSXModule) as any;
 
       // Preparar datos para Excel
       const data = [
@@ -249,7 +249,7 @@ const VisualizarInventariosPage: React.FC = () => {
       const nombreArchivo = `Inventarios_${fecha}.xlsx`;
 
       // Descargar
-      (XLSXModule as any).writeFile(wb, nombreArchivo);
+      XLSX.writeFile(wb, nombreArchivo);
     } catch (err: any) {
       setError(`Error al exportar: ${err.message}`);
     } finally {
