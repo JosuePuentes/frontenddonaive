@@ -19,23 +19,24 @@ const HomePage: React.FC = () => {
                     backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
                 
-                <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
+                <div className="relative z-10 max-w-7xl mx-auto px-6">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
+                        className="text-left"
                     >
                         <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
                             <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                                 DONAIVE
                             </span>
                         </h1>
-                        <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl mx-auto leading-relaxed">
+                        <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed">
                             Transformamos y potenciamos los resultados de tu empresa con una combinación única de 
                             <span className="text-yellow-300 font-semibold"> asesoría financiera</span> y 
                             <span className="text-yellow-300 font-semibold"> desarrollo web</span>
                         </p>
-                        <p className="text-lg text-gray-300 mb-12 max-w-3xl mx-auto">
+                        <p className="text-lg text-gray-300 mb-12 max-w-3xl">
                             Mejoramos tus procesos, estandarizamos operaciones y disminuimos riesgos al 100%, 
                             asegurando que tu negocio sea financieramente sólido y tenga una presencia digital robusta.
                         </p>
@@ -44,7 +45,7 @@ const HomePage: React.FC = () => {
                                    initial={{ opacity: 0, y: 20 }}
                                    animate={{ opacity: 1, y: 0 }}
                                    transition={{ duration: 0.8, delay: 0.3 }}
-                                   className="flex flex-col sm:flex-row gap-4 justify-center"
+                                   className="flex flex-col sm:flex-row gap-4 justify-start"
                                >
                                    <Link to="/servicios" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl inline-flex items-center justify-center">
                                        Conoce Nuestros Servicios
