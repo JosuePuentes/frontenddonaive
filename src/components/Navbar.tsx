@@ -30,6 +30,13 @@ const allLinks = [
         ]
     },
     {
+        category: 'Punto de Venta',
+        icon: DollarSign,
+        items: [
+            { to: '/punto-venta', label: 'Punto de Venta', permiso: 'agregar_cuadre' },
+        ]
+    },
+    {
         category: 'Gastos',
         icon: DollarSign,
         items: [
