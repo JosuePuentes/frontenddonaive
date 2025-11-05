@@ -10,6 +10,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    dedupe: ['xlsx'],
   },
   build: {
     target: 'esnext',
@@ -41,7 +42,10 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'xlsx']
+    include: ['react', 'react-dom', 'xlsx'],
+    esbuildOptions: {
+      target: 'es2020',
+    },
   },
   logLevel: 'warn' // Reducir logs innecesarios
 })
