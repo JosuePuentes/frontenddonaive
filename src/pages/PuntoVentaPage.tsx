@@ -222,7 +222,6 @@ const PuntoVentaPage: React.FC = () => {
       handleEliminarItem(index);
       return;
     }
-    const item = carrito[index];
     setCarrito(
       carrito.map((it, i) =>
         i === index
