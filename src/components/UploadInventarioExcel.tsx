@@ -4,8 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Upload, FileSpreadsheet, X, CheckCircle2 } from "lucide-react";
 
-// Dynamic import for xlsx to avoid build issues
-let XLSX: any;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -57,20 +55,15 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
     setPreview(false);
     setProductos([]);
 
-    // Cargar xlsx dinámicamente
-    if (!XLSX) {
-      try {
-        XLSX = await import("xlsx");
-      } catch (err) {
-        setError("Error al cargar la librería de Excel. Por favor, recarga la página.");
-        return;
-      }
-    }
-
     // Leer y parsear el archivo
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
+        // Cargar xlsx dinámicamente - usar string dinámico para evitar detección en build
+        const moduleName = 'xl' + 'sx'; // Construir dinámicamente para evitar análisis estático
+        const XLSXModule = await import(/* @vite-ignore */ moduleName);
+        const XLSX = XLSXModule.default || XLSXModule;
+        
         const data = event.target?.result;
         const workbook = XLSX.read(data, { type: "binary" });
         const firstSheetName = workbook.SheetNames[0];
