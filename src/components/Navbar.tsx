@@ -1,4 +1,4 @@
-    import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Phone, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -27,13 +27,6 @@ const allLinks = [
             { to: '/ver-cuadres-dia', label: 'Cuadres por Día', permiso: 'ver_cuadres_dia' },
             { to: '/visualizarcuadres', label: 'Visualizar Cuadres', permiso: 'ver_cuadres_dia' },
             { to: '/modificar-cuadre', label: 'Modificar Cuadre', permiso: 'modificar_cuadre' },
-        ]
-    },
-    {
-        category: 'Punto de Venta',
-        icon: DollarSign,
-        items: [
-            { to: '/punto-venta', label: 'Punto de Venta', permiso: 'agregar_cuadre' },
         ]
     },
     {
@@ -99,29 +92,14 @@ const Navbar = () => {
 
     // Effect for handling user data and permissions from localStorage
     useEffect(() => {
-        try {
-            const storedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
-            setUsuario(storedUsuario);
-            // Asegurar que permisosUsuario siempre sea un array
-            const permisos = storedUsuario?.permisos;
-            setPermisosUsuario(Array.isArray(permisos) ? permisos : []);
-        } catch (error) {
-            console.error('Error al parsear usuario:', error);
-            setUsuario(null);
-            setPermisosUsuario([]);
-        }
+        const storedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+        setUsuario(storedUsuario);
+        setPermisosUsuario(storedUsuario?.permisos || []);
 
         const handleStorageChange = () => {
-            try {
-                const updatedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
-                setUsuario(updatedUsuario);
-                const permisos = updatedUsuario?.permisos;
-                setPermisosUsuario(Array.isArray(permisos) ? permisos : []);
-            } catch (error) {
-                console.error('Error al parsear usuario:', error);
-                setUsuario(null);
-                setPermisosUsuario([]);
-            }
+            const updatedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+            setUsuario(updatedUsuario);
+            setPermisosUsuario(updatedUsuario?.permisos || []);
         };
 
         window.addEventListener('storage', handleStorageChange);
@@ -158,38 +136,24 @@ const Navbar = () => {
     }, [isDropdownOpen, isMobileMenuOpen]);
 
     // Filter links based on user permissions
-    // Asegurar que permisosUsuario sea un array
-    const permisosArray = Array.isArray(permisosUsuario) ? permisosUsuario : [];
-    
-    // Asegurar que allLinks sea un array
-    const linksArray = Array.isArray(allLinks) ? allLinks : [];
-    
-    const accessibleLinks = permisosArray.length > 0
-        ? linksArray.map(category => {
-            // Asegurar que category.items sea un array
-            const categoryItems = Array.isArray(category?.items) ? category.items : [];
-            return {
-                ...category,
-                items: categoryItems.filter(link => !link?.permiso || permisosArray.includes(link.permiso))
-            };
-        }).filter(category => Array.isArray(category?.items) && category.items.length > 0)
+    const accessibleLinks = permisosUsuario.length > 0
+        ? allLinks.map(category => ({
+            ...category,
+            items: category.items.filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
+        })).filter(category => category.items.length > 0)
         : [];
 
     // Filter links based on search term
     const filteredLinks = searchTerm.trim() === ''
         ? accessibleLinks
-        : accessibleLinks.map(category => {
-            // Asegurar que category.items sea un array
-            const categoryItems = Array.isArray(category?.items) ? category.items : [];
-            return {
-                ...category,
-                items: categoryItems.filter(link => {
-                    const matchesCategory = String(category?.category || '').toLowerCase().includes(searchTerm.toLowerCase());
-                    const matchesLabel = String(link?.label || '').toLowerCase().includes(searchTerm.toLowerCase());
-                    return matchesCategory || matchesLabel;
-                })
-            };
-        }).filter(category => Array.isArray(category?.items) && category.items.length > 0);
+        : accessibleLinks.map(category => ({
+            ...category,
+            items: category.items.filter(link => {
+                const matchesCategory = category.category.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesLabel = link.label.toLowerCase().includes(searchTerm.toLowerCase());
+                return matchesCategory || matchesLabel;
+            })
+        })).filter(category => category.items.length > 0);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -208,7 +172,7 @@ const Navbar = () => {
         <nav className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white shadow-lg px-4 py-2 sticky top-0 z-50">
             <div className="flex justify-between items-center max-w-7xl mx-auto">
                 {/* Logo / Brand Name */}
-                <Link to="/" className="text-xl font-bold tracking-wide flex flex-col items-center gap-1 text-white hover:text-blue-300 transition-colors duration-200">
+                <Link to="/" className="text-xl font-bold tracking-wide flex flex-col items-start gap-1 text-white hover:text-blue-300 transition-colors duration-200 -ml-2">
                     <div className="flex items-center gap-3">
                         <img 
                             src="/logo.png" 
