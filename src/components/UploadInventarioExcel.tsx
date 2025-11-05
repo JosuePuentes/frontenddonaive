@@ -315,7 +315,7 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
                     const nombreArchivo = `Inventario_Preliminar_${fecha}.xlsx`;
 
                     // Descargar
-                    XLSX.writeFile(wb, nombreArchivo);
+                    (XLSXModule as any).writeFile(wb, nombreArchivo);
                   } catch (err: any) {
                     setError(`Error al exportar: ${err.message}`);
                   }

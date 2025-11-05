@@ -155,7 +155,7 @@ const VisualizarInventariosPage: React.FC = () => {
       
       // Importar xlsx dinámicamente
       const XLSXModule = await import("xlsx");
-      const XLSX = XLSXModule.default || XLSXModule;
+      const XLSX = (XLSXModule.default || XLSXModule) as any;
 
       // Preparar datos para Excel
       const data = [
@@ -180,7 +180,7 @@ const VisualizarInventariosPage: React.FC = () => {
       const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;
 
       // Descargar
-      XLSX.writeFile(wb, nombreArchivo);
+      (XLSXModule as any).writeFile(wb, nombreArchivo);
     } catch (err: any) {
       // Si falla, intentar exportar solo la información básica del inventario
       try {
@@ -201,13 +201,16 @@ const VisualizarInventariosPage: React.FC = () => {
           ["Contacte al administrador para obtener el detalle completo."],
         ];
 
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+        const XLSXModule2 = await import("xlsx");
+        const XLSX2 = (XLSXModule2.default || XLSXModule2) as any;
+        
+        const ws = XLSX2.utils.aoa_to_sheet(data);
+        const wb = XLSX2.utils.book_new();
+        XLSX2.utils.book_append_sheet(wb, ws, "Inventario");
 
         const fechaFormateada = fecha.replace(/-/g, "");
         const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;
-        XLSX.writeFile(wb, nombreArchivo);
+        (XLSXModule2 as any).writeFile(wb, nombreArchivo);
       } catch (exportErr: any) {
         setError(`Error al exportar: ${err.message}. ${exportErr.message}`);
       }
@@ -246,7 +249,7 @@ const VisualizarInventariosPage: React.FC = () => {
       const nombreArchivo = `Inventarios_${fecha}.xlsx`;
 
       // Descargar
-      XLSX.writeFile(wb, nombreArchivo);
+      (XLSXModule as any).writeFile(wb, nombreArchivo);
     } catch (err: any) {
       setError(`Error al exportar: ${err.message}`);
     } finally {

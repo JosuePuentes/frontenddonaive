@@ -1,0 +1,65 @@
+[1mdiff --git a/src/components/UploadInventarioExcel.tsx b/src/components/UploadInventarioExcel.tsx[m
+[1mindex 2b7eb1f..8d0e186 100644[m
+[1m--- a/src/components/UploadInventarioExcel.tsx[m
+[1m+++ b/src/components/UploadInventarioExcel.tsx[m
+[36m@@ -315,7 +315,7 @@[m [mconst UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({[m
+                     const nombreArchivo = `Inventario_Preliminar_${fecha}.xlsx`;[m
+ [m
+                     // Descargar[m
+[31m-                    XLSX.writeFile(wb, nombreArchivo);[m
+[32m+[m[32m                    (XLSXModule as any).writeFile(wb, nombreArchivo);[m
+                   } catch (err: any) {[m
+                     setError(`Error al exportar: ${err.message}`);[m
+                   }[m
+[1mdiff --git a/src/pages/VisualizarInventariosPage.tsx b/src/pages/VisualizarInventariosPage.tsx[m
+[1mindex f3a3f64..f83a25d 100644[m
+[1m--- a/src/pages/VisualizarInventariosPage.tsx[m
+[1m+++ b/src/pages/VisualizarInventariosPage.tsx[m
+[36m@@ -155,7 +155,7 @@[m [mconst VisualizarInventariosPage: React.FC = () => {[m
+       [m
+       // Importar xlsx dinámicamente[m
+       const XLSXModule = await import("xlsx");[m
+[31m-      const XLSX = XLSXModule.default || XLSXModule;[m
+[32m+[m[32m      const XLSX = (XLSXModule.default || XLSXModule) as any;[m
+ [m
+       // Preparar datos para Excel[m
+       const data = [[m
+[36m@@ -180,7 +180,7 @@[m [mconst VisualizarInventariosPage: React.FC = () => {[m
+       const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;[m
+ [m
+       // Descargar[m
+[31m-      XLSX.writeFile(wb, nombreArchivo);[m
+[32m+[m[32m      (XLSXModule as any).writeFile(wb, nombreArchivo);[m
+     } catch (err: any) {[m
+       // Si falla, intentar exportar solo la información básica del inventario[m
+       try {[m
+[36m@@ -201,13 +201,16 @@[m [mconst VisualizarInventariosPage: React.FC = () => {[m
+           ["Contacte al administrador para obtener el detalle completo."],[m
+         ];[m
+ [m
+[31m-        const ws = XLSX.utils.aoa_to_sheet(data);[m
+[31m-        const wb = XLSX.utils.book_new();[m
+[31m-        XLSX.utils.book_append_sheet(wb, ws, "Inventario");[m
+[32m+[m[32m        const XLSXModule2 = await import("xlsx");[m
+[32m+[m[32m        const XLSX2 = (XLSXModule2.default || XLSXModule2) as any;[m
+[32m+[m[41m        [m
+[32m+[m[32m        const ws = XLSX2.utils.aoa_to_sheet(data);[m
+[32m+[m[32m        const wb = XLSX2.utils.book_new();[m
+[32m+[m[32m        XLSX2.utils.book_append_sheet(wb, ws, "Inventario");[m
+ [m
+         const fechaFormateada = fecha.replace(/-/g, "");[m
+         const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;[m
+[31m-        XLSX.writeFile(wb, nombreArchivo);[m
+[32m+[m[32m        (XLSXModule2 as any).writeFile(wb, nombreArchivo);[m
+       } catch (exportErr: any) {[m
+         setError(`Error al exportar: ${err.message}. ${exportErr.message}`);[m
+       }[m
+[36m@@ -246,7 +249,7 @@[m [mconst VisualizarInventariosPage: React.FC = () => {[m
+       const nombreArchivo = `Inventarios_${fecha}.xlsx`;[m
+ [m
+       // Descargar[m
+[31m-      XLSX.writeFile(wb, nombreArchivo);[m
+[32m+[m[32m      (XLSXModule as any).writeFile(wb, nombreArchivo);[m
+     } catch (err: any) {[m
+       setError(`Error al exportar: ${err.message}`);[m
+     } finally {[m
