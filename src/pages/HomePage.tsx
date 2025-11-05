@@ -26,7 +26,7 @@ const HomePage: React.FC = () => {
                         transition={{ duration: 0.8 }}
                         className="text-left"
                     >
-                        <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+                        <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 leading-tight">
                             <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                                 DONAIVE
                             </span>
