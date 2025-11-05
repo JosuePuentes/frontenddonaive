@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import UploadInventarioExcel from "../components/UploadInventarioExcel";
 import ModificarItemInventarioModal from "../components/ModificarItemInventarioModal";
 import { Button } from "@/components/ui/button";
-import { Edit } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 
 interface Inventario {
   _id: string;
@@ -34,6 +34,9 @@ const VisualizarInventariosPage: React.FC = () => {
   const [pendingEstado, setPendingEstado] = useState<{ id: string; nuevoEstado: string } | null>(null);
   const [showModificarModal, setShowModificarModal] = useState(false);
   const [inventarioSeleccionado, setInventarioSeleccionado] = useState<{ id: string; sucursalId: string } | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [inventarioAEliminar, setInventarioAEliminar] = useState<{ id: string; fecha: string; farmacia: string } | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
   const fetchInventarios = async () => {
     setLoading(true);
@@ -125,6 +128,51 @@ const VisualizarInventariosPage: React.FC = () => {
     setShowModificarModal(false);
     setInventarioSeleccionado(null);
     fetchInventarios(); // Refrescar lista después de modificar
+  };
+
+  const handleEliminarClick = (inventario: Inventario) => {
+    setInventarioAEliminar({
+      id: inventario._id,
+      fecha: inventario.fecha?.slice(0, 10) || "",
+      farmacia: inventario.farmacia,
+    });
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmarEliminar = async () => {
+    if (!inventarioAEliminar) return;
+
+    setEliminando(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No se encontró el token de autenticación");
+
+      const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioAEliminar.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || data.message || "Error al eliminar el inventario");
+      }
+
+      setShowDeleteModal(false);
+      setInventarioAEliminar(null);
+      fetchInventarios(); // Refrescar lista
+    } catch (err: any) {
+      setError(err.message || "Error al eliminar el inventario");
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  const handleCancelarEliminar = () => {
+    setShowDeleteModal(false);
+    setInventarioAEliminar(null);
   };
 
   const inventariosFiltrados = inventarios
@@ -256,15 +304,26 @@ const VisualizarInventariosPage: React.FC = () => {
                         </select>
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap text-sm">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleModificarItems(i._id, i.farmacia)}
-                          className="flex items-center gap-1"
-                        >
-                          <Edit className="h-3 w-3" />
-                          Modificar Items
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleModificarItems(i._id, i.farmacia)}
+                            className="flex items-center gap-1"
+                          >
+                            <Edit className="h-3 w-3" />
+                            Modificar Items
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleEliminarClick(i)}
+                            className="flex items-center gap-1"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Eliminar
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -314,6 +373,39 @@ const VisualizarInventariosPage: React.FC = () => {
             sucursalId={inventarioSeleccionado.sucursalId}
             onSuccess={handleCerrarModal}
           />
+        )}
+
+        {/* Modal de confirmación de eliminación */}
+        {showDeleteModal && inventarioAEliminar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold mb-3 text-slate-800">Confirmar eliminación</h3>
+              <p className="mb-5 text-slate-600 text-sm">
+                ¿Está seguro que desea eliminar el inventario del{" "}
+                <span className="font-bold text-red-600">{inventarioAEliminar.fecha}</span> de la sucursal{" "}
+                <span className="font-bold text-red-600">{inventarioAEliminar.farmacia}</span>?
+              </p>
+              <p className="mb-5 text-red-600 text-sm font-medium">
+                ⚠️ Esta acción no se puede deshacer. Se eliminarán todos los items asociados a este inventario.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelarEliminar}
+                  disabled={eliminando}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleConfirmarEliminar}
+                  disabled={eliminando}
+                >
+                  {eliminando ? "Eliminando..." : "Eliminar"}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
