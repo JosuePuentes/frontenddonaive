@@ -13,7 +13,7 @@ interface UseModificarUsuarioReturn {
   setError: (error: string | null) => void;
 }
 
-const API_BASE_URL = "https://rapifarma-backend.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://rapifarma-backend.onrender.com";
 
 export const useModificarUsuario = (): UseModificarUsuarioReturn => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -39,13 +39,19 @@ export const useModificarUsuario = (): UseModificarUsuarioReturn => {
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/usuarios`, {
+      const response = await fetch(`${API_BASE_URL}/modificar-usuarios`, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`
         }
       });
       
       if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('El endpoint /modificar-usuarios no está disponible. Verifique que el backend tenga esta ruta implementada.');
+        }
+        if (response.status === 403 || response.status === 401) {
+          throw new Error('No tiene permisos para acceder a esta información.');
+        }
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
       
@@ -53,7 +59,14 @@ export const useModificarUsuario = (): UseModificarUsuarioReturn => {
       // Asegurar que siempre sea un array
       setUsuarios(Array.isArray(data) ? data : []);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al obtener usuarios";
+      let errorMessage = "Error al obtener usuarios";
+      
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        errorMessage = 'Error de conexión: No se pudo conectar con el servidor. Verifique su conexión a internet y que el backend esté disponible.';
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       console.error("Error fetching usuarios:", err);
     } finally {
@@ -66,7 +79,7 @@ export const useModificarUsuario = (): UseModificarUsuarioReturn => {
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/usuarios`, {
+      const response = await fetch(`${API_BASE_URL}/modificar-usuarios`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(usuario),
@@ -101,7 +114,7 @@ export const useModificarUsuario = (): UseModificarUsuarioReturn => {
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/usuarios/${usuario._id}`, {
+      const response = await fetch(`${API_BASE_URL}/modificar-usuarios/${usuario._id}`, {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(usuario),
@@ -132,7 +145,7 @@ export const useModificarUsuario = (): UseModificarUsuarioReturn => {
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/usuarios/${usuarioId}/permisos`, {
+      const response = await fetch(`${API_BASE_URL}/modificar-usuarios/${usuarioId}/permisos`, {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(permisos),
@@ -163,7 +176,7 @@ export const useModificarUsuario = (): UseModificarUsuarioReturn => {
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/usuarios/${usuarioId}`, {
+      const response = await fetch(`${API_BASE_URL}/modificar-usuarios/${usuarioId}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
