@@ -10,7 +10,6 @@ interface Inventario {
   farmacia: string;
   costo: number;
   usuarioCorreo: string;
-  estado: string; // Nuevo campo
 }
 
 interface FarmaciaChip {
@@ -19,7 +18,6 @@ interface FarmaciaChip {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const ESTADO_OPCIONES = ["activo", "inactivo"];
 
 const VisualizarInventariosPage: React.FC = () => {
   const [inventarios, setInventarios] = useState<Inventario[]>([]);
@@ -30,8 +28,6 @@ const VisualizarInventariosPage: React.FC = () => {
   const [usuarioFiltro, setUsuarioFiltro] = useState<string>("");
   const [fechaInicio, setFechaInicio] = useState<string>("");
   const [fechaFin, setFechaFin] = useState<string>("");
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingEstado, setPendingEstado] = useState<{ id: string; nuevoEstado: string } | null>(null);
   const [showModificarModal, setShowModificarModal] = useState(false);
   const [inventarioSeleccionado, setInventarioSeleccionado] = useState<{ id: string; sucursalId: string } | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -73,46 +69,6 @@ const VisualizarInventariosPage: React.FC = () => {
       });
   }, []);
 
-  const handleEstadoChange = async (id: string, nuevoEstado: string) => {
-    setError(null);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No se encontró el token de autenticación");
-      const res = await fetch(`${API_BASE_URL}/inventarios/${id}/estado`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ estado: nuevoEstado })
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Error al actualizar estado");
-      }
-      setInventarios(prev => prev.map(i => i._id === id ? { ...i, estado: nuevoEstado } : i));
-    } catch (err: any) {
-      setError(err.message || "Error al actualizar estado");
-    }
-  };
-
-  const handleEstadoSelect = (id: string, nuevoEstado: string) => {
-    setPendingEstado({ id, nuevoEstado });
-    setShowConfirmModal(true);
-  };
-
-  const handleConfirmEstadoChange = async () => {
-    if (pendingEstado) {
-      await handleEstadoChange(pendingEstado.id, pendingEstado.nuevoEstado);
-      setShowConfirmModal(false);
-      setPendingEstado(null);
-    }
-  };
-
-  const handleCancelEstadoChange = () => {
-    setShowConfirmModal(false);
-    setPendingEstado(null);
-  };
 
   const handleModificarItems = (inventarioId: string, sucursalId: string) => {
     // Obtener el ID de sucursal desde el nombre de farmacia
@@ -278,7 +234,7 @@ const VisualizarInventariosPage: React.FC = () => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-100">
                   <tr>
-                    {['Fecha de Cargo', 'Sucursal', 'Costo Inventario', 'Usuario', 'Estado', 'Acciones'].map(header => (
+                    {['Fecha de Cargo', 'Sucursal', 'Costo Inventario', 'Usuario', 'Acciones'].map(header => (
                       <th key={header} scope="col" className="px-5 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                         {header}
                       </th>
@@ -292,35 +248,24 @@ const VisualizarInventariosPage: React.FC = () => {
                       <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700">{i.farmacia}</td>
                       <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700 text-right">{i.costo.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
                       <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-500">{i.usuarioCorreo}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm">
-                        <select
-                          value={i.estado}
-                          onChange={e => handleEstadoSelect(i._id, e.target.value)}
-                          className="border-slate-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-1.5 px-2 text-xs"
-                        >
-                          {ESTADO_OPCIONES.map(opt => (
-                            <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-2">
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleModificarItems(i._id, i.farmacia)}
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 whitespace-nowrap"
                           >
-                            <Edit className="h-3 w-3" />
+                            <Edit className="h-4 w-4" />
                             Modificar Items
                           </Button>
                           <Button
                             size="sm"
                             variant="destructive"
                             onClick={() => handleEliminarClick(i)}
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 whitespace-nowrap"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-4 w-4" />
                             Eliminar
                           </Button>
                         </div>
@@ -332,38 +277,6 @@ const VisualizarInventariosPage: React.FC = () => {
             </div>
           </div>
         )}
-        {/* Modal de confirmación */}
-        {showConfirmModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-30">
-            <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
-              <h3 className="text-lg font-semibold mb-3 text-slate-800">Confirmar cambio de estado</h3>
-              <p className="mb-5 text-slate-600 text-sm">
-                ¿Está seguro que desea cambiar el estado del inventario a
-                <span className="font-bold text-indigo-700">
-                  {pendingEstado && pendingEstado.nuevoEstado
-                    ? pendingEstado.nuevoEstado.charAt(0).toUpperCase() + pendingEstado.nuevoEstado.slice(1)
-                    : ""}
-                </span>
-                ? Esta acción no se puede deshacer fácilmente.
-              </p>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={handleCancelEstadoChange}
-                  className="px-4 py-2 rounded-md bg-slate-200 text-slate-700 hover:bg-slate-300 font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleConfirmEstadoChange}
-                  className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 font-medium"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Modal de modificar items */}
         {showModificarModal && inventarioSeleccionado && (
           <ModificarItemInventarioModal
