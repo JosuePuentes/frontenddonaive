@@ -17,6 +17,10 @@ declare module 'xlsx' {
   export function read(data: any, opts?: { type?: string }): WorkBook;
   export const utils: {
     sheet_to_json<T = any>(sheet: WorkSheet, opts?: Sheet2JSONOpts): T[];
+    aoa_to_sheet(data: any[][]): WorkSheet;
+    book_new(): WorkBook;
+    book_append_sheet(wb: WorkBook, ws: WorkSheet, name: string): void;
+    writeFile(wb: WorkBook, filename: string): void;
   };
 }
 

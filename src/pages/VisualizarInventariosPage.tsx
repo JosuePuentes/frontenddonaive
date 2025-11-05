@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import UploadInventarioExcel from "../components/UploadInventarioExcel";
 import ModificarItemInventarioModal from "../components/ModificarItemInventarioModal";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Download, FileSpreadsheet } from "lucide-react";
 
 interface Inventario {
   _id: string;
@@ -131,6 +131,129 @@ const VisualizarInventariosPage: React.FC = () => {
     setInventarioAEliminar(null);
   };
 
+  const handleExportarInventario = async (inventarioId: string, fecha: string, farmacia: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No se encontró el token de autenticación");
+
+      // Obtener items del inventario desde el backend
+      const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        // Si el endpoint no existe, intentar con el endpoint general de productos filtrado por inventario
+        throw new Error("No se pudo obtener los items del inventario");
+      }
+
+      const items = await res.json();
+      
+      // Importar xlsx dinámicamente
+      const XLSXModule = await import("xlsx");
+      const XLSX = XLSXModule.default || XLSXModule;
+
+      // Preparar datos para Excel
+      const data = [
+        ["CODIGO", "DESCRIPCION", "MARCA", "COSTO", "PRECIO", "EXISTENCIA"],
+        ...(Array.isArray(items) ? items : items.items || []).map((item: any) => [
+          item.codigo || "",
+          item.descripcion || item.nombre || "",
+          item.marca || "",
+          item.costo || 0,
+          item.precio || 0,
+          item.existencia || item.stock || 0,
+        ]),
+      ];
+
+      // Crear workbook
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+
+      // Generar nombre de archivo
+      const fechaFormateada = fecha.replace(/-/g, "");
+      const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;
+
+      // Descargar
+      XLSX.writeFile(wb, nombreArchivo);
+    } catch (err: any) {
+      // Si falla, intentar exportar solo la información básica del inventario
+      try {
+        const XLSXModule = await import("xlsx");
+        const XLSX = XLSXModule.default || XLSXModule;
+
+        const inventario = inventarios.find(i => i._id === inventarioId);
+        if (!inventario) throw new Error("Inventario no encontrado");
+
+        const data = [
+          ["INFORMACIÓN DEL INVENTARIO"],
+          ["Fecha de Cargo", inventario.fecha?.slice(0, 10) || ""],
+          ["Sucursal", inventario.farmacia || ""],
+          ["Costo Total", inventario.costo || 0],
+          ["Usuario", inventario.usuarioCorreo || ""],
+          [],
+          ["NOTA: Los items detallados del inventario no están disponibles."],
+          ["Contacte al administrador para obtener el detalle completo."],
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+
+        const fechaFormateada = fecha.replace(/-/g, "");
+        const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;
+        XLSX.writeFile(wb, nombreArchivo);
+      } catch (exportErr: any) {
+        setError(`Error al exportar: ${err.message}. ${exportErr.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportarTodos = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Importar xlsx dinámicamente
+      const XLSXModule = await import("xlsx");
+      const XLSX = XLSXModule.default || XLSXModule;
+
+      // Preparar datos para Excel
+      const data = [
+        ["Fecha de Cargo", "Sucursal", "Costo Inventario", "Usuario"],
+        ...inventariosFiltrados.map(i => [
+          i.fecha?.slice(0, 10) || "",
+          i.farmacia || "",
+          i.costo || 0,
+          i.usuarioCorreo || "",
+        ]),
+      ];
+
+      // Crear workbook
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Inventarios");
+
+      // Generar nombre de archivo
+      const fecha = new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const nombreArchivo = `Inventarios_${fecha}.xlsx`;
+
+      // Descargar
+      XLSX.writeFile(wb, nombreArchivo);
+    } catch (err: any) {
+      setError(`Error al exportar: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const inventariosFiltrados = inventarios
     .filter(i => !selectedFarmacia || i.farmacia === selectedFarmacia)
     .filter(i => !usuarioFiltro || i.usuarioCorreo.toLowerCase().includes(usuarioFiltro.toLowerCase()))
@@ -146,7 +269,20 @@ const VisualizarInventariosPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 py-8">
       <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-slate-800 mb-8 text-center">Inventarios Registrados</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-slate-800">Inventarios Registrados</h1>
+          {inventariosFiltrados.length > 0 && (
+            <Button
+              onClick={handleExportarTodos}
+              disabled={loading}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Exportar Todos a Excel
+            </Button>
+          )}
+        </div>
         
         {/* Componente para subir inventario desde Excel */}
         <UploadInventarioExcel
@@ -258,6 +394,16 @@ const VisualizarInventariosPage: React.FC = () => {
                           >
                             <Edit className="h-4 w-4" />
                             Modificar Items
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleExportarInventario(i._id, i.fecha?.slice(0, 10) || "", i.farmacia)}
+                            className="flex items-center gap-1 whitespace-nowrap"
+                            disabled={loading}
+                          >
+                            <FileSpreadsheet className="h-4 w-4" />
+                            Exportar
                           </Button>
                           <Button
                             size="sm"

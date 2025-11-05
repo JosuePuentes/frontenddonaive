@@ -124,33 +124,37 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
           const codigo = String(row[codigoIdx] || "").trim();
           const descripcion = String(row[descripcionIdx] || "").trim();
           const marca = String(row[marcaIdx] || "").trim();
+          
+          // Permitir valores vacíos o 0 para números
           const costo = parseFloat(String(row[costoIdx] || 0)) || 0;
           const precio = parseFloat(String(row[precioIdx] || 0)) || 0;
           const existencia = parseFloat(String(row[existenciaIdx] || 0)) || 0;
 
-          // Validar que TODOS los campos estén presentes (ninguno es opcional)
-          if (!codigo || !descripcion || !marca) {
-            // Saltar filas incompletas
+          // Permitir campos vacíos - guardar todo lo que esté en la fila
+          // Solo saltar si la fila está completamente vacía
+          if (codigo === "" && descripcion === "" && marca === "" && costo === 0 && precio === 0 && existencia === 0) {
             continue;
           }
 
-          // Validar que los números sean válidos
-          if (isNaN(costo) || isNaN(precio) || isNaN(existencia)) {
-            continue;
-          }
+          // Permitir valores NaN - convertirlos a 0 o string vacío según corresponda
+          const costoFinal = isNaN(costo) ? 0 : costo;
+          const precioFinal = isNaN(precio) ? 0 : precio;
+          const existenciaFinal = isNaN(existencia) ? 0 : existencia;
 
           productosParsed.push({
-            codigo,
-            descripcion,
-            marca,
-            existencia,
-            costo,
-            precio,
+            codigo: codigo || "", // Permitir código vacío
+            descripcion: descripcion || "", // Permitir descripción vacía
+            marca: marca || "", // Permitir marca vacía
+            existencia: existenciaFinal,
+            costo: costoFinal,
+            precio: precioFinal,
           });
         }
 
+        // No validar si hay productos - permitir incluso si están vacíos
+        // Solo mostrar advertencia si realmente no hay datos
         if (productosParsed.length === 0) {
-          setError("No se encontraron productos válidos en el archivo Excel");
+          setError("El archivo Excel no contiene datos para procesar. Verifique que haya al menos una fila con datos.");
           return;
         }
 
@@ -275,43 +279,82 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
         </div>
 
         {preview && productos.length > 0 && (
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm font-medium text-blue-800 mb-2">
-              Vista previa: {productos.length} productos encontrados
-            </p>
-            <div className="max-h-40 overflow-y-auto">
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-sm font-semibold text-blue-800">
+                📋 Vista Previa del Inventario: <span className="font-bold">{productos.length}</span> productos encontrados
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const XLSXModule = await import("xlsx");
+                    const XLSX = XLSXModule.default || XLSXModule;
+                    
+                    // Preparar datos para Excel
+                    const data = [
+                      ["CODIGO", "DESCRIPCION", "MARCA", "COSTO", "PRECIO", "EXISTENCIA"],
+                      ...productos.map(p => [
+                        p.codigo || "",
+                        p.descripcion || "",
+                        p.marca || "",
+                        p.costo || 0,
+                        p.precio || 0,
+                        p.existencia || 0
+                      ])
+                    ];
+
+                    // Crear workbook
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+
+                    // Generar nombre de archivo
+                    const fecha = new Date().toISOString().split("T")[0];
+                    const nombreArchivo = `Inventario_Preliminar_${fecha}.xlsx`;
+
+                    // Descargar
+                    XLSX.writeFile(wb, nombreArchivo);
+                  } catch (err: any) {
+                    setError(`Error al exportar: ${err.message}`);
+                  }
+                }}
+                className="text-xs"
+              >
+                <FileSpreadsheet className="w-3 h-3 mr-1" />
+                Exportar Previa a Excel
+              </Button>
+            </div>
+            <div className="max-h-96 overflow-y-auto border border-blue-200 rounded bg-white">
               <table className="w-full text-xs">
-                <thead>
+                <thead className="bg-blue-100 sticky top-0">
                   <tr className="border-b">
-                    <th className="text-left p-1">Código</th>
-                    <th className="text-left p-1">Descripción</th>
-                    <th className="text-left p-1">Marca</th>
-                    <th className="text-right p-1">Costo</th>
-                    <th className="text-right p-1">Precio</th>
-                    <th className="text-right p-1">Existencia</th>
+                    <th className="text-left p-2 font-semibold">Código</th>
+                    <th className="text-left p-2 font-semibold">Descripción</th>
+                    <th className="text-left p-2 font-semibold">Marca</th>
+                    <th className="text-right p-2 font-semibold">Costo</th>
+                    <th className="text-right p-2 font-semibold">Precio</th>
+                    <th className="text-right p-2 font-semibold">Existencia</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {productos.slice(0, 5).map((p, idx) => (
-                    <tr key={idx} className="border-b">
-                      <td className="p-1">{p.codigo}</td>
-                      <td className="p-1">{p.descripcion}</td>
-                      <td className="p-1">{p.marca}</td>
-                      <td className="text-right p-1">{p.costo.toFixed(2)}</td>
-                      <td className="text-right p-1">{p.precio.toFixed(2)}</td>
-                      <td className="text-right p-1">{p.existencia}</td>
+                  {productos.map((p, idx) => (
+                    <tr key={idx} className="border-b hover:bg-blue-50">
+                      <td className="p-2">{p.codigo || <span className="text-gray-400 italic">(vacío)</span>}</td>
+                      <td className="p-2">{p.descripcion || <span className="text-gray-400 italic">(vacío)</span>}</td>
+                      <td className="p-2">{p.marca || <span className="text-gray-400 italic">(vacío)</span>}</td>
+                      <td className="text-right p-2">{p.costo.toFixed(2)}</td>
+                      <td className="text-right p-2">{p.precio.toFixed(2)}</td>
+                      <td className="text-right p-2">{p.existencia}</td>
                     </tr>
                   ))}
-                  {productos.length > 5 && (
-                    <tr>
-                      <td colSpan={6} className="text-center p-1 text-gray-500">
-                        ... y {productos.length - 5} más
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
+            <p className="text-xs text-blue-600 mt-2">
+              💡 Esta es la vista previa de todos los productos que se cargarán. Puedes exportarla a Excel antes de subir.
+            </p>
           </div>
         )}
 

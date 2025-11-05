@@ -38,12 +38,12 @@
 **Campos del Request:**
 - `sucursal` (string, requerido): ID de la sucursal donde se agregará el inventario
 - `productos` (array, requerido): Array de objetos producto con:
-  - `codigo` (string, requerido): Código del producto
-  - `descripcion` (string, requerido): Descripción/nombre del producto
-  - `marca` (string, requerido): Marca del producto (TODAS las columnas son obligatorias)
-  - `existencia` (number, requerido): Cantidad en stock
-  - `costo` (number, requerido): Costo del producto
-  - `precio` (number, requerido): Precio de venta del producto
+  - `codigo` (string, opcional): Código del producto (puede estar vacío)
+  - `descripcion` (string, opcional): Descripción/nombre del producto (puede estar vacío)
+  - `marca` (string, opcional): Marca del producto (puede estar vacío)
+  - `existencia` (number, opcional): Cantidad en stock (default: 0 si está vacío)
+  - `costo` (number, opcional): Costo del producto (default: 0 si está vacío)
+  - `precio` (number, opcional): Precio de venta del producto (default: 0 si está vacío)
 
 **Formato del Excel:**
 El archivo Excel debe tener exactamente estas columnas en este orden:
@@ -54,7 +54,7 @@ El archivo Excel debe tener exactamente estas columnas en este orden:
 5. **PRECIO** (obligatorio)
 6. **EXISTENCIA** (obligatorio)
 
-**IMPORTANTE:** Todas las columnas son obligatorias. No se aceptan valores vacíos.
+**IMPORTANTE:** Todas las columnas deben existir en el Excel, pero pueden estar vacías. El sistema guardará los productos incluso con campos vacíos (código, descripción, marca, etc.).
 
 **Response (200 OK):**
 ```json
@@ -73,12 +73,12 @@ El archivo Excel debe tener exactamente estas columnas en este orden:
 - `404 Not Found`: Si la sucursal no existe
 
 **Validaciones:**
-- Todos los productos deben tener código, descripción, marca, existencia, costo y precio (TODOS obligatorios)
-- La marca no puede estar vacía
-- La existencia debe ser un número positivo o cero
-- El costo y precio deben ser números positivos (mayor que 0)
-- El código debe ser único por sucursal (si ya existe, actualizar; si no, crear)
-- Si algún campo está vacío o inválido, se debe rechazar el producto o toda la operación según tu lógica de negocio
+- Las columnas deben existir en el Excel, pero pueden estar vacías
+- Los campos de texto (código, descripción, marca) pueden estar vacíos
+- La existencia, costo y precio pueden ser 0 o estar vacíos (se tratarán como 0)
+- El código no necesita ser único si está vacío (se permiten múltiples productos sin código)
+- Si un producto tiene todos los campos vacíos, se puede omitir o guardar según tu lógica de negocio
+- El sistema debe aceptar productos con cualquier combinación de campos vacíos
 
 ---
 
