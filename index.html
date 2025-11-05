@@ -14,46 +14,68 @@
   <div id="root"></div>
   <!-- Suprimir warnings del navegador sobre APIs deprecadas y preload -->
   <script>
-    // Suprimir warning de "Deprecated API for given entry type"
-    if ('PerformanceObserver' in window) {
-      try {
-        const observer = new PerformanceObserver(() => {});
-        observer.disconnect();
-      } catch (e) {
-        // Ignorar errores de Performance Observer
+    // Interceptar warnings ANTES de que se muestren en la consola
+    (function() {
+      const originalWarn = console.warn;
+      const originalError = console.error;
+      
+      // Función para detectar si un mensaje debe ser filtrado (warnings de navegador)
+      function shouldFilterWarnings(message) {
+        const msg = String(message).toLowerCase();
+        return (
+          msg.includes('deprecated api') ||
+          msg.includes('entry type') ||
+          (msg.includes('preload') && (msg.includes('not used') || msg.includes('was preloaded'))) ||
+          msg.includes('resource was preloaded') ||
+          msg.includes('preloaded using link preload')
+        );
       }
-    }
-    
-    // Suprimir warnings de preload no utilizados
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-      const message = args.join(' ');
-      // Filtrar warnings específicos del navegador que no podemos controlar
-      if (
-        message.includes('preload') && message.includes('not used') ||
-        message.includes('Deprecated API') ||
-        message.includes('entry type')
-      ) {
-        return;
+      
+      // Función para detectar errores 404 de servicios externos
+      function shouldFilter404(message) {
+        const msg = String(message);
+        return (
+          ((msg.includes('/api/v1/projects/') || msg.includes('rapifarma-frontend')) && 
+           (msg.includes('404') || msg.includes('Failed to load resource'))) ||
+          (msg.includes('rolling-release') && msg.includes('404'))
+        );
       }
-      originalWarn.apply(console, args);
-    };
-    
-    // Suprimir errores 404 de servicios externos que no controlamos
-    const originalError = console.error;
-    console.error = function(...args) {
-      const message = args.join(' ');
-      // Filtrar solo errores 404 específicos de servicios externos (Vercel, extensiones, etc.)
-      // No filtrar otros errores que puedan ser importantes
-      if (
-        (message.includes('/api/v1/projects/') || message.includes('rapifarma-frontend')) && 
-        (message.includes('404') || message.includes('Failed to load resource')) ||
-        (message.includes('rolling-release') && message.includes('404'))
-      ) {
-        return; // Ignorar este error específico de servicio externo
+      
+      // Interceptar console.warn
+      console.warn = function(...args) {
+        const message = args.map(arg => String(arg)).join(' ');
+        if (shouldFilterWarnings(message)) {
+          return; // No mostrar este warning
+        }
+        originalWarn.apply(console, args);
+      };
+      
+      // Interceptar console.error (warnings y errores 404 externos)
+      console.error = function(...args) {
+        const message = args.map(arg => String(arg)).join(' ');
+        if (shouldFilterWarnings(message) || shouldFilter404(message)) {
+          return; // No mostrar este error/warning
+        }
+        originalError.apply(console, args);
+      };
+      
+      // Suprimir warnings de Performance API deprecada
+      if ('PerformanceObserver' in window) {
+        try {
+          const originalPerformanceObserver = window.PerformanceObserver;
+          window.PerformanceObserver = function(...args) {
+            try {
+              return new originalPerformanceObserver(...args);
+            } catch (e) {
+              // Silenciar errores de Performance Observer deprecado
+              return null;
+            }
+          };
+        } catch (e) {
+          // Ignorar errores
+        }
       }
-      originalError.apply(console, args);
-    };
+    })();
   </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
