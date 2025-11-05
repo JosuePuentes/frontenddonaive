@@ -11,6 +11,13 @@ interface Sucursal {
   nombre: string;
 }
 
+interface Cajero {
+  _id: string;
+  ID?: string;
+  NOMBRE: string;
+  FARMACIAS?: Record<string, string>;
+}
+
 interface Producto {
   id: string;
   nombre: string;
@@ -41,8 +48,10 @@ const PuntoVentaPage: React.FC = () => {
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [showSucursalModal, setShowSucursalModal] = useState(true);
   const [sucursalSeleccionada, setSucursalSeleccionada] = useState<Sucursal | null>(null);
-  const [cajeroNombre, setCajeroNombre] = useState<string>("");
-  const [showCajeroInput, setShowCajeroInput] = useState(false);
+  const [cajeros, setCajeros] = useState<Cajero[]>([]);
+  const [cajeroSeleccionado, setCajeroSeleccionado] = useState<Cajero | null>(null);
+  const [showCajeroModal, setShowCajeroModal] = useState(false);
+  const [loadingCajeros, setLoadingCajeros] = useState(false);
 
   // Estados del POS
   const [tasaDelDia, setTasaDelDia] = useState<number>(0);
@@ -145,16 +154,52 @@ const PuntoVentaPage: React.FC = () => {
     }
   }, [busquedaItem, sucursalSeleccionada]);
 
+  // Cargar cajeros cuando se selecciona una sucursal
+  useEffect(() => {
+    if (sucursalSeleccionada && !showSucursalModal) {
+      const fetchCajeros = async () => {
+        setLoadingCajeros(true);
+        try {
+          const token = localStorage.getItem("token");
+          const headers: HeadersInit = {};
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+          
+          const res = await fetch(`${API_BASE_URL}/cajeros`, { headers });
+          if (res.ok) {
+            const data = await res.json();
+            // Transformar los datos al formato esperado
+            const cajerosTransformados: Cajero[] = Array.isArray(data)
+              ? data.map((cajero: any) => ({
+                  _id: cajero._id || cajero.id,
+                  ID: cajero.ID || cajero.id,
+                  NOMBRE: cajero.NOMBRE || cajero.nombre,
+                  FARMACIAS: cajero.FARMACIAS || cajero.farmacias || {},
+                }))
+              : [];
+            setCajeros(cajerosTransformados);
+            setShowCajeroModal(true);
+          }
+        } catch (error) {
+          console.error("Error al cargar cajeros:", error);
+          setCajeros([]);
+        } finally {
+          setLoadingCajeros(false);
+        }
+      };
+      fetchCajeros();
+    }
+  }, [sucursalSeleccionada, showSucursalModal]);
+
   const handleSeleccionarSucursal = (sucursal: Sucursal) => {
     setSucursalSeleccionada(sucursal);
     setShowSucursalModal(false);
-    setShowCajeroInput(true);
   };
 
-  const handleConfirmarCajero = () => {
-    if (cajeroNombre.trim()) {
-      setShowCajeroInput(false);
-    }
+  const handleSeleccionarCajero = (cajero: Cajero) => {
+    setCajeroSeleccionado(cajero);
+    setShowCajeroModal(false);
   };
 
   const handleSeleccionarProducto = (producto: Producto) => {
@@ -332,7 +377,7 @@ const PuntoVentaPage: React.FC = () => {
       return;
     }
 
-    if (!sucursalSeleccionada || !cajeroNombre.trim()) {
+    if (!sucursalSeleccionada || !cajeroSeleccionado) {
       alert("Debe seleccionar una sucursal y un cajero");
       return;
     }
@@ -376,7 +421,7 @@ const PuntoVentaPage: React.FC = () => {
         total_usd: totalUsd,
         tasa_dia: tasaDelDia,
         sucursal: sucursalSeleccionada.id,
-        cajero: usuario?.correo || cajeroNombre,
+        cajero: usuario?.correo || cajeroSeleccionado.NOMBRE,
         cliente: "",
         notas: "",
       };
@@ -411,7 +456,7 @@ const PuntoVentaPage: React.FC = () => {
   };
 
   // Si no hay sucursal o cajero seleccionado, mostrar modales
-  if (!sucursalSeleccionada || showCajeroInput) {
+  if (!sucursalSeleccionada || !cajeroSeleccionado) {
     return (
       <>
         {/* Modal de selección de sucursal */}
@@ -434,40 +479,50 @@ const PuntoVentaPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de ingreso de cajero */}
-        <Dialog open={showCajeroInput} onOpenChange={setShowCajeroInput}>
+        {/* Modal de selección de cajero */}
+        <Dialog open={showCajeroModal} onOpenChange={setShowCajeroModal}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Ingresar Nombre del Cajero</DialogTitle>
+              <DialogTitle>Seleccionar Cajero</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <Input
-                type="text"
-                placeholder="Nombre del cajero o vendedor"
-                value={cajeroNombre}
-                onChange={(e) => setCajeroNombre(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && cajeroNombre.trim()) {
-                    handleConfirmarCajero();
-                  }
-                }}
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <Button onClick={handleConfirmarCajero} className="flex-1" disabled={!cajeroNombre.trim()}>
-                  Continuar
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowCajeroInput(false);
-                    setShowSucursalModal(true);
-                  }}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Volver
-                </Button>
+            {loadingCajeros ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-gray-600">Cargando cajeros...</div>
               </div>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {cajeros.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    No hay cajeros disponibles
+                  </div>
+                ) : (
+                  cajeros.map((cajero) => (
+                    <button
+                      key={cajero._id}
+                      onClick={() => handleSeleccionarCajero(cajero)}
+                      className="w-full text-left p-4 rounded-lg border hover:bg-blue-50 transition-colors"
+                    >
+                      <div className="font-semibold">{cajero.NOMBRE}</div>
+                      {cajero.ID && (
+                        <div className="text-sm text-gray-500">ID: {cajero.ID}</div>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+            <div className="flex gap-2 mt-4">
+              <Button
+                onClick={() => {
+                  setShowCajeroModal(false);
+                  setShowSucursalModal(true);
+                  setSucursalSeleccionada(null);
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                Volver
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -486,7 +541,7 @@ const PuntoVentaPage: React.FC = () => {
               <span className="font-semibold">Sucursal:</span> {sucursalSeleccionada.nombre}
             </div>
             <div className="text-sm text-gray-600">
-              <span className="font-semibold">Cajero:</span> {cajeroNombre}
+              <span className="font-semibold">Cajero:</span> {cajeroSeleccionado.NOMBRE}
             </div>
           </div>
           <div className="text-right">
