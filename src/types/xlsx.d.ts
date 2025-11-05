@@ -1,0 +1,22 @@
+declare module 'xlsx' {
+  export interface WorkSheet {
+    [key: string]: any;
+  }
+  
+  export interface WorkBook {
+    SheetNames: string[];
+    Sheets: { [key: string]: WorkSheet };
+  }
+  
+  export interface Sheet2JSONOpts {
+    header?: number | string[];
+    defval?: any;
+    raw?: boolean;
+  }
+  
+  export function read(data: any, opts?: { type?: string }): WorkBook;
+  export const utils: {
+    sheet_to_json<T = any>(sheet: WorkSheet, opts?: Sheet2JSONOpts): T[];
+  };
+}
+
