@@ -32,13 +32,10 @@ const HomePage: React.FC = () => {
                             </span>
                         </h1>
                         <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed">
-                            Transformamos y potenciamos los resultados de tu empresa con una combinación única de 
-                            <span className="text-green-800 font-semibold"> asesoría financiera</span> y 
-                            <span className="text-green-800 font-semibold"> desarrollo web</span>
+                            Transformamos y potenciamos los resultados de tu empresa con una combinación única de asesoría financiera y desarrollo web
                         </p>
                         <p className="text-lg text-gray-300 mb-12 max-w-3xl">
-                            Mejoramos tus procesos, estandarizamos operaciones y disminuimos riesgos al 100%, 
-                            asegurando que tu negocio sea financieramente sólido y tenga una presencia digital robusta.
+                            Mejoramos tus procesos, estandarizamos operaciones y disminuimos riesgos al 100%, asegurando que tu negocio sea financieramente sólido y tenga una presencia digital robusta.
                         </p>
                         
                                <motion.div
