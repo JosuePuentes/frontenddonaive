@@ -37,7 +37,7 @@ const VisualizarInventariosPage: React.FC = () => {
   const [totalesExistencias, setTotalesExistencias] = useState<{ [key: string]: number }>({});
   const [totalesCostoInventario, setTotalesCostoInventario] = useState<{ [key: string]: number }>({});
 
-  const fetchInventarios = async () => {
+  const fetchInventarios = async (): Promise<Inventario[]> => {
     setLoading(true);
     setError(null);
     try {
@@ -46,7 +46,7 @@ const VisualizarInventariosPage: React.FC = () => {
         console.warn("No se encontró token de autenticación. Redirigiendo a login...");
         // Redirigir a login si no hay token
         window.location.href = "/login";
-        return;
+        return [];
       }
       
       const res = await fetch(`${API_BASE_URL}/inventarios`, {
@@ -59,7 +59,7 @@ const VisualizarInventariosPage: React.FC = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("usuario");
         window.location.href = "/login";
-        return;
+        return [];
       }
       
       if (!res.ok) {
@@ -68,14 +68,17 @@ const VisualizarInventariosPage: React.FC = () => {
       }
       
       const data = await res.json();
-      setInventarios(Array.isArray(data) ? data : []);
+      const inventariosArray = Array.isArray(data) ? data : [];
+      setInventarios(inventariosArray);
+      return inventariosArray;
     } catch (err: any) {
       // No mostrar error si es una redirección
       if (err.message?.includes("login") || window.location.pathname === "/login") {
-        return;
+        return [];
       }
       setError(err.message || "Error al obtener inventarios");
       console.error("Error al obtener inventarios:", err);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -170,15 +173,68 @@ const VisualizarInventariosPage: React.FC = () => {
     setInventarioParaVer(null);
   };
 
-  const handleCerrarModal = () => {
+  const handleCerrarModal = async () => {
     setShowModificarModal(false);
     setInventarioSeleccionado(null);
-    // Refrescar la lista después de modificar
-    fetchInventarios();
+    // Refrescar la lista después de modificar y obtener los inventarios actualizados
+    const inventariosActualizados = await fetchInventarios();
+    // Recalcular totales después de modificar usando los inventarios actualizados
+    await recalcularTotales(inventariosActualizados);
     // Si el modal de ver items está abierto, refrescar también esos datos
     if (showVerItemsModal && inventarioParaVer) {
       setRefreshItemsTrigger(prev => prev + 1);
     }
+  };
+
+  // Función para recalcular totales manualmente (útil después de modificar items)
+  const recalcularTotales = async (inventariosParaCalcular?: Inventario[]) => {
+    const inventariosACalcular = inventariosParaCalcular || inventarios;
+    if (inventariosACalcular.length === 0) return;
+    
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const nuevosTotalesExistencias: { [key: string]: number } = {};
+    const nuevosTotalesCosto: { [key: string]: number } = {};
+    
+    // Cargar totales en paralelo para todos los inventarios
+    const promesas = inventariosACalcular.map(async (inventario) => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/inventarios/${inventario._id}/items`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          const items = await res.json();
+          if (Array.isArray(items)) {
+            // Calcular total de existencias
+            const totalExistencias = items.reduce((sum, item: any) => sum + (item.existencia || 0), 0);
+            nuevosTotalesExistencias[inventario._id] = totalExistencias;
+            
+            // Calcular costo total del inventario: suma de (existencia × costo) de todos los items
+            const costoTotal = items.reduce((sum, item: any) => {
+              const existencia = item.existencia || 0;
+              const costo = item.costo || 0;
+              return sum + (existencia * costo);
+            }, 0);
+            nuevosTotalesCosto[inventario._id] = costoTotal;
+          } else {
+            nuevosTotalesExistencias[inventario._id] = 0;
+            nuevosTotalesCosto[inventario._id] = 0;
+          }
+        }
+      } catch (err) {
+        console.error(`Error al obtener items del inventario ${inventario._id}:`, err);
+        nuevosTotalesExistencias[inventario._id] = 0;
+        nuevosTotalesCosto[inventario._id] = 0;
+      }
+    });
+
+    await Promise.all(promesas);
+    setTotalesExistencias(nuevosTotalesExistencias);
+    setTotalesCostoInventario(nuevosTotalesCosto);
   };
 
   const handleCancelarEliminar = () => {
@@ -209,8 +265,9 @@ const VisualizarInventariosPage: React.FC = () => {
         throw new Error(errorData?.detail || errorData?.message || "Error al eliminar inventario");
       }
 
-      // Refrescar la lista
-      await fetchInventarios();
+      // Refrescar la lista y recalcular totales
+      const inventariosActualizados = await fetchInventarios();
+      await recalcularTotales(inventariosActualizados);
       setShowDeleteModal(false);
       setInventarioAEliminar(null);
     } catch (err: any) {
@@ -356,7 +413,7 @@ const VisualizarInventariosPage: React.FC = () => {
                           {fechaCarga}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700 text-right font-semibold">
-                          {costoTotalInventario.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs
+                          ${costoTotalInventario.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700 text-right font-semibold">
                           {totalExist.toLocaleString('es-VE')}
