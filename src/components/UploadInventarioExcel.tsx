@@ -188,6 +188,17 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
         throw new Error("No se encontró el token de autenticación");
       }
 
+      // Transformar productos para que coincidan con lo que espera el backend
+      // El backend espera: nombre (en lugar de descripcion) y stock (en lugar de existencia)
+      const productosTransformados = productos.map((p) => ({
+        codigo: p.codigo || "",
+        nombre: p.descripcion || "",
+        marca: p.marca || "",
+        costo: p.costo || 0,
+        precio: p.precio || 0,
+        stock: p.existencia || 0,
+      }));
+
       const response = await fetch(
         `${API_BASE_URL}/inventarios/upload-excel`,
         {
@@ -198,7 +209,7 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
           },
           body: JSON.stringify({
             sucursal: sucursalSeleccionada,
-            productos,
+            productos: productosTransformados,
           }),
         }
       );
