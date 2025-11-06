@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import UploadInventarioExcel from "../components/UploadInventarioExcel";
 import ModificarItemInventarioModal from "../components/ModificarItemInventarioModal";
+import VerItemsInventarioModal from "../components/VerItemsInventarioModal";
 import { Button } from "@/components/ui/button";
-import { Download, Trash2, Edit } from "lucide-react";
+import { Download, Trash2, Edit, Eye } from "lucide-react";
 
 interface Inventario {
   _id: string;
@@ -29,6 +30,9 @@ const VisualizarInventariosPage: React.FC = () => {
   const [eliminando, setEliminando] = useState(false);
   const [showModificarModal, setShowModificarModal] = useState(false);
   const [inventarioSeleccionado, setInventarioSeleccionado] = useState<Inventario | null>(null);
+  const [showVerItemsModal, setShowVerItemsModal] = useState(false);
+  const [inventarioParaVer, setInventarioParaVer] = useState<Inventario | null>(null);
+  const [refreshItemsTrigger, setRefreshItemsTrigger] = useState(0);
 
   const fetchInventarios = async () => {
     setLoading(true);
@@ -99,11 +103,25 @@ const VisualizarInventariosPage: React.FC = () => {
     setShowModificarModal(true);
   };
 
+  const handleVerItems = (inventario: Inventario) => {
+    setInventarioParaVer(inventario);
+    setShowVerItemsModal(true);
+  };
+
+  const handleCerrarVerItems = () => {
+    setShowVerItemsModal(false);
+    setInventarioParaVer(null);
+  };
+
   const handleCerrarModal = () => {
     setShowModificarModal(false);
     setInventarioSeleccionado(null);
     // Refrescar la lista después de modificar
     fetchInventarios();
+    // Si el modal de ver items está abierto, refrescar también esos datos
+    if (showVerItemsModal && inventarioParaVer) {
+      setRefreshItemsTrigger(prev => prev + 1);
+    }
   };
 
   const handleCancelarEliminar = () => {
@@ -281,6 +299,15 @@ const VisualizarInventariosPage: React.FC = () => {
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-center">
                           <div className="flex items-center justify-center gap-2">
                             <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleVerItems(i)}
+                              className="flex items-center gap-1"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Ver Items
+                            </Button>
+                            <Button
                               variant="default"
                               size="sm"
                               onClick={() => handleModificarItems(i)}
@@ -307,6 +334,17 @@ const VisualizarInventariosPage: React.FC = () => {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Modal de ver items */}
+        {showVerItemsModal && inventarioParaVer && (
+          <VerItemsInventarioModal
+            open={showVerItemsModal}
+            onClose={handleCerrarVerItems}
+            inventarioId={inventarioParaVer._id}
+            inventarioNombre={farmacias.find(f => f.id === inventarioParaVer.farmacia || f.nombre === inventarioParaVer.farmacia)?.nombre || inventarioParaVer.farmacia}
+            refreshTrigger={refreshItemsTrigger}
+          />
         )}
 
         {/* Modal de modificar items */}
