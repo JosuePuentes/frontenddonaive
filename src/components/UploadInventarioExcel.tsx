@@ -241,22 +241,16 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
           throw new Error(errorMessage);
         }
 
-        // La respuesta fue exitosa, proceder con el éxito
-        const responseData = await response.json().catch(() => null);
-        console.log("Inventario subido exitosamente:", responseData);
-        
-        // Calcular el costo total del inventario (suma de costo * existencia)
+        // Calcular el costo total ANTES de esperar la respuesta (optimización)
         const costoTotal = productos.reduce((sum, p) => {
           const costo = p.costo || 0;
           const existencia = p.existencia || 0;
           return sum + (costo * existencia);
         }, 0);
 
-        // Obtener el nombre de la sucursal
+        // Preparar datos para crear registro de inventario (optimización)
         const sucursalEncontrada = sucursales.find(s => s.id === sucursalSeleccionada);
         const nombreSucursal = sucursalEncontrada?.nombre || sucursalSeleccionada;
-
-        // Obtener el correo del usuario desde localStorage
         const usuarioStorage = localStorage.getItem("usuario");
         let usuarioCorreo = "";
         if (usuarioStorage) {
@@ -268,54 +262,62 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
           }
         }
 
-        // Crear el registro de inventario en la colección inventarios
+        // La respuesta fue exitosa
+        const responseData = await response.json().catch(() => null);
+        console.log("Inventario subido exitosamente:", responseData);
+        
+        // Crear el registro de inventario en paralelo (no esperar)
         // Esto es necesario porque el backend no lo crea automáticamente
-        try {
-          const inventarioResponse = await fetch(
-            `${API_BASE_URL}/inventarios`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                farmacia: nombreSucursal,
-                costo: costoTotal,
-                usuarioCorreo: usuarioCorreo,
-              }),
-            }
-          );
+        const crearRegistroInventario = async () => {
+          try {
+            const inventarioResponse = await fetch(
+              `${API_BASE_URL}/inventarios`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  farmacia: nombreSucursal,
+                  costo: costoTotal,
+                  usuarioCorreo: usuarioCorreo,
+                }),
+              }
+            );
 
-          if (!inventarioResponse.ok) {
-            console.warn("No se pudo crear el registro de inventario, pero los productos se procesaron correctamente");
-          } else {
-            console.log("Registro de inventario creado exitosamente");
+            if (!inventarioResponse.ok) {
+              console.warn("No se pudo crear el registro de inventario, pero los productos se procesaron correctamente");
+            } else {
+              console.log("Registro de inventario creado exitosamente");
+            }
+          } catch (inventarioError) {
+            console.warn("Error al crear registro de inventario:", inventarioError);
           }
-        } catch (inventarioError) {
-          console.warn("Error al crear registro de inventario:", inventarioError);
-          // No lanzar error aquí, porque los productos ya se procesaron correctamente
-        }
+        };
+
+        // Crear registro en background (no bloquea la UI)
+        crearRegistroInventario().catch(() => {}); // No esperar, ejecutar en background
         
         setSuccess(true);
         setError(null);
         
-        // Mostrar mensaje de éxito por más tiempo antes de limpiar
+        // Refrescar la lista inmediatamente (el registro se creará en background)
+        if (onSuccess) {
+          // Esperar un poco para que el backend termine de procesar
+          setTimeout(() => {
+            onSuccess();
+          }, 500);
+        }
+        
+        // Mostrar mensaje de éxito y limpiar después
         setTimeout(() => {
           setFile(null);
           setProductos([]);
           setSucursalSeleccionada("");
           setPreview(false);
           setSuccess(false);
-        }, 5000); // Mantener el mensaje de éxito por 5 segundos
-
-        // Llamar al callback para refrescar la lista
-        if (onSuccess) {
-          // Esperar un poco para que el backend termine de procesar
-          setTimeout(() => {
-            onSuccess();
-          }, 1000);
-        }
+        }, 3000); // Reducido a 3 segundos
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
         throw fetchError;
