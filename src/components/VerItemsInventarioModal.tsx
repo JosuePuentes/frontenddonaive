@@ -77,7 +77,13 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
       }
 
       const data = await res.json();
-      setItems(Array.isArray(data) ? data : []);
+      const itemsArray = Array.isArray(data) ? data : [];
+      // Debug: ver la estructura del primer item
+      if (itemsArray.length > 0) {
+        console.log('[VerItemsInventarioModal] Estructura del primer item:', itemsArray[0]);
+        console.log('[VerItemsInventarioModal] Campos disponibles:', Object.keys(itemsArray[0]));
+      }
+      setItems(itemsArray);
     } catch (err: any) {
       setError(err.message || "Error al cargar los items del inventario");
       console.error("Error al obtener items:", err);

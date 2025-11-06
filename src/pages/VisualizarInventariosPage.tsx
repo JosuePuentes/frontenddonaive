@@ -216,15 +216,26 @@ const VisualizarInventariosPage: React.FC = () => {
         if (res.ok) {
           const items = await res.json();
           if (Array.isArray(items)) {
-            // Calcular total de existencias
-            const totalExistencias = items.reduce((sum, item: any) => sum + (item.existencia || 0), 0);
+            // Debug: ver la estructura del primer item
+            if (items.length > 0) {
+              console.log(`[Recalcular Totales] Estructura del primer item del inventario ${inventario._id}:`, items[0]);
+              console.log(`[Recalcular Totales] Campos disponibles:`, Object.keys(items[0]));
+            }
+            
+            // Calcular total de existencias - intentar diferentes nombres de campo
+            const totalExistencias = items.reduce((sum, item: any) => {
+              const existencia = item.existencia || item.cantidad || item.stock || item.existencia_actual || 0;
+              return sum + (Number(existencia) || 0);
+            }, 0);
             nuevosTotalesExistencias[inventario._id] = totalExistencias;
             
             // Calcular costo total del inventario: suma de (existencia × costo) de todos los items
             const costoTotal = items.reduce((sum, item: any) => {
-              const existencia = item.existencia || 0;
-              const costo = item.costo || 0;
-              return sum + (existencia * costo);
+              const existencia = item.existencia || item.cantidad || item.stock || item.existencia_actual || 0;
+              const costo = item.costo || item.costo_unitario || item.precio_costo || 0;
+              const existenciaNum = Number(existencia) || 0;
+              const costoNum = Number(costo) || 0;
+              return sum + (existenciaNum * costoNum);
             }, 0);
             nuevosTotalesCosto[inventario._id] = costoTotal;
             
