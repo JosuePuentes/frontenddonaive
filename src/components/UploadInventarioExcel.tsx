@@ -235,16 +235,18 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
         }
 
         // La respuesta fue exitosa, proceder con el éxito
+        const responseData = await response.json().catch(() => null);
+        console.log("Inventario subido exitosamente:", responseData);
+        
         setSuccess(true);
         setFile(null);
         setProductos([]);
         setSucursalSeleccionada("");
         setPreview(false);
 
+        // Llamar al callback inmediatamente para refrescar la lista
         if (onSuccess) {
-          setTimeout(() => {
-            onSuccess();
-          }, 1500);
+          onSuccess();
         }
       } catch (fetchError: any) {
         clearTimeout(timeoutId);

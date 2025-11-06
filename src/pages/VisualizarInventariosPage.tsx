@@ -45,9 +45,11 @@ const VisualizarInventariosPage: React.FC = () => {
       });
       if (!res.ok) throw new Error("Error al obtener inventarios");
       const data = await res.json();
-      setInventarios(data);
+      console.log("Inventarios obtenidos:", data);
+      setInventarios(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setError(err.message || "Error al obtener inventarios");
+      console.error("Error al obtener inventarios:", err);
     } finally {
       setLoading(false);
     }
@@ -255,7 +257,14 @@ const VisualizarInventariosPage: React.FC = () => {
   };
 
   const inventariosFiltrados = inventarios
-    .filter(i => !selectedFarmacia || i.farmacia === selectedFarmacia)
+    .filter(i => {
+      if (!selectedFarmacia) return true;
+      // Buscar la farmacia seleccionada por ID o nombre
+      const farmaciaSeleccionada = farmacias.find(f => f.id === selectedFarmacia);
+      if (!farmaciaSeleccionada) return true;
+      // Comparar tanto por ID como por nombre para asegurar que funcione
+      return i.farmacia === farmaciaSeleccionada.nombre || i.farmacia === farmaciaSeleccionada.id;
+    })
     .filter(i => !usuarioFiltro || i.usuarioCorreo.toLowerCase().includes(usuarioFiltro.toLowerCase()))
     .filter(i => {
       if (!fechaInicio && !fechaFin) return true;
