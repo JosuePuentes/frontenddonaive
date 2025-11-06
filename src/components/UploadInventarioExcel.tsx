@@ -234,9 +234,7 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
           throw new Error(errorMessage);
         }
 
-        // Verificar que la respuesta sea válida
-        const responseData = await response.json().catch(() => null);
-
+        // La respuesta fue exitosa, proceder con el éxito
         setSuccess(true);
         setFile(null);
         setProductos([]);
