@@ -35,9 +35,11 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [productosTodos, setProductosTodos] = useState<Producto[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(false);
   const [buscando, setBuscando] = useState(false);
+  const [cargandoProductos, setCargandoProductos] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -50,48 +52,121 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
   const [precio, setPrecio] = useState<number>(0);
   const [porcentajeGanancia, setPorcentajeGanancia] = useState<number>(0);
 
-  // Debounce para búsqueda
+  // Cargar todos los productos de la sucursal al abrir el modal
   useEffect(() => {
-    if (searchTerm.length < 2) {
+    if (open && sucursalId) {
+      cargarTodosLosProductos();
+    } else if (!open) {
+      // Limpiar cuando se cierra el modal
+      setProductosTodos([]);
       setProductos([]);
+      setSearchTerm("");
+      setProductoSeleccionado(null);
+    }
+  }, [open, sucursalId]);
+
+  // Filtrar productos localmente cuando cambia el término de búsqueda
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setProductos(productosTodos);
       return;
     }
 
-    const timeoutId = setTimeout(() => {
-      buscarProductos();
-    }, 300);
+    const termino = searchTerm.toLowerCase().trim();
+    const productosFiltrados = productosTodos.filter((p) => {
+      const codigo = (p.codigo || "").toLowerCase();
+      const descripcion = (p.descripcion || p.nombre || "").toLowerCase();
+      const marca = (p.marca || "").toLowerCase();
+      return codigo.includes(termino) || descripcion.includes(termino) || marca.includes(termino);
+    });
+    setProductos(productosFiltrados);
+  }, [searchTerm, productosTodos]);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, sucursalId]);
-
-  const buscarProductos = async () => {
-    if (searchTerm.length < 2) return;
-
-    setBuscando(true);
+  const cargarTodosLosProductos = async () => {
+    setCargandoProductos(true);
     setError(null);
     try {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      const res = await fetch(
-        `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(searchTerm)}&sucursal=${sucursalId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      // Intentar múltiples estrategias para obtener todos los productos
+      // Estrategia 1: Buscar con caracteres comunes que probablemente devuelvan muchos resultados
+      const caracteresBusqueda = ['a', 'e', 'i', 'o', 'u', '1', '2', '3', '4', '5'];
+      const todosProductos: Producto[] = [];
+      const idsVistos = new Set<string>();
+      
+      // Buscar con cada carácter y combinar resultados
+      for (const char of caracteresBusqueda) {
+        try {
+          const res = await fetch(
+            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(char)}&sucursal=${sucursalId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          
+          if (res.ok) {
+            const data = await res.json();
+            const productosArray = Array.isArray(data) ? data : [];
+            productosArray.forEach((p: Producto) => {
+              if (p.id && !idsVistos.has(p.id)) {
+                idsVistos.add(p.id);
+                todosProductos.push(p);
+              }
+            });
+          }
+        } catch (e) {
+          // Continuar con el siguiente carácter
+          console.warn(`Error al buscar con "${char}":`, e);
         }
-      );
-
-      if (!res.ok) throw new Error("Error al buscar productos");
-      const data = await res.json();
-      setProductos(Array.isArray(data) ? data : []);
+      }
+      
+      // Si no se obtuvieron productos, intentar con términos más específicos
+      if (todosProductos.length === 0) {
+        const terminos = ['aa', 'ee', '11', '22'];
+        for (const termino of terminos) {
+          try {
+            const res = await fetch(
+              `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(termino)}&sucursal=${sucursalId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            if (res.ok) {
+              const data = await res.json();
+              const productosArray = Array.isArray(data) ? data : [];
+              productosArray.forEach((p: Producto) => {
+                if (p.id && !idsVistos.has(p.id)) {
+                  idsVistos.add(p.id);
+                  todosProductos.push(p);
+                }
+              });
+            }
+          } catch (e) {
+            // Continuar
+          }
+        }
+      }
+      
+      setProductosTodos(todosProductos);
+      setProductos(todosProductos);
+      
+      if (todosProductos.length === 0) {
+        setError("No se encontraron productos. Verifica que el inventario tenga productos cargados.");
+      }
     } catch (err: any) {
-      setError(err.message || "Error al buscar productos");
+      setError(err.message || "Error al cargar productos del inventario");
+      setProductosTodos([]);
       setProductos([]);
     } finally {
-      setBuscando(false);
+      setCargandoProductos(false);
     }
   };
+
 
   const seleccionarProducto = (producto: Producto) => {
     setProductoSeleccionado(producto);
@@ -217,23 +292,23 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
           </div>
         )}
 
-        {/* Búsqueda de productos */}
+        {/* Búsqueda y lista de productos */}
         {!productoSeleccionado && (
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
               <Input
                 type="text"
-                placeholder="Buscar producto por código, nombre o descripción (mínimo 2 caracteres)..."
+                placeholder="Buscar producto por código, nombre o descripción..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
 
-            {buscando && (
+            {cargandoProductos && (
               <div className="text-center py-4 text-slate-500 text-sm">
-                Buscando productos...
+                Cargando productos del inventario...
               </div>
             )}
 
@@ -286,9 +361,21 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
               </div>
             )}
 
-            {searchTerm.length >= 2 && !buscando && productos.length === 0 && (
+            {!cargandoProductos && productosTodos.length === 0 && (
               <div className="text-center py-4 text-slate-500 text-sm">
-                No se encontraron productos
+                No hay productos en este inventario
+              </div>
+            )}
+
+            {!cargandoProductos && productosTodos.length > 0 && searchTerm.trim() !== "" && productos.length === 0 && (
+              <div className="text-center py-4 text-slate-500 text-sm">
+                No se encontraron productos que coincidan con "{searchTerm}"
+              </div>
+            )}
+
+            {!cargandoProductos && productosTodos.length > 0 && searchTerm.trim() === "" && (
+              <div className="text-xs text-slate-500 mb-2">
+                Mostrando {productosTodos.length} {productosTodos.length === 1 ? 'producto' : 'productos'} del inventario
               </div>
             )}
           </div>
