@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import UploadInventarioExcel from "../components/UploadInventarioExcel";
+import ModificarItemInventarioModal from "../components/ModificarItemInventarioModal";
 import { Button } from "@/components/ui/button";
-import { Download, Trash2 } from "lucide-react";
+import { Download, Trash2, Edit } from "lucide-react";
 
 interface Inventario {
   _id: string;
@@ -26,6 +27,8 @@ const VisualizarInventariosPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [inventarioAEliminar, setInventarioAEliminar] = useState<Inventario | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const [showModificarModal, setShowModificarModal] = useState(false);
+  const [inventarioSeleccionado, setInventarioSeleccionado] = useState<Inventario | null>(null);
 
   const fetchInventarios = async () => {
     setLoading(true);
@@ -66,6 +69,18 @@ const VisualizarInventariosPage: React.FC = () => {
   const handleEliminarClick = (inventario: Inventario) => {
     setInventarioAEliminar(inventario);
     setShowDeleteModal(true);
+  };
+
+  const handleModificarItems = (inventario: Inventario) => {
+    setInventarioSeleccionado(inventario);
+    setShowModificarModal(true);
+  };
+
+  const handleCerrarModal = () => {
+    setShowModificarModal(false);
+    setInventarioSeleccionado(null);
+    // Refrescar la lista después de modificar
+    fetchInventarios();
   };
 
   const handleCancelarEliminar = () => {
@@ -241,15 +256,26 @@ const VisualizarInventariosPage: React.FC = () => {
                           {totalCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-center">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleEliminarClick(i)}
-                            className="flex items-center gap-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Eliminar
-                          </Button>
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleModificarItems(i)}
+                              className="flex items-center gap-1"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Modificar Items
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleEliminarClick(i)}
+                              className="flex items-center gap-1"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Eliminar
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -258,6 +284,17 @@ const VisualizarInventariosPage: React.FC = () => {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Modal de modificar items */}
+        {showModificarModal && inventarioSeleccionado && (
+          <ModificarItemInventarioModal
+            open={showModificarModal}
+            onClose={handleCerrarModal}
+            inventarioId={inventarioSeleccionado._id}
+            sucursalId={farmacias.find(f => f.id === inventarioSeleccionado.farmacia || f.nombre === inventarioSeleccionado.farmacia)?.id || inventarioSeleccionado.farmacia}
+            onSuccess={handleCerrarModal}
+          />
         )}
 
         {/* Modal de confirmación de eliminación */}
