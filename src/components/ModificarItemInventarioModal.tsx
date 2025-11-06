@@ -262,15 +262,19 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      // IMPORTANTE: El backend espera el código del item, no el ObjectId
-      // Usar el código del producto como identificador (debe ser el código original, no el editado)
-      // Si el usuario cambió el código, usar el código original del producto seleccionado
+      // El backend puede buscar por código o por ObjectId
+      // Intentar primero con el ObjectId del producto, luego con el código
+      const productoId = productoSeleccionado.id || (productoSeleccionado as any)._id;
       const codigoOriginal = productoSeleccionado.codigo || "";
-      const itemId = codigoOriginal.trim() || codigo.trim() || productoSeleccionado.id;
+      
+      // Usar ObjectId si está disponible, sino usar código
+      // El backend debería poder buscar por cualquiera de los dos
+      const itemId = productoId || codigoOriginal.trim() || codigo.trim();
       
       console.log("Enviando actualización de item:", {
         inventarioId,
         itemId,
+        productoId,
         codigoOriginal: codigoOriginal,
         codigoNuevo: codigo.trim(),
         descripcion: descripcion.trim(),
@@ -280,9 +284,9 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
         productoSeleccionado: productoSeleccionado
       });
       
-      // Validar que tenemos un código válido
+      // Validar que tenemos un identificador válido
       if (!itemId || itemId.trim() === "") {
-        throw new Error("No se pudo identificar el código del item. Por favor, selecciona el producto nuevamente.");
+        throw new Error("No se pudo identificar el item. Por favor, selecciona el producto nuevamente.");
       }
 
       const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items/${encodeURIComponent(itemId)}`, {
