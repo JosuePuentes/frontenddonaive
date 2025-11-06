@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Phone, Search } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Phone, Search, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // Permisos y enlaces agrupados para una mejor organización visual
@@ -71,6 +71,13 @@ const allLinks = [
         ]
     },
     
+    {
+        category: 'Ventas',
+        icon: ShoppingCart,
+        items: [
+            { to: '/punto-venta', label: 'Punto de Venta', permiso: 'punto_venta' },
+        ]
+    },
     {
         category: 'Inicio',
         icon: Home,
