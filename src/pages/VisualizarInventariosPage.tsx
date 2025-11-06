@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import UploadInventarioExcel from "../components/UploadInventarioExcel";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 
 interface Inventario {
   _id: string;
@@ -23,6 +23,9 @@ const VisualizarInventariosPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [farmacias, setFarmacias] = useState<FarmaciaChip[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [inventarioAEliminar, setInventarioAEliminar] = useState<Inventario | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
   const fetchInventarios = async () => {
     setLoading(true);
@@ -59,6 +62,51 @@ const VisualizarInventariosPage: React.FC = () => {
         setFarmacias(lista);
       });
   }, []);
+
+  const handleEliminarClick = (inventario: Inventario) => {
+    setInventarioAEliminar(inventario);
+    setShowDeleteModal(true);
+  };
+
+  const handleCancelarEliminar = () => {
+    setShowDeleteModal(false);
+    setInventarioAEliminar(null);
+  };
+
+  const handleConfirmarEliminar = async () => {
+    if (!inventarioAEliminar) return;
+
+    setEliminando(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No se encontró el token de autenticación");
+
+      const response = await fetch(
+        `${API_BASE_URL}/inventarios/${inventarioAEliminar._id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail || errorData?.message || "Error al eliminar inventario");
+      }
+
+      // Refrescar la lista
+      await fetchInventarios();
+      setShowDeleteModal(false);
+      setInventarioAEliminar(null);
+    } catch (err: any) {
+      setError(err.message || "Error al eliminar el inventario");
+      console.error("Error al eliminar inventario:", err);
+    } finally {
+      setEliminando(false);
+    }
+  };
 
 
 
@@ -169,6 +217,9 @@ const VisualizarInventariosPage: React.FC = () => {
                     <th scope="col" className="px-5 py-3.5 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                       Total Costo Inventario
                     </th>
+                    <th scope="col" className="px-5 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
@@ -189,11 +240,59 @@ const VisualizarInventariosPage: React.FC = () => {
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700 text-right font-semibold">
                           {totalCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs
                         </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-sm text-center">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleEliminarClick(i)}
+                            className="flex items-center gap-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Eliminar
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de confirmación de eliminación */}
+        {showDeleteModal && inventarioAEliminar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold mb-3 text-slate-800">Confirmar eliminación</h3>
+              <p className="mb-5 text-slate-600 text-sm">
+                ¿Está seguro que desea eliminar el inventario del{" "}
+                <span className="font-bold text-red-600">
+                  {inventarioAEliminar.fecha ? new Date(inventarioAEliminar.fecha).toLocaleDateString('es-VE') : 'N/A'}
+                </span> de la sucursal{" "}
+                <span className="font-bold text-red-600">
+                  {farmacias.find(f => f.id === inventarioAEliminar.farmacia || f.nombre === inventarioAEliminar.farmacia)?.nombre || inventarioAEliminar.farmacia}
+                </span>?
+              </p>
+              <p className="mb-5 text-red-600 text-sm font-medium">
+                ⚠️ Esta acción no se puede deshacer. Se eliminarán todos los items asociados a este inventario.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelarEliminar}
+                  disabled={eliminando}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleConfirmarEliminar}
+                  disabled={eliminando}
+                >
+                  {eliminando ? "Eliminando..." : "Eliminar"}
+                </Button>
+              </div>
             </div>
           </div>
         )}
