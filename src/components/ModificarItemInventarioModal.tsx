@@ -156,25 +156,28 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       // Procesar todos los resultados
       resultados.forEach((productosArray) => {
         productosArray.forEach((p: any) => {
-          const productoId = p.id || p._id || `${p.codigo}-${p.descripcion}`;
+          // Priorizar _id sobre id, ya que _id es el ObjectId de MongoDB
+          const productoId = p._id || p.id;
           const codigoProducto = p.codigo || p.codigo_producto || "";
           
-          // Usar código como identificador único si está disponible
-          const identificador = codigoProducto || productoId;
-          
-          if (identificador && !idsVistos.has(identificador)) {
-            idsVistos.add(identificador);
-            todosProductos.push({
-              id: productoId,
-              codigo: codigoProducto,
-              nombre: p.nombre || p.descripcion || "",
-              descripcion: p.descripcion || p.nombre || "",
-              marca: p.marca || "",
-              precio: p.precio || p.precio_unitario || 0,
-              costo: p.costo || p.costo_unitario || 0,
-              existencia: p.existencia || p.stock || p.cantidad || 0,
-              sucursal: p.sucursal || sucursalId
-            });
+          // Solo agregar productos que tengan un ID válido (ObjectId de MongoDB)
+          // El ID debe ser un string no vacío
+          if (productoId && typeof productoId === 'string' && productoId.trim() !== '') {
+            // Usar el ID como identificador único para evitar duplicados
+            if (!idsVistos.has(productoId)) {
+              idsVistos.add(productoId);
+              todosProductos.push({
+                id: productoId,
+                codigo: codigoProducto,
+                nombre: p.nombre || p.descripcion || "",
+                descripcion: p.descripcion || p.nombre || "",
+                marca: p.marca || "",
+                precio: p.precio || p.precio_unitario || 0,
+                costo: p.costo || p.costo_unitario || 0,
+                existencia: p.existencia || p.stock || p.cantidad || 0,
+                sucursal: p.sucursal || sucursalId
+              });
+            }
           }
         });
       });
@@ -258,14 +261,13 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      // El backend busca por código del producto dentro del inventario
-      // Usar el código original del producto seleccionado, o el código nuevo si no hay original
-      const codigoOriginal = productoSeleccionado.codigo || "";
-      const itemId = codigoOriginal.trim() || codigo.trim();
+      // El backend espera el ID del item (ObjectId de MongoDB), no el código
+      // Usar el ID del producto seleccionado
+      const itemId = productoSeleccionado.id;
       
-      // Validar que tenemos un código válido
+      // Validar que tenemos un ID válido
       if (!itemId || itemId.trim() === "") {
-        throw new Error("No se pudo identificar el item. El código del producto es requerido.");
+        throw new Error("No se pudo identificar el item. El ID del producto es requerido.");
       }
 
       const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items/${encodeURIComponent(itemId)}`, {
