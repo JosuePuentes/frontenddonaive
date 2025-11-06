@@ -261,16 +261,16 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      // El backend espera el ID del item (ObjectId de MongoDB), no el código
-      // Usar el ID del producto seleccionado
-      const itemId = productoSeleccionado.id;
+      // El backend busca items por código del producto, no por ID
+      // Usar el código del producto seleccionado (el código original, no el editado)
+      const codigoProducto = productoSeleccionado.codigo || codigo.trim();
       
-      // Validar que tenemos un ID válido
-      if (!itemId || itemId.trim() === "") {
-        throw new Error("No se pudo identificar el item. El ID del producto es requerido.");
+      // Validar que tenemos un código válido
+      if (!codigoProducto || codigoProducto.trim() === "") {
+        throw new Error("No se pudo identificar el item. El código del producto es requerido.");
       }
 
-      const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items/${encodeURIComponent(itemId)}`, {
+      const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items/${encodeURIComponent(codigoProducto)}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
