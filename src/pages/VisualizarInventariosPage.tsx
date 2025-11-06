@@ -11,6 +11,7 @@ interface Inventario {
   farmacia: string;
   costo: number;
   usuarioCorreo: string;
+  totalExistencias?: number; // Total de existencias de todos los items
 }
 
 interface FarmaciaChip {
@@ -33,6 +34,8 @@ const VisualizarInventariosPage: React.FC = () => {
   const [showVerItemsModal, setShowVerItemsModal] = useState(false);
   const [inventarioParaVer, setInventarioParaVer] = useState<Inventario | null>(null);
   const [refreshItemsTrigger, setRefreshItemsTrigger] = useState(0);
+  const [totalesExistencias, setTotalesExistencias] = useState<{ [key: string]: number }>({});
+  const [totalesCostoInventario, setTotalesCostoInventario] = useState<{ [key: string]: number }>({});
 
   const fetchInventarios = async () => {
     setLoading(true);
@@ -81,6 +84,60 @@ const VisualizarInventariosPage: React.FC = () => {
   useEffect(() => {
     fetchInventarios();
   }, []);
+
+  // Cargar totales de existencias y costo total para cada inventario
+  useEffect(() => {
+    const cargarTotalesInventario = async () => {
+      if (inventarios.length === 0) return;
+      
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const nuevosTotalesExistencias: { [key: string]: number } = {};
+      const nuevosTotalesCosto: { [key: string]: number } = {};
+      
+      // Cargar totales en paralelo para todos los inventarios
+      const promesas = inventarios.map(async (inventario) => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/inventarios/${inventario._id}/items`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (res.ok) {
+            const items = await res.json();
+            if (Array.isArray(items)) {
+              // Calcular total de existencias
+              const totalExistencias = items.reduce((sum, item: any) => sum + (item.existencia || 0), 0);
+              nuevosTotalesExistencias[inventario._id] = totalExistencias;
+              
+              // Calcular costo total del inventario: suma de (existencia × costo) de todos los items
+              const costoTotal = items.reduce((sum, item: any) => {
+                const existencia = item.existencia || 0;
+                const costo = item.costo || 0;
+                return sum + (existencia * costo);
+              }, 0);
+              nuevosTotalesCosto[inventario._id] = costoTotal;
+            } else {
+              nuevosTotalesExistencias[inventario._id] = 0;
+              nuevosTotalesCosto[inventario._id] = 0;
+            }
+          }
+        } catch (err) {
+          console.error(`Error al obtener items del inventario ${inventario._id}:`, err);
+          nuevosTotalesExistencias[inventario._id] = 0;
+          nuevosTotalesCosto[inventario._id] = 0;
+        }
+      });
+
+      await Promise.all(promesas);
+      setTotalesExistencias(nuevosTotalesExistencias);
+      setTotalesCostoInventario(nuevosTotalesCosto);
+    };
+
+    cargarTotalesInventario();
+  }, [inventarios]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/farmacias`)
@@ -273,6 +330,9 @@ const VisualizarInventariosPage: React.FC = () => {
                     <th scope="col" className="px-5 py-3.5 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                       Total Costo Inventario
                     </th>
+                    <th scope="col" className="px-5 py-3.5 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                      Total Existencias
+                    </th>
                     <th scope="col" className="px-5 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                       Acciones
                     </th>
@@ -283,7 +343,9 @@ const VisualizarInventariosPage: React.FC = () => {
                     // Obtener el nombre de la farmacia desde el ID
                     const farmaciaNombre = farmacias.find(f => f.id === i.farmacia || f.nombre === i.farmacia)?.nombre || i.farmacia;
                     const fechaCarga = i.fecha ? new Date(i.fecha).toLocaleDateString('es-VE') : 'N/A';
-                    const totalCosto = i.costo || 0;
+                    // Calcular costo total: suma de (existencia × costo) de todos los items
+                    const costoTotalInventario = totalesCostoInventario[i._id] ?? 0;
+                    const totalExist = totalesExistencias[i._id] ?? 0;
                     
                     return (
                       <tr key={i._id} className="hover:bg-slate-50 transition-colors duration-150 ease-in-out">
@@ -294,7 +356,10 @@ const VisualizarInventariosPage: React.FC = () => {
                           {fechaCarga}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700 text-right font-semibold">
-                          {totalCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs
+                          {costoTotalInventario.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700 text-right font-semibold">
+                          {totalExist.toLocaleString('es-VE')}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-center">
                           <div className="flex items-center justify-center gap-2">

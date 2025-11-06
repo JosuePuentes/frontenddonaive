@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, RefreshCw } from "lucide-react";
+import { X, RefreshCw, FileSpreadsheet, FileText } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -101,6 +101,222 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
     onClose();
   };
 
+  const handleExportarExcel = async () => {
+    try {
+      // Importar xlsx dinámicamente
+      const XLSXModule = await import("xlsx");
+      const XLSX = (XLSXModule.default || XLSXModule) as any;
+
+      // Preparar datos para Excel
+      const data = [
+        ["Código", "Descripción", "Marca", "Costo", "Precio", "Existencia", "Utilidad", "% Ganancia"],
+        ...items.map(item => {
+          const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
+          const porcentajeGanancia = item.porcentaje_ganancia ?? ((item.precio - item.costo) / item.costo) * 100;
+          
+          return [
+            item.codigo || "",
+            item.descripcion || "",
+            item.marca || "",
+            item.costo || 0,
+            item.precio || 0,
+            item.existencia || 0,
+            utilidad.toFixed(2),
+            porcentajeGanancia.toFixed(2) + "%"
+          ];
+        }),
+        // Fila de totales
+        [
+          "TOTALES",
+          "",
+          "",
+          items.reduce((sum, item) => sum + (item.costo || 0) * (item.existencia || 0), 0),
+          items.reduce((sum, item) => sum + (item.precio || 0) * (item.existencia || 0), 0),
+          items.reduce((sum, item) => sum + (item.existencia || 0), 0),
+          items.reduce((sum, item) => {
+            const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
+            return sum + utilidad * (item.existencia || 0);
+          }, 0),
+          ""
+        ]
+      ];
+
+      // Crear workbook
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Items Inventario");
+
+      // Generar nombre de archivo
+      const fecha = new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const nombreArchivo = `Inventario_${inventarioNombre || inventarioId}_${fecha}.xlsx`;
+
+      // Descargar
+      XLSX.writeFile(wb, nombreArchivo);
+    } catch (err: any) {
+      console.error("Error al exportar a Excel:", err);
+      alert(`Error al exportar a Excel: ${err.message}`);
+    }
+  };
+
+  const handleExportarPDF = () => {
+    try {
+      // Crear HTML para imprimir
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        alert('Por favor, permite ventanas emergentes para exportar el PDF');
+        return;
+      }
+
+      // Calcular totales
+      const totalCosto = items.reduce((sum, item) => sum + (item.costo || 0) * (item.existencia || 0), 0);
+      const totalPrecio = items.reduce((sum, item) => sum + (item.precio || 0) * (item.existencia || 0), 0);
+      const totalExistencia = items.reduce((sum, item) => sum + (item.existencia || 0), 0);
+      const totalUtilidad = items.reduce((sum, item) => {
+        const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
+        return sum + utilidad * (item.existencia || 0);
+      }, 0);
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Inventario - ${inventarioNombre || inventarioId}</title>
+            <style>
+              @media print {
+                @page {
+                  margin: 1cm;
+                  size: A4 landscape;
+                }
+                body {
+                  margin: 0;
+                  padding: 0;
+                }
+              }
+              body {
+                font-family: Arial, sans-serif;
+                font-size: 10px;
+                padding: 20px;
+              }
+              h1 {
+                font-size: 18px;
+                margin-bottom: 5px;
+                color: #1e293b;
+              }
+              .header-info {
+                font-size: 9px;
+                color: #64748b;
+                margin-bottom: 15px;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+              }
+              th {
+                background-color: #f1f5f9;
+                color: #1e293b;
+                font-weight: bold;
+                padding: 8px 6px;
+                text-align: left;
+                border: 1px solid #cbd5e1;
+                font-size: 9px;
+              }
+              td {
+                padding: 6px;
+                border: 1px solid #e2e8f0;
+                font-size: 9px;
+              }
+              tr:nth-child(even) {
+                background-color: #f8fafc;
+              }
+              .text-right {
+                text-align: right;
+              }
+              .text-center {
+                text-align: center;
+              }
+              .totals-row {
+                background-color: #e2e8f0 !important;
+                font-weight: bold;
+                border-top: 2px solid #94a3b8;
+              }
+              .totals-row td {
+                border-top: 2px solid #94a3b8;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Inventario - ${inventarioNombre || inventarioId}</h1>
+            <div class="header-info">
+              <p><strong>Fecha de generación:</strong> ${new Date().toLocaleDateString('es-VE', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}</p>
+              <p><strong>Total de items:</strong> ${items.length} | <strong>Total existencias:</strong> ${totalExistencia.toLocaleString('es-VE')}</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Descripción</th>
+                  <th>Marca</th>
+                  <th class="text-right">Costo</th>
+                  <th class="text-right">Precio</th>
+                  <th class="text-right">Existencia</th>
+                  <th class="text-right">Utilidad</th>
+                  <th class="text-right">% Ganancia</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map(item => {
+                  const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
+                  const porcentajeGanancia = item.porcentaje_ganancia ?? ((item.precio - item.costo) / item.costo) * 100;
+                  return `
+                    <tr>
+                      <td>${item.codigo || "-"}</td>
+                      <td>${item.descripcion || "-"}</td>
+                      <td>${item.marca || "-"}</td>
+                      <td class="text-right">${(item.costo || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                      <td class="text-right">${(item.precio || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                      <td class="text-right">${(item.existencia || 0).toLocaleString('es-VE')}</td>
+                      <td class="text-right">${utilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                      <td class="text-right">${porcentajeGanancia.toFixed(2)}%</td>
+                    </tr>
+                  `;
+                }).join('')}
+                <tr class="totals-row">
+                  <td colspan="3"><strong>TOTALES</strong></td>
+                  <td class="text-right"><strong>${totalCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</strong></td>
+                  <td class="text-right"><strong>${totalPrecio.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</strong></td>
+                  <td class="text-right"><strong>${totalExistencia.toLocaleString('es-VE')}</strong></td>
+                  <td class="text-right"><strong>${totalUtilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</strong></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+      
+      // Esperar a que se cargue el contenido y luego imprimir
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 250);
+      };
+    } catch (err: any) {
+      console.error("Error al exportar a PDF:", err);
+      alert(`Error al exportar a PDF: ${err.message}`);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCerrar()}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby="ver-items-description">
@@ -114,19 +330,52 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
         </DialogHeader>
 
         <div className="flex justify-between items-center mb-4">
-          <p className="text-sm text-slate-600">
-            Total de items: <span className="font-semibold">{items.length}</span>
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchItems}
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Actualizar
-          </Button>
+          <div className="flex gap-4">
+            <p className="text-sm text-slate-600">
+              Total de items: <span className="font-semibold">{items.length}</span>
+            </p>
+            <p className="text-sm text-slate-600">
+              Total existencias: <span className="font-semibold">
+                {items.reduce((sum, item) => sum + (item.existencia || 0), 0).toLocaleString('es-VE')}
+              </span>
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {items.length > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportarExcel}
+                  disabled={loading}
+                  className="flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Excel
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportarPDF}
+                  disabled={loading}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  PDF
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchItems}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Actualizar
+            </Button>
+          </div>
         </div>
 
         {error && (
