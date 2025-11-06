@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import UploadInventarioExcel from "../components/UploadInventarioExcel";
-import ModificarItemInventarioModal from "../components/ModificarItemInventarioModal";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Download, FileSpreadsheet } from "lucide-react";
+import { Download } from "lucide-react";
 
 interface Inventario {
   _id: string;
@@ -24,11 +23,6 @@ const VisualizarInventariosPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [farmacias, setFarmacias] = useState<FarmaciaChip[]>([]);
-  const [showModificarModal, setShowModificarModal] = useState(false);
-  const [inventarioSeleccionado, setInventarioSeleccionado] = useState<{ id: string; sucursalId: string } | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [inventarioAEliminar, setInventarioAEliminar] = useState<{ id: string; fecha: string; farmacia: string } | null>(null);
-  const [eliminando, setEliminando] = useState(false);
 
   const fetchInventarios = async () => {
     setLoading(true);
@@ -63,156 +57,11 @@ const VisualizarInventariosPage: React.FC = () => {
           ? Object.entries(data.farmacias).map(([id, nombre]) => ({ id, nombre: String(nombre) }))
           : Object.entries(data).map(([id, nombre]) => ({ id, nombre: String(nombre) }));
         setFarmacias(lista);
-        if (lista.length === 1) setSelectedFarmacia(lista[0].id);
       });
   }, []);
 
 
-  const handleModificarItems = (inventarioId: string, sucursalId: string) => {
-    // Obtener el ID de sucursal desde el nombre de farmacia
-    const farmacia = farmacias.find(f => f.nombre === sucursalId || f.id === sucursalId);
-    setInventarioSeleccionado({
-      id: inventarioId,
-      sucursalId: farmacia?.id || sucursalId,
-    });
-    setShowModificarModal(true);
-  };
 
-  const handleCerrarModal = () => {
-    setShowModificarModal(false);
-    setInventarioSeleccionado(null);
-    fetchInventarios(); // Refrescar lista después de modificar
-  };
-
-  const handleEliminarClick = (inventario: Inventario) => {
-    setInventarioAEliminar({
-      id: inventario._id,
-      fecha: inventario.fecha?.slice(0, 10) || "",
-      farmacia: inventario.farmacia,
-    });
-    setShowDeleteModal(true);
-  };
-
-  const handleConfirmarEliminar = async () => {
-    if (!inventarioAEliminar) return;
-
-    setEliminando(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No se encontró el token de autenticación");
-
-      const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioAEliminar.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || data.message || "Error al eliminar el inventario");
-      }
-
-      setShowDeleteModal(false);
-      setInventarioAEliminar(null);
-      fetchInventarios(); // Refrescar lista
-    } catch (err: any) {
-      setError(err.message || "Error al eliminar el inventario");
-    } finally {
-      setEliminando(false);
-    }
-  };
-
-  const handleCancelarEliminar = () => {
-    setShowDeleteModal(false);
-    setInventarioAEliminar(null);
-  };
-
-  const handleExportarInventario = async (inventarioId: string, fecha: string, farmacia: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No se encontró el token de autenticación");
-
-      // Obtener items del inventario desde el backend
-      const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        // Si el endpoint no existe, intentar con el endpoint general de productos filtrado por inventario
-        throw new Error("No se pudo obtener los items del inventario");
-      }
-
-      const items = await res.json();
-      
-      // Importar xlsx dinámicamente
-      const XLSXModule = await import("xlsx");
-      const XLSX = (XLSXModule.default || XLSXModule) as any;
-
-      // Preparar datos para Excel
-      const data = [
-        ["CODIGO", "DESCRIPCION", "MARCA", "COSTO", "PRECIO", "EXISTENCIA"],
-        ...(Array.isArray(items) ? items : items.items || []).map((item: any) => [
-          item.codigo || "",
-          item.descripcion || item.nombre || "",
-          item.marca || "",
-          item.costo || 0,
-          item.precio || 0,
-          item.existencia || item.stock || 0,
-        ]),
-      ];
-
-      // Crear workbook
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Inventario");
-
-      // Generar nombre de archivo
-      const fechaFormateada = fecha.replace(/-/g, "");
-      const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;
-
-      // Descargar
-      XLSX.writeFile(wb, nombreArchivo);
-      } catch (err: any) {
-        // Si falla, intentar exportar solo la información básica del inventario
-        try {
-          const XLSXModule2 = await import("xlsx");
-          const XLSX2 = (XLSXModule2.default || XLSXModule2) as any;
-
-        const inventario = inventarios.find(i => i._id === inventarioId);
-        if (!inventario) throw new Error("Inventario no encontrado");
-
-        const data = [
-          ["INFORMACIÓN DEL INVENTARIO"],
-          ["Fecha de Cargo", inventario.fecha?.slice(0, 10) || ""],
-          ["Sucursal", inventario.farmacia || ""],
-          ["Costo Total", inventario.costo || 0],
-          ["Usuario", inventario.usuarioCorreo || ""],
-          [],
-          ["NOTA: Los items detallados del inventario no están disponibles."],
-          ["Contacte al administrador para obtener el detalle completo."],
-        ];
-        
-        const ws = XLSX2.utils.aoa_to_sheet(data);
-        const wb = XLSX2.utils.book_new();
-        XLSX2.utils.book_append_sheet(wb, ws, "Inventario");
-
-        const fechaFormateada = fecha.replace(/-/g, "");
-        const nombreArchivo = `Inventario_${farmacia}_${fechaFormateada}.xlsx`;
-        XLSX2.writeFile(wb, nombreArchivo);
-      } catch (exportErr: any) {
-        setError(`Error al exportar: ${err.message}. ${exportErr.message}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleExportarTodos = async () => {
     try {
@@ -345,49 +194,6 @@ const VisualizarInventariosPage: React.FC = () => {
                   })}
                 </tbody>
               </table>
-            </div>
-          </div>
-        )}
-        {/* Modal de modificar items */}
-        {showModificarModal && inventarioSeleccionado && (
-          <ModificarItemInventarioModal
-            open={showModificarModal}
-            onClose={handleCerrarModal}
-            inventarioId={inventarioSeleccionado.id}
-            sucursalId={inventarioSeleccionado.sucursalId}
-            onSuccess={handleCerrarModal}
-          />
-        )}
-
-        {/* Modal de confirmación de eliminación */}
-        {showDeleteModal && inventarioAEliminar && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold mb-3 text-slate-800">Confirmar eliminación</h3>
-              <p className="mb-5 text-slate-600 text-sm">
-                ¿Está seguro que desea eliminar el inventario del{" "}
-                <span className="font-bold text-red-600">{inventarioAEliminar.fecha}</span> de la sucursal{" "}
-                <span className="font-bold text-red-600">{inventarioAEliminar.farmacia}</span>?
-              </p>
-              <p className="mb-5 text-red-600 text-sm font-medium">
-                ⚠️ Esta acción no se puede deshacer. Se eliminarán todos los items asociados a este inventario.
-              </p>
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleCancelarEliminar}
-                  disabled={eliminando}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleConfirmarEliminar}
-                  disabled={eliminando}
-                >
-                  {eliminando ? "Eliminando..." : "Eliminar"}
-                </Button>
-              </div>
             </div>
           </div>
         )}
