@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Upload, FileSpreadsheet, X, CheckCircle2 } from "lucide-react";
+import { Upload, FileSpreadsheet, X, CheckCircle2, RefreshCw } from "lucide-react";
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -201,7 +201,7 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
 
       // Crear un AbortController para timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutos timeout
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutos timeout (el backend tarda ~100 segundos)
 
       try {
         const response = await fetch(
@@ -239,14 +239,23 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
         console.log("Inventario subido exitosamente:", responseData);
         
         setSuccess(true);
-        setFile(null);
-        setProductos([]);
-        setSucursalSeleccionada("");
-        setPreview(false);
+        setError(null);
+        
+        // Mostrar mensaje de éxito por más tiempo antes de limpiar
+        setTimeout(() => {
+          setFile(null);
+          setProductos([]);
+          setSucursalSeleccionada("");
+          setPreview(false);
+          setSuccess(false);
+        }, 5000); // Mantener el mensaje de éxito por 5 segundos
 
-        // Llamar al callback inmediatamente para refrescar la lista
+        // Llamar al callback para refrescar la lista
         if (onSuccess) {
-          onSuccess();
+          // Esperar un poco para que el backend termine de procesar
+          setTimeout(() => {
+            onSuccess();
+          }, 1000);
         }
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
@@ -437,8 +446,17 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
               loading
             }
           >
-            <Upload className="w-4 h-4 mr-2" />
-            {loading ? "Subiendo..." : "Subir Inventario"}
+            {loading ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Subiendo... (esto puede tardar 1-2 minutos)
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                Subir Inventario
+              </>
+            )}
           </Button>
         </div>
       </CardContent>
