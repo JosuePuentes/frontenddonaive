@@ -174,18 +174,23 @@ const VisualizarInventariosPage: React.FC = () => {
   };
 
   const handleCerrarModal = async () => {
+    console.log('[handleCerrarModal] Iniciando actualización después de modificar item...');
     // NO cerrar el modal todavía, primero actualizar los datos
     // Refrescar la lista después de modificar y obtener los inventarios actualizados
     const inventariosActualizados = await fetchInventarios();
+    console.log('[handleCerrarModal] Inventarios actualizados:', inventariosActualizados.length);
     // Recalcular totales después de modificar usando los inventarios actualizados
     await recalcularTotales(inventariosActualizados);
+    console.log('[handleCerrarModal] Totales recalculados');
     // Si el modal de ver items está abierto, refrescar también esos datos
     if (showVerItemsModal && inventarioParaVer) {
+      console.log('[handleCerrarModal] Refrescando modal de ver items');
       setRefreshItemsTrigger(prev => prev + 1);
     }
     // Ahora sí cerrar el modal después de actualizar todo
     setShowModificarModal(false);
     setInventarioSeleccionado(null);
+    console.log('[handleCerrarModal] Modal cerrado');
   };
 
   // Función para recalcular totales manualmente (útil después de modificar items)
@@ -222,19 +227,26 @@ const VisualizarInventariosPage: React.FC = () => {
               return sum + (existencia * costo);
             }, 0);
             nuevosTotalesCosto[inventario._id] = costoTotal;
+            
+            console.log(`[Recalcular Totales] Inventario ${inventario._id}: ${items.length} items, Total Existencias: ${totalExistencias}, Total Costo: ${costoTotal}`);
           } else {
             nuevosTotalesExistencias[inventario._id] = 0;
             nuevosTotalesCosto[inventario._id] = 0;
           }
+        } else {
+          console.error(`[Recalcular Totales] Error al obtener items del inventario ${inventario._id}: ${res.status} ${res.statusText}`);
+          nuevosTotalesExistencias[inventario._id] = 0;
+          nuevosTotalesCosto[inventario._id] = 0;
         }
       } catch (err) {
-        console.error(`Error al obtener items del inventario ${inventario._id}:`, err);
+        console.error(`[Recalcular Totales] Error al obtener items del inventario ${inventario._id}:`, err);
         nuevosTotalesExistencias[inventario._id] = 0;
         nuevosTotalesCosto[inventario._id] = 0;
       }
     });
 
     await Promise.all(promesas);
+    console.log('[Recalcular Totales] Nuevos totales calculados:', { nuevosTotalesExistencias, nuevosTotalesCosto });
     setTotalesExistencias(nuevosTotalesExistencias);
     setTotalesCostoInventario(nuevosTotalesCosto);
   };
