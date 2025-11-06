@@ -174,8 +174,7 @@ const VisualizarInventariosPage: React.FC = () => {
   };
 
   const handleCerrarModal = async () => {
-    setShowModificarModal(false);
-    setInventarioSeleccionado(null);
+    // NO cerrar el modal todavía, primero actualizar los datos
     // Refrescar la lista después de modificar y obtener los inventarios actualizados
     const inventariosActualizados = await fetchInventarios();
     // Recalcular totales después de modificar usando los inventarios actualizados
@@ -184,6 +183,9 @@ const VisualizarInventariosPage: React.FC = () => {
     if (showVerItemsModal && inventarioParaVer) {
       setRefreshItemsTrigger(prev => prev + 1);
     }
+    // Ahora sí cerrar el modal después de actualizar todo
+    setShowModificarModal(false);
+    setInventarioSeleccionado(null);
   };
 
   // Función para recalcular totales manualmente (útil después de modificar items)

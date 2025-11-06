@@ -293,10 +293,26 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       }
 
       setSuccess(true);
+      // Llamar onSuccess primero para actualizar los datos (esto actualizará los totales y cerrará el modal)
+      if (onSuccess) {
+        await onSuccess();
+      }
+      // No necesitamos llamar handleCerrar porque onSuccess ya cerró el modal
+      // Solo limpiamos el estado local después de un momento
       setTimeout(() => {
-        if (onSuccess) onSuccess();
-        handleCerrar();
-      }, 1000);
+        setProductoSeleccionado(null);
+        setSearchTerm("");
+        setProductos([]);
+        setCodigo("");
+        setDescripcion("");
+        setMarca("");
+        setCosto(0);
+        setExistencia(0);
+        setPrecio(0);
+        setPorcentajeGanancia(0);
+        setError(null);
+        setSuccess(false);
+      }, 500);
     } catch (err: any) {
       setError(err.message || "Error al guardar los cambios");
     } finally {
