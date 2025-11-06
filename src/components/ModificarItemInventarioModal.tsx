@@ -249,7 +249,21 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items/${productoSeleccionado.id}`, {
+      // IMPORTANTE: El backend espera el código del item, no el ObjectId
+      // Usar el código del producto como identificador
+      const itemId = codigo.trim() || productoSeleccionado.codigo || productoSeleccionado.id;
+      
+      console.log("Enviando actualización de item:", {
+        inventarioId,
+        itemId,
+        codigo: codigo.trim(),
+        descripcion: descripcion.trim(),
+        costo,
+        precio,
+        porcentaje_ganancia: porcentajeGanancia
+      });
+
+      const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items/${encodeURIComponent(itemId)}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
