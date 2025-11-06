@@ -117,16 +117,19 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
       const data = [
         ["Código", "Descripción", "Marca", "Costo", "Precio", "Existencia", "Utilidad", "% Ganancia"],
         ...items.map(item => {
-          const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
-          const porcentajeGanancia = item.porcentaje_ganancia ?? ((item.precio - item.costo) / item.costo) * 100;
+          const costo = item.costo_unitario || item.costo || 0;
+          const precio = item.precio_unitario || item.precio || 0;
+          const cantidad = item.cantidad || item.existencia || 0;
+          const utilidad = item.utilidad_contable ?? (precio - costo);
+          const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
           
           return [
             item.codigo || "",
             item.descripcion || "",
             item.marca || "",
-            item.costo || 0,
-            item.precio || 0,
-            item.existencia || 0,
+            costo,
+            precio,
+            cantidad,
             utilidad.toFixed(2),
             porcentajeGanancia.toFixed(2) + "%"
           ];
@@ -136,12 +139,26 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
           "TOTALES",
           "",
           "",
-          items.reduce((sum, item) => sum + (item.costo || 0) * (item.existencia || 0), 0),
-          items.reduce((sum, item) => sum + (item.precio || 0) * (item.existencia || 0), 0),
-          items.reduce((sum, item) => sum + (item.existencia || 0), 0),
           items.reduce((sum, item) => {
-            const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
-            return sum + utilidad * (item.existencia || 0);
+            const costo = item.costo_unitario || item.costo || 0;
+            const cantidad = item.cantidad || item.existencia || 0;
+            return sum + (Number(costo) * Number(cantidad));
+          }, 0),
+          items.reduce((sum, item) => {
+            const precio = item.precio_unitario || item.precio || 0;
+            const cantidad = item.cantidad || item.existencia || 0;
+            return sum + (Number(precio) * Number(cantidad));
+          }, 0),
+          items.reduce((sum, item) => {
+            const cantidad = item.cantidad || item.existencia || 0;
+            return sum + Number(cantidad);
+          }, 0),
+          items.reduce((sum, item) => {
+            const costo = item.costo_unitario || item.costo || 0;
+            const precio = item.precio_unitario || item.precio || 0;
+            const cantidad = item.cantidad || item.existencia || 0;
+            const utilidad = item.utilidad_contable ?? (precio - costo);
+            return sum + (utilidad * Number(cantidad));
           }, 0),
           ""
         ]
@@ -173,13 +190,27 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
         return;
       }
 
-      // Calcular totales
-      const totalCosto = items.reduce((sum, item) => sum + (item.costo || 0) * (item.existencia || 0), 0);
-      const totalPrecio = items.reduce((sum, item) => sum + (item.precio || 0) * (item.existencia || 0), 0);
-      const totalExistencia = items.reduce((sum, item) => sum + (item.existencia || 0), 0);
+      // Calcular totales usando los campos correctos del backend
+      const totalCosto = items.reduce((sum, item) => {
+        const costo = item.costo_unitario || item.costo || 0;
+        const cantidad = item.cantidad || item.existencia || 0;
+        return sum + (Number(costo) * Number(cantidad));
+      }, 0);
+      const totalPrecio = items.reduce((sum, item) => {
+        const precio = item.precio_unitario || item.precio || 0;
+        const cantidad = item.cantidad || item.existencia || 0;
+        return sum + (Number(precio) * Number(cantidad));
+      }, 0);
+      const totalExistencia = items.reduce((sum, item) => {
+        const cantidad = item.cantidad || item.existencia || 0;
+        return sum + Number(cantidad);
+      }, 0);
       const totalUtilidad = items.reduce((sum, item) => {
-        const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
-        return sum + utilidad * (item.existencia || 0);
+        const costo = item.costo_unitario || item.costo || 0;
+        const precio = item.precio_unitario || item.precio || 0;
+        const cantidad = item.cantidad || item.existencia || 0;
+        const utilidad = item.utilidad_contable ?? (precio - costo);
+        return sum + (utilidad * Number(cantidad));
       }, 0);
 
       const html = `
@@ -279,16 +310,19 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
               </thead>
               <tbody>
                 ${items.map(item => {
-                  const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
-                  const porcentajeGanancia = item.porcentaje_ganancia ?? ((item.precio - item.costo) / item.costo) * 100;
+                  const costo = item.costo_unitario || item.costo || 0;
+                  const precio = item.precio_unitario || item.precio || 0;
+                  const cantidad = item.cantidad || item.existencia || 0;
+                  const utilidad = item.utilidad_contable ?? (precio - costo);
+                  const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
                   return `
                     <tr>
                       <td>${item.codigo || "-"}</td>
                       <td>${item.descripcion || "-"}</td>
                       <td>${item.marca || "-"}</td>
-                      <td class="text-right">${(item.costo || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
-                      <td class="text-right">${(item.precio || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
-                      <td class="text-right">${(item.existencia || 0).toLocaleString('es-VE')}</td>
+                      <td class="text-right">${Number(costo).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                      <td class="text-right">${Number(precio).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                      <td class="text-right">${Number(cantidad).toLocaleString('es-VE')}</td>
                       <td class="text-right">${utilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
                       <td class="text-right">${porcentajeGanancia.toFixed(2)}%</td>
                     </tr>
@@ -342,7 +376,10 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
             </p>
             <p className="text-sm text-slate-600">
               Total existencias: <span className="font-semibold">
-                {items.reduce((sum, item) => sum + (item.existencia || 0), 0).toLocaleString('es-VE')}
+                {items.reduce((sum, item) => {
+                  const cantidad = item.cantidad || item.existencia || 0;
+                  return sum + Number(cantidad);
+                }, 0).toLocaleString('es-VE')}
               </span>
             </p>
           </div>
@@ -417,8 +454,12 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
                   {items.map((item, index) => {
-                    const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
-                    const porcentajeGanancia = item.porcentaje_ganancia ?? ((item.precio - item.costo) / item.costo) * 100;
+                    // El backend usa costo_unitario y cantidad
+                    const costo = item.costo_unitario || item.costo || 0;
+                    const precio = item.precio_unitario || item.precio || 0;
+                    const cantidad = item.cantidad || item.existencia || 0;
+                    const utilidad = item.utilidad_contable ?? (precio - costo);
+                    const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
                     
                     return (
                       <tr key={item._id || item.id || index} className="hover:bg-slate-50">
@@ -426,18 +467,18 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                         <td className="px-4 py-3 text-slate-700">{item.descripcion || "-"}</td>
                         <td className="px-4 py-3 text-slate-600">{item.marca || "-"}</td>
                         <td className="px-4 py-3 text-right text-slate-700">
-                          {item.costo?.toLocaleString("es-VE", {
+                          {costo.toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
-                          }) || "0.00"} Bs
+                          })} Bs
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                          {item.precio?.toLocaleString("es-VE", {
+                          {precio.toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
-                          }) || "0.00"} Bs
+                          })} Bs
                         </td>
-                        <td className="px-4 py-3 text-right text-slate-700">{item.existencia || 0}</td>
+                        <td className="px-4 py-3 text-right text-slate-700">{cantidad}</td>
                         <td className="px-4 py-3 text-right text-green-600 font-medium">
                           {utilidad.toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
@@ -457,24 +498,38 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                       Totales
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                      {items.reduce((sum, item) => sum + (item.costo || 0) * (item.existencia || 0), 0).toLocaleString("es-VE", {
+                      {items.reduce((sum, item) => {
+                        const costo = item.costo_unitario || item.costo || 0;
+                        const cantidad = item.cantidad || item.existencia || 0;
+                        return sum + (Number(costo) * Number(cantidad));
+                      }, 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })} Bs
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                      {items.reduce((sum, item) => sum + (item.precio || 0) * (item.existencia || 0), 0).toLocaleString("es-VE", {
+                      {items.reduce((sum, item) => {
+                        const precio = item.precio_unitario || item.precio || 0;
+                        const cantidad = item.cantidad || item.existencia || 0;
+                        return sum + (Number(precio) * Number(cantidad));
+                      }, 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })} Bs
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                      {items.reduce((sum, item) => sum + (item.existencia || 0), 0)}
+                      {items.reduce((sum, item) => {
+                        const cantidad = item.cantidad || item.existencia || 0;
+                        return sum + Number(cantidad);
+                      }, 0)}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-green-600">
                       {items.reduce((sum, item) => {
-                        const utilidad = item.utilidad_contable ?? (item.precio - item.costo);
-                        return sum + utilidad * (item.existencia || 0);
+                        const costo = item.costo_unitario || item.costo || 0;
+                        const precio = item.precio_unitario || item.precio || 0;
+                        const cantidad = item.cantidad || item.existencia || 0;
+                        const utilidad = item.utilidad_contable ?? (precio - costo);
+                        return sum + (utilidad * Number(cantidad));
                       }, 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
