@@ -241,34 +241,38 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
           throw new Error(errorMessage);
         }
 
-        // Calcular el costo total ANTES de esperar la respuesta (optimización)
-        const costoTotal = productos.reduce((sum, p) => {
-          const costo = p.costo || 0;
-          const existencia = p.existencia || 0;
-          return sum + (costo * existencia);
-        }, 0);
-
-        // Preparar datos para crear registro de inventario (optimización)
-        const sucursalEncontrada = sucursales.find(s => s.id === sucursalSeleccionada);
-        const nombreSucursal = sucursalEncontrada?.nombre || sucursalSeleccionada;
-        const usuarioStorage = localStorage.getItem("usuario");
-        let usuarioCorreo = "";
-        if (usuarioStorage) {
-          try {
-            const usuario = JSON.parse(usuarioStorage);
-            usuarioCorreo = usuario.correo || "";
-          } catch (e) {
-            console.error("Error al parsear usuario:", e);
-          }
-        }
-
         // La respuesta fue exitosa
         const responseData = await response.json().catch(() => null);
         console.log("Inventario subido exitosamente:", responseData);
         
-        // Crear el registro de inventario en paralelo (no esperar)
-        // Esto es necesario porque el backend no lo crea automáticamente
-        const crearRegistroInventario = async () => {
+        // Verificar si el backend ya creó el registro de inventario
+        // Si la respuesta incluye un inventario_id o similar, el backend ya lo creó
+        const backendCreoRegistro = responseData?.inventario_id || responseData?.inventarioId;
+        
+        // Solo crear el registro manualmente si el backend NO lo creó
+        if (!backendCreoRegistro) {
+          // Calcular el costo total del inventario (suma de costo * existencia)
+          const costoTotal = productos.reduce((sum, p) => {
+            const costo = p.costo || 0;
+            const existencia = p.existencia || 0;
+            return sum + (costo * existencia);
+          }, 0);
+
+          // Preparar datos para crear registro de inventario
+          const sucursalEncontrada = sucursales.find(s => s.id === sucursalSeleccionada);
+          const nombreSucursal = sucursalEncontrada?.nombre || sucursalSeleccionada;
+          const usuarioStorage = localStorage.getItem("usuario");
+          let usuarioCorreo = "";
+          if (usuarioStorage) {
+            try {
+              const usuario = JSON.parse(usuarioStorage);
+              usuarioCorreo = usuario.correo || "";
+            } catch (e) {
+              console.error("Error al parsear usuario:", e);
+            }
+          }
+
+          // Crear el registro de inventario solo si el backend no lo creó
           try {
             const inventarioResponse = await fetch(
               `${API_BASE_URL}/inventarios`,
@@ -294,10 +298,9 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
           } catch (inventarioError) {
             console.warn("Error al crear registro de inventario:", inventarioError);
           }
-        };
-
-        // Crear registro en background (no bloquea la UI)
-        crearRegistroInventario().catch(() => {}); // No esperar, ejecutar en background
+        } else {
+          console.log("El backend ya creó el registro de inventario, no es necesario crearlo manualmente");
+        }
         
         setSuccess(true);
         setError(null);
