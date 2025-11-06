@@ -42,6 +42,13 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
+    // Validar que se haya seleccionado una sucursal primero
+    if (!sucursalSeleccionada) {
+      setError("Por favor, selecciona una sucursal antes de elegir el archivo");
+      e.target.value = ""; // Limpiar el input
+      return;
+    }
+
     // Validar extensión
     const extension = selectedFile.name.split(".").pop()?.toLowerCase();
     if (extension !== "xlsx" && extension !== "xls") {
@@ -238,6 +245,58 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
         const responseData = await response.json().catch(() => null);
         console.log("Inventario subido exitosamente:", responseData);
         
+        // Calcular el costo total del inventario (suma de costo * existencia)
+        const costoTotal = productos.reduce((sum, p) => {
+          const costo = p.costo || 0;
+          const existencia = p.existencia || 0;
+          return sum + (costo * existencia);
+        }, 0);
+
+        // Obtener el nombre de la sucursal
+        const sucursalEncontrada = sucursales.find(s => s.id === sucursalSeleccionada);
+        const nombreSucursal = sucursalEncontrada?.nombre || sucursalSeleccionada;
+
+        // Obtener el correo del usuario desde localStorage
+        const usuarioStorage = localStorage.getItem("usuario");
+        let usuarioCorreo = "";
+        if (usuarioStorage) {
+          try {
+            const usuario = JSON.parse(usuarioStorage);
+            usuarioCorreo = usuario.correo || "";
+          } catch (e) {
+            console.error("Error al parsear usuario:", e);
+          }
+        }
+
+        // Crear el registro de inventario en la colección inventarios
+        // Esto es necesario porque el backend no lo crea automáticamente
+        try {
+          const inventarioResponse = await fetch(
+            `${API_BASE_URL}/inventarios`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                farmacia: nombreSucursal,
+                costo: costoTotal,
+                usuarioCorreo: usuarioCorreo,
+              }),
+            }
+          );
+
+          if (!inventarioResponse.ok) {
+            console.warn("No se pudo crear el registro de inventario, pero los productos se procesaron correctamente");
+          } else {
+            console.log("Registro de inventario creado exitosamente");
+          }
+        } catch (inventarioError) {
+          console.warn("Error al crear registro de inventario:", inventarioError);
+          // No lanzar error aquí, porque los productos ya se procesaron correctamente
+        }
+        
         setSuccess(true);
         setError(null);
         
@@ -289,13 +348,23 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">
-              Seleccionar Sucursal
+              Seleccionar Sucursal <span className="text-red-500">*</span>
             </label>
             <select
               value={sucursalSeleccionada}
-              onChange={(e) => setSucursalSeleccionada(e.target.value)}
+              onChange={(e) => {
+                setSucursalSeleccionada(e.target.value);
+                // Si cambia la sucursal, limpiar el archivo seleccionado
+                if (file) {
+                  setFile(null);
+                  setProductos([]);
+                  setPreview(false);
+                }
+                setError(null);
+              }}
               className="w-full border rounded-md px-3 py-2"
               disabled={loading}
+              required
             >
               <option value="">Seleccione una sucursal</option>
               {sucursales.map((sucursal) => (
@@ -304,18 +373,21 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
                 </option>
               ))}
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Debe seleccionar una sucursal antes de cargar el archivo Excel
+            </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-2">
-              Archivo Excel
+              Archivo Excel <span className="text-red-500">*</span>
             </label>
             <div className="flex items-center gap-2">
               <Input
                 type="file"
                 accept=".xlsx,.xls"
                 onChange={handleFileChange}
-                disabled={loading}
+                disabled={loading || !sucursalSeleccionada}
                 className="flex-1"
               />
             </div>
@@ -449,7 +521,7 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
             {loading ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Subiendo... (esto puede tardar 1-2 minutos)
+                Subiendo...
               </>
             ) : (
               <>
