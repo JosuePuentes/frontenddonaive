@@ -11,9 +11,12 @@ interface ItemInventario {
   codigo: string;
   descripcion: string;
   marca?: string;
-  costo: number;
-  existencia: number;
-  precio: number;
+  costo?: number;
+  costo_unitario?: number; // Campo usado por el backend
+  existencia?: number;
+  cantidad?: number; // Campo usado por el backend
+  precio?: number;
+  precio_unitario?: number; // Campo usado por el backend
   porcentaje_ganancia?: number;
   utilidad_contable?: number;
   sucursal?: string;
