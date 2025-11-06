@@ -38,7 +38,6 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
   const [productosTodos, setProductosTodos] = useState<Producto[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(false);
-  const [buscando, setBuscando] = useState(false);
   const [cargandoProductos, setCargandoProductos] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
