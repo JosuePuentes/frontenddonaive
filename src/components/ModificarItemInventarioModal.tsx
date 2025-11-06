@@ -195,10 +195,12 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
     setExistencia(producto.existencia || 0);
     setPrecio(producto.precio || 0);
     
-    // Calcular porcentaje de ganancia inicial
-    if (producto.costo && producto.costo > 0) {
-      const ganancia = ((producto.precio - producto.costo) / producto.costo) * 100;
-      setPorcentajeGanancia(ganancia || 0);
+    // Calcular porcentaje de ganancia inicial (utilidad contable)
+    // Fórmula inversa: % Ganancia = (1 - Costo / Precio) × 100
+    // Ejemplo: Costo = $8, Precio = $13.33 → % = (1 - 8/13.33) × 100 = 40%
+    if (producto.costo && producto.costo > 0 && producto.precio && producto.precio > producto.costo) {
+      const porcentaje = (1 - producto.costo / producto.precio) * 100;
+      setPorcentajeGanancia(Number(porcentaje.toFixed(2)));
     } else {
       setPorcentajeGanancia(0);
     }
@@ -207,11 +209,19 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
     setProductos([]);
   };
 
-  // Calcular precio cuando cambia costo o porcentaje de ganancia
+  // Calcular precio cuando cambia costo o porcentaje de ganancia (utilidad contable)
+  // Utilidad contable: el porcentaje se aplica sobre el precio de venta
+  // Fórmula: Precio = Costo / (1 - % Ganancia / 100)
+  // Ejemplo: Costo = $8, % Ganancia = 40% → Precio = $8 / (1 - 0.40) = $8 / 0.60 = $13.33
   useEffect(() => {
-    if (costo > 0 && porcentajeGanancia >= 0) {
-      const nuevoPrecio = costo * (1 + porcentajeGanancia / 100);
+    if (costo > 0 && porcentajeGanancia >= 0 && porcentajeGanancia < 100) {
+      const nuevoPrecio = costo / (1 - porcentajeGanancia / 100);
       setPrecio(Number(nuevoPrecio.toFixed(2)));
+    } else if (costo > 0 && porcentajeGanancia >= 100) {
+      // Si el porcentaje es 100% o más, no se puede calcular (división por cero o negativa)
+      setPrecio(costo);
+    } else if (costo > 0) {
+      setPrecio(costo);
     }
   }, [costo, porcentajeGanancia]);
 
@@ -472,7 +482,7 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Porcentaje de Ganancia (%)
+                  Porcentaje de Ganancia (%) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Percent className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
@@ -480,15 +490,32 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
                     type="number"
                     step="0.01"
                     min="0"
+                    max="99.99"
                     value={porcentajeGanancia}
-                    onChange={(e) => setPorcentajeGanancia(Number(e.target.value))}
+                    onChange={(e) => {
+                      const valor = Number(e.target.value);
+                      // Limitar a máximo 99.99% para evitar división por cero
+                      if (valor >= 100) {
+                        setPorcentajeGanancia(99.99);
+                      } else if (valor >= 0) {
+                        setPorcentajeGanancia(valor);
+                      }
+                    }}
                     placeholder="0.00"
                     className="pl-10"
                   />
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Se sumará al costo para calcular el precio
+                  Utilidad contable: el porcentaje se aplica sobre el precio de venta
                 </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Fórmula: Precio = Costo ÷ (1 - % Ganancia ÷ 100)
+                </p>
+                {porcentajeGanancia >= 100 && (
+                  <p className="text-xs text-red-500 mt-1">
+                    ⚠️ El porcentaje no puede ser 100% o mayor
+                  </p>
+                )}
               </div>
 
               <div>
@@ -503,17 +530,22 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
                   onChange={(e) => {
                     const nuevoPrecio = Number(e.target.value);
                     setPrecio(nuevoPrecio);
-                    // Recalcular porcentaje de ganancia si se modifica el precio manualmente
-                    if (costo > 0) {
-                      const nuevoPorcentaje = ((nuevoPrecio - costo) / costo) * 100;
-                      setPorcentajeGanancia(nuevoPorcentaje);
+                    // Recalcular porcentaje de ganancia si se modifica el precio manualmente (utilidad contable)
+                    if (costo > 0 && nuevoPrecio > costo) {
+                      const nuevoPorcentaje = (1 - costo / nuevoPrecio) * 100;
+                      setPorcentajeGanancia(Number(nuevoPorcentaje.toFixed(2)));
+                    } else if (costo > 0 && nuevoPrecio <= costo) {
+                      setPorcentajeGanancia(0);
                     }
                   }}
                   placeholder="0.00"
                   className="bg-slate-50"
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  Precio = Costo × (1 + % Ganancia / 100)
+                  Precio = Costo ÷ (1 - % Ganancia ÷ 100)
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Ejemplo: Costo $8, 40% ganancia → Precio = $8 ÷ 0.60 = $13.33
                 </p>
               </div>
 
