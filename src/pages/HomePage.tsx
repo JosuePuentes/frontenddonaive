@@ -283,15 +283,15 @@ const HomePage: React.FC = () => {
                         
                         <div className="grid md:grid-cols-3 gap-8 mt-16">
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-green-800 mb-2">100%</div>
+                                <div className="text-3xl font-bold text-green-600 mb-2">100%</div>
                                 <div className="text-blue-200">Reducción de Riesgos</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-green-800 mb-2">∞</div>
+                                <div className="text-3xl font-bold text-green-600 mb-2">∞</div>
                                 <div className="text-blue-200">Crecimiento Continuo</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-green-800 mb-2">24/7</div>
+                                <div className="text-3xl font-bold text-green-600 mb-2">24/7</div>
                                 <div className="text-blue-200">Soporte Estratégico</div>
                             </div>
                         </div>
