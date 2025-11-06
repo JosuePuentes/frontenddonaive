@@ -245,62 +245,9 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
         const responseData = await response.json().catch(() => null);
         console.log("Inventario subido exitosamente:", responseData);
         
-        // Verificar si el backend ya creó el registro de inventario
-        // Si la respuesta incluye un inventario_id o similar, el backend ya lo creó
-        const backendCreoRegistro = responseData?.inventario_id || responseData?.inventarioId;
-        
-        // Solo crear el registro manualmente si el backend NO lo creó
-        if (!backendCreoRegistro) {
-          // Calcular el costo total del inventario (suma de costo * existencia)
-          const costoTotal = productos.reduce((sum, p) => {
-            const costo = p.costo || 0;
-            const existencia = p.existencia || 0;
-            return sum + (costo * existencia);
-          }, 0);
-
-          // Preparar datos para crear registro de inventario
-          const sucursalEncontrada = sucursales.find(s => s.id === sucursalSeleccionada);
-          const nombreSucursal = sucursalEncontrada?.nombre || sucursalSeleccionada;
-          const usuarioStorage = localStorage.getItem("usuario");
-          let usuarioCorreo = "";
-          if (usuarioStorage) {
-            try {
-              const usuario = JSON.parse(usuarioStorage);
-              usuarioCorreo = usuario.correo || "";
-            } catch (e) {
-              console.error("Error al parsear usuario:", e);
-            }
-          }
-
-          // Crear el registro de inventario solo si el backend no lo creó
-          try {
-            const inventarioResponse = await fetch(
-              `${API_BASE_URL}/inventarios`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  farmacia: nombreSucursal,
-                  costo: costoTotal,
-                  usuarioCorreo: usuarioCorreo,
-                }),
-              }
-            );
-
-            if (!inventarioResponse.ok) {
-              console.warn("No se pudo crear el registro de inventario, pero los productos se procesaron correctamente");
-            } else {
-              console.log("Registro de inventario creado exitosamente");
-            }
-          } catch (inventarioError) {
-            console.warn("Error al crear registro de inventario:", inventarioError);
-          }
-        } else {
-          console.log("El backend ya creó el registro de inventario, no es necesario crearlo manualmente");
-        }
+        // IMPORTANTE: El backend debe crear el registro de inventario automáticamente
+        // El frontend NO crea el registro para evitar duplicados
+        // Si el backend no está creando el registro, debe implementarse en el backend
         
         setSuccess(true);
         setError(null);
