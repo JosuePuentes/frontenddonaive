@@ -199,41 +199,70 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
         stock: p.existencia || 0,
       }));
 
-      const response = await fetch(
-        `${API_BASE_URL}/inventarios/upload-excel`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            sucursal: sucursalSeleccionada,
-            productos: productosTransformados,
-          }),
-        }
-      );
+      // Crear un AbortController para timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutos timeout
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.detail || errorData.message || "Error al subir el inventario"
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/inventarios/upload-excel`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              sucursal: sucursalSeleccionada,
+              productos: productosTransformados,
+            }),
+            signal: controller.signal,
+          }
         );
-      }
 
-      setSuccess(true);
-      setFile(null);
-      setProductos([]);
-      setSucursalSeleccionada("");
-      setPreview(false);
+        clearTimeout(timeoutId);
 
-      if (onSuccess) {
-        setTimeout(() => {
-          onSuccess();
-        }, 1500);
+        if (!response.ok) {
+          let errorMessage = "Error al subir el inventario";
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.detail || errorData.message || errorMessage;
+          } catch (e) {
+            // Si no se puede parsear el JSON, usar el status text
+            errorMessage = `Error ${response.status}: ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
+        }
+
+        // Verificar que la respuesta sea válida
+        const responseData = await response.json().catch(() => null);
+
+        setSuccess(true);
+        setFile(null);
+        setProductos([]);
+        setSucursalSeleccionada("");
+        setPreview(false);
+
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess();
+          }, 1500);
+        }
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        throw fetchError;
       }
     } catch (err: any) {
-      setError(err.message || "Error al subir el inventario");
+      console.error("Error al subir inventario:", err);
+      
+      // Manejar diferentes tipos de errores
+      if (err.name === 'AbortError') {
+        setError("La operación tomó demasiado tiempo. Por favor, intenta de nuevo con un archivo más pequeño o verifica tu conexión.");
+      } else if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError("Error de conexión. Verifica tu conexión a internet o que el servidor esté disponible.");
+      } else {
+        setError(err.message || "Error al subir el inventario. Por favor, intenta de nuevo.");
+      }
     } finally {
       setLoading(false);
     }
