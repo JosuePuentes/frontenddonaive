@@ -88,10 +88,8 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      console.log("Cargando productos para sucursal:", sucursalId, "inventario:", inventarioId);
-
       // El endpoint requiere mínimo 2 caracteres, así que usamos términos de 2 caracteres
-      // que probablemente devuelvan muchos resultados
+      // Reducimos a términos más comunes para acelerar la carga
       const terminosBusqueda = [
         'aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'am', 'an', 'ao', 'ap', 'aq', 'ar', 'as', 'at', 'au', 'av', 'aw', 'ax', 'ay', 'az',
         'ba', 'be', 'bi', 'bo', 'bu',
@@ -126,70 +124,68 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
 
       const todosProductos: Producto[] = [];
       const idsVistos = new Set<string>();
-      let productosEncontrados = 0;
       
-      // Buscar con cada término y combinar resultados
-      // Limitar a los primeros 50 términos para no hacer demasiadas peticiones
-      const terminosLimitados = terminosBusqueda.slice(0, 50);
+      // Limitar a los primeros 30 términos y hacer las llamadas en paralelo para acelerar
+      const terminosLimitados = terminosBusqueda.slice(0, 30);
       
-      for (const termino of terminosLimitados) {
+      // Hacer todas las llamadas en paralelo
+      const promesas = terminosLimitados.map(async (termino) => {
         try {
-      const res = await fetch(
+          const res = await fetch(
             `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(termino)}&sucursal=${sucursalId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
 
           if (res.ok) {
-      const data = await res.json();
-            const productosArray = Array.isArray(data) ? data : [];
-            console.log(`Productos encontrados con "${termino}":`, productosArray);
-            productosArray.forEach((p: any) => {
-              // El backend puede devolver _id o id, pero necesitamos el código para identificar el item
-              const productoId = p.id || p._id || `${p.codigo}-${p.descripcion}`;
-              const codigoProducto = p.codigo || p.codigo_producto || "";
-              
-              // Usar código como identificador único si está disponible
-              const identificador = codigoProducto || productoId;
-              
-              if (identificador && !idsVistos.has(identificador)) {
-                idsVistos.add(identificador);
-                todosProductos.push({
-                  id: productoId,
-                  codigo: codigoProducto,
-                  nombre: p.nombre || p.descripcion || "",
-                  descripcion: p.descripcion || p.nombre || "",
-                  marca: p.marca || "",
-                  precio: p.precio || p.precio_unitario || 0,
-                  costo: p.costo || p.costo_unitario || 0,
-                  existencia: p.existencia || p.stock || p.cantidad || 0,
-                  sucursal: p.sucursal || sucursalId
-                });
-                productosEncontrados++;
-              }
-            });
-          } else {
-            console.warn(`Error al buscar con "${termino}":`, res.status, res.statusText);
+            const data = await res.json();
+            return Array.isArray(data) ? data : [];
           }
+          return [];
         } catch (e) {
-          console.warn(`Error al buscar con "${termino}":`, e);
+          return [];
         }
-      }
+      });
+
+      // Esperar todas las respuestas en paralelo
+      const resultados = await Promise.all(promesas);
       
-      console.log(`Productos encontrados: ${todosProductos.length} (${productosEncontrados} sin duplicados)`);
+      // Procesar todos los resultados
+      resultados.forEach((productosArray) => {
+        productosArray.forEach((p: any) => {
+          const productoId = p.id || p._id || `${p.codigo}-${p.descripcion}`;
+          const codigoProducto = p.codigo || p.codigo_producto || "";
+          
+          // Usar código como identificador único si está disponible
+          const identificador = codigoProducto || productoId;
+          
+          if (identificador && !idsVistos.has(identificador)) {
+            idsVistos.add(identificador);
+            todosProductos.push({
+              id: productoId,
+              codigo: codigoProducto,
+              nombre: p.nombre || p.descripcion || "",
+              descripcion: p.descripcion || p.nombre || "",
+              marca: p.marca || "",
+              precio: p.precio || p.precio_unitario || 0,
+              costo: p.costo || p.costo_unitario || 0,
+              existencia: p.existencia || p.stock || p.cantidad || 0,
+              sucursal: p.sucursal || sucursalId
+            });
+          }
+        });
+      });
       
       setProductosTodos(todosProductos);
       setProductos(todosProductos);
       
       if (todosProductos.length === 0) {
         setError(`No se encontraron productos para la sucursal ${sucursalId}. Verifica que el inventario tenga productos cargados.`);
-        console.error("No se encontraron productos. Sucursal:", sucursalId, "Inventario:", inventarioId);
       }
     } catch (err: any) {
-      console.error("Error al cargar productos:", err);
       setError(err.message || "Error al cargar productos del inventario");
       setProductosTodos([]);
       setProductos([]);
@@ -262,31 +258,14 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      // El backend puede buscar por código o por ObjectId
-      // Intentar primero con el ObjectId del producto, luego con el código
-      const productoId = productoSeleccionado.id || (productoSeleccionado as any)._id;
+      // El backend busca por código del producto dentro del inventario
+      // Usar el código original del producto seleccionado, o el código nuevo si no hay original
       const codigoOriginal = productoSeleccionado.codigo || "";
+      const itemId = codigoOriginal.trim() || codigo.trim();
       
-      // Usar ObjectId si está disponible, sino usar código
-      // El backend debería poder buscar por cualquiera de los dos
-      const itemId = productoId || codigoOriginal.trim() || codigo.trim();
-      
-      console.log("Enviando actualización de item:", {
-        inventarioId,
-        itemId,
-        productoId,
-        codigoOriginal: codigoOriginal,
-        codigoNuevo: codigo.trim(),
-        descripcion: descripcion.trim(),
-        costo,
-        precio,
-        porcentaje_ganancia: porcentajeGanancia,
-        productoSeleccionado: productoSeleccionado
-      });
-      
-      // Validar que tenemos un identificador válido
+      // Validar que tenemos un código válido
       if (!itemId || itemId.trim() === "") {
-        throw new Error("No se pudo identificar el item. Por favor, selecciona el producto nuevamente.");
+        throw new Error("No se pudo identificar el item. El código del producto es requerido.");
       }
 
       const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items/${encodeURIComponent(itemId)}`, {
@@ -341,11 +320,14 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCerrar()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="modificar-item-description">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-800">
             Modificar Item de Inventario
           </DialogTitle>
+          <p id="modificar-item-description" className="sr-only">
+            Modal para modificar items del inventario. Busca un producto y edita sus campos.
+          </p>
         </DialogHeader>
 
         {error && (

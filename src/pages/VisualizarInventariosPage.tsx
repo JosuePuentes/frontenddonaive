@@ -61,7 +61,6 @@ const VisualizarInventariosPage: React.FC = () => {
       }
       
       const data = await res.json();
-      console.log("Inventarios obtenidos:", data);
       setInventarios(Array.isArray(data) ? data : []);
     } catch (err: any) {
       // No mostrar error si es una redirección
