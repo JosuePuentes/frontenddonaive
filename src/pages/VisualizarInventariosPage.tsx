@@ -24,10 +24,6 @@ const VisualizarInventariosPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [farmacias, setFarmacias] = useState<FarmaciaChip[]>([]);
-  const [selectedFarmacia, setSelectedFarmacia] = useState<string>("");
-  const [usuarioFiltro, setUsuarioFiltro] = useState<string>("");
-  const [fechaInicio, setFechaInicio] = useState<string>("");
-  const [fechaFin, setFechaFin] = useState<string>("");
   const [showModificarModal, setShowModificarModal] = useState(false);
   const [inventarioSeleccionado, setInventarioSeleccionado] = useState<{ id: string; sucursalId: string } | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -256,24 +252,13 @@ const VisualizarInventariosPage: React.FC = () => {
     }
   };
 
+  // Ordenar inventarios por fecha más reciente primero
   const inventariosFiltrados = inventarios
-    .filter(i => {
-      if (!selectedFarmacia) return true;
-      // Buscar la farmacia seleccionada por ID o nombre
-      const farmaciaSeleccionada = farmacias.find(f => f.id === selectedFarmacia);
-      if (!farmaciaSeleccionada) return true;
-      // Comparar tanto por ID como por nombre para asegurar que funcione
-      return i.farmacia === farmaciaSeleccionada.nombre || i.farmacia === farmaciaSeleccionada.id;
-    })
-    .filter(i => !usuarioFiltro || i.usuarioCorreo.toLowerCase().includes(usuarioFiltro.toLowerCase()))
-    .filter(i => {
-      if (!fechaInicio && !fechaFin) return true;
-      const fecha = i.fecha?.slice(0, 10);
-      if (fechaInicio && fecha < fechaInicio) return false;
-      if (fechaFin && fecha > fechaFin) return false;
-      return true;
-    })
-    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+    .sort((a, b) => {
+      const fechaA = a.fecha || "";
+      const fechaB = b.fecha || "";
+      return fechaB.localeCompare(fechaA);
+    });
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
@@ -304,59 +289,6 @@ const VisualizarInventariosPage: React.FC = () => {
             <p>{error}</p>
           </div>
         )}
-        {/* Filtros */}
-        <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
-          <h2 className="text-xl font-semibold text-slate-700 mb-4">Filtros</h2>
-          {farmacias.length > 1 && (
-            <div className="mb-6">
-              <span className="font-medium text-slate-700 mr-3">Farmacias:</span>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {farmacias.map(f => (
-                  <button
-                    key={f.id}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 ease-in-out
-                                ${selectedFarmacia === f.id 
-                                  ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-300' 
-                                  : 'bg-slate-100 text-slate-700 hover:bg-indigo-100 hover:text-indigo-700 border border-slate-300'}`}
-                    onClick={() => setSelectedFarmacia(f.id === selectedFarmacia ? "" : f.id)}
-                  >
-                    {f.nombre}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            <div>
-              <label htmlFor="usuarioFiltro" className="block text-sm font-medium text-slate-600 mb-1">Usuario</label>
-              <input 
-                type="text" 
-                id="usuarioFiltro"
-                value={usuarioFiltro} 
-                onChange={e => setUsuarioFiltro(e.target.value)} 
-                className="w-full border-slate-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-2 px-3 text-sm" 
-                placeholder="Buscar por correo..." />
-            </div>
-            <div>
-              <label htmlFor="fechaInicio" className="block text-sm font-medium text-slate-600 mb-1">Fecha desde</label>
-              <input 
-                type="date" 
-                id="fechaInicio"
-                value={fechaInicio} 
-                onChange={e => setFechaInicio(e.target.value)} 
-                className="w-full border-slate-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-2 px-3 text-sm" />
-            </div>
-            <div>
-              <label htmlFor="fechaFin" className="block text-sm font-medium text-slate-600 mb-1">Fecha hasta</label>
-              <input 
-                type="date" 
-                id="fechaFin"
-                value={fechaFin} 
-                onChange={e => setFechaFin(e.target.value)} 
-                className="w-full border-slate-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-2 px-3 text-sm" />
-            </div>
-          </div>
-        </div>
         {loading ? (
           <div className="text-center py-10 text-slate-500 text-lg">
             <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -371,7 +303,7 @@ const VisualizarInventariosPage: React.FC = () => {
               <path vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
             </svg>
             <h3 className="mt-2 text-lg font-medium text-slate-800">No hay inventarios registrados</h3>
-            <p className="mt-1 text-sm text-slate-500">No se encontraron inventarios que coincidan con los filtros aplicados.</p>
+            <p className="mt-1 text-sm text-slate-500">Aún no se han cargado inventarios desde Excel.</p>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-xl overflow-hidden">
@@ -379,54 +311,38 @@ const VisualizarInventariosPage: React.FC = () => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-100">
                   <tr>
-                    {['Fecha de Cargo', 'Sucursal', 'Costo Inventario', 'Usuario', 'Acciones'].map(header => (
-                      <th key={header} scope="col" className="px-5 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
-                        {header}
-                      </th>
-                    ))}
+                    <th scope="col" className="px-5 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                      Sucursal
+                    </th>
+                    <th scope="col" className="px-5 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                      Fecha de Carga
+                    </th>
+                    <th scope="col" className="px-5 py-3.5 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                      Total Costo Inventario
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
-                  {inventariosFiltrados.map(i => (
-                    <tr key={i._id} className="hover:bg-slate-50 transition-colors duration-150 ease-in-out">
-                      <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700">{i.fecha?.slice(0,10)}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700">{i.farmacia}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700 text-right">{i.costo.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-500">{i.usuarioCorreo}</td>
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleModificarItems(i._id, i.farmacia)}
-                            className="flex items-center gap-1 whitespace-nowrap"
-                          >
-                            <Edit className="h-4 w-4" />
-                            Modificar Items
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleExportarInventario(i._id, i.fecha?.slice(0, 10) || "", i.farmacia)}
-                            className="flex items-center gap-1 whitespace-nowrap"
-                            disabled={loading}
-                          >
-                            <FileSpreadsheet className="h-4 w-4" />
-                            Exportar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleEliminarClick(i)}
-                            className="flex items-center gap-1 whitespace-nowrap"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Eliminar
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {inventariosFiltrados.map(i => {
+                    // Obtener el nombre de la farmacia desde el ID
+                    const farmaciaNombre = farmacias.find(f => f.id === i.farmacia || f.nombre === i.farmacia)?.nombre || i.farmacia;
+                    const fechaCarga = i.fecha ? new Date(i.fecha).toLocaleDateString('es-VE') : 'N/A';
+                    const totalCosto = i.costo || 0;
+                    
+                    return (
+                      <tr key={i._id} className="hover:bg-slate-50 transition-colors duration-150 ease-in-out">
+                        <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-slate-700">
+                          {farmaciaNombre}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700">
+                          {fechaCarga}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700 text-right font-semibold">
+                          {totalCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
