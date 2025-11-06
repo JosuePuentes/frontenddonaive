@@ -134,26 +134,39 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       
       for (const termino of terminosLimitados) {
         try {
-          const res = await fetch(
+      const res = await fetch(
             `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(termino)}&sucursal=${sucursalId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
           if (res.ok) {
-            const data = await res.json();
+      const data = await res.json();
             const productosArray = Array.isArray(data) ? data : [];
-            productosArray.forEach((p: Producto) => {
-              // Usar _id o id según lo que devuelva el backend
-              const productoId = p.id || (p as any)._id || `${p.codigo}-${p.descripcion}`;
-              if (productoId && !idsVistos.has(productoId)) {
-                idsVistos.add(productoId);
+            console.log(`Productos encontrados con "${termino}":`, productosArray);
+            productosArray.forEach((p: any) => {
+              // El backend puede devolver _id o id, pero necesitamos el código para identificar el item
+              const productoId = p.id || p._id || `${p.codigo}-${p.descripcion}`;
+              const codigoProducto = p.codigo || p.codigo_producto || "";
+              
+              // Usar código como identificador único si está disponible
+              const identificador = codigoProducto || productoId;
+              
+              if (identificador && !idsVistos.has(identificador)) {
+                idsVistos.add(identificador);
                 todosProductos.push({
-                  ...p,
-                  id: productoId
+                  id: productoId,
+                  codigo: codigoProducto,
+                  nombre: p.nombre || p.descripcion || "",
+                  descripcion: p.descripcion || p.nombre || "",
+                  marca: p.marca || "",
+                  precio: p.precio || p.precio_unitario || 0,
+                  costo: p.costo || p.costo_unitario || 0,
+                  existencia: p.existencia || p.stock || p.cantidad || 0,
+                  sucursal: p.sucursal || sucursalId
                 });
                 productosEncontrados++;
               }
@@ -250,18 +263,27 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       if (!token) throw new Error("No se encontró el token de autenticación");
 
       // IMPORTANTE: El backend espera el código del item, no el ObjectId
-      // Usar el código del producto como identificador
-      const itemId = codigo.trim() || productoSeleccionado.codigo || productoSeleccionado.id;
+      // Usar el código del producto como identificador (debe ser el código original, no el editado)
+      // Si el usuario cambió el código, usar el código original del producto seleccionado
+      const codigoOriginal = productoSeleccionado.codigo || "";
+      const itemId = codigoOriginal.trim() || codigo.trim() || productoSeleccionado.id;
       
       console.log("Enviando actualización de item:", {
         inventarioId,
         itemId,
-        codigo: codigo.trim(),
+        codigoOriginal: codigoOriginal,
+        codigoNuevo: codigo.trim(),
         descripcion: descripcion.trim(),
         costo,
         precio,
-        porcentaje_ganancia: porcentajeGanancia
+        porcentaje_ganancia: porcentajeGanancia,
+        productoSeleccionado: productoSeleccionado
       });
+      
+      // Validar que tenemos un código válido
+      if (!itemId || itemId.trim() === "") {
+        throw new Error("No se pudo identificar el código del item. Por favor, selecciona el producto nuevamente.");
+      }
 
       const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items/${encodeURIComponent(itemId)}`, {
         method: "PATCH",

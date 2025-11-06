@@ -35,15 +35,39 @@ const VisualizarInventariosPage: React.FC = () => {
     setError(null);
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("No se encontró el token de autenticación");
+      if (!token) {
+        console.warn("No se encontró token de autenticación. Redirigiendo a login...");
+        // Redirigir a login si no hay token
+        window.location.href = "/login";
+        return;
+      }
+      
       const res = await fetch(`${API_BASE_URL}/inventarios`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error("Error al obtener inventarios");
+      
+      if (res.status === 401 || res.status === 403) {
+        // Token inválido o expirado
+        console.warn("Token inválido o expirado. Limpiando y redirigiendo a login...");
+        localStorage.removeItem("token");
+        localStorage.removeItem("usuario");
+        window.location.href = "/login";
+        return;
+      }
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.detail || errorData?.message || `Error al obtener inventarios: ${res.status} ${res.statusText}`);
+      }
+      
       const data = await res.json();
       console.log("Inventarios obtenidos:", data);
       setInventarios(Array.isArray(data) ? data : []);
     } catch (err: any) {
+      // No mostrar error si es una redirección
+      if (err.message?.includes("login") || window.location.pathname === "/login") {
+        return;
+      }
       setError(err.message || "Error al obtener inventarios");
       console.error("Error al obtener inventarios:", err);
     } finally {
