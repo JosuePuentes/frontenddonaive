@@ -88,17 +88,54 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      // Intentar múltiples estrategias para obtener todos los productos
-      // Estrategia 1: Buscar con caracteres comunes que probablemente devuelvan muchos resultados
-      const caracteresBusqueda = ['a', 'e', 'i', 'o', 'u', '1', '2', '3', '4', '5'];
+      console.log("Cargando productos para sucursal:", sucursalId, "inventario:", inventarioId);
+
+      // El endpoint requiere mínimo 2 caracteres, así que usamos términos de 2 caracteres
+      // que probablemente devuelvan muchos resultados
+      const terminosBusqueda = [
+        'aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'am', 'an', 'ao', 'ap', 'aq', 'ar', 'as', 'at', 'au', 'av', 'aw', 'ax', 'ay', 'az',
+        'ba', 'be', 'bi', 'bo', 'bu',
+        'ca', 'ce', 'ci', 'co', 'cu',
+        'da', 'de', 'di', 'do', 'du',
+        'ea', 'ee', 'ei', 'eo', 'eu',
+        'fa', 'fe', 'fi', 'fo', 'fu',
+        'ga', 'ge', 'gi', 'go', 'gu',
+        'ha', 'he', 'hi', 'ho', 'hu',
+        'ia', 'ie', 'ii', 'io', 'iu',
+        'ja', 'je', 'ji', 'jo', 'ju',
+        'ka', 'ke', 'ki', 'ko', 'ku',
+        'la', 'le', 'li', 'lo', 'lu',
+        'ma', 'me', 'mi', 'mo', 'mu',
+        'na', 'ne', 'ni', 'no', 'nu',
+        'oa', 'oe', 'oi', 'oo', 'ou',
+        'pa', 'pe', 'pi', 'po', 'pu',
+        'qa', 'qe', 'qi', 'qo', 'qu',
+        'ra', 're', 'ri', 'ro', 'ru',
+        'sa', 'se', 'si', 'so', 'su',
+        'ta', 'te', 'ti', 'to', 'tu',
+        'ua', 'ue', 'ui', 'uo', 'uu',
+        'va', 've', 'vi', 'vo', 'vu',
+        'wa', 'we', 'wi', 'wo', 'wu',
+        'xa', 'xe', 'xi', 'xo', 'xu',
+        'ya', 'ye', 'yi', 'yo', 'yu',
+        'za', 'ze', 'zi', 'zo', 'zu',
+        '00', '01', '02', '03', '04', '05', '06', '07', '08', '09',
+        '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
+        '20', '21', '22', '23', '24', '25', '26', '27', '28', '29'
+      ];
+
       const todosProductos: Producto[] = [];
       const idsVistos = new Set<string>();
+      let productosEncontrados = 0;
       
-      // Buscar con cada carácter y combinar resultados
-      for (const char of caracteresBusqueda) {
+      // Buscar con cada término y combinar resultados
+      // Limitar a los primeros 50 términos para no hacer demasiadas peticiones
+      const terminosLimitados = terminosBusqueda.slice(0, 50);
+      
+      for (const termino of terminosLimitados) {
         try {
           const res = await fetch(
-            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(char)}&sucursal=${sucursalId}`,
+            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(termino)}&sucursal=${sucursalId}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -110,54 +147,36 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
             const data = await res.json();
             const productosArray = Array.isArray(data) ? data : [];
             productosArray.forEach((p: Producto) => {
-              if (p.id && !idsVistos.has(p.id)) {
-                idsVistos.add(p.id);
-                todosProductos.push(p);
+              // Usar _id o id según lo que devuelva el backend
+              const productoId = p.id || (p as any)._id || `${p.codigo}-${p.descripcion}`;
+              if (productoId && !idsVistos.has(productoId)) {
+                idsVistos.add(productoId);
+                todosProductos.push({
+                  ...p,
+                  id: productoId
+                });
+                productosEncontrados++;
               }
             });
+          } else {
+            console.warn(`Error al buscar con "${termino}":`, res.status, res.statusText);
           }
         } catch (e) {
-          // Continuar con el siguiente carácter
-          console.warn(`Error al buscar con "${char}":`, e);
+          console.warn(`Error al buscar con "${termino}":`, e);
         }
       }
       
-      // Si no se obtuvieron productos, intentar con términos más específicos
-      if (todosProductos.length === 0) {
-        const terminos = ['aa', 'ee', '11', '22'];
-        for (const termino of terminos) {
-          try {
-            const res = await fetch(
-              `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(termino)}&sucursal=${sucursalId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-            if (res.ok) {
-              const data = await res.json();
-              const productosArray = Array.isArray(data) ? data : [];
-              productosArray.forEach((p: Producto) => {
-                if (p.id && !idsVistos.has(p.id)) {
-                  idsVistos.add(p.id);
-                  todosProductos.push(p);
-                }
-              });
-            }
-          } catch (e) {
-            // Continuar
-          }
-        }
-      }
+      console.log(`Productos encontrados: ${todosProductos.length} (${productosEncontrados} sin duplicados)`);
       
       setProductosTodos(todosProductos);
       setProductos(todosProductos);
       
       if (todosProductos.length === 0) {
-        setError("No se encontraron productos. Verifica que el inventario tenga productos cargados.");
+        setError(`No se encontraron productos para la sucursal ${sucursalId}. Verifica que el inventario tenga productos cargados.`);
+        console.error("No se encontraron productos. Sucursal:", sucursalId, "Inventario:", inventarioId);
       }
     } catch (err: any) {
+      console.error("Error al cargar productos:", err);
       setError(err.message || "Error al cargar productos del inventario");
       setProductosTodos([]);
       setProductos([]);
