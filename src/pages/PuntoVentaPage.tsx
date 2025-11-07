@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { fetchWithAuth } from "@/lib/api";
 import AgregarCuadreModal from "@/components/AgregarCuadreModal";
+import { TicketFactura } from "@/components/TicketFactura";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -126,6 +127,32 @@ const PuntoVentaPage: React.FC = () => {
   const [showCerrarCajaModal, setShowCerrarCajaModal] = useState(false);
   const [totalCajaSistemaUsd, setTotalCajaSistemaUsd] = useState<number>(0);
   const [costoInventarioTotal, setCostoInventarioTotal] = useState<number>(0);
+  
+  // Estado para el ticket de factura
+  const [ticketData, setTicketData] = useState<{
+    numeroFactura: string;
+    fecha: string;
+    hora: string;
+    sucursal: string;
+    cajero: string;
+    cliente?: { nombre: string; cedula?: string };
+    items: Array<{
+      nombre: string;
+      codigo?: string;
+      cantidad: number;
+      precio_unitario: number;
+      precio_unitario_usd: number;
+      subtotal: number;
+      subtotal_usd: number;
+      descuento_aplicado?: number;
+    }>;
+    metodosPago: Array<{ tipo: string; monto: number; divisa: "USD" | "Bs" }>;
+    totalBs: number;
+    totalUsd: number;
+    tasaDia: number;
+    porcentajeDescuento?: number;
+    vuelto?: { monto: number; divisa: "USD" | "Bs" };
+  } | null>(null);
 
   // Obtener usuario actual
   const getUsuarioActual = () => {
@@ -850,15 +877,77 @@ const PuntoVentaPage: React.FC = () => {
       const data = await res.json();
       alert(`Venta registrada exitosamente. Número de factura: ${data.numero_factura || data._id}`);
       
+      // Calcular vuelto si existe
+      const vueltoPendiente = calcularTotalPagadoUsd() - totalUsd;
+      let vueltoTicket: { monto: number; divisa: "USD" | "Bs" } | undefined;
+      if (vueltoPendiente > 0.01) {
+        // Buscar el método de vuelto en metodosPago (debe ser negativo)
+        const vueltoNegativo = metodosPago.find(m => m.monto < 0);
+        if (vueltoNegativo) {
+          vueltoTicket = {
+            monto: Math.abs(vueltoNegativo.monto),
+            divisa: vueltoNegativo.divisa
+          };
+        }
+      }
+      
+      // Obtener fecha y hora actual
+      const ahora = new Date();
+      const fecha = ahora.toLocaleDateString('es-VE', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      });
+      const hora = ahora.toLocaleTimeString('es-VE', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      // Preparar datos del ticket
+      const ticketItems = carrito.map(item => ({
+        nombre: item.producto.nombre,
+        codigo: item.producto.codigo,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_unitario,
+        precio_unitario_usd: item.precio_unitario_usd,
+        subtotal: item.subtotal,
+        subtotal_usd: item.subtotal_usd,
+        descuento_aplicado: item.descuento_aplicado
+      }));
+      
+      // Filtrar métodos de pago positivos para el ticket
+      const metodosPagoTicket = metodosPago
+        .filter(m => m.monto > 0)
+        .map(m => ({
+          tipo: m.tipo,
+          monto: m.monto,
+          divisa: m.divisa
+        }));
+      
+      // Establecer datos del ticket para imprimir
+      setTicketData({
+        numeroFactura: data.numero_factura || data._id || "N/A",
+        fecha,
+        hora,
+        sucursal: sucursalSeleccionada.nombre,
+        cajero: usuario?.correo || cajeroSeleccionado.NOMBRE,
+        cliente: clienteSeleccionado ? {
+          nombre: clienteSeleccionado.nombre,
+          cedula: clienteSeleccionado.cedula
+        } : undefined,
+        items: ticketItems,
+        metodosPago: metodosPagoTicket,
+        totalBs,
+        totalUsd,
+        tasaDia: tasaDelDia,
+        porcentajeDescuento: clienteSeleccionado?.porcentaje_descuento,
+        vuelto: vueltoTicket
+      });
+      
       // Limpiar carrito y reiniciar
       setCarrito([]);
       setMetodosPago([]);
       setShowPagoModal(false);
-      
-      // Imprimir factura
-      if (data.numero_factura) {
-        window.print();
-      }
     } catch (error: any) {
       console.error("Error al confirmar venta:", error);
       // El error ya fue mostrado en el alert anterior si viene del backend
@@ -1941,6 +2030,26 @@ const PuntoVentaPage: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Componente de Ticket de Factura - Se renderiza cuando hay datos del ticket */}
+      {ticketData && (
+        <TicketFactura
+          numeroFactura={ticketData.numeroFactura}
+          fecha={ticketData.fecha}
+          hora={ticketData.hora}
+          sucursal={ticketData.sucursal}
+          cajero={ticketData.cajero}
+          cliente={ticketData.cliente}
+          items={ticketData.items}
+          metodosPago={ticketData.metodosPago}
+          totalBs={ticketData.totalBs}
+          totalUsd={ticketData.totalUsd}
+          tasaDia={ticketData.tasaDia}
+          porcentajeDescuento={ticketData.porcentajeDescuento}
+          vuelto={ticketData.vuelto}
+          onImpreso={() => setTicketData(null)}
+        />
+      )}
     </div>
   );
 };
