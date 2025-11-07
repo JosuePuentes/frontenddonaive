@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { fetchWithAuth, getApiBaseUrl } from "@/lib/api";
+import { fetchWithAuth } from "@/lib/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -137,14 +137,8 @@ const PuntoVentaPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem("access_token");
-        const headers: HeadersInit = {};
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
-        }
-
-        // Cargar sucursales (farmacias)
-        const resSucursales = await fetch(`${API_BASE_URL}/farmacias`, { headers });
+        // Cargar sucursales (farmacias) usando fetchWithAuth
+        const resSucursales = await fetchWithAuth(`${API_BASE_URL}/farmacias`);
         if (resSucursales.ok) {
           const dataSucursales = await resSucursales.json();
           const listaSucursales = dataSucursales.farmacias
@@ -159,9 +153,9 @@ const PuntoVentaPage: React.FC = () => {
           setSucursales(listaSucursales);
         }
 
-        // Cargar tasa del día
+        // Cargar tasa del día usando fetchWithAuth
         const hoy = new Date().toISOString().split('T')[0];
-        const resTasa = await fetch(`${API_BASE_URL}/punto-venta/tasa-del-dia?fecha=${hoy}`, { headers });
+        const resTasa = await fetchWithAuth(`${API_BASE_URL}/punto-venta/tasa-del-dia?fecha=${hoy}`);
         if (resTasa.ok) {
           const dataTasa = await resTasa.json();
           setTasaDelDia(dataTasa.tasa || 0);
@@ -179,11 +173,6 @@ const PuntoVentaPage: React.FC = () => {
     if (busquedaItem.length >= 2 && sucursalSeleccionada) {
       const timeoutId = setTimeout(async () => {
         try {
-          const token = localStorage.getItem("access_token");
-          const headers: HeadersInit = {};
-          if (token) {
-            headers.Authorization = `Bearer ${token}`;
-          }
           const res = await fetchWithAuth(
             `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(busquedaItem)}&sucursal=${sucursalSeleccionada.id}`
           );
@@ -225,14 +214,8 @@ const PuntoVentaPage: React.FC = () => {
     if (busquedaCliente.length >= 2) {
       const timeoutId = setTimeout(async () => {
         try {
-          const token = localStorage.getItem("access_token");
-          const headers: HeadersInit = {};
-          if (token) {
-            headers.Authorization = `Bearer ${token}`;
-          }
-          const res = await fetch(
-            `${API_BASE_URL}/clientes/buscar?q=${encodeURIComponent(busquedaCliente)}`,
-            { headers }
+          const res = await fetchWithAuth(
+            `${API_BASE_URL}/clientes/buscar?q=${encodeURIComponent(busquedaCliente)}`
           );
           if (res.ok) {
             const data = await res.json();
@@ -256,12 +239,6 @@ const PuntoVentaPage: React.FC = () => {
       const fetchCajeros = async () => {
         setLoadingCajeros(true);
         try {
-          const token = localStorage.getItem("access_token");
-          const headers: HeadersInit = {};
-          if (token) {
-            headers.Authorization = `Bearer ${token}`;
-          }
-          
           const res = await fetchWithAuth(`${API_BASE_URL}/cajeros`);
           if (res.ok) {
             const data = await res.json();
@@ -665,14 +642,7 @@ const PuntoVentaPage: React.FC = () => {
     }
 
     try {
-      const token = localStorage.getItem("token");
       const usuario = getUsuarioActual();
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
 
       const totalUsd = calcularTotalUsd();
       const totalBs = calcularTotalBs();
@@ -715,9 +685,8 @@ const PuntoVentaPage: React.FC = () => {
         notas: "",
       };
 
-      const res = await fetch(`${API_BASE_URL}/punto-venta/ventas`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/punto-venta/ventas`, {
         method: "POST",
-        headers,
         body: JSON.stringify(ventaData),
       });
 
