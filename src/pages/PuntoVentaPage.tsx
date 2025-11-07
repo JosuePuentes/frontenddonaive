@@ -387,6 +387,17 @@ const PuntoVentaPage: React.FC = () => {
       handleEliminarItem(index);
       return;
     }
+    
+    // Validar que la nueva cantidad no exceda el stock disponible
+    const item = carrito[index];
+    const stockDisponible = item.producto.cantidad ?? item.producto.stock ?? 0;
+    
+    if (nuevaCantidad > stockDisponible) {
+      alert(`No hay suficiente stock disponible. Stock disponible: ${stockDisponible}`);
+      // Limitar al stock disponible
+      nuevaCantidad = stockDisponible;
+    }
+    
     setCarrito(
       carrito.map((it, i) =>
         i === index
@@ -1259,13 +1270,38 @@ const PuntoVentaPage: React.FC = () => {
                 onChange={(e) => {
                   const valor = e.target.value;
                   const stockDisponible = productoSeleccionado.cantidad ?? productoSeleccionado.stock ?? 0;
+                  
+                  // Si el campo está vacío, permitir que se borre
+                  if (valor === "" || valor === "0") {
+                    setCantidadInput(valor);
+                    return;
+                  }
+                  
                   const cantidadIngresada = parseFloat(valor);
                   
                   // Si el valor ingresado es mayor al stock, limitar al stock disponible
-                  if (!isNaN(cantidadIngresada) && cantidadIngresada > stockDisponible) {
-                    setCantidadInput(stockDisponible.toString());
+                  if (!isNaN(cantidadIngresada)) {
+                    if (cantidadIngresada > stockDisponible) {
+                      setCantidadInput(stockDisponible.toString());
+                      alert(`La cantidad máxima disponible es ${stockDisponible}`);
+                    } else if (cantidadIngresada < 1) {
+                      setCantidadInput("1");
+                    } else {
+                      setCantidadInput(valor);
+                    }
                   } else {
                     setCantidadInput(valor);
+                  }
+                }}
+                onBlur={(e) => {
+                  const valor = parseFloat(e.target.value) || 1;
+                  const stockDisponible = productoSeleccionado.cantidad ?? productoSeleccionado.stock ?? 0;
+                  
+                  if (valor > stockDisponible) {
+                    setCantidadInput(stockDisponible.toString());
+                    alert(`La cantidad máxima disponible es ${stockDisponible}`);
+                  } else if (valor < 1) {
+                    setCantidadInput("1");
                   }
                 }}
                 placeholder="Cantidad"
