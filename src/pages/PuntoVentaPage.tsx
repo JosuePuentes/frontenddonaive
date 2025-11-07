@@ -59,6 +59,15 @@ interface MetodoPago {
   divisa: "Bs" | "USD";
 }
 
+interface Cliente {
+  _id?: string;
+  id?: string;
+  cedula: string;
+  nombre: string;
+  direccion?: string;
+  telefono?: string;
+}
+
 const PuntoVentaPage: React.FC = () => {
   // Estados de configuración inicial
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
@@ -86,6 +95,19 @@ const PuntoVentaPage: React.FC = () => {
   });
   const [montoPago, setMontoPago] = useState("");
   const [productoConStockAbierto, setProductoConStockAbierto] = useState<string | null>(null);
+  
+  // Estados de clientes
+  const [showClienteModal, setShowClienteModal] = useState(false);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
+  const [busquedaCliente, setBusquedaCliente] = useState("");
+  const [clientesEncontrados, setClientesEncontrados] = useState<Cliente[]>([]);
+  const [creandoCliente, setCreandoCliente] = useState(false);
+  
+  // Formulario de cliente
+  const [cedulaCliente, setCedulaCliente] = useState("");
+  const [nombreCliente, setNombreCliente] = useState("");
+  const [direccionCliente, setDireccionCliente] = useState("");
+  const [telefonoCliente, setTelefonoCliente] = useState("");
 
   // Obtener usuario actual
   const getUsuarioActual = () => {
