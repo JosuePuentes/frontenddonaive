@@ -121,7 +121,7 @@ const Navbar = () => {
             console.log('¿Tiene gestionar_clientes?', permisos.includes('gestionar_clientes'));
             
             // Intentar actualizar desde el backend si hay token
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('access_token');
             if (token && storedUsuario._id) {
                 // Intentar primero con /auth/me, luego con /modificar-usuarios/{id}
                 const endpoints = [
@@ -253,7 +253,7 @@ const Navbar = () => {
         })).filter(category => category.items.length > 0);
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
         localStorage.removeItem('usuario');
         window.location.href = '/login';
     };

@@ -41,7 +41,7 @@ const VisualizarInventariosPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) {
         console.warn("No se encontró token de autenticación. Redirigiendo a login...");
         // Redirigir a login si no hay token
@@ -56,7 +56,7 @@ const VisualizarInventariosPage: React.FC = () => {
       if (res.status === 401 || res.status === 403) {
         // Token inválido o expirado
         console.warn("Token inválido o expirado. Limpiando y redirigiendo a login...");
-        localStorage.removeItem("token");
+        localStorage.removeItem("access_token");
         localStorage.removeItem("usuario");
         window.location.href = "/login";
         return [];
@@ -102,7 +102,7 @@ const VisualizarInventariosPage: React.FC = () => {
         return;
       }
       
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) return;
 
       const nuevosTotalesExistencias: { [key: string]: number } = {};
@@ -314,7 +314,7 @@ const VisualizarInventariosPage: React.FC = () => {
 
     setEliminando(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
       const response = await fetch(

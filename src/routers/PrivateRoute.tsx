@@ -11,7 +11,7 @@ const PrivateRoute: React.FC<Props> = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         if (usuario || token) {
             setIsAuthenticated(true);
         } else {

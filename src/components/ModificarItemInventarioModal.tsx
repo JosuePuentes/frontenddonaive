@@ -96,7 +96,7 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
     setCargandoProductos(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
       // Obtener items directamente del inventario (no del punto de venta)
@@ -240,7 +240,7 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
     setSuccess(false);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
       // El backend busca items por código del producto, no por ID

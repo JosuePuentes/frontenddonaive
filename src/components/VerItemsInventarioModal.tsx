@@ -53,7 +53,7 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
       // Intentar obtener items del inventario

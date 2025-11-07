@@ -190,7 +190,7 @@ const UploadInventarioExcel: React.FC<UploadInventarioExcelProps> = ({
     setSuccess(false);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) {
         throw new Error("No se encontró el token de autenticación");
       }

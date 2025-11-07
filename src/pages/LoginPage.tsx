@@ -30,7 +30,7 @@ const LoginPage: React.FC = () => {
             }
 
             // Guardar el token y el usuario en localStorage
-            localStorage.setItem("token", data.access_token);
+            localStorage.setItem("access_token", data.access_token);
             localStorage.setItem("usuario", JSON.stringify(data.usuario));
 
             // Navegar a la página principal

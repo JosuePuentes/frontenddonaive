@@ -30,17 +30,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Efecto para cerrar sesión si el token expira
     React.useEffect(() => {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         if (token && isTokenExpired(token)) {
             setUsuario(null);
-            localStorage.removeItem("token");
+            localStorage.removeItem("access_token");
         }
         // Opcional: chequeo periódico
         const interval = setInterval(() => {
-            const token = localStorage.getItem("token");
+            const token = localStorage.getItem("access_token");
             if (token && isTokenExpired(token)) {
                 setUsuario(null);
-                localStorage.removeItem("token");
+                localStorage.removeItem("access_token");
             }
         }, 60 * 1000); // cada minuto
         return () => clearInterval(interval);

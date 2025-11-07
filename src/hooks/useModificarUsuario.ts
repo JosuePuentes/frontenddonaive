@@ -22,7 +22,7 @@ export const useModificarUsuario = (): UseModificarUsuarioReturn => {
 
   // Función para obtener el token de autenticación
   const getAuthToken = (): string | null => {
-    return localStorage.getItem("token");
+    return localStorage.getItem("access_token");
   };
 
   // Función para crear headers con autenticación

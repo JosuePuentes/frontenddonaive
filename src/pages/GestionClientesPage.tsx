@@ -65,7 +65,7 @@ const GestionClientesPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       const headers: HeadersInit = {};
       if (token) {
         headers.Authorization = `Bearer ${token}`;
@@ -94,7 +94,7 @@ const GestionClientesPage: React.FC = () => {
     const cargarTotalesCompras = async () => {
       if (clientes.length === 0) return;
 
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       const headers: HeadersInit = {};
       if (token) {
         headers.Authorization = `Bearer ${token}`;
@@ -139,7 +139,7 @@ const GestionClientesPage: React.FC = () => {
     setItemsComprados([]);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       const headers: HeadersInit = {};
       if (token) {
         headers.Authorization = `Bearer ${token}`;
@@ -188,7 +188,7 @@ const GestionClientesPage: React.FC = () => {
 
     setGuardando(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       const headers: HeadersInit = {
         "Content-Type": "application/json",
       };
@@ -238,7 +238,7 @@ const GestionClientesPage: React.FC = () => {
 
     setLoadingDelete(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       const headers: HeadersInit = {};
       if (token) {
         headers.Authorization = `Bearer ${token}`;

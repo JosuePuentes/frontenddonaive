@@ -136,7 +136,7 @@ const PuntoVentaPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         const headers: HeadersInit = {};
         if (token) {
           headers.Authorization = `Bearer ${token}`;
@@ -178,7 +178,7 @@ const PuntoVentaPage: React.FC = () => {
     if (busquedaItem.length >= 2 && sucursalSeleccionada) {
       const timeoutId = setTimeout(async () => {
         try {
-          const token = localStorage.getItem("token");
+          const token = localStorage.getItem("access_token");
           const headers: HeadersInit = {};
           if (token) {
             headers.Authorization = `Bearer ${token}`;
@@ -225,7 +225,7 @@ const PuntoVentaPage: React.FC = () => {
     if (busquedaCliente.length >= 2) {
       const timeoutId = setTimeout(async () => {
         try {
-          const token = localStorage.getItem("token");
+          const token = localStorage.getItem("access_token");
           const headers: HeadersInit = {};
           if (token) {
             headers.Authorization = `Bearer ${token}`;
@@ -256,7 +256,7 @@ const PuntoVentaPage: React.FC = () => {
       const fetchCajeros = async () => {
         setLoadingCajeros(true);
         try {
-          const token = localStorage.getItem("token");
+          const token = localStorage.getItem("access_token");
           const headers: HeadersInit = {};
           if (token) {
             headers.Authorization = `Bearer ${token}`;
