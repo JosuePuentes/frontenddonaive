@@ -873,8 +873,8 @@ const PuntoVentaPage: React.FC = () => {
       numeroFactura: factura.numero_factura || factura._id || "N/A",
       fecha,
       hora,
-      sucursal: factura.sucursal?.nombre || sucursalSeleccionada.nombre,
-      cajero: factura.cajero || cajeroSeleccionado.NOMBRE,
+      sucursal: factura.sucursal?.nombre || sucursalSeleccionada?.nombre || "",
+      cajero: factura.cajero || cajeroSeleccionado?.NOMBRE || "",
       cliente: factura.cliente ? {
         nombre: factura.cliente.nombre,
         cedula: factura.cliente.cedula
