@@ -657,7 +657,19 @@ const PuntoVentaPage: React.FC = () => {
                   const stock = producto.cantidad ?? producto.stock ?? 0;
                   const precio = producto.precio_usd || producto.precio;
                   const tieneStock = stock > 0;
-                  const mostrarLotes = productoConLotesAbierto === producto.id && producto.lotes && producto.lotes.length > 0;
+                  const mostrarStock = productoConStockAbierto === producto.id;
+                  
+                  // Obtener el primer lote para mostrar al lado de la descripción
+                  const primerLote = producto.lotes && producto.lotes.length > 0 ? producto.lotes[0] : null;
+                  const fechaVencPrimerLote = primerLote?.fecha_vencimiento 
+                    ? new Date(primerLote.fecha_vencimiento).toLocaleDateString('es-VE')
+                    : null;
+                  const hoy = new Date();
+                  const fechaVencDate = primerLote?.fecha_vencimiento 
+                    ? new Date(primerLote.fecha_vencimiento)
+                    : null;
+                  const estaVencido = fechaVencDate && fechaVencDate < hoy;
+                  const estaPorVencer = fechaVencDate && fechaVencDate >= hoy && fechaVencDate <= new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000);
                   
                   return (
                     <div
@@ -670,9 +682,31 @@ const PuntoVentaPage: React.FC = () => {
                           className="flex-1 text-left"
                         >
                           <div className="font-semibold">{producto.nombre}</div>
-                          {producto.codigo && (
-                            <div className="text-xs text-gray-500">Código: {producto.codigo}</div>
-                          )}
+                          <div className="flex items-center gap-3 mt-1 flex-wrap">
+                            {producto.codigo && (
+                              <div className="text-xs text-gray-500">Código: {producto.codigo}</div>
+                            )}
+                            {primerLote && (
+                              <>
+                                <div className="text-xs text-gray-600">
+                                  Lote: <span className="font-medium">{primerLote.lote || '-'}</span>
+                                </div>
+                                {fechaVencPrimerLote && (
+                                  <div className={`text-xs font-medium ${
+                                    estaVencido 
+                                      ? 'text-red-600' 
+                                      : estaPorVencer 
+                                      ? 'text-orange-600' 
+                                      : 'text-gray-600'
+                                  }`}>
+                                    Vence: {fechaVencPrimerLote}
+                                    {estaVencido && ' (VENCIDO)'}
+                                    {estaPorVencer && !estaVencido && ' (Por vencer)'}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </button>
                         <div className="flex items-center gap-3 flex-shrink-0">
                           {/* Precio */}
@@ -680,12 +714,12 @@ const PuntoVentaPage: React.FC = () => {
                             ${precio.toFixed(2)}
                           </div>
                           {/* Stock con dropdown */}
-                          <div className="relative lotes-dropdown-container">
+                          <div className="relative stock-dropdown-container">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setProductoConLotesAbierto(
-                                  productoConLotesAbierto === producto.id ? null : producto.id
+                                setProductoConStockAbierto(
+                                  productoConStockAbierto === producto.id ? null : producto.id
                                 );
                               }}
                               className={`px-2 py-1 rounded text-sm font-medium ${
@@ -696,61 +730,52 @@ const PuntoVentaPage: React.FC = () => {
                             >
                               Stock: {stock}
                             </button>
-                            {/* Dropdown de lotes */}
-                            {mostrarLotes && (
-                              <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                                <div className="p-2">
-                                  <div className="text-xs font-semibold text-gray-700 mb-2 px-2">
-                                    Lotes y Existencias:
+                            {/* Dropdown de stock por sucursal */}
+                            {mostrarStock && (
+                              <div className="absolute right-0 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
+                                <div className="p-3">
+                                  <div className="text-sm font-semibold text-gray-700 mb-3">
+                                    Stock por Sucursal:
                                   </div>
-                                  {producto.lotes && producto.lotes.length > 0 ? (
-                                    <div className="space-y-1">
-                                      {producto.lotes.map((lote, index) => {
-                                        const cantidadLote = lote.cantidad ?? 0;
-                                        const fechaVenc = lote.fecha_vencimiento 
-                                          ? new Date(lote.fecha_vencimiento).toLocaleDateString('es-VE')
-                                          : null;
-                                        const hoy = new Date();
-                                        const fechaVencDate = lote.fecha_vencimiento 
-                                          ? new Date(lote.fecha_vencimiento)
-                                          : null;
-                                        const estaVencido = fechaVencDate && fechaVencDate < hoy;
-                                        const estaPorVencer = fechaVencDate && fechaVencDate >= hoy && fechaVencDate <= new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000);
+                                  {producto.stock_por_sucursal && producto.stock_por_sucursal.length > 0 ? (
+                                    <div className="space-y-2">
+                                      {producto.stock_por_sucursal.map((stockSucursal, index) => {
+                                        const stockSuc = stockSucursal.cantidad ?? stockSucursal.stock ?? 0;
+                                        const esSucursalActual = stockSucursal.sucursal_id === sucursalSeleccionada?.id;
                                         
                                         return (
                                           <div
                                             key={index}
-                                            className={`p-2 rounded text-xs ${
-                                              estaVencido 
-                                                ? 'bg-red-50 border border-red-200' 
-                                                : estaPorVencer 
-                                                ? 'bg-orange-50 border border-orange-200' 
-                                                : 'bg-gray-50 border border-gray-200'
+                                            className={`p-2 rounded text-sm border ${
+                                              esSucursalActual
+                                                ? 'bg-blue-50 border-blue-200'
+                                                : stockSuc > 0
+                                                ? 'bg-green-50 border-green-200'
+                                                : 'bg-red-50 border-red-200'
                                             }`}
                                           >
-                                            <div className="font-medium">
-                                              Lote: {lote.lote || '-'} | Cantidad: {cantidadLote}
-                                            </div>
-                                            {fechaVenc && (
-                                              <div className={`text-xs mt-1 ${
-                                                estaVencido 
-                                                  ? 'text-red-600 font-semibold' 
-                                                  : estaPorVencer 
-                                                  ? 'text-orange-600' 
-                                                  : 'text-gray-600'
-                                              }`}>
-                                                Vence: {fechaVenc}
-                                                {estaVencido && ' (VENCIDO)'}
-                                                {estaPorVencer && !estaVencido && ' (Por vencer)'}
+                                            <div className="flex justify-between items-center">
+                                              <div className="font-medium text-gray-800">
+                                                {stockSucursal.sucursal_nombre}
+                                                {esSucursalActual && (
+                                                  <span className="ml-2 text-xs text-blue-600 font-semibold">
+                                                    (Actual)
+                                                  </span>
+                                                )}
                                               </div>
-                                            )}
+                                              <div className={`font-semibold ${
+                                                stockSuc > 0 ? 'text-green-700' : 'text-red-700'
+                                              }`}>
+                                                {stockSuc}
+                                              </div>
+                                            </div>
                                           </div>
                                         );
                                       })}
                                     </div>
                                   ) : (
-                                    <div className="text-xs text-gray-500 px-2 py-1">
-                                      No hay lotes registrados
+                                    <div className="text-sm text-gray-500 py-2">
+                                      No hay información de stock en otras sucursales
                                     </div>
                                   )}
                                 </div>
