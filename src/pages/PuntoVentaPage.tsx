@@ -1251,6 +1251,77 @@ const PuntoVentaPage: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Crear Cliente */}
+      <Dialog open={showClienteModal} onOpenChange={setShowClienteModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Cédula *</label>
+              <Input
+                type="text"
+                value={cedulaCliente}
+                onChange={(e) => setCedulaCliente(e.target.value)}
+                placeholder="Ingrese la cédula"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Nombre *</label>
+              <Input
+                type="text"
+                value={nombreCliente}
+                onChange={(e) => setNombreCliente(e.target.value)}
+                placeholder="Ingrese el nombre completo"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Dirección</label>
+              <Input
+                type="text"
+                value={direccionCliente}
+                onChange={(e) => setDireccionCliente(e.target.value)}
+                placeholder="Ingrese la dirección"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Número de Teléfono</label>
+              <Input
+                type="text"
+                value={telefonoCliente}
+                onChange={(e) => setTelefonoCliente(e.target.value)}
+                placeholder="Ingrese el número de teléfono"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleCrearCliente}
+                className="flex-1"
+                disabled={creandoCliente || !cedulaCliente.trim() || !nombreCliente.trim()}
+              >
+                {creandoCliente ? "Creando..." : "Crear Cliente"}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowClienteModal(false);
+                  setCedulaCliente("");
+                  setNombreCliente("");
+                  setDireccionCliente("");
+                  setTelefonoCliente("");
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
