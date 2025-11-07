@@ -3,9 +3,19 @@
 ## Resumen
 Cuando se confirma una venta desde el punto de venta (`POST /punto-venta/ventas`), el backend debe **actualizar o crear un cuadre con estado "wait"** para la sucursal correspondiente, agregando el total de la venta al campo "Pendiente" que se muestra en el resumen de farmacias.
 
+**IMPORTANTE:** El monto total de cada venta debe sumarse al Pendiente y **permanecer visible** incluso después de confirmar o denegar un cuadre. El monto no desaparece, solo cambia de categoría (Pendiente → Total cuando se confirma).
+
 ---
 
 ## Contexto
+
+### Flujo de Estados del Cuadre
+
+1. **Venta confirmada** → Se crea/actualiza cuadre con estado `"wait"` → Aparece en **Pendiente**
+2. **Cuadre confirmado** → Estado cambia a `"verified"` → El monto pasa al **Total de Ventas** pero el monto original sigue visible
+3. **Cuadre denegado** → Estado cambia a `"denied"` → El monto **NO desaparece**, sigue visible pero no cuenta en Pendiente ni Total
+
+### Cálculo del Pendiente
 
 El "Pendiente" en el resumen de farmacias se calcula sumando los montos de todos los cuadres con estado `"wait"` (pendiente de verificación) para cada sucursal.
 
@@ -17,6 +27,12 @@ totalPendiente = sumaUsd + (sumaBs / tasa)
 Donde:
 - `sumaUsd` = `efectivoUsd + zelleUsd`
 - `sumaBs` = `recargaBs + pagomovilBs + efectivoBs + puntosVenta (puntoDebito + puntoCredito) - devolucionesBs`
+
+### Cálculo del Total de Ventas
+
+El "Total de Ventas" se calcula sumando los montos de todos los cuadres con estado `"verified"` (verificados) para cada sucursal, usando la misma fórmula.
+
+**CRÍTICO:** El monto de cada venta debe ser **trazable y visible** independientemente del estado del cuadre. No se elimina, solo se mueve entre categorías.
 
 ---
 
@@ -160,25 +176,55 @@ async def actualizar_cuadre_con_venta(
     
     if cuadre_existente:
         # Actualizar cuadre existente: SUMAR los montos
-        await db.cuadres.update_one(
-            {
-                "_id": cuadre_existente["_id"]
-            },
-            {
-                "$inc": {
-                    "efectivoUsd": efectivo_usd,
-                    "zelleUsd": zelle_usd,
-                    "efectivoBs": efectivo_bs,
-                    "pagomovilBs": pagomovil_bs,
-                    "puntosVenta.0.puntoDebito": punto_debito,
-                    "puntosVenta.0.puntoCredito": punto_credito
+        # IMPORTANTE: Si el cuadre tiene estado "verified" o "denied", 
+        # NO cambiar el estado, solo sumar el nuevo monto
+        # El nuevo monto se sumará y el cuadre seguirá mostrando el total acumulado
+        
+        estado_actual = cuadre_existente.get("estado", "wait")
+        
+        # Si el cuadre está verificado o denegado, mantener su estado
+        # pero sumar el nuevo monto (esto permite que el monto total sea visible)
+        if estado_actual in ["verified", "denied"]:
+            # Sumar el monto pero mantener el estado actual
+            await db.cuadres.update_one(
+                {
+                    "_id": cuadre_existente["_id"]
                 },
-                "$set": {
-                    "estado": "wait",  # Asegurar que esté en "wait"
-                    "tasa": tasa_dia  # Actualizar tasa si cambió
+                {
+                    "$inc": {
+                        "efectivoUsd": efectivo_usd,
+                        "zelleUsd": zelle_usd,
+                        "efectivoBs": efectivo_bs,
+                        "pagomovilBs": pagomovil_bs,
+                        "puntosVenta.0.puntoDebito": punto_debito,
+                        "puntosVenta.0.puntoCredito": punto_credito
+                    },
+                    "$set": {
+                        "tasa": tasa_dia  # Actualizar tasa si cambió
+                    }
                 }
-            }
-        )
+            )
+        else:
+            # Si está en "wait", sumar y asegurar que siga en "wait"
+            await db.cuadres.update_one(
+                {
+                    "_id": cuadre_existente["_id"]
+                },
+                {
+                    "$inc": {
+                        "efectivoUsd": efectivo_usd,
+                        "zelleUsd": zelle_usd,
+                        "efectivoBs": efectivo_bs,
+                        "pagomovilBs": pagomovil_bs,
+                        "puntosVenta.0.puntoDebito": punto_debito,
+                        "puntosVenta.0.puntoCredito": punto_credito
+                    },
+                    "$set": {
+                        "estado": "wait",  # Asegurar que esté en "wait"
+                        "tasa": tasa_dia  # Actualizar tasa si cambió
+                    }
+                }
+            )
     else:
         # Crear nuevo cuadre
         await db.cuadres.insert_one(datos_cuadre)
@@ -232,23 +278,36 @@ async def crear_venta(
 
 ### 1. Estado del Cuadre
 - **CRÍTICO:** El cuadre DEBE tener `estado: "wait"` para que aparezca en el cálculo de "Pendiente"
-- Si el cuadre ya existe y tiene otro estado, puedes decidir:
-  - Opción A: Solo actualizar si el estado es "wait"
-  - Opción B: Cambiar el estado a "wait" si se agrega una nueva venta
+- **IMPORTANTE:** Cuando se agrega una nueva venta, SIEMPRE se debe actualizar el cuadre del día, incluso si ya tiene otro estado
+- Si el cuadre ya existe con estado `"verified"` o `"denied"`, al agregar una nueva venta:
+  - **NO cambiar el estado existente** de las ventas anteriores
+  - **SÍ sumar el nuevo monto** al cuadre
+  - **Crear un nuevo cuadre con estado "wait"** para el nuevo monto, O
+  - **Actualizar el cuadre existente** sumando el nuevo monto pero manteniendo el historial
 
-### 2. Suma de Montos
+### 2. Trazabilidad de Ventas
+- **CRÍTICO:** Cada venta debe ser trazable y su monto debe permanecer visible
+- El monto de una venta **NO desaparece** cuando se confirma o deniega un cuadre
+- El monto solo cambia de categoría:
+  - `"wait"` → Aparece en **Pendiente**
+  - `"verified"` → Aparece en **Total de Ventas**
+  - `"denied"` → No cuenta en Pendiente ni Total, pero **sigue visible** para auditoría
+
+### 3. Suma de Montos
 - Usar `$inc` (incrementar) en MongoDB para SUMAR los montos, no reemplazarlos
 - Esto permite que múltiples ventas del mismo día se acumulen correctamente
+- **IMPORTANTE:** Cada venta se suma al cuadre, y el monto total del cuadre es la suma de todas las ventas
+- El monto de cada venta individual debe estar registrado en la colección `ventas` para trazabilidad
 
-### 3. Estructura de `puntosVenta`
+### 4. Estructura de `puntosVenta`
 - Si tu estructura actual de cuadres tiene `puntosVenta` como un array, asegúrate de actualizar el primer elemento `[0]`
 - Si no existe el array, créalo con un objeto inicial
 
-### 4. Conversión de Divisas
+### 5. Conversión de Divisas
 - Las tarjetas en USD deben convertirse a Bs usando la tasa del día antes de agregarse a `puntosVenta`
 - O puedes decidir mantenerlas en USD si tu sistema lo permite
 
-### 5. Validación
+### 6. Validación
 - Verificar que la sucursal existe antes de crear/actualizar el cuadre
 - Manejar errores si el cuadre no se puede actualizar (no debe fallar la venta)
 
@@ -256,17 +315,50 @@ async def crear_venta(
 
 ## Ejemplo de Flujo
 
+### Escenario 1: Ventas que se suman al Pendiente
+
 1. **Venta 1:** $10 USD en efectivo
    - Cuadre creado: `efectivoUsd: 10.0`, `estado: "wait"`
    - Pendiente: $10 USD
+   - Total Ventas: $0 USD
 
 2. **Venta 2:** $5 USD en zelle + 600 Bs en tarjeta (tasa: 120)
-   - Cuadre actualizado: `efectivoUsd: 10.0`, `zelleUsd: 5.0`, `puntosVenta[0].puntoDebito: 600.0`
+   - Cuadre actualizado: `efectivoUsd: 10.0`, `zelleUsd: 5.0`, `puntosVenta[0].puntoDebito: 600.0`, `estado: "wait"`
    - Pendiente: $15 USD + (600/120) = $20 USD
+   - Total Ventas: $0 USD
 
 3. **Venta 3:** 1200 Bs en efectivo (tasa: 120)
-   - Cuadre actualizado: `efectivoUsd: 10.0`, `zelleUsd: 5.0`, `efectivoBs: 1200.0`, `puntosVenta[0].puntoDebito: 600.0`
+   - Cuadre actualizado: `efectivoUsd: 10.0`, `zelleUsd: 5.0`, `efectivoBs: 1200.0`, `puntosVenta[0].puntoDebito: 600.0`, `estado: "wait"`
    - Pendiente: $15 USD + (1200/120) + (600/120) = $25 USD
+   - Total Ventas: $0 USD
+
+### Escenario 2: Cuadre confirmado (el monto NO desaparece)
+
+4. **Cuadre confirmado** (estado cambia a "verified")
+   - Cuadre: `efectivoUsd: 10.0`, `zelleUsd: 5.0`, `efectivoBs: 1200.0`, `puntosVenta[0].puntoDebito: 600.0`, `estado: "verified"`
+   - Pendiente: $0 USD (ya no está en wait)
+   - Total Ventas: $25 USD (ahora cuenta en total)
+   - **IMPORTANTE:** El monto total ($25 USD) sigue visible y no desaparece
+
+5. **Venta 4:** $8 USD en efectivo (después de confirmar)
+   - Cuadre actualizado: `efectivoUsd: 18.0`, `zelleUsd: 5.0`, `efectivoBs: 1200.0`, `puntosVenta[0].puntoDebito: 600.0`, `estado: "verified"`
+   - Pendiente: $0 USD (el cuadre sigue en "verified")
+   - Total Ventas: $33 USD (suma de todas las ventas)
+   - **IMPORTANTE:** El nuevo monto se suma al cuadre existente, manteniendo el estado "verified"
+
+### Escenario 3: Cuadre denegado (el monto NO desaparece)
+
+6. **Cuadre denegado** (estado cambia a "denied")
+   - Cuadre: `efectivoUsd: 18.0`, `zelleUsd: 5.0`, `efectivoBs: 1200.0`, `puntosVenta[0].puntoDebito: 600.0`, `estado: "denied"`
+   - Pendiente: $0 USD (no cuenta en pendiente)
+   - Total Ventas: $0 USD (no cuenta en total)
+   - **IMPORTANTE:** El monto total ($33 USD) sigue visible para auditoría, solo no cuenta en los cálculos
+
+7. **Venta 5:** $12 USD en zelle (después de denegar)
+   - Cuadre actualizado: `efectivoUsd: 18.0`, `zelleUsd: 17.0`, `efectivoBs: 1200.0`, `puntosVenta[0].puntoDebito: 600.0`, `estado: "denied"`
+   - Pendiente: $0 USD
+   - Total Ventas: $0 USD
+   - **IMPORTANTE:** El nuevo monto se suma al cuadre, manteniendo el estado "denied" y el monto total visible
 
 ---
 
@@ -275,13 +367,18 @@ async def crear_venta(
 - [ ] Función `actualizar_cuadre_con_venta()` implementada
 - [ ] Mapeo correcto de métodos de pago a campos del cuadre
 - [ ] Uso de `$inc` para sumar montos (no reemplazar)
-- [ ] Cuadre creado/actualizado con `estado: "wait"`
-- [ ] Manejo de cuadres existentes (sumar) vs nuevos (crear)
+- [ ] Cuadre creado/actualizado con `estado: "wait"` para nuevas ventas
+- [ ] Manejo de cuadres existentes: sumar montos independientemente del estado
+- [ ] Si el cuadre está en "verified" o "denied", mantener el estado pero sumar el nuevo monto
 - [ ] Conversión correcta de USD a Bs para tarjetas (si aplica)
 - [ ] Validación de que la sucursal existe
 - [ ] Manejo de errores sin afectar el registro de la venta
+- [ ] **CRÍTICO:** El monto total del cuadre permanece visible incluso después de confirmar/denegar
 - [ ] Pruebas con múltiples ventas del mismo día
+- [ ] Pruebas con ventas después de confirmar un cuadre
+- [ ] Pruebas con ventas después de denegar un cuadre
 - [ ] Verificación de que el "Pendiente" se actualiza correctamente en el frontend
+- [ ] Verificación de que el monto total no desaparece al confirmar/denegar
 
 ---
 
