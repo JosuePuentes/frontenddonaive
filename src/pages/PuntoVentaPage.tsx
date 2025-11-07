@@ -566,14 +566,6 @@ const PuntoVentaPage: React.FC = () => {
 
     setCreandoCliente(true);
     try {
-      const token = localStorage.getItem("token");
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
       const clienteData = {
         cedula: cedulaCliente.trim(),
         nombre: nombreCliente.trim(),
