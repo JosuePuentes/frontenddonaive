@@ -582,9 +582,8 @@ const PuntoVentaPage: React.FC = () => {
         porcentaje_descuento: porcentajeDescuentoCliente ? parseFloat(porcentajeDescuentoCliente) : 0,
       };
 
-      const res = await fetch(`${API_BASE_URL}/clientes`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/clientes`, {
         method: "POST",
-        headers,
         body: JSON.stringify(clienteData),
       });
 
