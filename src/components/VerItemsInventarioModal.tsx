@@ -5,6 +5,12 @@ import { X, RefreshCw, FileSpreadsheet, FileText } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+interface Lote {
+  lote: string;
+  fecha_vencimiento: string;
+  cantidad?: number;
+}
+
 interface ItemInventario {
   _id?: string;
   id?: string;
@@ -19,6 +25,7 @@ interface ItemInventario {
   precio_unitario?: number; // Campo usado por el backend
   porcentaje_ganancia?: number;
   utilidad_contable?: number;
+  lotes?: Lote[]; // Array de lotes con fechas de vencimiento
   sucursal?: string;
   inventario_id?: string;
 }
@@ -117,26 +124,52 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
       const XLSX = (XLSXModule.default || XLSXModule) as any;
 
       // Preparar datos para Excel
-      const data = [
-        ["Código", "Descripción", "Marca", "Costo", "Precio", "Existencia", "Utilidad", "% Ganancia"],
-        ...items.map(item => {
-          const costo = item.costo_unitario || item.costo || 0;
-          const precio = item.precio_unitario || item.precio || 0;
-          const cantidad = item.cantidad || item.existencia || 0;
-          const utilidad = item.utilidad_contable ?? (precio - costo);
-          const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
-          
-          return [
+      // Si un item tiene múltiples lotes, crear una fila por cada lote
+      const filasExcel: any[] = [];
+      
+      items.forEach(item => {
+        const costo = item.costo_unitario || item.costo || 0;
+        const precio = item.precio_unitario || item.precio || 0;
+        const cantidad = item.cantidad || item.existencia || 0;
+        const utilidad = item.utilidad_contable ?? (precio - costo);
+        const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
+        
+        if (item.lotes && item.lotes.length > 0) {
+          // Si tiene lotes, crear una fila por cada lote
+          item.lotes.forEach((lote, loteIndex) => {
+            filasExcel.push([
+              item.codigo || "",
+              item.descripcion || "",
+              item.marca || "",
+              costo,
+              precio,
+              cantidad,
+              lote.lote || "",
+              lote.fecha_vencimiento ? new Date(lote.fecha_vencimiento).toLocaleDateString('es-VE') : "",
+              utilidad.toFixed(2),
+              porcentajeGanancia.toFixed(2) + "%"
+            ]);
+          });
+        } else {
+          // Si no tiene lotes, crear una fila normal
+          filasExcel.push([
             item.codigo || "",
             item.descripcion || "",
             item.marca || "",
             costo,
             precio,
             cantidad,
+            "",
+            "",
             utilidad.toFixed(2),
             porcentajeGanancia.toFixed(2) + "%"
-          ];
-        }),
+          ]);
+        }
+      });
+      
+      const data = [
+        ["Código", "Descripción", "Marca", "Costo", "Precio", "Existencia", "Lote", "Fecha Vencimiento", "Utilidad", "% Ganancia"],
+        ...filasExcel,
         // Fila de totales
         [
           "TOTALES",
@@ -156,6 +189,8 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
             const cantidad = item.cantidad || item.existencia || 0;
             return sum + Number(cantidad);
           }, 0),
+          "",
+          "",
           items.reduce((sum, item) => {
             const costo = item.costo_unitario || item.costo || 0;
             const precio = item.precio_unitario || item.precio || 0;
@@ -307,6 +342,8 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                   <th class="text-right">Costo</th>
                   <th class="text-right">Precio</th>
                   <th class="text-right">Existencia</th>
+                  <th>Lote</th>
+                  <th>Fecha Vencimiento</th>
                   <th class="text-right">Utilidad</th>
                   <th class="text-right">% Ganancia</th>
                 </tr>
@@ -318,24 +355,61 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                   const cantidad = item.cantidad || item.existencia || 0;
                   const utilidad = item.utilidad_contable ?? (precio - costo);
                   const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
-                  return `
-                    <tr>
-                      <td>${item.codigo || "-"}</td>
-                      <td>${item.descripcion || "-"}</td>
-                      <td>${item.marca || "-"}</td>
-                      <td class="text-right">${Number(costo).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
-                      <td class="text-right">${Number(precio).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
-                      <td class="text-right">${Number(cantidad).toLocaleString('es-VE')}</td>
-                      <td class="text-right">${utilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
-                      <td class="text-right">${porcentajeGanancia.toFixed(2)}%</td>
-                    </tr>
-                  `;
+                  
+                  // Si tiene lotes, crear una fila por cada lote
+                  if (item.lotes && item.lotes.length > 0) {
+                    return item.lotes.map((lote, loteIndex) => {
+                      const fechaVenc = lote.fecha_vencimiento 
+                        ? new Date(lote.fecha_vencimiento).toLocaleDateString('es-VE')
+                        : "-";
+                      const hoy = new Date();
+                      const fechaVencDate = lote.fecha_vencimiento 
+                        ? new Date(lote.fecha_vencimiento)
+                        : null;
+                      const estaVencido = fechaVencDate && fechaVencDate < hoy;
+                      const estaPorVencer = fechaVencDate && fechaVencDate >= hoy && fechaVencDate <= new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000);
+                      const colorFecha = estaVencido ? "color: red; font-weight: bold;" : estaPorVencer ? "color: orange; font-weight: 500;" : "";
+                      
+                      return `
+                        <tr>
+                          <td>${item.codigo || "-"}</td>
+                          <td>${item.descripcion || "-"}</td>
+                          <td>${item.marca || "-"}</td>
+                          <td class="text-right">${Number(costo).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                          <td class="text-right">${Number(precio).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                          <td class="text-right">${Number(cantidad).toLocaleString('es-VE')}</td>
+                          <td>${lote.lote || "-"}${lote.cantidad ? ` (${lote.cantidad})` : ""}</td>
+                          <td style="${colorFecha}">${fechaVenc}</td>
+                          <td class="text-right">${utilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                          <td class="text-right">${porcentajeGanancia.toFixed(2)}%</td>
+                        </tr>
+                      `;
+                    }).join('');
+                  } else {
+                    // Si no tiene lotes, crear una fila normal
+                    return `
+                      <tr>
+                        <td>${item.codigo || "-"}</td>
+                        <td>${item.descripcion || "-"}</td>
+                        <td>${item.marca || "-"}</td>
+                        <td class="text-right">${Number(costo).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                        <td class="text-right">${Number(precio).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                        <td class="text-right">${Number(cantidad).toLocaleString('es-VE')}</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="text-right">${utilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                        <td class="text-right">${porcentajeGanancia.toFixed(2)}%</td>
+                      </tr>
+                    `;
+                  }
                 }).join('')}
                 <tr class="totals-row">
                   <td colspan="3"><strong>TOTALES</strong></td>
                   <td class="text-right"><strong>${totalCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</strong></td>
                   <td class="text-right"><strong>${totalPrecio.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</strong></td>
                   <td class="text-right"><strong>${totalExistencia.toLocaleString('es-VE')}</strong></td>
+                  <td></td>
+                  <td></td>
                   <td class="text-right"><strong>${totalUtilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</strong></td>
                   <td></td>
                 </tr>
@@ -451,6 +525,8 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                     <th className="px-4 py-3 text-right font-semibold text-slate-700">Costo</th>
                     <th className="px-4 py-3 text-right font-semibold text-slate-700">Precio</th>
                     <th className="px-4 py-3 text-right font-semibold text-slate-700">Existencia</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Lote</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Fecha Vencimiento</th>
                     <th className="px-4 py-3 text-right font-semibold text-slate-700">Utilidad</th>
                     <th className="px-4 py-3 text-right font-semibold text-slate-700">% Ganancia</th>
                   </tr>
@@ -482,6 +558,54 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                           })} Bs
                         </td>
                         <td className="px-4 py-3 text-right text-slate-700">{cantidad}</td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {item.lotes && item.lotes.length > 0 ? (
+                            <div className="space-y-1">
+                              {item.lotes.map((lote, loteIndex) => (
+                                <div key={loteIndex} className="text-xs">
+                                  {lote.lote || "-"}
+                                  {lote.cantidad && ` (${lote.cantidad})`}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {item.lotes && item.lotes.length > 0 ? (
+                            <div className="space-y-1">
+                              {item.lotes.map((lote, loteIndex) => {
+                                const fechaVenc = lote.fecha_vencimiento 
+                                  ? new Date(lote.fecha_vencimiento).toLocaleDateString('es-VE')
+                                  : "-";
+                                const hoy = new Date();
+                                const fechaVencDate = lote.fecha_vencimiento 
+                                  ? new Date(lote.fecha_vencimiento)
+                                  : null;
+                                const estaVencido = fechaVencDate && fechaVencDate < hoy;
+                                const estaPorVencer = fechaVencDate && fechaVencDate >= hoy && fechaVencDate <= new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000);
+                                
+                                return (
+                                  <div 
+                                    key={loteIndex} 
+                                    className={`text-xs ${
+                                      estaVencido 
+                                        ? "text-red-600 font-semibold" 
+                                        : estaPorVencer 
+                                        ? "text-orange-600 font-medium" 
+                                        : "text-slate-600"
+                                    }`}
+                                  >
+                                    {fechaVenc}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-right text-green-600 font-medium">
                           {utilidad.toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
@@ -497,7 +621,7 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                 </tbody>
                 <tfoot className="bg-slate-50">
                   <tr>
-                    <td colSpan={3} className="px-4 py-3 font-semibold text-slate-900">
+                    <td colSpan={5} className="px-4 py-3 font-semibold text-slate-900">
                       Totales
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
@@ -538,6 +662,7 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                         maximumFractionDigits: 2,
                       })} Bs
                     </td>
+                    <td colSpan={2}></td>
                     <td></td>
                   </tr>
                 </tfoot>

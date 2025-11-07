@@ -6,6 +6,12 @@ import { Search, X, Save, Percent } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+interface Lote {
+  lote: string;
+  fecha_vencimiento: string; // Formato: YYYY-MM-DD
+  cantidad?: number;
+}
+
 interface Producto {
   id: string;
   codigo: string;
@@ -18,6 +24,7 @@ interface Producto {
   costo_unitario?: number; // Campo usado por el backend
   existencia?: number;
   cantidad?: number; // Campo usado por el backend
+  lotes?: Lote[]; // Array de lotes con fechas de vencimiento
   sucursal?: string;
 }
 
@@ -53,6 +60,7 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
   const [existencia, setExistencia] = useState<number>(0);
   const [precio, setPrecio] = useState<number>(0);
   const [porcentajeGanancia, setPorcentajeGanancia] = useState<number>(0);
+  const [lotes, setLotes] = useState<Lote[]>([]);
 
   // Cargar todos los productos de la sucursal al abrir el modal
   useEffect(() => {
@@ -128,6 +136,7 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
           costo: item.costo_unitario || item.costo || 0, // Mantener ambos para compatibilidad
           cantidad: item.cantidad || item.existencia || 0,
           existencia: item.cantidad || item.existencia || 0, // Mantener ambos para compatibilidad
+          lotes: item.lotes || [], // Incluir lotes del backend
           sucursal: item.sucursal || sucursalId
         };
       });
@@ -163,6 +172,9 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
     setExistencia(cantidad);
     setPrecio(precio);
     
+    // Cargar lotes del producto
+    setLotes(producto.lotes || []);
+    
     // Calcular porcentaje de ganancia inicial (utilidad contable)
     // Fórmula inversa: % Ganancia = (1 - Costo / Precio) × 100
     // Ejemplo: Costo = $8, Precio = $13.33 → % = (1 - 8/13.33) × 100 = 40%
@@ -175,6 +187,20 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
     
     setSearchTerm("");
     setProductos([]);
+  };
+
+  const agregarLote = () => {
+    setLotes([...lotes, { lote: "", fecha_vencimiento: "", cantidad: 0 }]);
+  };
+
+  const eliminarLote = (index: number) => {
+    setLotes(lotes.filter((_, i) => i !== index));
+  };
+
+  const actualizarLote = (index: number, campo: keyof Lote, valor: string | number) => {
+    const nuevosLotes = [...lotes];
+    nuevosLotes[index] = { ...nuevosLotes[index], [campo]: valor };
+    setLotes(nuevosLotes);
   };
 
   // Calcular precio cuando cambia costo o porcentaje de ganancia (utilidad contable)
@@ -240,6 +266,7 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
           cantidad: Number(existencia), // El backend espera cantidad (no existencia)
           precio_unitario: Number(precio), // El backend espera precio_unitario
           porcentaje_ganancia: porcentajeGanancia,
+          lotes: lotes.filter(l => l.lote.trim() !== "" && l.fecha_vencimiento !== ""), // Filtrar lotes vacíos
         }),
       });
 
@@ -266,6 +293,7 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
         setExistencia(0);
         setPrecio(0);
         setPorcentajeGanancia(0);
+        setLotes([]);
         setError(null);
         setSuccess(false);
       }, 500);
@@ -559,6 +587,83 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Sección de Lotes y Fechas de Vencimiento */}
+            <div className="mt-6 pt-4 border-t">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-slate-700">Lotes y Fechas de Vencimiento</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={agregarLote}
+                  className="flex items-center gap-1"
+                >
+                  <span>+</span>
+                  Agregar Lote
+                </Button>
+              </div>
+
+              {lotes.length === 0 ? (
+                <div className="text-center py-4 text-slate-500 text-sm bg-slate-50 rounded-md">
+                  No hay lotes agregados. Haz clic en "Agregar Lote" para agregar uno.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {lotes.map((lote, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-md border border-slate-200">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Lote
+                        </label>
+                        <Input
+                          value={lote.lote}
+                          onChange={(e) => actualizarLote(index, "lote", e.target.value)}
+                          placeholder="Número de lote"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Fecha de Vencimiento
+                        </label>
+                        <Input
+                          type="date"
+                          value={lote.fecha_vencimiento}
+                          onChange={(e) => actualizarLote(index, "fecha_vencimiento", e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Cantidad (opcional)
+                        </label>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={lote.cantidad || ""}
+                          onChange={(e) => actualizarLote(index, "cantidad", Number(e.target.value) || 0)}
+                          placeholder="Cantidad"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => eliminarLote(index)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
