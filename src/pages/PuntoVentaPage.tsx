@@ -1209,9 +1209,14 @@ const PuntoVentaPage: React.FC = () => {
                     })} Bs</>
                   )}
                 </div>
-                {productoSeleccionado.stock !== undefined && (
-                  <div className="text-sm text-gray-500">Stock disponible: {productoSeleccionado.stock}</div>
-                )}
+                {(() => {
+                  const stockDisponible = productoSeleccionado.cantidad ?? productoSeleccionado.stock ?? 0;
+                  return (
+                    <div className="text-sm text-gray-500">
+                      Stock disponible: {stockDisponible}
+                    </div>
+                  );
+                })()}
               </div>
               <Input
                 type="number"
