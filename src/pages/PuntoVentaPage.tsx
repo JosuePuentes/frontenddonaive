@@ -99,6 +99,11 @@ const PuntoVentaPage: React.FC = () => {
   });
   const [montoPago, setMontoPago] = useState("");
   const [productoConStockAbierto, setProductoConStockAbierto] = useState<string | null>(null);
+  const [mostrarDarVuelto, setMostrarDarVuelto] = useState(false);
+  const [metodoVuelto, setMetodoVuelto] = useState<{ tipo: string; divisa: string }>({ 
+    tipo: "efectivo", 
+    divisa: "USD" 
+  });
   
   // Estados de clientes
   const [showClienteModal, setShowClienteModal] = useState(false);
@@ -495,11 +500,42 @@ const PuntoVentaPage: React.FC = () => {
     return Math.max(0, pagadoUsd - totalUsd);
   };
 
+  const calcularVuelto = () => {
+    const totalUsd = calcularTotalUsd();
+    const pagadoUsd = calcularTotalPagadoUsd();
+    return Math.max(0, pagadoUsd - totalUsd);
+  };
+
   const puedeConfirmar = () => {
     const totalUsd = calcularTotalUsd();
     const pagadoUsd = calcularTotalPagadoUsd();
-    // Tolerancia de 0.01 según el backend
-    return pagadoUsd >= totalUsd - 0.01;
+    const vuelto = calcularVuelto();
+    // Solo se puede confirmar si el monto pagado es exactamente igual al total (sin vuelto)
+    return Math.abs(pagadoUsd - totalUsd) < 0.01 && pagadoUsd > 0 && vuelto < 0.01;
+  };
+
+  const handleDarVuelto = () => {
+    const vuelto = calcularVuelto();
+    if (vuelto <= 0) {
+      alert("No hay vuelto pendiente");
+      return;
+    }
+
+    // Agregar un método de pago negativo para representar el vuelto dado
+    const vueltoNegativo: MetodoPago = {
+      tipo: metodoVuelto.tipo as any,
+      monto: -vuelto, // Monto negativo para restar
+      divisa: metodoVuelto.divisa as "Bs" | "USD",
+    };
+
+    // Si el vuelto es en USD pero el método es en Bs, convertir
+    if (metodoVuelto.divisa === "Bs" && vuelto > 0) {
+      vueltoNegativo.monto = -(vuelto * tasaDelDia);
+      vueltoNegativo.divisa = "Bs";
+    }
+
+    setMetodosPago([...metodosPago, vueltoNegativo]);
+    setMostrarDarVuelto(false);
   };
 
   const handleActualizarTasa = () => {
@@ -599,7 +635,15 @@ const PuntoVentaPage: React.FC = () => {
 
   const handleConfirmarVenta = async () => {
     if (!puedeConfirmar()) {
-      alert("El monto pagado debe ser igual o mayor al total");
+      const totalUsd = calcularTotalUsd();
+      const pagadoUsd = calcularTotalPagadoUsd();
+      if (pagadoUsd < totalUsd) {
+        alert(`Falta por pagar: $${(totalUsd - pagadoUsd).toFixed(2)} USD`);
+      } else if (pagadoUsd > totalUsd) {
+        alert(`Hay vuelto pendiente: $${(pagadoUsd - totalUsd).toFixed(2)} USD. El monto pagado debe ser exactamente igual al total.`);
+      } else {
+        alert("Debe agregar métodos de pago que sumen exactamente el total a pagar");
+      }
       return;
     }
 
@@ -637,11 +681,14 @@ const PuntoVentaPage: React.FC = () => {
       }));
 
       // Formatear métodos de pago según el backend
-      const metodosPagoFormateados = metodosPago.map((metodo) => ({
-        tipo: metodo.tipo,
-        monto: metodo.monto,
-        divisa: metodo.divisa,
-      }));
+      // Filtrar métodos de pago negativos (vuelto) y solo enviar los positivos
+      const metodosPagoFormateados = metodosPago
+        .filter((metodo) => metodo.monto > 0) // Solo métodos de pago positivos
+        .map((metodo) => ({
+          tipo: metodo.tipo,
+          monto: metodo.monto,
+          divisa: metodo.divisa,
+        }));
 
       const ventaData = {
         items,
@@ -1388,22 +1435,78 @@ const PuntoVentaPage: React.FC = () => {
               )}
               {calcularVuelto() > 0 && (
                 <>
-                  <div className="flex justify-between text-green-600 mt-2">
-                    <span>Vuelto (USD):</span>
-                    <span className="font-bold">${calcularVuelto().toFixed(2)}</span>
-                  </div>
-                  {tasaDelDia > 0 && (
-                    <div className="flex justify-between text-green-600 mt-1">
-                      <span>Vuelto (Bs):</span>
-                      <span className="font-bold">
-                        {(calcularVuelto() * tasaDelDia).toLocaleString("es-VE", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}{" "}
-                        Bs
-                      </span>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-semibold text-yellow-800">Vuelto pendiente:</span>
+                      <span className="font-bold text-yellow-900">${calcularVuelto().toFixed(2)} USD</span>
                     </div>
-                  )}
+                    {tasaDelDia > 0 && (
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-sm text-yellow-700">Vuelto (Bs):</span>
+                        <span className="font-semibold text-yellow-800">
+                          {(calcularVuelto() * tasaDelDia).toLocaleString("es-VE", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}{" "}
+                          Bs
+                        </span>
+                      </div>
+                    )}
+                    {!mostrarDarVuelto ? (
+                      <Button
+                        onClick={() => setMostrarDarVuelto(true)}
+                        className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+                      >
+                        Dar Vuelto
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-medium mb-1 text-yellow-800">Método</label>
+                            <select
+                              value={metodoVuelto.tipo}
+                              onChange={(e) => setMetodoVuelto({ ...metodoVuelto, tipo: e.target.value })}
+                              className="w-full border rounded px-2 py-1 text-sm"
+                            >
+                              <option value="efectivo">Efectivo</option>
+                              <option value="tarjeta">Tarjeta</option>
+                              <option value="transferencia">Transferencia</option>
+                              <option value="zelle">Zelle</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1 text-yellow-800">Divisa</label>
+                            <select
+                              value={metodoVuelto.divisa}
+                              onChange={(e) => setMetodoVuelto({ ...metodoVuelto, divisa: e.target.value })}
+                              className="w-full border rounded px-2 py-1 text-sm"
+                            >
+                              <option value="USD">USD</option>
+                              <option value="Bs">Bs</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleDarVuelto}
+                            className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white text-sm"
+                            size="sm"
+                          >
+                            Confirmar Vuelto
+                          </Button>
+                          <Button
+                            onClick={() => setMostrarDarVuelto(false)}
+                            variant="outline"
+                            className="flex-1 text-sm"
+                            size="sm"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
               {calcularTotalPagadoUsd() < calcularTotalUsd() && (
