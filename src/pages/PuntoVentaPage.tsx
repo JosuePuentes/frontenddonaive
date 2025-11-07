@@ -124,7 +124,6 @@ const PuntoVentaPage: React.FC = () => {
   
   // Estados para cerrar caja
   const [showCerrarCajaModal, setShowCerrarCajaModal] = useState(false);
-  const [ventasDelDia, setVentasDelDia] = useState<any[]>([]);
   const [totalCajaSistemaUsd, setTotalCajaSistemaUsd] = useState<number>(0);
   const [costoInventarioTotal, setCostoInventarioTotal] = useState<number>(0);
 
@@ -698,21 +697,21 @@ const PuntoVentaPage: React.FC = () => {
       
       if (resVentas.ok) {
         const ventas = await resVentas.json();
-        setVentasDelDia(Array.isArray(ventas) ? ventas : []);
+        const ventasArray = Array.isArray(ventas) ? ventas : [];
         
         // Calcular total de caja en USD (suma de todas las ventas)
-        const totalUsd = ventas.reduce((sum: number, venta: any) => {
+        const totalUsd = ventasArray.reduce((sum: number, venta: any) => {
           return sum + (venta.total_usd || 0);
         }, 0);
         setTotalCajaSistemaUsd(totalUsd);
         
         // Calcular costo total del inventario (suma de costos de productos vendidos)
-        const costoTotal = ventas.reduce((sum: number, venta: any) => {
+        const costoTotal = ventasArray.reduce((sum: number, venta: any) => {
           if (Array.isArray(venta.items)) {
             const costoVenta = venta.items.reduce((itemSum: number, item: any) => {
-              // El costo viene en el item, o se calcula desde precio_unitario_original
-              // Asumimos que el backend envía el costo en cada item
-              const costoItem = item.costo_unitario || item.precio_unitario_original || 0;
+              // El costo viene en el item. El backend debe enviar costo_unitario en cada item
+              // Si no está, intentamos calcularlo desde precio_unitario_original / tasa
+              const costoItem = item.costo_unitario || (item.precio_unitario_original_usd || 0);
               return itemSum + (costoItem * (item.cantidad || 0));
             }, 0);
             return sum + costoVenta;
@@ -721,15 +720,13 @@ const PuntoVentaPage: React.FC = () => {
         }, 0);
         setCostoInventarioTotal(costoTotal);
       } else {
-        // Si no hay endpoint específico, intentar obtener desde cuadres
+        // Si no hay endpoint específico, usar valores por defecto
         console.warn("No se pudo obtener ventas del día, usando valores por defecto");
-        setVentasDelDia([]);
         setTotalCajaSistemaUsd(0);
         setCostoInventarioTotal(0);
       }
     } catch (error) {
       console.error("Error al obtener ventas del día:", error);
-      setVentasDelDia([]);
       setTotalCajaSistemaUsd(0);
       setCostoInventarioTotal(0);
     }
@@ -1811,7 +1808,6 @@ const PuntoVentaPage: React.FC = () => {
           dia={new Date().toISOString().split('T')[0]}
           onClose={() => {
             setShowCerrarCajaModal(false);
-            setVentasDelDia([]);
             setTotalCajaSistemaUsd(0);
             setCostoInventarioTotal(0);
           }}

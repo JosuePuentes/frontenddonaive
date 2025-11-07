@@ -41,7 +41,14 @@ const AgregarCuadreModal: React.FC<Props> = ({
 
   const [totalCajaSistemaBs, setTotalCajaSistemaBs] = useState<
     number | undefined
-  >(totalCajaSistemaUsd ? totalCajaSistemaUsd * (tasaPrellenada || 1) : undefined);
+  >(totalCajaSistemaUsd && tasaPrellenada ? totalCajaSistemaUsd * tasaPrellenada : undefined);
+  
+  // Actualizar totalCajaSistemaBs cuando cambie totalCajaSistemaUsd o tasa
+  useEffect(() => {
+    if (totalCajaSistemaUsd && tasaPrellenada) {
+      setTotalCajaSistemaBs(totalCajaSistemaUsd * tasaPrellenada);
+    }
+  }, [totalCajaSistemaUsd, tasaPrellenada]);
   const [devolucionesBs, setDevolucionesBs] = useState<number | undefined>();
   const [recargaBs, setRecargaBs] = useState<number | undefined>();
   const [pagomovilBs, setPagomovilBs] = useState<number | undefined>();
