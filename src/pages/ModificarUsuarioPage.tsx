@@ -39,6 +39,27 @@ const ModificarUsuarioPage: React.FC = () => {
   const handleGuardarUsuario = async (usuarioEditado: Usuario) => {
     try {
       await actualizarUsuario(usuarioEditado);
+      
+      // Si el usuario modificado es el mismo que está logueado, actualizar localStorage
+      const usuarioLogueado = JSON.parse(localStorage.getItem('usuario') || 'null');
+      if (usuarioLogueado && usuarioLogueado._id === usuarioEditado._id) {
+        // Actualizar los permisos en localStorage
+        const usuarioActualizado = {
+          ...usuarioLogueado,
+          permisos: usuarioEditado.permisos,
+          farmacias: usuarioEditado.farmacias
+        };
+        localStorage.setItem('usuario', JSON.stringify(usuarioActualizado));
+        
+        // Disparar evento para que el Navbar se actualice
+        window.dispatchEvent(new Event('storage'));
+        
+        // También forzar actualización del Navbar
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+      
       setIsModalOpen(false);
       setUsuarioSeleccionado(null);
     } catch (err) {
