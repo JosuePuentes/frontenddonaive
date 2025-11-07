@@ -16,9 +16,9 @@ export const getAuthToken = (): string | null => {
  */
 export const getAuthHeaders = (additionalHeaders?: HeadersInit): HeadersInit => {
   const token = getAuthToken();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...additionalHeaders,
+    ...(additionalHeaders as Record<string, string>),
   };
 
   if (token) {
@@ -38,9 +38,9 @@ export const fetchWithAuth = async (
 ): Promise<Response> => {
   const token = getAuthToken();
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options.headers as HeadersInit),
+    ...(options.headers as Record<string, string>),
   };
 
   if (token) {
