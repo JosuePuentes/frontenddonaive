@@ -2132,6 +2132,32 @@ const PuntoVentaPage: React.FC = () => {
                             </select>
                           </div>
                         </div>
+                        {metodoVuelto.tipo === "banco" && (
+                          <div>
+                            <label className="block text-xs font-medium mb-1 text-yellow-800">Seleccionar Banco *</label>
+                            <select
+                              value={bancoSeleccionadoVuelto}
+                              onChange={(e) => {
+                                setBancoSeleccionadoVuelto(e.target.value);
+                                // Actualizar divisa según el banco seleccionado
+                                const banco = bancos.find(b => (b._id || b.id) === e.target.value);
+                                if (banco) {
+                                  setMetodoVuelto({ ...metodoVuelto, divisa: banco.divisa });
+                                }
+                              }}
+                              className="w-full border rounded px-2 py-1 text-sm"
+                            >
+                              <option value="">Seleccione un banco</option>
+                              {bancos
+                                .filter(b => b.divisa === metodoVuelto.divisa)
+                                .map((banco) => (
+                                  <option key={banco._id || banco.id} value={banco._id || banco.id}>
+                                    {banco.nombre_banco} - {banco.numero_cuenta} (Saldo: {banco.divisa === "USD" ? "$" : ""}{banco.saldo.toFixed(2)}{banco.divisa === "Bs" ? " Bs" : ""})
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                        )}
                         <div>
                           <label className="block text-xs font-medium mb-1 text-yellow-800">Monto del Vuelto</label>
                           <Input
