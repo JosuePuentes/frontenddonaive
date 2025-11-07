@@ -12,9 +12,12 @@ interface Producto {
   nombre?: string;
   descripcion?: string;
   marca?: string;
-  precio: number;
-  costo: number;
-  existencia: number;
+  precio?: number;
+  precio_unitario?: number; // Campo usado por el backend
+  costo?: number;
+  costo_unitario?: number; // Campo usado por el backend
+  existencia?: number;
+  cantidad?: number; // Campo usado por el backend
   sucursal?: string;
 }
 
@@ -203,15 +206,21 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
     setCodigo(producto.codigo || "");
     setDescripcion(producto.descripcion || producto.nombre || "");
     setMarca(producto.marca || "");
-    setCosto(producto.costo || 0);
-    setExistencia(producto.existencia || 0);
-    setPrecio(producto.precio || 0);
+    
+    // Usar los campos correctos del backend: costo_unitario, cantidad, precio_unitario
+    const costo = producto.costo_unitario || producto.costo || 0;
+    const cantidad = producto.cantidad || producto.existencia || 0;
+    const precio = producto.precio_unitario || producto.precio || 0;
+    
+    setCosto(costo);
+    setExistencia(cantidad);
+    setPrecio(precio);
     
     // Calcular porcentaje de ganancia inicial (utilidad contable)
     // Fórmula inversa: % Ganancia = (1 - Costo / Precio) × 100
     // Ejemplo: Costo = $8, Precio = $13.33 → % = (1 - 8/13.33) × 100 = 40%
-    if (producto.costo && producto.costo > 0 && producto.precio && producto.precio > producto.costo) {
-      const porcentaje = (1 - producto.costo / producto.precio) * 100;
+    if (costo > 0 && precio > 0 && precio > costo) {
+      const porcentaje = (1 - costo / precio) * 100;
       setPorcentajeGanancia(Number(porcentaje.toFixed(2)));
     } else {
       setPorcentajeGanancia(0);
