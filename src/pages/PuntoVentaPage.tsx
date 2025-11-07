@@ -516,6 +516,7 @@ const PuntoVentaPage: React.FC = () => {
   };
 
   const handleDarVuelto = () => {
+    // Calcular el vuelto pendiente ANTES de agregar el nuevo método
     const vueltoPendiente = calcularVuelto();
     if (vueltoPendiente <= 0) {
       alert("No hay vuelto pendiente");
@@ -535,7 +536,8 @@ const PuntoVentaPage: React.FC = () => {
 
     if (metodoVuelto.divisa === "USD") {
       // Si el método es en USD, el monto debe ser en USD
-      if (montoIngresado > vueltoPendiente) {
+      // Usar tolerancia para errores de redondeo
+      if (montoIngresado > vueltoPendiente + 0.01) {
         alert(`El monto no puede ser mayor al vuelto pendiente ($${vueltoPendiente.toFixed(2)} USD)`);
         return;
       }
@@ -543,9 +545,15 @@ const PuntoVentaPage: React.FC = () => {
       montoVueltoBs = montoIngresado * tasaDelDia;
     } else {
       // Si el método es en Bs, convertir a USD para validar
+      if (tasaDelDia <= 0) {
+        alert("La tasa del día no está configurada");
+        return;
+      }
       const montoEnUSD = montoIngresado / tasaDelDia;
-      if (montoEnUSD > vueltoPendiente) {
-        alert(`El monto no puede ser mayor al vuelto pendiente ($${vueltoPendiente.toFixed(2)} USD = ${(vueltoPendiente * tasaDelDia).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs)`);
+      // Usar tolerancia para errores de redondeo
+      if (montoEnUSD > vueltoPendiente + 0.01) {
+        const maxBs = vueltoPendiente * tasaDelDia;
+        alert(`El monto no puede ser mayor al vuelto pendiente ($${vueltoPendiente.toFixed(2)} USD = ${maxBs.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs)`);
         return;
       }
       montoVueltoBs = montoIngresado;
@@ -559,13 +567,25 @@ const PuntoVentaPage: React.FC = () => {
       divisa: metodoVuelto.divisa as "Bs" | "USD",
     };
 
-    setMetodosPago([...metodosPago, vueltoNegativo]);
+    // Actualizar el estado con el nuevo método de pago
+    const nuevosMetodosPago = [...metodosPago, vueltoNegativo];
+    setMetodosPago(nuevosMetodosPago);
+    
+    // Calcular el nuevo vuelto después de agregar este método
+    // Necesitamos calcular manualmente porque el estado aún no se ha actualizado
+    const totalPagadoUsd = nuevosMetodosPago.reduce((sum, metodo) => {
+      if (metodo.divisa === "USD") {
+        return sum + metodo.monto;
+      } else {
+        return sum + (metodo.monto / tasaDelDia);
+      }
+    }, 0);
+    const nuevoVuelto = totalPagadoUsd - calcularTotalUsd();
     
     // Limpiar el monto pero mantener el método y divisa para facilitar agregar más
     setMetodoVuelto({ ...metodoVuelto, monto: "" });
     
     // Si aún hay vuelto pendiente, mantener el modal abierto; si no, cerrarlo
-    const nuevoVuelto = calcularVuelto() - montoVueltoUSD;
     if (nuevoVuelto <= 0.01) { // Tolerancia para errores de redondeo
       setMostrarDarVuelto(false);
     }
@@ -1372,7 +1392,7 @@ const PuntoVentaPage: React.FC = () => {
 
       {/* Modal de pago */}
       <Dialog open={showPagoModal} onOpenChange={setShowPagoModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Métodos de Pago</DialogTitle>
           </DialogHeader>
@@ -1463,7 +1483,7 @@ const PuntoVentaPage: React.FC = () => {
             {metodosPago.length > 0 && (
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-2">Métodos de Pago Agregados:</h3>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-48 overflow-y-auto">
                   {metodosPago.map((metodo, index) => {
                     const esVuelto = metodo.monto < 0;
                     return (
@@ -1596,18 +1616,30 @@ const PuntoVentaPage: React.FC = () => {
                               const valor = e.target.value;
                               const vueltoPendiente = calcularVuelto();
                               
+                              // Permitir borrar el campo
+                              if (valor === "" || valor === "0") {
+                                setMetodoVuelto({ ...metodoVuelto, monto: valor });
+                                return;
+                              }
+                              
                               if (metodoVuelto.divisa === "USD") {
                                 const montoIngresado = parseFloat(valor) || 0;
-                                if (montoIngresado > vueltoPendiente) {
+                                // Usar tolerancia para errores de redondeo
+                                if (montoIngresado > vueltoPendiente + 0.01) {
                                   setMetodoVuelto({ ...metodoVuelto, monto: vueltoPendiente.toFixed(2) });
                                   alert(`El monto no puede ser mayor al vuelto pendiente ($${vueltoPendiente.toFixed(2)} USD)`);
                                 } else {
                                   setMetodoVuelto({ ...metodoVuelto, monto: valor });
                                 }
                               } else {
+                                if (tasaDelDia <= 0) {
+                                  setMetodoVuelto({ ...metodoVuelto, monto: valor });
+                                  return;
+                                }
                                 const montoIngresado = parseFloat(valor) || 0;
                                 const montoEnUSD = montoIngresado / tasaDelDia;
-                                if (montoEnUSD > vueltoPendiente) {
+                                // Usar tolerancia para errores de redondeo
+                                if (montoEnUSD > vueltoPendiente + 0.01) {
                                   const maxBs = vueltoPendiente * tasaDelDia;
                                   setMetodoVuelto({ ...metodoVuelto, monto: maxBs.toFixed(2) });
                                   alert(`El monto no puede ser mayor al vuelto pendiente (${maxBs.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs)`);
