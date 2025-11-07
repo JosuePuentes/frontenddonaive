@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { fetchWithAuth } from "@/lib/api";
+import AgregarCuadreModal from "@/components/AgregarCuadreModal";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -120,6 +121,12 @@ const PuntoVentaPage: React.FC = () => {
   const [direccionCliente, setDireccionCliente] = useState("");
   const [telefonoCliente, setTelefonoCliente] = useState("");
   const [porcentajeDescuentoCliente, setPorcentajeDescuentoCliente] = useState("");
+  
+  // Estados para cerrar caja
+  const [showCerrarCajaModal, setShowCerrarCajaModal] = useState(false);
+  const [ventasDelDia, setVentasDelDia] = useState<any[]>([]);
+  const [totalCajaSistemaUsd, setTotalCajaSistemaUsd] = useState<number>(0);
+  const [costoInventarioTotal, setCostoInventarioTotal] = useState<number>(0);
 
   // Obtener usuario actual
   const getUsuarioActual = () => {
@@ -677,6 +684,69 @@ const PuntoVentaPage: React.FC = () => {
     setClientesEncontrados([]);
   };
 
+  // Función para obtener ventas del día y calcular totales
+  const obtenerVentasDelDia = async () => {
+    if (!sucursalSeleccionada) return;
+
+    try {
+      const hoy = new Date().toISOString().split('T')[0];
+      
+      // Obtener ventas del día para la sucursal
+      const resVentas = await fetchWithAuth(
+        `${API_BASE_URL}/punto-venta/ventas?fecha=${hoy}&sucursal=${sucursalSeleccionada.id}`
+      );
+      
+      if (resVentas.ok) {
+        const ventas = await resVentas.json();
+        setVentasDelDia(Array.isArray(ventas) ? ventas : []);
+        
+        // Calcular total de caja en USD (suma de todas las ventas)
+        const totalUsd = ventas.reduce((sum: number, venta: any) => {
+          return sum + (venta.total_usd || 0);
+        }, 0);
+        setTotalCajaSistemaUsd(totalUsd);
+        
+        // Calcular costo total del inventario (suma de costos de productos vendidos)
+        const costoTotal = ventas.reduce((sum: number, venta: any) => {
+          if (Array.isArray(venta.items)) {
+            const costoVenta = venta.items.reduce((itemSum: number, item: any) => {
+              // El costo viene en el item, o se calcula desde precio_unitario_original
+              // Asumimos que el backend envía el costo en cada item
+              const costoItem = item.costo_unitario || item.precio_unitario_original || 0;
+              return itemSum + (costoItem * (item.cantidad || 0));
+            }, 0);
+            return sum + costoVenta;
+          }
+          return sum;
+        }, 0);
+        setCostoInventarioTotal(costoTotal);
+      } else {
+        // Si no hay endpoint específico, intentar obtener desde cuadres
+        console.warn("No se pudo obtener ventas del día, usando valores por defecto");
+        setVentasDelDia([]);
+        setTotalCajaSistemaUsd(0);
+        setCostoInventarioTotal(0);
+      }
+    } catch (error) {
+      console.error("Error al obtener ventas del día:", error);
+      setVentasDelDia([]);
+      setTotalCajaSistemaUsd(0);
+      setCostoInventarioTotal(0);
+    }
+  };
+
+  // Función para abrir modal de cerrar caja
+  const handleCerrarCaja = async () => {
+    if (!sucursalSeleccionada || !cajeroSeleccionado) {
+      alert("Debe seleccionar una sucursal y un cajero");
+      return;
+    }
+    
+    // Obtener ventas del día antes de abrir el modal
+    await obtenerVentasDelDia();
+    setShowCerrarCajaModal(true);
+  };
+
   const handleConfirmarVenta = async () => {
     if (!puedeConfirmar()) {
       const totalUsd = calcularTotalUsd();
@@ -914,6 +984,17 @@ const PuntoVentaPage: React.FC = () => {
               </Button>
             </div>
           </div>
+        </div>
+        
+        {/* Botón Cerrar Caja */}
+        <div className="mt-4 pt-4 border-t border-gray-200 flex justify-center">
+          <Button
+            onClick={handleCerrarCaja}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 text-lg shadow-lg"
+            size="lg"
+          >
+            🏪 Cerrar Caja
+          </Button>
         </div>
         
         {/* Sección de Cliente - Parte superior central */}
@@ -1722,6 +1803,25 @@ const PuntoVentaPage: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Cerrar Caja */}
+      {showCerrarCajaModal && sucursalSeleccionada && (
+        <AgregarCuadreModal
+          farmacia={sucursalSeleccionada.id}
+          dia={new Date().toISOString().split('T')[0]}
+          onClose={() => {
+            setShowCerrarCajaModal(false);
+            setVentasDelDia([]);
+            setTotalCajaSistemaUsd(0);
+            setCostoInventarioTotal(0);
+          }}
+          cajeroPrellenado={cajeroSeleccionado.NOMBRE}
+          tasaPrellenada={tasaDelDia}
+          totalCajaSistemaUsd={totalCajaSistemaUsd}
+          costoInventarioPrellenado={costoInventarioTotal}
+          deshabilitarCajero={true}
+        />
+      )}
 
       {/* Modal de Crear Cliente */}
       <Dialog open={showClienteModal} onOpenChange={setShowClienteModal}>
