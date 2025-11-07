@@ -112,6 +112,7 @@ const PuntoVentaPage: React.FC = () => {
   const [nombreCliente, setNombreCliente] = useState("");
   const [direccionCliente, setDireccionCliente] = useState("");
   const [telefonoCliente, setTelefonoCliente] = useState("");
+  const [porcentajeDescuentoCliente, setPorcentajeDescuentoCliente] = useState("");
 
   // Obtener usuario actual
   const getUsuarioActual = () => {
@@ -567,6 +568,7 @@ const PuntoVentaPage: React.FC = () => {
       setNombreCliente("");
       setDireccionCliente("");
       setTelefonoCliente("");
+      setPorcentajeDescuentoCliente("");
       alert("Cliente creado exitosamente");
     } catch (error: any) {
       console.error("Error al crear cliente:", error);
@@ -863,9 +865,16 @@ const PuntoVentaPage: React.FC = () => {
             
             {clienteSeleccionado && (
               <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
-                <div>
+                <div className="flex-1">
                   <div className="text-sm font-semibold text-blue-900">{clienteSeleccionado.nombre}</div>
                   <div className="text-xs text-blue-700">Cédula: {clienteSeleccionado.cedula}</div>
+                  {clienteSeleccionado.porcentaje_descuento && clienteSeleccionado.porcentaje_descuento > 0 && (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800 border border-green-300">
+                        Descuento: {clienteSeleccionado.porcentaje_descuento}% ACTIVO
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <Button
                   onClick={handleLimpiarCliente}
@@ -1420,6 +1429,21 @@ const PuntoVentaPage: React.FC = () => {
                 placeholder="Ingrese el número de teléfono"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Porcentaje de Descuento (%)</label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={porcentajeDescuentoCliente}
+                onChange={(e) => setPorcentajeDescuentoCliente(e.target.value)}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Ingrese el porcentaje de descuento que aplicará a este cliente (0-100)
+              </p>
+            </div>
             <div className="flex gap-2">
               <Button
                 onClick={handleCrearCliente}
@@ -1435,6 +1459,7 @@ const PuntoVentaPage: React.FC = () => {
                   setNombreCliente("");
                   setDireccionCliente("");
                   setTelefonoCliente("");
+                  setPorcentajeDescuentoCliente("");
                 }}
                 variant="outline"
                 className="flex-1"
