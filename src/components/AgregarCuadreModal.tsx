@@ -6,6 +6,12 @@ interface Props {
   farmacia: string;
   dia: string;
   onClose: () => void;
+  // Props opcionales para prellenar desde punto de venta
+  cajeroPrellenado?: string;
+  tasaPrellenada?: number;
+  totalCajaSistemaUsd?: number;
+  costoInventarioPrellenado?: number;
+  deshabilitarCajero?: boolean;
 }
 
 interface Cajero {
@@ -17,16 +23,25 @@ interface Cajero {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const AgregarCuadreModal: React.FC<Props> = ({ farmacia, dia, onClose }) => {
+const AgregarCuadreModal: React.FC<Props> = ({ 
+  farmacia, 
+  dia, 
+  onClose,
+  cajeroPrellenado,
+  tasaPrellenada,
+  totalCajaSistemaUsd,
+  costoInventarioPrellenado,
+  deshabilitarCajero = false
+}) => {
   // Estados para los campos del cuadre
   const [cajaNumero, setCajaNumero] = useState<number>(1);
   const [turno, setTurno] = useState<string>("Mañana");
-  const [cajero, setCajero] = useState<string>("");
-  const [tasa, setTasa] = useState<number>();
+  const [cajero, setCajero] = useState<string>(cajeroPrellenado || "");
+  const [tasa, setTasa] = useState<number | undefined>(tasaPrellenada);
 
   const [totalCajaSistemaBs, setTotalCajaSistemaBs] = useState<
     number | undefined
-  >();
+  >(totalCajaSistemaUsd ? totalCajaSistemaUsd * (tasaPrellenada || 1) : undefined);
   const [devolucionesBs, setDevolucionesBs] = useState<number | undefined>();
   const [recargaBs, setRecargaBs] = useState<number | undefined>();
   const [pagomovilBs, setPagomovilBs] = useState<number | undefined>();
@@ -37,7 +52,7 @@ const AgregarCuadreModal: React.FC<Props> = ({ farmacia, dia, onClose }) => {
 
   const [valesUsd, setValesUsd] = useState<number | undefined>(undefined); // Inicialmente vacío
   const [costoInventario, setCostoInventario] = useState<number | undefined>(
-    undefined
+    costoInventarioPrellenado
   ); // Nuevo estado para Costo Inventario
 
   const [error, setError] = useState<string>("");
@@ -133,6 +148,14 @@ const AgregarCuadreModal: React.FC<Props> = ({ farmacia, dia, onClose }) => {
 
   const doSubmit = async () => {
     setLoading(true);
+    // Detectar si viene desde punto de venta (tiene datos prellenados)
+    const desdePuntoVenta = !!(
+      cajeroPrellenado || 
+      tasaPrellenada || 
+      totalCajaSistemaUsd || 
+      costoInventarioPrellenado
+    );
+    
     const cuadre = {
       dia,
       cajaNumero,
@@ -175,6 +198,7 @@ const AgregarCuadreModal: React.FC<Props> = ({ farmacia, dia, onClose }) => {
       imagenesCuadre: imagenesCuadre
         .filter((img): img is string => img !== null)
         .slice(0, 4),
+      desde_punto_venta: desdePuntoVenta, // CRÍTICO: indica que NO se debe sumar al pendiente
     };
 
     console.log("Cuadre object being sent:", cuadre); // Log the cuadre object
@@ -336,8 +360,9 @@ const AgregarCuadreModal: React.FC<Props> = ({ farmacia, dia, onClose }) => {
               <select
                 value={cajero}
                 onChange={(e) => setCajero(e.target.value)}
-                className="w-full border rounded-lg p-2"
+                className={`w-full border rounded-lg p-2 ${deshabilitarCajero ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 required
+                disabled={deshabilitarCajero}
               >
                 <option value="">Seleccionar cajero</option>
                 {cajeros.map((cj) => (
@@ -346,6 +371,11 @@ const AgregarCuadreModal: React.FC<Props> = ({ farmacia, dia, onClose }) => {
                   </option>
                 ))}
               </select>
+              {deshabilitarCajero && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Cajero seleccionado desde punto de venta
+                </p>
+              )}
             </div>
           </div>
           <hr className="my-5 border-blue-100" />
