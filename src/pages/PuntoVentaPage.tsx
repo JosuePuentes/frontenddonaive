@@ -47,10 +47,13 @@ interface Producto {
 interface ItemCarrito {
   producto: Producto;
   cantidad: number;
-  precio_unitario: number;
-  precio_unitario_usd: number;
-  subtotal: number;
-  subtotal_usd: number;
+  precio_unitario: number; // Precio en Bs (con descuento aplicado si hay cliente)
+  precio_unitario_usd: number; // Precio en USD (con descuento aplicado si hay cliente)
+  precio_unitario_original: number; // Precio original en Bs (sin descuento)
+  precio_unitario_original_usd: number; // Precio original en USD (sin descuento)
+  subtotal: number; // Subtotal en Bs (con descuento)
+  subtotal_usd: number; // Subtotal en USD (con descuento)
+  descuento_aplicado?: number; // Porcentaje de descuento aplicado
 }
 
 interface MetodoPago {
@@ -66,6 +69,7 @@ interface Cliente {
   nombre: string;
   direccion?: string;
   telefono?: string;
+  porcentaje_descuento?: number;
 }
 
 const PuntoVentaPage: React.FC = () => {
@@ -296,6 +300,15 @@ const PuntoVentaPage: React.FC = () => {
     setProductosEncontrados([]);
   };
 
+  // Función para calcular precio con descuento
+  const calcularPrecioConDescuento = (precioOriginal: number, porcentajeDescuento?: number): number => {
+    if (!porcentajeDescuento || porcentajeDescuento <= 0) {
+      return precioOriginal;
+    }
+    const descuento = precioOriginal * (porcentajeDescuento / 100);
+    return precioOriginal - descuento;
+  };
+
   const handleAgregarAlCarrito = () => {
     if (!productoSeleccionado || !cantidadInput || parseFloat(cantidadInput) <= 0) {
       return;
@@ -303,18 +316,27 @@ const PuntoVentaPage: React.FC = () => {
 
     const cantidad = parseFloat(cantidadInput);
     // El precio del producto viene en USD, calcular precio en Bs
-    const precioUnitarioUSD = productoSeleccionado.precio_usd || productoSeleccionado.precio;
-    const precioUnitarioBs = precioUnitarioUSD * tasaDelDia;
+    const precioUnitarioOriginalUSD = productoSeleccionado.precio_usd || productoSeleccionado.precio;
+    const precioUnitarioOriginalBs = precioUnitarioOriginalUSD * tasaDelDia;
+    
+    // Aplicar descuento del cliente si existe
+    const porcentajeDescuento = clienteSeleccionado?.porcentaje_descuento || 0;
+    const precioUnitarioUSD = calcularPrecioConDescuento(precioUnitarioOriginalUSD, porcentajeDescuento);
+    const precioUnitarioBs = calcularPrecioConDescuento(precioUnitarioOriginalBs, porcentajeDescuento);
+    
     const subtotalUSD = precioUnitarioUSD * cantidad;
-    const subtotalBs = subtotalUSD * tasaDelDia;
+    const subtotalBs = precioUnitarioBs * cantidad;
 
     const nuevoItem: ItemCarrito = {
       producto: productoSeleccionado,
       cantidad,
       precio_unitario: precioUnitarioBs,
       precio_unitario_usd: precioUnitarioUSD,
+      precio_unitario_original: precioUnitarioOriginalBs,
+      precio_unitario_original_usd: precioUnitarioOriginalUSD,
       subtotal: subtotalBs,
       subtotal_usd: subtotalUSD,
+      descuento_aplicado: porcentajeDescuento > 0 ? porcentajeDescuento : undefined,
     };
 
     // Verificar si el producto ya está en el carrito
@@ -329,8 +351,13 @@ const PuntoVentaPage: React.FC = () => {
             ? {
                 ...item,
                 cantidad: item.cantidad + cantidad,
+                precio_unitario: precioUnitarioBs,
+                precio_unitario_usd: precioUnitarioUSD,
+                precio_unitario_original: precioUnitarioOriginalBs,
+                precio_unitario_original_usd: precioUnitarioOriginalUSD,
                 subtotal: (item.cantidad + cantidad) * precioUnitarioBs,
                 subtotal_usd: (item.cantidad + cantidad) * precioUnitarioUSD,
+                descuento_aplicado: porcentajeDescuento > 0 ? porcentajeDescuento : undefined,
               }
             : item
         )
