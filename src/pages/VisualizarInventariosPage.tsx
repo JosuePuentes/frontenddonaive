@@ -220,23 +220,36 @@ const VisualizarInventariosPage: React.FC = () => {
             if (items.length > 0) {
               console.log(`[Recalcular Totales] Estructura del primer item del inventario ${inventario._id}:`, items[0]);
               console.log(`[Recalcular Totales] Campos disponibles:`, Object.keys(items[0]));
+              // Ver valores específicos del primer item
+              const primerItem = items[0] as any;
+              console.log(`[Recalcular Totales] Primer item - cantidad: ${primerItem.cantidad}, existencia: ${primerItem.existencia}, costo_unitario: ${primerItem.costo_unitario}, costo: ${primerItem.costo}`);
             }
             
             // Calcular total de existencias - el backend usa 'cantidad'
             const totalExistencias = items.reduce((sum, item: any) => {
-              const cantidad = item.cantidad || item.existencia || 0;
-              return sum + (Number(cantidad) || 0);
+              const cantidad = item.cantidad ?? item.existencia ?? 0;
+              const cantidadNum = cantidad !== null && cantidad !== undefined ? Number(cantidad) : 0;
+              if (isNaN(cantidadNum)) {
+                console.warn(`[Recalcular Totales] Cantidad inválida para item ${item.codigo}:`, cantidad);
+                return sum;
+              }
+              return sum + cantidadNum;
             }, 0);
             nuevosTotalesExistencias[inventario._id] = totalExistencias;
             
             // Calcular costo total del inventario: suma de (cantidad × costo_unitario) de todos los items
             // El backend usa 'cantidad' para existencia y 'costo_unitario' para costo
             const costoTotal = items.reduce((sum, item: any) => {
-              const cantidad = item.cantidad || item.existencia || 0;
-              const costo = item.costo_unitario || item.costo || 0;
-              const cantidadNum = Number(cantidad) || 0;
-              const costoNum = Number(costo) || 0;
-              return sum + (cantidadNum * costoNum);
+              const cantidad = item.cantidad ?? item.existencia ?? 0;
+              const costo = item.costo_unitario ?? item.costo ?? 0;
+              const cantidadNum = cantidad !== null && cantidad !== undefined ? Number(cantidad) : 0;
+              const costoNum = costo !== null && costo !== undefined ? Number(costo) : 0;
+              if (isNaN(cantidadNum) || isNaN(costoNum)) {
+                console.warn(`[Recalcular Totales] Valores inválidos para item ${item.codigo}: cantidad=${cantidad}, costo=${costo}`);
+                return sum;
+              }
+              const subtotal = cantidadNum * costoNum;
+              return sum + subtotal;
             }, 0);
             nuevosTotalesCosto[inventario._id] = costoTotal;
             
