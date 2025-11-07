@@ -79,6 +79,13 @@ const allLinks = [
         ]
     },
     {
+        category: 'Clientes',
+        icon: Users,
+        items: [
+            { to: '/clientes', label: 'Gestión de Clientes', permiso: 'gestionar_clientes' },
+        ]
+    },
+    {
         category: 'Inicio',
         icon: Home,
         items: [

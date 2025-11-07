@@ -37,6 +37,7 @@ import ModificarEstadoMeta from "@/pages/metas/ModificarEstadoMeta";
 import ModificacionCuadrePage from "@/pages/cuadres/modificarCuadre/ModificacionCuadrePage";
 import ModificarUsuarioPage from "@/pages/ModificarUsuarioPage";
 import RegisterPage from "@/pages/RegisterPage";
+import GestionClientesPage from "@/pages/GestionClientesPage";
 import PuntoVentaPage from "@/pages/PuntoVentaPage";
 
 const AppRouter = () => (
@@ -292,6 +293,14 @@ const AppRouter = () => (
       element={
         <PermissionRoute permiso="agregar_cuadre">
           <PuntoVentaPage />
+        </PermissionRoute>
+      }
+    />
+    <Route
+      path="/clientes"
+      element={
+        <PermissionRoute permiso="gestionar_clientes">
+          <GestionClientesPage />
         </PermissionRoute>
       }
     />
