@@ -280,9 +280,9 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
           codigo: codigo.trim(),
           descripcion: descripcion.trim(),
           marca: marca.trim(),
-          costo: Number(costo),
-          existencia: Number(existencia),
-          precio: Number(precio),
+          costo_unitario: Number(costo), // El backend espera costo_unitario
+          cantidad: Number(existencia), // El backend espera cantidad (no existencia)
+          precio_unitario: Number(precio), // El backend espera precio_unitario
           porcentaje_ganancia: porcentajeGanancia,
         }),
       });
