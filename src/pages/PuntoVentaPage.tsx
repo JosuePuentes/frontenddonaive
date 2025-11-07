@@ -394,6 +394,34 @@ const PuntoVentaPage: React.FC = () => {
     );
   };
 
+  // Recalcular precios del carrito cuando se selecciona o cambia un cliente
+  useEffect(() => {
+    if (carrito.length === 0) return;
+    
+    const porcentajeDescuento = clienteSeleccionado?.porcentaje_descuento || 0;
+    
+    setCarrito(
+      carrito.map((item) => {
+        const precioOriginalUSD = item.precio_unitario_original_usd || item.precio_unitario_usd;
+        const precioOriginalBs = item.precio_unitario_original || (precioOriginalUSD * tasaDelDia);
+        
+        const precioConDescuentoUSD = calcularPrecioConDescuento(precioOriginalUSD, porcentajeDescuento);
+        const precioConDescuentoBs = calcularPrecioConDescuento(precioOriginalBs, porcentajeDescuento);
+        
+        return {
+          ...item,
+          precio_unitario: precioConDescuentoBs,
+          precio_unitario_usd: precioConDescuentoUSD,
+          precio_unitario_original: precioOriginalBs,
+          precio_unitario_original_usd: precioOriginalUSD,
+          subtotal: item.cantidad * precioConDescuentoBs,
+          subtotal_usd: item.cantidad * precioConDescuentoUSD,
+          descuento_aplicado: porcentajeDescuento > 0 ? porcentajeDescuento : undefined,
+        };
+      })
+    );
+  }, [clienteSeleccionado?.porcentaje_descuento]);
+
   const calcularTotalBs = () => {
     return carrito.reduce((sum, item) => sum + item.subtotal, 0);
   };
@@ -471,13 +499,27 @@ const PuntoVentaPage: React.FC = () => {
     const nuevaTasa = parseFloat(tasaInput);
     if (nuevaTasa > 0) {
       setTasaDelDia(nuevaTasa);
-      // Recalcular subtotales en Bs
+      const porcentajeDescuento = clienteSeleccionado?.porcentaje_descuento || 0;
+      
+      // Recalcular subtotales en Bs con descuento aplicado
       setCarrito(
-        carrito.map((item) => ({
-          ...item,
-          precio_unitario: item.precio_unitario_usd * nuevaTasa,
-          subtotal: item.cantidad * item.precio_unitario_usd * nuevaTasa,
-        }))
+        carrito.map((item) => {
+          const precioOriginalUSD = item.precio_unitario_original_usd || item.precio_unitario_usd;
+          const precioOriginalBs = precioOriginalUSD * nuevaTasa;
+          const precioConDescuentoUSD = calcularPrecioConDescuento(precioOriginalUSD, porcentajeDescuento);
+          const precioConDescuentoBs = calcularPrecioConDescuento(precioOriginalBs, porcentajeDescuento);
+          
+          return {
+            ...item,
+            precio_unitario: precioConDescuentoBs,
+            precio_unitario_usd: precioConDescuentoUSD,
+            precio_unitario_original: precioOriginalBs,
+            precio_unitario_original_usd: precioOriginalUSD,
+            subtotal: item.cantidad * precioConDescuentoBs,
+            subtotal_usd: item.cantidad * precioConDescuentoUSD,
+            descuento_aplicado: porcentajeDescuento > 0 ? porcentajeDescuento : undefined,
+          };
+        })
       );
     } else {
       alert("Ingrese una tasa válida mayor a 0");
@@ -1000,12 +1042,52 @@ const PuntoVentaPage: React.FC = () => {
                     <div className="flex-1">
                       <div className="font-semibold">{item.producto.nombre}</div>
                       <div className="text-sm text-gray-600">
-                        ${item.precio_unitario_usd.toFixed(2)} USD x {item.cantidad}
+                        {item.descuento_aplicado ? (
+                          <>
+                            <span className="line-through text-gray-400">
+                              ${item.precio_unitario_original_usd?.toFixed(2) || item.precio_unitario_usd.toFixed(2)} USD
+                            </span>
+                            {" "}
+                            <span className="text-green-600 font-semibold">
+                              ${item.precio_unitario_usd.toFixed(2)} USD
+                            </span>
+                            {" "}
+                            <span className="text-xs bg-green-100 text-green-700 px-1 rounded">
+                              -{item.descuento_aplicado}%
+                            </span>
+                          </>
+                        ) : (
+                          <>${item.precio_unitario_usd.toFixed(2)} USD</>
+                        )}
+                        {" x "}{item.cantidad}
                         {tasaDelDia > 0 && (
-                          <> = {item.precio_unitario.toLocaleString("es-VE", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })} Bs</>
+                          <>
+                            {" = "}
+                            {item.descuento_aplicado ? (
+                              <>
+                                <span className="line-through text-gray-400">
+                                  {item.precio_unitario_original?.toLocaleString("es-VE", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })} Bs
+                                </span>
+                                {" "}
+                                <span className="text-green-600 font-semibold">
+                                  {item.precio_unitario.toLocaleString("es-VE", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })} Bs
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                {item.precio_unitario.toLocaleString("es-VE", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })} Bs
+                              </>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -1050,6 +1132,16 @@ const PuntoVentaPage: React.FC = () => {
         <div className="lg:col-span-1">
           <Card className="p-4 sticky top-4">
             <h2 className="text-lg font-semibold mb-4">Resumen</h2>
+            {clienteSeleccionado?.porcentaje_descuento && clienteSeleccionado.porcentaje_descuento > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded p-2 mb-3">
+                <div className="text-sm text-green-700 font-semibold">
+                  Descuento aplicado: {clienteSeleccionado.porcentaje_descuento}%
+                </div>
+                <div className="text-xs text-green-600">
+                  Cliente: {clienteSeleccionado.nombre}
+                </div>
+              </div>
+            )}
             <div className="space-y-2 mb-4">
               <div className="flex justify-between">
                 <span>Total (USD):</span>
