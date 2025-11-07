@@ -24,6 +24,13 @@ interface Lote {
   cantidad?: number;
 }
 
+interface StockPorSucursal {
+  sucursal_id: string;
+  sucursal_nombre: string;
+  cantidad: number;
+  stock?: number; // Alias para compatibilidad
+}
+
 interface Producto {
   id: string;
   nombre: string;
@@ -31,9 +38,10 @@ interface Producto {
   precio: number;
   precio_usd?: number;
   stock?: number;
-  cantidad?: number; // Stock total (suma de lotes)
+  cantidad?: number; // Stock total en la sucursal actual (suma de lotes)
   lotes?: Lote[]; // Array de lotes con fechas de vencimiento
   sucursal?: string;
+  stock_por_sucursal?: StockPorSucursal[]; // Stock en todas las sucursales
 }
 
 interface ItemCarrito {
@@ -77,7 +85,7 @@ const PuntoVentaPage: React.FC = () => {
     divisa: "USD" 
   });
   const [montoPago, setMontoPago] = useState("");
-  const [productoConLotesAbierto, setProductoConLotesAbierto] = useState<string | null>(null);
+  const [productoConStockAbierto, setProductoConStockAbierto] = useState<string | null>(null);
 
   // Obtener usuario actual
   const getUsuarioActual = () => {
@@ -163,22 +171,22 @@ const PuntoVentaPage: React.FC = () => {
     }
   }, [busquedaItem, sucursalSeleccionada]);
 
-  // Cerrar dropdown de lotes al hacer clic fuera
+  // Cerrar dropdown de stock al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.lotes-dropdown-container')) {
-        setProductoConLotesAbierto(null);
+      if (!target.closest('.stock-dropdown-container')) {
+        setProductoConStockAbierto(null);
       }
     };
 
-    if (productoConLotesAbierto) {
+    if (productoConStockAbierto) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [productoConLotesAbierto]);
+  }, [productoConStockAbierto]);
 
   // Cargar cajeros cuando se selecciona una sucursal
   useEffect(() => {
