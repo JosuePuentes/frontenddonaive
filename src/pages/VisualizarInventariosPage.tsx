@@ -111,15 +111,25 @@ const VisualizarInventariosPage: React.FC = () => {
           if (res.ok) {
             const items = await res.json();
             if (Array.isArray(items)) {
-              // Calcular total de existencias
-              const totalExistencias = items.reduce((sum, item: any) => sum + (item.existencia || 0), 0);
+              // Calcular total de existencias - el backend usa 'cantidad'
+              const totalExistencias = items.reduce((sum, item: any) => {
+                const cantidad = item.cantidad ?? item.existencia ?? 0;
+                const cantidadNum = cantidad !== null && cantidad !== undefined ? Number(cantidad) : 0;
+                if (isNaN(cantidadNum)) return sum;
+                return sum + cantidadNum;
+              }, 0);
               nuevosTotalesExistencias[inventario._id] = totalExistencias;
               
-              // Calcular costo total del inventario: suma de (existencia × costo) de todos los items
+              // Calcular costo total del inventario: suma de (cantidad × costo_unitario) de todos los items
+              // El backend usa 'cantidad' para existencia y 'costo_unitario' para costo
               const costoTotal = items.reduce((sum, item: any) => {
-                const existencia = item.existencia || 0;
-                const costo = item.costo || 0;
-                return sum + (existencia * costo);
+                const cantidad = item.cantidad ?? item.existencia ?? 0;
+                const costo = item.costo_unitario ?? item.costo ?? 0;
+                const cantidadNum = cantidad !== null && cantidad !== undefined ? Number(cantidad) : 0;
+                const costoNum = costo !== null && costo !== undefined ? Number(costo) : 0;
+                if (isNaN(cantidadNum) || isNaN(costoNum)) return sum;
+                const subtotal = cantidadNum * costoNum;
+                return sum + subtotal;
               }, 0);
               nuevosTotalesCosto[inventario._id] = costoTotal;
             } else {
