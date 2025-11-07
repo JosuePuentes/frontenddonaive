@@ -294,6 +294,12 @@ const PuntoVentaPage: React.FC = () => {
   };
 
   const handleSeleccionarProducto = (producto: Producto) => {
+    // Verificar que el producto tenga stock antes de seleccionarlo
+    const stock = producto.cantidad ?? producto.stock ?? 0;
+    if (stock <= 0) {
+      alert("Este producto no tiene stock disponible");
+      return;
+    }
     setProductoSeleccionado(producto);
     setCantidadInput("1");
     setShowCantidadModal(true);
