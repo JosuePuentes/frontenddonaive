@@ -500,12 +500,6 @@ const PuntoVentaPage: React.FC = () => {
     return Math.max(0, pagadoUsd - totalUsd);
   };
 
-  const calcularVuelto = () => {
-    const totalUsd = calcularTotalUsd();
-    const pagadoUsd = calcularTotalPagadoUsd();
-    return Math.max(0, pagadoUsd - totalUsd);
-  };
-
   const puedeConfirmar = () => {
     const totalUsd = calcularTotalUsd();
     const pagadoUsd = calcularTotalPagadoUsd();
