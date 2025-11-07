@@ -106,18 +106,32 @@ const Navbar = () => {
 
     // Effect for handling user data and permissions from localStorage
     useEffect(() => {
-        const storedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
-        setUsuario(storedUsuario);
-        setPermisosUsuario(storedUsuario?.permisos || []);
+        const loadUserData = () => {
+            const storedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+            setUsuario(storedUsuario);
+            const permisos = storedUsuario?.permisos || [];
+            setPermisosUsuario(permisos);
+            // Debug: verificar permisos cargados
+            console.log('Permisos del usuario cargados:', permisos);
+            console.log('¿Tiene gestionar_clientes?', permisos.includes('gestionar_clientes'));
+        };
+
+        loadUserData();
 
         const handleStorageChange = () => {
             const updatedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
             setUsuario(updatedUsuario);
-            setPermisosUsuario(updatedUsuario?.permisos || []);
+            const permisos = updatedUsuario?.permisos || [];
+            setPermisosUsuario(permisos);
+            console.log('Permisos actualizados:', permisos);
         };
 
+        // Escuchar cambios en localStorage (desde otras pestañas)
         window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+        
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
     }, []);
 
     // Effect for handling clicks outside dropdown/mobile menu to close them
@@ -156,6 +170,17 @@ const Navbar = () => {
             items: category.items.filter(link => !link.permiso || permisosUsuario.includes(link.permiso))
         })).filter(category => category.items.length > 0)
         : [];
+
+    // Debug: verificar si el módulo de Clientes está disponible
+    useEffect(() => {
+        const clientesCategory = accessibleLinks.find(cat => cat.category === 'Clientes');
+        console.log('=== DEBUG MÓDULO CLIENTES ===');
+        console.log('Permisos del usuario:', permisosUsuario);
+        console.log('¿Tiene gestionar_clientes?', permisosUsuario.includes('gestionar_clientes'));
+        console.log('Categoría Clientes encontrada:', clientesCategory);
+        console.log('Todos los links accesibles:', accessibleLinks.map(cat => cat.category));
+        console.log('============================');
+    }, [accessibleLinks, permisosUsuario]);
 
     // Filter links based on search term
     const filteredLinks = searchTerm.trim() === ''
