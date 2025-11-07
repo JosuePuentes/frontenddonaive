@@ -101,9 +101,10 @@ const PuntoVentaPage: React.FC = () => {
   const [montoPago, setMontoPago] = useState("");
   const [productoConStockAbierto, setProductoConStockAbierto] = useState<string | null>(null);
   const [mostrarDarVuelto, setMostrarDarVuelto] = useState(false);
-  const [metodoVuelto, setMetodoVuelto] = useState<{ tipo: string; divisa: string }>({ 
+  const [metodoVuelto, setMetodoVuelto] = useState<{ tipo: string; divisa: string; monto: string }>({ 
     tipo: "efectivo", 
-    divisa: "USD" 
+    divisa: "USD",
+    monto: ""
   });
   
   // Estados de clientes
@@ -515,27 +516,59 @@ const PuntoVentaPage: React.FC = () => {
   };
 
   const handleDarVuelto = () => {
-    const vuelto = calcularVuelto();
-    if (vuelto <= 0) {
+    const vueltoPendiente = calcularVuelto();
+    if (vueltoPendiente <= 0) {
       alert("No hay vuelto pendiente");
       return;
+    }
+
+    // Obtener el monto ingresado
+    const montoIngresado = parseFloat(metodoVuelto.monto) || 0;
+    if (montoIngresado <= 0) {
+      alert("Debe ingresar un monto mayor a 0");
+      return;
+    }
+
+    // Calcular el vuelto restante después de este pago
+    let montoVueltoUSD = 0;
+    let montoVueltoBs = 0;
+
+    if (metodoVuelto.divisa === "USD") {
+      // Si el método es en USD, el monto debe ser en USD
+      if (montoIngresado > vueltoPendiente) {
+        alert(`El monto no puede ser mayor al vuelto pendiente ($${vueltoPendiente.toFixed(2)} USD)`);
+        return;
+      }
+      montoVueltoUSD = montoIngresado;
+      montoVueltoBs = montoIngresado * tasaDelDia;
+    } else {
+      // Si el método es en Bs, convertir a USD para validar
+      const montoEnUSD = montoIngresado / tasaDelDia;
+      if (montoEnUSD > vueltoPendiente) {
+        alert(`El monto no puede ser mayor al vuelto pendiente ($${vueltoPendiente.toFixed(2)} USD = ${(vueltoPendiente * tasaDelDia).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs)`);
+        return;
+      }
+      montoVueltoBs = montoIngresado;
+      montoVueltoUSD = montoEnUSD;
     }
 
     // Agregar un método de pago negativo para representar el vuelto dado
     const vueltoNegativo: MetodoPago = {
       tipo: metodoVuelto.tipo as any,
-      monto: -vuelto, // Monto negativo para restar
+      monto: metodoVuelto.divisa === "USD" ? -montoVueltoUSD : -montoVueltoBs,
       divisa: metodoVuelto.divisa as "Bs" | "USD",
     };
 
-    // Si el vuelto es en USD pero el método es en Bs, convertir
-    if (metodoVuelto.divisa === "Bs" && vuelto > 0) {
-      vueltoNegativo.monto = -(vuelto * tasaDelDia);
-      vueltoNegativo.divisa = "Bs";
-    }
-
     setMetodosPago([...metodosPago, vueltoNegativo]);
-    setMostrarDarVuelto(false);
+    
+    // Limpiar el monto pero mantener el método y divisa para facilitar agregar más
+    setMetodoVuelto({ ...metodoVuelto, monto: "" });
+    
+    // Si aún hay vuelto pendiente, mantener el modal abierto; si no, cerrarlo
+    const nuevoVuelto = calcularVuelto() - montoVueltoUSD;
+    if (nuevoVuelto <= 0.01) { // Tolerancia para errores de redondeo
+      setMostrarDarVuelto(false);
+    }
   };
 
   const handleActualizarTasa = () => {
@@ -1500,13 +1533,32 @@ const PuntoVentaPage: React.FC = () => {
                     )}
                     {!mostrarDarVuelto ? (
                       <Button
-                        onClick={() => setMostrarDarVuelto(true)}
+                        onClick={() => {
+                          setMostrarDarVuelto(true);
+                          // Inicializar el monto con el vuelto pendiente en USD
+                          const vueltoPendiente = calcularVuelto();
+                          setMetodoVuelto({ 
+                            tipo: "efectivo", 
+                            divisa: "USD",
+                            monto: vueltoPendiente > 0 ? vueltoPendiente.toFixed(2) : ""
+                          });
+                        }}
                         className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
                       >
                         Dar Vuelto
                       </Button>
                     ) : (
                       <div className="space-y-2">
+                        <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2">
+                          <div className="text-xs text-yellow-800">
+                            <strong>Vuelto pendiente:</strong> ${calcularVuelto().toFixed(2)} USD
+                            {tasaDelDia > 0 && (
+                              <span className="ml-2">
+                                ({(calcularVuelto() * tasaDelDia).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs)
+                              </span>
+                            )}
+                          </div>
+                        </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="block text-xs font-medium mb-1 text-yellow-800">Método</label>
@@ -1533,23 +1585,77 @@ const PuntoVentaPage: React.FC = () => {
                             </select>
                           </div>
                         </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1 text-yellow-800">Monto del Vuelto</label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={metodoVuelto.monto}
+                            onChange={(e) => {
+                              const valor = e.target.value;
+                              const vueltoPendiente = calcularVuelto();
+                              
+                              if (metodoVuelto.divisa === "USD") {
+                                const montoIngresado = parseFloat(valor) || 0;
+                                if (montoIngresado > vueltoPendiente) {
+                                  setMetodoVuelto({ ...metodoVuelto, monto: vueltoPendiente.toFixed(2) });
+                                  alert(`El monto no puede ser mayor al vuelto pendiente ($${vueltoPendiente.toFixed(2)} USD)`);
+                                } else {
+                                  setMetodoVuelto({ ...metodoVuelto, monto: valor });
+                                }
+                              } else {
+                                const montoIngresado = parseFloat(valor) || 0;
+                                const montoEnUSD = montoIngresado / tasaDelDia;
+                                if (montoEnUSD > vueltoPendiente) {
+                                  const maxBs = vueltoPendiente * tasaDelDia;
+                                  setMetodoVuelto({ ...metodoVuelto, monto: maxBs.toFixed(2) });
+                                  alert(`El monto no puede ser mayor al vuelto pendiente (${maxBs.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs)`);
+                                } else {
+                                  setMetodoVuelto({ ...metodoVuelto, monto: valor });
+                                }
+                              }
+                            }}
+                            placeholder={metodoVuelto.divisa === "USD" ? "Monto en USD" : "Monto en Bs"}
+                            className="w-full text-sm"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleDarVuelto();
+                              }
+                            }}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Máximo: {metodoVuelto.divisa === "USD" 
+                              ? `$${calcularVuelto().toFixed(2)} USD`
+                              : `${(calcularVuelto() * tasaDelDia).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs`
+                            }
+                          </p>
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             onClick={handleDarVuelto}
                             className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white text-sm"
                             size="sm"
                           >
-                            Confirmar Vuelto
+                            Agregar Vuelto
                           </Button>
                           <Button
-                            onClick={() => setMostrarDarVuelto(false)}
+                            onClick={() => {
+                              setMostrarDarVuelto(false);
+                              setMetodoVuelto({ tipo: "efectivo", divisa: "USD", monto: "" });
+                            }}
                             variant="outline"
                             className="flex-1 text-sm"
                             size="sm"
                           >
-                            Cancelar
+                            Cerrar
                           </Button>
                         </div>
+                        {calcularVuelto() > 0.01 && (
+                          <p className="text-xs text-yellow-700 text-center">
+                            Puede agregar más métodos de pago para completar el vuelto
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
