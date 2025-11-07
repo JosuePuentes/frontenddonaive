@@ -941,7 +941,12 @@ const PuntoVentaPage: React.FC = () => {
                       <div className="flex items-start justify-between gap-4">
                         <button
                           onClick={() => handleSeleccionarProducto(producto)}
-                          className="flex-1 text-left"
+                          disabled={!tieneStock}
+                          className={`flex-1 text-left ${
+                            tieneStock 
+                              ? 'cursor-pointer hover:bg-blue-50' 
+                              : 'cursor-not-allowed opacity-50'
+                          }`}
                         >
                           <div className="font-semibold">{producto.nombre}</div>
                           <div className="flex items-center gap-3 mt-1 flex-wrap">
