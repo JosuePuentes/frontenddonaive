@@ -373,11 +373,6 @@ const PuntoVentaPage: React.FC = () => {
       descuento_aplicado: porcentajeDescuento > 0 ? porcentajeDescuento : undefined,
     };
 
-    // Verificar si el producto ya está en el carrito
-    const itemExistente = carrito.find(
-      (item) => item.producto.id === productoSeleccionado.id
-    );
-
     if (itemExistente) {
       setCarrito(
         carrito.map((item) =>
