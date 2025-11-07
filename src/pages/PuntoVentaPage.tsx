@@ -128,6 +128,13 @@ const PuntoVentaPage: React.FC = () => {
   const [totalCajaSistemaUsd, setTotalCajaSistemaUsd] = useState<number>(0);
   const [costoInventarioTotal, setCostoInventarioTotal] = useState<number>(0);
   
+  // Estados para facturas procesadas
+  const [mostrarFacturasProcesadas, setMostrarFacturasProcesadas] = useState(false);
+  const [facturasProcesadas, setFacturasProcesadas] = useState<any[]>([]);
+  const [cargandoFacturas, setCargandoFacturas] = useState(false);
+  const [facturaSeleccionada, setFacturaSeleccionada] = useState<any | null>(null);
+  const [showFacturaModal, setShowFacturaModal] = useState(false);
+  
   // Estado para el ticket de factura
   const [ticketData, setTicketData] = useState<{
     numeroFactura: string;
@@ -771,6 +778,117 @@ const PuntoVentaPage: React.FC = () => {
     setShowCerrarCajaModal(true);
   };
 
+  // Función para obtener facturas procesadas del usuario/cajero
+  const obtenerFacturasProcesadas = async () => {
+    if (!cajeroSeleccionado || !sucursalSeleccionada) return;
+    
+    setCargandoFacturas(true);
+    try {
+      const usuario = getUsuarioActual();
+      const cajero = usuario?.correo || cajeroSeleccionado.NOMBRE;
+      
+      const res = await fetchWithAuth(
+        `${API_BASE_URL}/punto-venta/ventas/usuario?cajero=${encodeURIComponent(cajero)}&sucursal=${sucursalSeleccionada.id}&limit=100`
+      );
+      
+      if (res.ok) {
+        const data = await res.json();
+        setFacturasProcesadas(data.facturas || []);
+      } else {
+        console.error("Error al obtener facturas procesadas");
+        setFacturasProcesadas([]);
+      }
+    } catch (error) {
+      console.error("Error al obtener facturas procesadas:", error);
+      setFacturasProcesadas([]);
+    } finally {
+      setCargandoFacturas(false);
+    }
+  };
+
+  // Función para manejar el click en "Facturas Procesadas"
+  const handleToggleFacturasProcesadas = () => {
+    if (!mostrarFacturasProcesadas) {
+      // Si se va a mostrar, cargar las facturas
+      obtenerFacturasProcesadas();
+    }
+    setMostrarFacturasProcesadas(!mostrarFacturasProcesadas);
+  };
+
+  // Función para ver el preliminar de una factura
+  const handleVerFactura = (factura: any) => {
+    setFacturaSeleccionada(factura);
+    setShowFacturaModal(true);
+  };
+
+  // Función para imprimir una factura
+  const handleImprimirFactura = (factura: any) => {
+    // Preparar datos del ticket
+    const ahora = new Date(factura.fecha || new Date());
+    const fecha = ahora.toLocaleDateString('es-VE', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit' 
+    });
+    const hora = ahora.toLocaleTimeString('es-VE', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    
+    // Calcular vuelto si existe (buscar métodos de pago negativos)
+    let vueltoTicket: { monto: number; divisa: "USD" | "Bs" } | undefined;
+    const totalPagado = factura.metodos_pago?.reduce((sum: number, mp: any) => {
+      return sum + (mp.divisa === "USD" ? mp.monto : mp.monto / factura.tasa_dia);
+    }, 0) || 0;
+    const vueltoPendiente = totalPagado - factura.total_usd;
+    if (vueltoPendiente > 0.01) {
+      // Buscar método de vuelto negativo
+      const vueltoNegativo = factura.metodos_pago?.find((mp: any) => mp.monto < 0);
+      if (vueltoNegativo) {
+        vueltoTicket = {
+          monto: Math.abs(vueltoNegativo.monto),
+          divisa: vueltoNegativo.divisa
+        };
+      }
+    }
+    
+    const ticketItems = factura.items?.map((item: any) => ({
+      nombre: item.nombre,
+      codigo: item.codigo,
+      cantidad: item.cantidad,
+      precio_unitario: item.precio_unitario,
+      precio_unitario_usd: item.precio_unitario_usd,
+      subtotal: item.subtotal,
+      subtotal_usd: item.subtotal_usd,
+      descuento_aplicado: item.descuento_aplicado
+    })) || [];
+    
+    const metodosPagoTicket = factura.metodos_pago?.filter((mp: any) => mp.monto > 0).map((mp: any) => ({
+      tipo: mp.tipo,
+      monto: mp.monto,
+      divisa: mp.divisa
+    })) || [];
+    
+    setTicketData({
+      numeroFactura: factura.numero_factura || factura._id || "N/A",
+      fecha,
+      hora,
+      sucursal: factura.sucursal?.nombre || sucursalSeleccionada.nombre,
+      cajero: factura.cajero || cajeroSeleccionado.NOMBRE,
+      cliente: factura.cliente ? {
+        nombre: factura.cliente.nombre,
+        cedula: factura.cliente.cedula
+      } : undefined,
+      items: ticketItems,
+      metodosPago: metodosPagoTicket,
+      totalBs: factura.total_bs || 0,
+      totalUsd: factura.total_usd || 0,
+      tasaDia: factura.tasa_dia || tasaDelDia,
+      porcentajeDescuento: factura.porcentaje_descuento,
+      vuelto: vueltoTicket
+    });
+  };
+
   const handleConfirmarVenta = async () => {
     if (!puedeConfirmar()) {
       const totalUsd = calcularTotalUsd();
@@ -1106,7 +1224,99 @@ const PuntoVentaPage: React.FC = () => {
               </Button>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            {/* Botón de Facturas Procesadas */}
+            <Button
+              onClick={handleToggleFacturasProcesadas}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <span>Facturas Procesadas</span>
+              <span className={`transform transition-transform ${mostrarFacturasProcesadas ? 'rotate-180' : ''}`}>
+                ▼
+              </span>
+            </Button>
+          </div>
         </div>
+        
+        {/* Sección de Facturas Procesadas (Desplegable) */}
+        {mostrarFacturasProcesadas && (
+          <div className="mt-4 border-t pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Facturas Procesadas ({facturasProcesadas.length})
+              </h2>
+              <Button
+                onClick={obtenerFacturasProcesadas}
+                variant="outline"
+                size="sm"
+                disabled={cargandoFacturas}
+              >
+                {cargandoFacturas ? "Cargando..." : "Actualizar"}
+              </Button>
+            </div>
+            
+            {cargandoFacturas ? (
+              <div className="text-center py-8 text-gray-600">
+                Cargando facturas...
+              </div>
+            ) : facturasProcesadas.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No hay facturas procesadas
+              </div>
+            ) : (
+              <div className="max-h-96 overflow-y-auto space-y-2">
+                {facturasProcesadas.map((factura) => (
+                  <div
+                    key={factura._id}
+                    className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-800">
+                          Factura #{factura.numero_factura || factura._id}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {new Date(factura.fecha).toLocaleString('es-VE', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                        {factura.cliente && (
+                          <div className="text-sm text-gray-600">
+                            Cliente: {factura.cliente.nombre}
+                          </div>
+                        )}
+                        <div className="text-sm font-semibold text-green-600 mt-1">
+                          Total: ${factura.total_usd?.toFixed(2) || '0.00'} USD
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          onClick={() => handleVerFactura(factura)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Ver
+                        </Button>
+                        <Button
+                          onClick={() => handleImprimirFactura(factura)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Imprimir
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Botón Cerrar Caja */}
         <div className="mt-4 pt-4 border-t border-gray-200 flex justify-center">
@@ -2028,6 +2238,147 @@ const PuntoVentaPage: React.FC = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Preliminar de Factura */}
+      <Dialog open={showFacturaModal} onOpenChange={setShowFacturaModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Factura #{facturaSeleccionada?.numero_factura || facturaSeleccionada?._id || "N/A"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {facturaSeleccionada && (
+            <div className="space-y-4">
+              {/* Información General */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-600">Fecha:</div>
+                  <div className="font-semibold">
+                    {new Date(facturaSeleccionada.fecha).toLocaleString('es-VE')}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">Sucursal:</div>
+                  <div className="font-semibold">
+                    {facturaSeleccionada.sucursal?.nombre || sucursalSeleccionada.nombre}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">Cajero:</div>
+                  <div className="font-semibold">{facturaSeleccionada.cajero}</div>
+                </div>
+                {facturaSeleccionada.cliente && (
+                  <div>
+                    <div className="text-sm text-gray-600">Cliente:</div>
+                    <div className="font-semibold">
+                      {facturaSeleccionada.cliente.nombre}
+                      {facturaSeleccionada.cliente.cedula && ` (C.I.: ${facturaSeleccionada.cliente.cedula})`}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Items */}
+              <div>
+                <h3 className="font-semibold mb-2">Items:</h3>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-sm font-semibold">Descripción</th>
+                        <th className="px-4 py-2 text-center text-sm font-semibold">Cantidad</th>
+                        <th className="px-4 py-2 text-right text-sm font-semibold">Precio Unit.</th>
+                        <th className="px-4 py-2 text-right text-sm font-semibold">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {facturaSeleccionada.items?.map((item: any, index: number) => (
+                        <tr key={index} className="border-t">
+                          <td className="px-4 py-2">
+                            <div className="font-medium">{item.nombre}</div>
+                            {item.codigo && (
+                              <div className="text-sm text-gray-500">Código: {item.codigo}</div>
+                            )}
+                            {item.descuento_aplicado && item.descuento_aplicado > 0 && (
+                              <div className="text-sm text-red-600">
+                                Descuento: {item.descuento_aplicado}%
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-center">{item.cantidad}</td>
+                          <td className="px-4 py-2 text-right">
+                            ${item.precio_unitario_usd?.toFixed(2) || '0.00'} USD
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            ${item.subtotal_usd?.toFixed(2) || '0.00'} USD
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Totales */}
+              <div className="border-t pt-4">
+                <div className="flex justify-end">
+                  <div className="w-64 space-y-2">
+                    {facturaSeleccionada.porcentaje_descuento && facturaSeleccionada.porcentaje_descuento > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span>Descuento ({facturaSeleccionada.porcentaje_descuento}%):</span>
+                        <span className="text-red-600">
+                          -${(facturaSeleccionada.total_usd * facturaSeleccionada.porcentaje_descuento / 100).toFixed(2)} USD
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-semibold text-lg">
+                      <span>Total:</span>
+                      <span>${facturaSeleccionada.total_usd?.toFixed(2) || '0.00'} USD</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Total:</span>
+                      <span>{facturaSeleccionada.total_bs?.toFixed(2) || '0.00'} Bs</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Métodos de Pago */}
+              <div>
+                <h3 className="font-semibold mb-2">Métodos de Pago:</h3>
+                <div className="space-y-1">
+                  {facturaSeleccionada.metodos_pago?.map((metodo: any, index: number) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span>{metodo.tipo.toUpperCase()} ({metodo.divisa}):</span>
+                      <span>
+                        {metodo.divisa === "USD" ? "$" : ""}
+                        {metodo.monto.toFixed(2)} {metodo.divisa === "Bs" ? "Bs" : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Botones de Acción */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  onClick={() => handleImprimirFactura(facturaSeleccionada)}
+                  variant="default"
+                >
+                  Imprimir Factura
+                </Button>
+                <Button
+                  onClick={() => setShowFacturaModal(false)}
+                  variant="outline"
+                >
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
