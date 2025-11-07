@@ -51,13 +51,22 @@ const ModificarUsuarioPage: React.FC = () => {
         };
         localStorage.setItem('usuario', JSON.stringify(usuarioActualizado));
         
-        // Disparar evento para que el Navbar se actualice
+        console.log('Usuario actualizado en localStorage:', usuarioActualizado);
+        console.log('Nuevos permisos:', usuarioActualizado.permisos);
+        
+        // Disparar evento personalizado para que el Navbar se actualice
+        window.dispatchEvent(new CustomEvent('userUpdated'));
+        
+        // También disparar evento storage (para otras pestañas)
         window.dispatchEvent(new Event('storage'));
         
-        // También forzar actualización del Navbar
+        // Forzar actualización del Navbar
         setTimeout(() => {
           window.location.reload();
         }, 500);
+      } else {
+        // Si es otro usuario, solo disparar el evento para que otros componentes sepan
+        window.dispatchEvent(new CustomEvent('userUpdated'));
       }
       
       setIsModalOpen(false);

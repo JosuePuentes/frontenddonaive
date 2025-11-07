@@ -106,14 +106,47 @@ const Navbar = () => {
 
     // Effect for handling user data and permissions from localStorage
     useEffect(() => {
-        const loadUserData = () => {
+        const loadUserData = async () => {
             const storedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+            if (!storedUsuario) return;
+            
             setUsuario(storedUsuario);
             const permisos = storedUsuario?.permisos || [];
             setPermisosUsuario(permisos);
+            
             // Debug: verificar permisos cargados
-            console.log('Permisos del usuario cargados:', permisos);
+            console.log('=== NAVBAR: Cargando permisos ===');
+            console.log('Usuario:', storedUsuario.correo);
+            console.log('Permisos del localStorage:', permisos);
             console.log('¿Tiene gestionar_clientes?', permisos.includes('gestionar_clientes'));
+            
+            // Intentar actualizar desde el backend si hay token
+            const token = localStorage.getItem('token');
+            if (token && storedUsuario._id) {
+                try {
+                    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/modificar-usuarios/${storedUsuario._id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    if (response.ok) {
+                        const usuarioActualizado = await response.json();
+                        if (usuarioActualizado.permisos) {
+                            console.log('Permisos actualizados desde backend:', usuarioActualizado.permisos);
+                            setPermisosUsuario(usuarioActualizado.permisos);
+                            // Actualizar localStorage
+                            const usuarioCompleto = {
+                                ...storedUsuario,
+                                permisos: usuarioActualizado.permisos
+                            };
+                            localStorage.setItem('usuario', JSON.stringify(usuarioCompleto));
+                            setUsuario(usuarioCompleto);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error al actualizar permisos desde backend:', err);
+                }
+            }
         };
 
         loadUserData();
@@ -123,14 +156,26 @@ const Navbar = () => {
             setUsuario(updatedUsuario);
             const permisos = updatedUsuario?.permisos || [];
             setPermisosUsuario(permisos);
-            console.log('Permisos actualizados:', permisos);
+            console.log('Permisos actualizados desde storage event:', permisos);
         };
 
         // Escuchar cambios en localStorage (desde otras pestañas)
         window.addEventListener('storage', handleStorageChange);
         
+        // También escuchar cambios personalizados
+        const handleCustomStorage = () => {
+            const updatedUsuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+            setUsuario(updatedUsuario);
+            const permisos = updatedUsuario?.permisos || [];
+            setPermisosUsuario(permisos);
+            console.log('Permisos actualizados desde custom event:', permisos);
+        };
+        
+        window.addEventListener('userUpdated', handleCustomStorage);
+        
         return () => {
             window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('userUpdated', handleCustomStorage);
         };
     }, []);
 
