@@ -90,8 +90,17 @@ const VisualizarInventariosPage: React.FC = () => {
 
   // Cargar totales de existencias y costo total para cada inventario
   useEffect(() => {
+    let cancelado = false; // Flag para cancelar si el componente se desmonta
+    
     const cargarTotalesInventario = async () => {
-      if (inventarios.length === 0) return;
+      if (inventarios.length === 0) {
+        // Si no hay inventarios, limpiar totales
+        if (!cancelado) {
+          setTotalesExistencias({});
+          setTotalesCostoInventario({});
+        }
+        return;
+      }
       
       const token = localStorage.getItem("token");
       if (!token) return;
@@ -145,11 +154,20 @@ const VisualizarInventariosPage: React.FC = () => {
       });
 
       await Promise.all(promesas);
-      setTotalesExistencias(nuevosTotalesExistencias);
-      setTotalesCostoInventario(nuevosTotalesCosto);
+      
+      // Solo actualizar si el componente aún está montado
+      if (!cancelado) {
+        setTotalesExistencias(nuevosTotalesExistencias);
+        setTotalesCostoInventario(nuevosTotalesCosto);
+      }
     };
 
     cargarTotalesInventario();
+    
+    // Cleanup: marcar como cancelado si el componente se desmonta
+    return () => {
+      cancelado = true;
+    };
   }, [inventarios]);
 
   useEffect(() => {
