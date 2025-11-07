@@ -18,6 +18,12 @@ interface Cajero {
   FARMACIAS?: Record<string, string>;
 }
 
+interface Lote {
+  lote: string;
+  fecha_vencimiento?: string;
+  cantidad?: number;
+}
+
 interface Producto {
   id: string;
   nombre: string;
@@ -25,6 +31,8 @@ interface Producto {
   precio: number;
   precio_usd?: number;
   stock?: number;
+  cantidad?: number; // Stock total (suma de lotes)
+  lotes?: Lote[]; // Array de lotes con fechas de vencimiento
   sucursal?: string;
 }
 
@@ -69,6 +77,7 @@ const PuntoVentaPage: React.FC = () => {
     divisa: "USD" 
   });
   const [montoPago, setMontoPago] = useState("");
+  const [productoConLotesAbierto, setProductoConLotesAbierto] = useState<string | null>(null);
 
   // Obtener usuario actual
   const getUsuarioActual = () => {
@@ -153,6 +162,23 @@ const PuntoVentaPage: React.FC = () => {
       setProductosEncontrados([]);
     }
   }, [busquedaItem, sucursalSeleccionada]);
+
+  // Cerrar dropdown de lotes al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.lotes-dropdown-container')) {
+        setProductoConLotesAbierto(null);
+      }
+    };
+
+    if (productoConLotesAbierto) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [productoConLotesAbierto]);
 
   // Cargar cajeros cuando se selecciona una sucursal
   useEffect(() => {
@@ -619,29 +645,115 @@ const PuntoVentaPage: React.FC = () => {
             />
             {productosEncontrados.length > 0 && (
               <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
-                {productosEncontrados.map((producto) => (
-                  <button
-                    key={producto.id}
-                    onClick={() => handleSeleccionarProducto(producto)}
-                    className="w-full text-left p-3 rounded-lg border hover:bg-blue-50 transition-colors"
-                  >
-                    <div className="font-semibold">{producto.nombre}</div>
-                    <div className="text-sm text-gray-600">
-                      {producto.codigo && `Código: ${producto.codigo} | `}
-                      Precio: ${(producto.precio_usd || producto.precio).toFixed(2)} USD |{" "}
-                      {tasaDelDia > 0 && (
-                        <>
-                          {((producto.precio_usd || producto.precio) * tasaDelDia).toLocaleString("es-VE", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{" "}
-                          Bs
-                        </>
-                      )}
-                      {producto.stock !== undefined && ` | Stock: ${producto.stock}`}
+                {productosEncontrados.map((producto) => {
+                  const stock = producto.cantidad ?? producto.stock ?? 0;
+                  const precio = producto.precio_usd || producto.precio;
+                  const tieneStock = stock > 0;
+                  const mostrarLotes = productoConLotesAbierto === producto.id && producto.lotes && producto.lotes.length > 0;
+                  
+                  return (
+                    <div
+                      key={producto.id}
+                      className="w-full p-3 rounded-lg border hover:bg-blue-50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <button
+                          onClick={() => handleSeleccionarProducto(producto)}
+                          className="flex-1 text-left"
+                        >
+                          <div className="font-semibold">{producto.nombre}</div>
+                          {producto.codigo && (
+                            <div className="text-xs text-gray-500">Código: {producto.codigo}</div>
+                          )}
+                        </button>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          {/* Precio */}
+                          <div className={`text-right font-semibold ${tieneStock ? 'text-green-600' : 'text-red-600'}`}>
+                            ${precio.toFixed(2)}
+                          </div>
+                          {/* Stock con dropdown */}
+                          <div className="relative lotes-dropdown-container">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProductoConLotesAbierto(
+                                  productoConLotesAbierto === producto.id ? null : producto.id
+                                );
+                              }}
+                              className={`px-2 py-1 rounded text-sm font-medium ${
+                                tieneStock 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+                              }`}
+                            >
+                              Stock: {stock}
+                            </button>
+                            {/* Dropdown de lotes */}
+                            {mostrarLotes && (
+                              <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                                <div className="p-2">
+                                  <div className="text-xs font-semibold text-gray-700 mb-2 px-2">
+                                    Lotes y Existencias:
+                                  </div>
+                                  {producto.lotes && producto.lotes.length > 0 ? (
+                                    <div className="space-y-1">
+                                      {producto.lotes.map((lote, index) => {
+                                        const cantidadLote = lote.cantidad ?? 0;
+                                        const fechaVenc = lote.fecha_vencimiento 
+                                          ? new Date(lote.fecha_vencimiento).toLocaleDateString('es-VE')
+                                          : null;
+                                        const hoy = new Date();
+                                        const fechaVencDate = lote.fecha_vencimiento 
+                                          ? new Date(lote.fecha_vencimiento)
+                                          : null;
+                                        const estaVencido = fechaVencDate && fechaVencDate < hoy;
+                                        const estaPorVencer = fechaVencDate && fechaVencDate >= hoy && fechaVencDate <= new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000);
+                                        
+                                        return (
+                                          <div
+                                            key={index}
+                                            className={`p-2 rounded text-xs ${
+                                              estaVencido 
+                                                ? 'bg-red-50 border border-red-200' 
+                                                : estaPorVencer 
+                                                ? 'bg-orange-50 border border-orange-200' 
+                                                : 'bg-gray-50 border border-gray-200'
+                                            }`}
+                                          >
+                                            <div className="font-medium">
+                                              Lote: {lote.lote || '-'} | Cantidad: {cantidadLote}
+                                            </div>
+                                            {fechaVenc && (
+                                              <div className={`text-xs mt-1 ${
+                                                estaVencido 
+                                                  ? 'text-red-600 font-semibold' 
+                                                  : estaPorVencer 
+                                                  ? 'text-orange-600' 
+                                                  : 'text-gray-600'
+                                              }`}>
+                                                Vence: {fechaVenc}
+                                                {estaVencido && ' (VENCIDO)'}
+                                                {estaPorVencer && !estaVencido && ' (Por vencer)'}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-gray-500 px-2 py-1">
+                                      No hay lotes registrados
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
