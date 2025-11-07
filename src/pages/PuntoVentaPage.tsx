@@ -345,6 +345,7 @@ const PuntoVentaPage: React.FC = () => {
       return;
     }
     
+    // Validación adicional: cantidad individual no puede exceder stock
     if (cantidad > stockDisponible) {
       alert(`No hay suficiente stock disponible. Stock disponible: ${stockDisponible}`);
       return;
