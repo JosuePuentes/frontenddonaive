@@ -1390,22 +1390,33 @@ const PuntoVentaPage: React.FC = () => {
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-2">Métodos de Pago Agregados:</h3>
                 <div className="space-y-2">
-                  {metodosPago.map((metodo, index) => (
-                    <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                      <span>
-                        {metodo.tipo} ({metodo.divisa}): {metodo.monto.toFixed(2)} {metodo.divisa}
-                      </span>
-                      <Button
-                        onClick={() =>
-                          setMetodosPago(metodosPago.filter((_, i) => i !== index))
-                        }
-                        variant="destructive"
-                        size="sm"
+                  {metodosPago.map((metodo, index) => {
+                    const esVuelto = metodo.monto < 0;
+                    return (
+                      <div 
+                        key={index} 
+                        className={`flex justify-between items-center p-2 rounded ${
+                          esVuelto ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'
+                        }`}
                       >
-                        Eliminar
-                      </Button>
-                    </div>
-                  ))}
+                        <span className={esVuelto ? 'text-yellow-800 font-semibold' : ''}>
+                          {esVuelto ? '🔄 ' : ''}
+                          {metodo.tipo} ({metodo.divisa}): {esVuelto ? '' : ''}
+                          {Math.abs(metodo.monto).toFixed(2)} {metodo.divisa}
+                          {esVuelto ? ' (Vuelto dado)' : ''}
+                        </span>
+                        <Button
+                          onClick={() =>
+                            setMetodosPago(metodosPago.filter((_, i) => i !== index))
+                          }
+                          variant="destructive"
+                          size="sm"
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
