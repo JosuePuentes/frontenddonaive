@@ -146,7 +146,7 @@ export function useResumenData() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         const headers: HeadersInit = {};
         if (token) {
           // Y añadimos la propiedad solo si el token existe
@@ -301,7 +301,7 @@ export function useResumenData() {
         return;
       }
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         const headers: HeadersInit = {};
         if (token) {
           // Y añadimos la propiedad solo si el token existe

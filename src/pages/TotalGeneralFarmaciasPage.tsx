@@ -229,7 +229,7 @@ const TotalGeneralFarmaciasPage: React.FC = () => {
         setTotalInventario(Math.max(0, totalInventarioCalc));
 
         // CUENTAS POR PAGAR
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         if (token) {
           const resCuentas = await fetch(`${API_BASE_URL}/cuentas-por-pagar`, {
             headers: { "Authorization": `Bearer ${token}` }

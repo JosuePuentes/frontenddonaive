@@ -19,7 +19,7 @@ const ListaCuentasPorPagarFarmacia: React.FC<Props> = ({ farmaciaId, fechaInicio
       setError(null);
       try {
         const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(`${API_BASE_URL}/cuentas-por-pagar`, { headers });

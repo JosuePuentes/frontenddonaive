@@ -46,7 +46,7 @@ const VisualizarPagosCPPPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         if (!token) throw new Error("No se encontró el token de autenticación");
         const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pagoscpp/all`, {
           headers: { "Authorization": `Bearer ${token}` }
@@ -128,7 +128,7 @@ const VisualizarPagosCPPPage: React.FC = () => {
                         onChange={async (e) => {
                           const nuevoEstado = e.target.value;
                           try {
-                            const token = localStorage.getItem("token");
+                            const token = localStorage.getItem("access_token");
                             if (!token) throw new Error("No se encontró el token de autenticación");
                             const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pagoscpp/${p._id}/estado`, {
                               method: "PATCH",

@@ -27,7 +27,7 @@ export function useCuentasPorPagar() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token"); // Obtenemos el token
+        const token = localStorage.getItem("access_token"); // Obtenemos el token
         if (!token) {
           throw new Error("No se encontró el token de autenticación.");
         }

@@ -21,7 +21,7 @@ const PagosDropdown: React.FC<PagosDropdownProps> = ({ cuentaId, onOpenChange, m
     onOpenChange(open);
     if (open) {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       fetch(`${API_BASE_URL}/pagoscpp?cuentaPorPagarId=${cuentaId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       })

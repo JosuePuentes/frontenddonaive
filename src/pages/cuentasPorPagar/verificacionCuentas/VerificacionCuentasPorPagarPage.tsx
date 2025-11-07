@@ -57,7 +57,7 @@ const VerificacionCuentasPorPagarPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       const headers: HeadersInit = token ? { "Authorization": `Bearer ${token}` } : {};
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/cuentas-por-pagar`, { headers });
       if (!res.ok) throw new Error("Error al obtener cuentas por pagar");
@@ -77,7 +77,7 @@ const VerificacionCuentasPorPagarPage: React.FC = () => {
     if (!confirmDialog.cuentaId) return;
     setError(null);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/cuentas-por-pagar/${confirmDialog.cuentaId}/estatus`, {

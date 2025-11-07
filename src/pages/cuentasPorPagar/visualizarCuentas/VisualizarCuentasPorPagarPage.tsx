@@ -110,7 +110,7 @@ const VisualizarCuentasPorPagarPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
       const res = await fetch(`${API_BASE_URL}/cuentas-por-pagar`, {
         headers: { "Authorization": `Bearer ${token}` }
@@ -255,7 +255,7 @@ const VisualizarCuentasPorPagarPage: React.FC = () => {
     setError(null);
     setSuccess(null);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
       const res = await fetch(`${API_BASE_URL}/cuentas-por-pagar/${confirmDialog.id}/estatus`, {
         method: "PATCH",
@@ -330,7 +330,7 @@ const VisualizarCuentasPorPagarPage: React.FC = () => {
       }));
       fetch(`${API_BASE_URL}/pagoscpp?cuentaPorPagarId=${cuenta._id}`, {
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
+          "Authorization": `Bearer ${localStorage.getItem("access_token")}`
         }
       })
         .then(res => {

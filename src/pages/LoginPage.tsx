@@ -30,8 +30,10 @@ const LoginPage: React.FC = () => {
             }
 
             // Guardar el token y el usuario en localStorage
+            console.log('[Login] Guardando token:', data.access_token ? 'Token recibido' : 'Token NO recibido');
             localStorage.setItem("access_token", data.access_token);
             localStorage.setItem("usuario", JSON.stringify(data.usuario));
+            console.log('[Login] Token guardado en localStorage:', localStorage.getItem("access_token") ? '✅ Token guardado correctamente' : '❌ Error al guardar token');
 
             // Navegar a la página principal
             navigate("/");

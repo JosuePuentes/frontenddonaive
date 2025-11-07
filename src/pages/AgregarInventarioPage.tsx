@@ -46,7 +46,7 @@ const AgregarInventarioPage: React.FC = () => {
             return;
         }
         try {
-            const token = localStorage.getItem("token");
+            const token = localStorage.getItem("access_token");
             const res = await fetch(`${API_BASE_URL}/inventarios`, {
                 method: "POST",
                 headers: {

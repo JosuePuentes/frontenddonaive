@@ -38,6 +38,10 @@ export const fetchWithAuth = async (
 ): Promise<Response> => {
   const token = getAuthToken();
   
+  // Debug: Verificar que el token existe
+  console.log('[fetchWithAuth] Token obtenido:', token ? 'Token encontrado' : 'Token NO encontrado');
+  console.log('[fetchWithAuth] URL:', url);
+  
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
@@ -45,7 +49,12 @@ export const fetchWithAuth = async (
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
+    console.log('[fetchWithAuth] Header Authorization agregado:', `Bearer ${token.substring(0, 20)}...`);
+  } else {
+    console.warn('[fetchWithAuth] ⚠️ No hay token disponible. La petición se enviará sin Authorization header.');
   }
+
+  console.log('[fetchWithAuth] Headers finales:', headers);
 
   const response = await fetch(url, {
     ...options,

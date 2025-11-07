@@ -115,7 +115,7 @@ const VisualizarGastosFarmaciaPage: React.FC = () => {
       if (fechaFin) url += `fecha_fin=${fechaFin}&`;
       
       // Agregamos el token de autenticación si es necesario para esta ruta
-      const token = localStorage.getItem("token"); // Asumiendo que usas token como en el anterior
+      const token = localStorage.getItem("access_token"); // Asumiendo que usas token como en el anterior
       const headers: HeadersInit = {};
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
@@ -174,7 +174,7 @@ const VisualizarGastosFarmaciaPage: React.FC = () => {
     if (!confirmDialog.gastoId) return;
     setError(null);
     try {
-      const token = localStorage.getItem("token"); // Asumiendo que usas token
+      const token = localStorage.getItem("access_token"); // Asumiendo que usas token
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;

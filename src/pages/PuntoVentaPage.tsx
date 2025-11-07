@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { fetchWithAuth, getApiBaseUrl } from "@/lib/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -183,9 +184,8 @@ const PuntoVentaPage: React.FC = () => {
           if (token) {
             headers.Authorization = `Bearer ${token}`;
           }
-          const res = await fetch(
-            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(busquedaItem)}&sucursal=${sucursalSeleccionada.id}`,
-            { headers }
+          const res = await fetchWithAuth(
+            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(busquedaItem)}&sucursal=${sucursalSeleccionada.id}`
           );
           if (res.ok) {
             const data = await res.json();
@@ -262,7 +262,7 @@ const PuntoVentaPage: React.FC = () => {
             headers.Authorization = `Bearer ${token}`;
           }
           
-          const res = await fetch(`${API_BASE_URL}/cajeros`, { headers });
+          const res = await fetchWithAuth(`${API_BASE_URL}/cajeros`);
           if (res.ok) {
             const data = await res.json();
             // Transformar los datos al formato esperado

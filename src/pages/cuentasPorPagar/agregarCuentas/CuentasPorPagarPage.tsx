@@ -126,7 +126,7 @@ const CuentasPorPagarPage: React.FC = () => {
         fechaRegistro: new Date().toISOString().slice(0, 10),
       };
       // Obtener token JWT del localStorage (guardado como string plano bajo la key "token")
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
       const response = await fetch(`${API_BASE_URL}/cuentas-por-pagar`, {
         method: "POST",
