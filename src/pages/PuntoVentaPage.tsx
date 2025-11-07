@@ -929,38 +929,43 @@ const PuntoVentaPage: React.FC = () => {
         descuento_aplicado: item.descuento_aplicado || 0,
       }));
 
+      // Validar que cada método tenga divisa antes de formatear
+      for (const metodo of metodosPago) {
+        if (!metodo.divisa || (metodo.divisa !== "USD" && metodo.divisa !== "Bs")) {
+          throw new Error(`Método de pago ${metodo.tipo} debe tener divisa válida (USD o Bs)`);
+        }
+      }
+      
+      // Validación: Verificar que la suma neta (pagos positivos - vuelto negativo) coincida con el total
+      let sumaNetaUsd = 0;
+      for (const metodo of metodosPago) {
+        let montoEnUsd = 0;
+        if (metodo.divisa === "USD") {
+          montoEnUsd = metodo.monto;
+        } else if (metodo.divisa === "Bs") {
+          montoEnUsd = metodo.monto / tasaDelDia; // Convertir Bs a USD
+        }
+        sumaNetaUsd += montoEnUsd; // Sumar todos (positivos y negativos)
+      }
+      
+      // Verificar que la suma neta coincida con total_usd (tolerancia de 0.01 para errores de redondeo)
+      if (Math.abs(sumaNetaUsd - totalUsd) > 0.01) {
+        throw new Error(
+          `La suma neta de métodos de pago ($${sumaNetaUsd.toFixed(2)} USD) no coincide con el total ($${totalUsd.toFixed(2)} USD). Diferencia: $${Math.abs(sumaNetaUsd - totalUsd).toFixed(2)} USD`
+        );
+      }
+      
       // Formatear métodos de pago según el backend
       // Filtrar métodos de pago negativos (vuelto) y solo enviar los positivos
       const metodosPagoFormateados = metodosPago
         .filter((metodo) => metodo.monto > 0) // Solo métodos de pago positivos
         .map((metodo) => {
-          // Validar que cada método tenga divisa
-          if (!metodo.divisa || (metodo.divisa !== "USD" && metodo.divisa !== "Bs")) {
-            throw new Error(`Método de pago ${metodo.tipo} debe tener divisa válida (USD o Bs)`);
-          }
           return {
             tipo: metodo.tipo,
             monto: metodo.monto,
             divisa: metodo.divisa, // ✅ CRÍTICO: Especificar divisa
           };
         });
-      
-      // Validación adicional: Verificar que la suma en USD coincida con el total
-      let sumaUsd = 0;
-      for (const metodo of metodosPagoFormateados) {
-        if (metodo.divisa === "USD") {
-          sumaUsd += metodo.monto;
-        } else if (metodo.divisa === "Bs") {
-          sumaUsd += metodo.monto / tasaDelDia; // Convertir Bs a USD
-        }
-      }
-      
-      // Verificar que coincida con total_usd (tolerancia de 0.01 para errores de redondeo)
-      if (Math.abs(sumaUsd - totalUsd) > 0.01) {
-        throw new Error(
-          `La suma de métodos de pago ($${sumaUsd.toFixed(2)} USD) no coincide con el total ($${totalUsd.toFixed(2)} USD). Diferencia: $${Math.abs(sumaUsd - totalUsd).toFixed(2)} USD`
-        );
-      }
 
       const ventaData = {
         items,
