@@ -91,108 +91,55 @@ const ModificarItemInventarioModal: React.FC<ModificarItemInventarioModalProps> 
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      // El endpoint requiere mínimo 2 caracteres, así que usamos términos de 2 caracteres
-      // Reducimos a términos más comunes para acelerar la carga
-      const terminosBusqueda = [
-        'aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'am', 'an', 'ao', 'ap', 'aq', 'ar', 'as', 'at', 'au', 'av', 'aw', 'ax', 'ay', 'az',
-        'ba', 'be', 'bi', 'bo', 'bu',
-        'ca', 'ce', 'ci', 'co', 'cu',
-        'da', 'de', 'di', 'do', 'du',
-        'ea', 'ee', 'ei', 'eo', 'eu',
-        'fa', 'fe', 'fi', 'fo', 'fu',
-        'ga', 'ge', 'gi', 'go', 'gu',
-        'ha', 'he', 'hi', 'ho', 'hu',
-        'ia', 'ie', 'ii', 'io', 'iu',
-        'ja', 'je', 'ji', 'jo', 'ju',
-        'ka', 'ke', 'ki', 'ko', 'ku',
-        'la', 'le', 'li', 'lo', 'lu',
-        'ma', 'me', 'mi', 'mo', 'mu',
-        'na', 'ne', 'ni', 'no', 'nu',
-        'oa', 'oe', 'oi', 'oo', 'ou',
-        'pa', 'pe', 'pi', 'po', 'pu',
-        'qa', 'qe', 'qi', 'qo', 'qu',
-        'ra', 're', 'ri', 'ro', 'ru',
-        'sa', 'se', 'si', 'so', 'su',
-        'ta', 'te', 'ti', 'to', 'tu',
-        'ua', 'ue', 'ui', 'uo', 'uu',
-        'va', 've', 'vi', 'vo', 'vu',
-        'wa', 'we', 'wi', 'wo', 'wu',
-        'xa', 'xe', 'xi', 'xo', 'xu',
-        'ya', 'ye', 'yi', 'yo', 'yu',
-        'za', 'ze', 'zi', 'zo', 'zu',
-        '00', '01', '02', '03', '04', '05', '06', '07', '08', '09',
-        '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
-        '20', '21', '22', '23', '24', '25', '26', '27', '28', '29'
-      ];
-
-      const todosProductos: Producto[] = [];
-      const idsVistos = new Set<string>();
-      
-      // Limitar a los primeros 30 términos y hacer las llamadas en paralelo para acelerar
-      const terminosLimitados = terminosBusqueda.slice(0, 30);
-      
-      // Hacer todas las llamadas en paralelo
-      const promesas = terminosLimitados.map(async (termino) => {
-        try {
-          const res = await fetch(
-            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(termino)}&sucursal=${sucursalId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-          if (res.ok) {
-            const data = await res.json();
-            return Array.isArray(data) ? data : [];
-          }
-          return [];
-        } catch (e) {
-          return [];
+      // Obtener items directamente del inventario (no del punto de venta)
+      // Esto asegura que obtenemos los datos actualizados con costo_unitario, cantidad, precio_unitario
+      const res = await fetch(
+        `${API_BASE_URL}/inventarios/${inventarioId}/items`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
 
-      // Esperar todas las respuestas en paralelo
-      const resultados = await Promise.all(promesas);
+      if (!res.ok) {
+        throw new Error("Error al obtener items del inventario");
+      }
+
+      const items = await res.json();
+      const itemsArray = Array.isArray(items) ? items : [];
       
-      // Procesar todos los resultados
-      resultados.forEach((productosArray) => {
-        productosArray.forEach((p: any) => {
-          // Priorizar _id sobre id, ya que _id es el ObjectId de MongoDB
-          const productoId = p._id || p.id;
-          const codigoProducto = p.codigo || p.codigo_producto || "";
-          
-          // Solo agregar productos que tengan un ID válido (ObjectId de MongoDB)
-          // El ID debe ser un string no vacío
-          if (productoId && typeof productoId === 'string' && productoId.trim() !== '') {
-            // Usar el ID como identificador único para evitar duplicados
-            if (!idsVistos.has(productoId)) {
-              idsVistos.add(productoId);
-              todosProductos.push({
-                id: productoId,
-                codigo: codigoProducto,
-                nombre: p.nombre || p.descripcion || "",
-                descripcion: p.descripcion || p.nombre || "",
-                marca: p.marca || "",
-                precio: p.precio || p.precio_unitario || 0,
-                costo: p.costo || p.costo_unitario || 0,
-                existencia: p.existencia || p.stock || p.cantidad || 0,
-                sucursal: p.sucursal || sucursalId
-              });
-            }
-          }
-        });
+      // Mapear items del inventario a productos para el modal
+      const todosProductos: Producto[] = itemsArray.map((item: any) => {
+        // Priorizar _id sobre id
+        const productoId = item._id || item.id || item.item_id || "";
+        const codigoProducto = item.codigo || "";
+        
+        return {
+          id: productoId,
+          codigo: codigoProducto,
+          nombre: item.descripcion || item.nombre || "",
+          descripcion: item.descripcion || item.nombre || "",
+          marca: item.marca || "",
+          // Usar los campos correctos del backend: priorizar costo_unitario, cantidad, precio_unitario
+          precio_unitario: item.precio_unitario || item.precio || 0,
+          precio: item.precio_unitario || item.precio || 0, // Mantener ambos para compatibilidad
+          costo_unitario: item.costo_unitario || item.costo || 0,
+          costo: item.costo_unitario || item.costo || 0, // Mantener ambos para compatibilidad
+          cantidad: item.cantidad || item.existencia || 0,
+          existencia: item.cantidad || item.existencia || 0, // Mantener ambos para compatibilidad
+          sucursal: item.sucursal || sucursalId
+        };
       });
       
       setProductosTodos(todosProductos);
       setProductos(todosProductos);
       
       if (todosProductos.length === 0) {
-        setError(`No se encontraron productos para la sucursal ${sucursalId}. Verifica que el inventario tenga productos cargados.`);
+        setError(`No se encontraron items en este inventario.`);
       }
     } catch (err: any) {
-      setError(err.message || "Error al cargar productos del inventario");
+      setError(err.message || "Error al cargar items del inventario");
       setProductosTodos([]);
       setProductos([]);
     } finally {
