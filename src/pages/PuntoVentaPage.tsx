@@ -330,6 +330,21 @@ const PuntoVentaPage: React.FC = () => {
     
     // Verificar stock disponible
     const stockDisponible = productoSeleccionado.cantidad ?? productoSeleccionado.stock ?? 0;
+    
+    // Verificar si el producto ya está en el carrito
+    const itemExistente = carrito.find(
+      (item) => item.producto.id === productoSeleccionado.id
+    );
+    
+    // Calcular cantidad total que se intenta agregar
+    const cantidadTotal = itemExistente ? itemExistente.cantidad + cantidad : cantidad;
+    
+    if (cantidadTotal > stockDisponible) {
+      const cantidadDisponible = stockDisponible - (itemExistente?.cantidad || 0);
+      alert(`No hay suficiente stock disponible. Stock disponible: ${stockDisponible}, ya en carrito: ${itemExistente?.cantidad || 0}, puedes agregar: ${cantidadDisponible > 0 ? cantidadDisponible : 0}`);
+      return;
+    }
+    
     if (cantidad > stockDisponible) {
       alert(`No hay suficiente stock disponible. Stock disponible: ${stockDisponible}`);
       return;
