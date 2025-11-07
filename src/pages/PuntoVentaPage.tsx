@@ -643,6 +643,7 @@ const PuntoVentaPage: React.FC = () => {
         sucursal: sucursalSeleccionada.id,
         cajero: usuario?.correo || cajeroSeleccionado.NOMBRE,
         cliente: clienteSeleccionado?._id || clienteSeleccionado?.id || "",
+        porcentaje_descuento: clienteSeleccionado?.porcentaje_descuento || 0,
         notas: "",
       };
 
