@@ -620,8 +620,11 @@ const PuntoVentaPage: React.FC = () => {
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
         precio_unitario_usd: item.precio_unitario_usd,
+        precio_unitario_original: item.precio_unitario_original || item.precio_unitario,
+        precio_unitario_original_usd: item.precio_unitario_original_usd || item.precio_unitario_usd,
         subtotal: item.subtotal,
         subtotal_usd: item.subtotal_usd,
+        descuento_aplicado: item.descuento_aplicado || 0,
       }));
 
       // Formatear métodos de pago según el backend
