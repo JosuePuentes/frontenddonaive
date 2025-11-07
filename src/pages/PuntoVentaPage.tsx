@@ -788,11 +788,34 @@ const PuntoVentaPage: React.FC = () => {
       // Filtrar métodos de pago negativos (vuelto) y solo enviar los positivos
       const metodosPagoFormateados = metodosPago
         .filter((metodo) => metodo.monto > 0) // Solo métodos de pago positivos
-        .map((metodo) => ({
-          tipo: metodo.tipo,
-          monto: metodo.monto,
-          divisa: metodo.divisa,
-        }));
+        .map((metodo) => {
+          // Validar que cada método tenga divisa
+          if (!metodo.divisa || (metodo.divisa !== "USD" && metodo.divisa !== "Bs")) {
+            throw new Error(`Método de pago ${metodo.tipo} debe tener divisa válida (USD o Bs)`);
+          }
+          return {
+            tipo: metodo.tipo,
+            monto: metodo.monto,
+            divisa: metodo.divisa, // ✅ CRÍTICO: Especificar divisa
+          };
+        });
+      
+      // Validación adicional: Verificar que la suma en USD coincida con el total
+      let sumaUsd = 0;
+      for (const metodo of metodosPagoFormateados) {
+        if (metodo.divisa === "USD") {
+          sumaUsd += metodo.monto;
+        } else if (metodo.divisa === "Bs") {
+          sumaUsd += metodo.monto / tasaDelDia; // Convertir Bs a USD
+        }
+      }
+      
+      // Verificar que coincida con total_usd (tolerancia de 0.01 para errores de redondeo)
+      if (Math.abs(sumaUsd - totalUsd) > 0.01) {
+        throw new Error(
+          `La suma de métodos de pago ($${sumaUsd.toFixed(2)} USD) no coincide con el total ($${totalUsd.toFixed(2)} USD). Diferencia: $${Math.abs(sumaUsd - totalUsd).toFixed(2)} USD`
+        );
+      }
 
       const ventaData = {
         items,
@@ -813,8 +836,15 @@ const PuntoVentaPage: React.FC = () => {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ detail: "Error al registrar la venta" }));
-        throw new Error(errorData.detail || "Error al registrar la venta");
+        // Manejo de errores del backend
+        const errorData = await res.json().catch(() => ({ 
+          detail: "Error al registrar la venta" 
+        }));
+        
+        // Mostrar mensaje de error claro al usuario
+        const mensajeError = errorData.detail || errorData.message || "Error al registrar la venta";
+        alert(`Error: ${mensajeError}`);
+        throw new Error(mensajeError);
       }
 
       const data = await res.json();
@@ -831,7 +861,13 @@ const PuntoVentaPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Error al confirmar venta:", error);
-      alert(error.message || "Error al registrar la venta. Por favor, intente nuevamente.");
+      // El error ya fue mostrado en el alert anterior si viene del backend
+      // Solo mostrar si es un error de validación del frontend
+      if (error.message && !error.message.includes("Error al registrar")) {
+        alert(error.message);
+      } else if (!error.message || error.message.includes("Error al registrar")) {
+        alert("Error al registrar la venta. Por favor, intente nuevamente.");
+      }
     }
   };
 
