@@ -1371,10 +1371,24 @@ const PuntoVentaPage: React.FC = () => {
                 </div>
               )}
               {calcularVuelto() > 0 && (
-                <div className="flex justify-between text-green-600 mt-2">
-                  <span>Vuelto (USD):</span>
-                  <span className="font-bold">${calcularVuelto().toFixed(2)}</span>
-                </div>
+                <>
+                  <div className="flex justify-between text-green-600 mt-2">
+                    <span>Vuelto (USD):</span>
+                    <span className="font-bold">${calcularVuelto().toFixed(2)}</span>
+                  </div>
+                  {tasaDelDia > 0 && (
+                    <div className="flex justify-between text-green-600 mt-1">
+                      <span>Vuelto (Bs):</span>
+                      <span className="font-bold">
+                        {(calcularVuelto() * tasaDelDia).toLocaleString("es-VE", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{" "}
+                        Bs
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
               {calcularTotalPagadoUsd() < calcularTotalUsd() && (
                 <div className="flex justify-between text-red-600 mt-2">
