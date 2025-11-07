@@ -548,6 +548,7 @@ const PuntoVentaPage: React.FC = () => {
         nombre: nombreCliente.trim(),
         direccion: direccionCliente.trim() || undefined,
         telefono: telefonoCliente.trim() || undefined,
+        porcentaje_descuento: porcentajeDescuentoCliente ? parseFloat(porcentajeDescuentoCliente) : 0,
       };
 
       const res = await fetch(`${API_BASE_URL}/clientes`, {
@@ -852,10 +853,19 @@ const PuntoVentaPage: React.FC = () => {
                       onClick={() => handleSeleccionarCliente(cliente)}
                       className="w-full text-left p-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
                     >
-                      <div className="font-semibold">{cliente.nombre}</div>
-                      <div className="text-sm text-gray-600">
-                        Cédula: {cliente.cedula}
-                        {cliente.telefono && ` | Tel: ${cliente.telefono}`}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold">{cliente.nombre}</div>
+                          <div className="text-sm text-gray-600">
+                            Cédula: {cliente.cedula}
+                            {cliente.telefono && ` | Tel: ${cliente.telefono}`}
+                          </div>
+                        </div>
+                        {cliente.porcentaje_descuento && cliente.porcentaje_descuento > 0 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800 border border-green-300">
+                            {cliente.porcentaje_descuento}% desc.
+                          </span>
+                        )}
                       </div>
                     </button>
                   ))}
@@ -1236,6 +1246,18 @@ const PuntoVentaPage: React.FC = () => {
             <DialogTitle>Métodos de Pago</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {clienteSeleccionado?.porcentaje_descuento && clienteSeleccionado.porcentaje_descuento > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-sm font-semibold bg-green-100 text-green-800 border border-green-300">
+                    Descuento: {clienteSeleccionado.porcentaje_descuento}% ACTIVO
+                  </span>
+                  <span className="text-sm text-green-700">
+                    Cliente: {clienteSeleccionado.nombre}
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between mb-2">
                 <span>Total a pagar (USD):</span>
