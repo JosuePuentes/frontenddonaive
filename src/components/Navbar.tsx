@@ -123,28 +123,41 @@ const Navbar = () => {
             // Intentar actualizar desde el backend si hay token
             const token = localStorage.getItem('token');
             if (token && storedUsuario._id) {
-                try {
-                    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/modificar-usuarios/${storedUsuario._id}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
+                // Intentar primero con /auth/me, luego con /modificar-usuarios/{id}
+                const endpoints = [
+                    `${import.meta.env.VITE_API_BASE_URL}/auth/me`,
+                    `${import.meta.env.VITE_API_BASE_URL}/usuarios/me`,
+                    `${import.meta.env.VITE_API_BASE_URL}/modificar-usuarios/me`,
+                    `${import.meta.env.VITE_API_BASE_URL}/modificar-usuarios/${storedUsuario._id}`
+                ];
+                
+                for (const endpoint of endpoints) {
+                    try {
+                        const response = await fetch(endpoint, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        if (response.ok) {
+                            const usuarioActualizado = await response.json();
+                            if (usuarioActualizado.permisos && Array.isArray(usuarioActualizado.permisos)) {
+                                console.log('✅ Permisos actualizados desde backend:', usuarioActualizado.permisos);
+                                setPermisosUsuario(usuarioActualizado.permisos);
+                                // Actualizar localStorage
+                                const usuarioCompleto = {
+                                    ...storedUsuario,
+                                    permisos: usuarioActualizado.permisos,
+                                    farmacias: usuarioActualizado.farmacias || storedUsuario.farmacias
+                                };
+                                localStorage.setItem('usuario', JSON.stringify(usuarioCompleto));
+                                setUsuario(usuarioCompleto);
+                                break; // Salir del loop si encontramos un endpoint válido
+                            }
                         }
-                    });
-                    if (response.ok) {
-                        const usuarioActualizado = await response.json();
-                        if (usuarioActualizado.permisos) {
-                            console.log('Permisos actualizados desde backend:', usuarioActualizado.permisos);
-                            setPermisosUsuario(usuarioActualizado.permisos);
-                            // Actualizar localStorage
-                            const usuarioCompleto = {
-                                ...storedUsuario,
-                                permisos: usuarioActualizado.permisos
-                            };
-                            localStorage.setItem('usuario', JSON.stringify(usuarioCompleto));
-                            setUsuario(usuarioCompleto);
-                        }
+                    } catch (err) {
+                        // Continuar con el siguiente endpoint si este falla
+                        continue;
                     }
-                } catch (err) {
-                    console.error('Error al actualizar permisos desde backend:', err);
                 }
             }
         };
