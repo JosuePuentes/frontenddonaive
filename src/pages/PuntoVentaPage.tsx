@@ -149,8 +149,8 @@ const PuntoVentaPage: React.FC = () => {
   
   // Estados para bancos
   const [bancos, setBancos] = useState<Banco[]>([]);
-  const [cargandoBancos, setCargandoBancos] = useState(false);
   const [bancoSeleccionadoPago, setBancoSeleccionadoPago] = useState<string>("");
+  const [bancoSeleccionadoVuelto, setBancoSeleccionadoVuelto] = useState<string>("");
   
   // Estado para el ticket de factura
   const [ticketData, setTicketData] = useState<{
@@ -193,7 +193,6 @@ const PuntoVentaPage: React.FC = () => {
 
   // Cargar bancos
   const fetchBancos = async () => {
-    setCargandoBancos(true);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/bancos`);
       if (res.ok) {
@@ -206,8 +205,6 @@ const PuntoVentaPage: React.FC = () => {
     } catch (error) {
       console.error("Error al obtener bancos:", error);
       setBancos([]);
-    } finally {
-      setCargandoBancos(false);
     }
   };
 
