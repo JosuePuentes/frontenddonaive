@@ -258,7 +258,7 @@ export const TicketFactura: React.FC<TicketFacturaProps> = ({
 
     <div class="section">
       <div class="section-title">DETALLE DE VENTA:</div>
-      ${items.map((item, index) => `
+      ${items.map((item) => `
         <div class="item">
           <div class="item-nombre">${item.nombre}</div>
           ${item.codigo ? `<div class="item-codigo">Código: ${item.codigo}</div>` : ""}
