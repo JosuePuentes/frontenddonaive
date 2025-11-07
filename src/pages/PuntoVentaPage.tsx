@@ -327,6 +327,13 @@ const PuntoVentaPage: React.FC = () => {
     }
 
     const cantidad = parseFloat(cantidadInput);
+    
+    // Verificar stock disponible
+    const stockDisponible = productoSeleccionado.cantidad ?? productoSeleccionado.stock ?? 0;
+    if (cantidad > stockDisponible) {
+      alert(`No hay suficiente stock disponible. Stock disponible: ${stockDisponible}`);
+      return;
+    }
     // El precio del producto viene en USD, calcular precio en Bs
     const precioUnitarioOriginalUSD = productoSeleccionado.precio_usd || productoSeleccionado.precio;
     const precioUnitarioOriginalBs = precioUnitarioOriginalUSD * tasaDelDia;
@@ -1273,8 +1280,23 @@ const PuntoVentaPage: React.FC = () => {
               <Input
                 type="number"
                 min="1"
+                max={(() => {
+                  const stock = productoSeleccionado.cantidad ?? productoSeleccionado.stock ?? 0;
+                  return stock;
+                })()}
                 value={cantidadInput}
-                onChange={(e) => setCantidadInput(e.target.value)}
+                onChange={(e) => {
+                  const valor = e.target.value;
+                  const stockDisponible = productoSeleccionado.cantidad ?? productoSeleccionado.stock ?? 0;
+                  const cantidadIngresada = parseFloat(valor);
+                  
+                  // Si el valor ingresado es mayor al stock, limitar al stock disponible
+                  if (!isNaN(cantidadIngresada) && cantidadIngresada > stockDisponible) {
+                    setCantidadInput(stockDisponible.toString());
+                  } else {
+                    setCantidadInput(valor);
+                  }
+                }}
                 placeholder="Cantidad"
                 autoFocus
                 onKeyDown={(e) => {
@@ -1283,6 +1305,18 @@ const PuntoVentaPage: React.FC = () => {
                   }
                 }}
               />
+              {(() => {
+                const stockDisponible = productoSeleccionado.cantidad ?? productoSeleccionado.stock ?? 0;
+                const cantidadIngresada = parseFloat(cantidadInput) || 0;
+                if (cantidadIngresada > stockDisponible) {
+                  return (
+                    <p className="text-sm text-red-600 mt-1">
+                      La cantidad no puede ser mayor al stock disponible ({stockDisponible})
+                    </p>
+                  );
+                }
+                return null;
+              })()}
               <div className="flex gap-2">
                 <Button onClick={handleAgregarAlCarrito} className="flex-1">
                   Agregar
