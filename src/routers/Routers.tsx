@@ -39,6 +39,7 @@ import ModificarUsuarioPage from "@/pages/ModificarUsuarioPage";
 import RegisterPage from "@/pages/RegisterPage";
 import GestionClientesPage from "@/pages/GestionClientesPage";
 import PuntoVentaPage from "@/pages/PuntoVentaPage";
+import GestionBancosPage from "@/pages/GestionBancosPage";
 
 const AppRouter = () => (
   <Routes>
@@ -301,6 +302,14 @@ const AppRouter = () => (
       element={
         <PermissionRoute permiso="gestionar_clientes">
           <GestionClientesPage />
+        </PermissionRoute>
+      }
+    />
+    <Route
+      path="/bancos"
+      element={
+        <PermissionRoute permiso="gestionar_bancos">
+          <GestionBancosPage />
         </PermissionRoute>
       }
     />

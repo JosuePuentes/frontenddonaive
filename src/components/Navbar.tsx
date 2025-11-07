@@ -86,6 +86,13 @@ const allLinks = [
         ]
     },
     {
+        category: 'Bancos',
+        icon: DollarSign,
+        items: [
+            { to: '/bancos', label: 'Gestión de Bancos', permiso: 'gestionar_bancos' },
+        ]
+    },
+    {
         category: 'Inicio',
         icon: Home,
         items: [

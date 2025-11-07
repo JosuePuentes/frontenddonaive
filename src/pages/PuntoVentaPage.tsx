@@ -59,10 +59,22 @@ interface ItemCarrito {
   descuento_aplicado?: number; // Porcentaje de descuento aplicado
 }
 
+interface Banco {
+  _id?: string;
+  id?: string;
+  numero_cuenta: string;
+  nombre_banco: string;
+  nombre_titular: string;
+  saldo: number;
+  divisa: "USD" | "Bs";
+  activo?: boolean;
+}
+
 interface MetodoPago {
-  tipo: "efectivo" | "tarjeta" | "transferencia" | "zelle";
+  tipo: "efectivo" | "tarjeta" | "transferencia" | "zelle" | "banco";
   monto: number;
   divisa: "Bs" | "USD";
+  banco_id?: string; // ID del banco si el método es "banco"
 }
 
 interface Cliente {
@@ -135,6 +147,11 @@ const PuntoVentaPage: React.FC = () => {
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<any | null>(null);
   const [showFacturaModal, setShowFacturaModal] = useState(false);
   
+  // Estados para bancos
+  const [bancos, setBancos] = useState<Banco[]>([]);
+  const [cargandoBancos, setCargandoBancos] = useState(false);
+  const [bancoSeleccionadoPago, setBancoSeleccionadoPago] = useState<string>("");
+  
   // Estado para el ticket de factura
   const [ticketData, setTicketData] = useState<{
     numeroFactura: string;
@@ -174,10 +191,33 @@ const PuntoVentaPage: React.FC = () => {
     return null;
   };
 
+  // Cargar bancos
+  const fetchBancos = async () => {
+    setCargandoBancos(true);
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/bancos`);
+      if (res.ok) {
+        const data = await res.json();
+        setBancos(data.bancos || data || []);
+      } else {
+        console.error("Error al obtener bancos");
+        setBancos([]);
+      }
+    } catch (error) {
+      console.error("Error al obtener bancos:", error);
+      setBancos([]);
+    } finally {
+      setCargandoBancos(false);
+    }
+  };
+
   // Cargar sucursales y tasa del día
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Cargar bancos
+        await fetchBancos();
+        
         // Cargar sucursales (farmacias) usando fetchWithAuth
         const resSucursales = await fetchWithAuth(`${API_BASE_URL}/farmacias`);
         if (resSucursales.ok) {
@@ -600,11 +640,18 @@ const PuntoVentaPage: React.FC = () => {
       montoVueltoUSD = montoEnUSD;
     }
 
+    // Validar banco si el tipo es "banco"
+    if (metodoVuelto.tipo === "banco" && !bancoSeleccionadoVuelto) {
+      alert("Seleccione un banco para el vuelto");
+      return;
+    }
+
     // Agregar un método de pago negativo para representar el vuelto dado
     const vueltoNegativo: MetodoPago = {
       tipo: metodoVuelto.tipo as any,
       monto: metodoVuelto.divisa === "USD" ? -montoVueltoUSD : -montoVueltoBs,
       divisa: metodoVuelto.divisa as "Bs" | "USD",
+      banco_id: metodoVuelto.tipo === "banco" ? bancoSeleccionadoVuelto : undefined,
     };
 
     // Actualizar el estado con el nuevo método de pago
@@ -955,19 +1002,39 @@ const PuntoVentaPage: React.FC = () => {
         );
       }
       
+      // Separar métodos de pago y vuelto
+      const metodosPagoPositivos = metodosPago.filter((metodo) => metodo.monto > 0);
+      const metodosVuelto = metodosPago.filter((metodo) => metodo.monto < 0);
+      
       // Formatear métodos de pago según el backend
-      // Filtrar métodos de pago negativos (vuelto) y solo enviar los positivos
-      const metodosPagoFormateados = metodosPago
-        .filter((metodo) => metodo.monto > 0) // Solo métodos de pago positivos
-        .map((metodo) => {
-          return {
-            tipo: metodo.tipo,
-            monto: metodo.monto,
-            divisa: metodo.divisa, // ✅ CRÍTICO: Especificar divisa
-          };
-        });
+      const metodosPagoFormateados = metodosPagoPositivos.map((metodo) => {
+        const metodoFormateado: any = {
+          tipo: metodo.tipo,
+          monto: metodo.monto,
+          divisa: metodo.divisa, // ✅ CRÍTICO: Especificar divisa
+        };
+        // Si tiene banco_id, incluirlo
+        if (metodo.banco_id) {
+          metodoFormateado.banco_id = metodo.banco_id;
+        }
+        return metodoFormateado;
+      });
+      
+      // Formatear vuelto
+      const vueltoFormateado = metodosVuelto.map((metodo) => {
+        const vueltoItem: any = {
+          tipo: metodo.tipo,
+          monto: Math.abs(metodo.monto), // Convertir a positivo
+          divisa: metodo.divisa,
+        };
+        // Si tiene banco_id, incluirlo
+        if (metodo.banco_id) {
+          vueltoItem.banco_id = metodo.banco_id;
+        }
+        return vueltoItem;
+      });
 
-      const ventaData = {
+      const ventaData: any = {
         items,
         metodos_pago: metodosPagoFormateados,
         total_bs: totalBs,
@@ -979,6 +1046,11 @@ const PuntoVentaPage: React.FC = () => {
         porcentaje_descuento: clienteSeleccionado?.porcentaje_descuento || 0,
         notas: "",
       };
+      
+      // Agregar vuelto si existe
+      if (vueltoFormateado.length > 0) {
+        ventaData.vuelto = vueltoFormateado;
+      }
 
       const res = await fetchWithAuth(`${API_BASE_URL}/punto-venta/ventas`, {
         method: "POST",
@@ -1877,6 +1949,33 @@ const PuntoVentaPage: React.FC = () => {
               </div>
             </div>
 
+            {metodoPagoActual.tipo === "banco" && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Seleccionar Banco *</label>
+                <select
+                  value={bancoSeleccionadoPago}
+                  onChange={(e) => {
+                    setBancoSeleccionadoPago(e.target.value);
+                    // Actualizar divisa según el banco seleccionado
+                    const banco = bancos.find(b => (b._id || b.id) === e.target.value);
+                    if (banco) {
+                      setMetodoPagoActual({ ...metodoPagoActual, divisa: banco.divisa });
+                    }
+                  }}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="">Seleccione un banco</option>
+                  {bancos
+                    .filter(b => b.divisa === metodoPagoActual.divisa)
+                    .map((banco) => (
+                      <option key={banco._id || banco.id} value={banco._id || banco.id}>
+                        {banco.nombre_banco} - {banco.numero_cuenta} (Saldo: {banco.divisa === "USD" ? "$" : ""}{banco.saldo.toFixed(2)}{banco.divisa === "Bs" ? " Bs" : ""})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium mb-1">Monto</label>
               <Input
@@ -1904,6 +2003,7 @@ const PuntoVentaPage: React.FC = () => {
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {metodosPago.map((metodo, index) => {
                     const esVuelto = metodo.monto < 0;
+                    const banco = metodo.banco_id ? bancos.find(b => (b._id || b.id) === metodo.banco_id) : null;
                     return (
                       <div 
                         key={index} 
@@ -1913,8 +2013,13 @@ const PuntoVentaPage: React.FC = () => {
                       >
                         <span className={esVuelto ? 'text-yellow-800 font-semibold' : ''}>
                           {esVuelto ? '🔄 ' : ''}
-                          {metodo.tipo} ({metodo.divisa}): {esVuelto ? '' : ''}
-                          {Math.abs(metodo.monto).toFixed(2)} {metodo.divisa}
+                          {banco ? `${banco.nombre_banco} (${metodo.divisa})` : `${metodo.tipo.toUpperCase()} (${metodo.divisa})`}:{" "}
+                          {metodo.divisa === "USD" ? "$" : ""}
+                          {Math.abs(metodo.monto).toLocaleString("es-VE", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}{" "}
+                          {metodo.divisa === "Bs" ? "Bs" : ""}
                           {esVuelto ? ' (Vuelto dado)' : ''}
                         </span>
                         <Button
@@ -2002,10 +2107,14 @@ const PuntoVentaPage: React.FC = () => {
                             <label className="block text-xs font-medium mb-1 text-yellow-800">Método</label>
                             <select
                               value={metodoVuelto.tipo}
-                              onChange={(e) => setMetodoVuelto({ ...metodoVuelto, tipo: e.target.value })}
+                              onChange={(e) => {
+                                setMetodoVuelto({ ...metodoVuelto, tipo: e.target.value });
+                                setBancoSeleccionadoVuelto(""); // Limpiar banco al cambiar tipo
+                              }}
                               className="w-full border rounded px-2 py-1 text-sm"
                             >
                               <option value="efectivo">Efectivo</option>
+                              <option value="banco">Banco</option>
                               <option value="tarjeta">Tarjeta</option>
                               <option value="transferencia">Transferencia</option>
                               <option value="zelle">Zelle</option>
