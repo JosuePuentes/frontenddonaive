@@ -210,6 +210,36 @@ const PuntoVentaPage: React.FC = () => {
     }
   }, [productoConStockAbierto]);
 
+  // Búsqueda de clientes en tiempo real con debounce
+  useEffect(() => {
+    if (busquedaCliente.length >= 2) {
+      const timeoutId = setTimeout(async () => {
+        try {
+          const token = localStorage.getItem("token");
+          const headers: HeadersInit = {};
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+          const res = await fetch(
+            `${API_BASE_URL}/clientes/buscar?q=${encodeURIComponent(busquedaCliente)}`,
+            { headers }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setClientesEncontrados(Array.isArray(data) ? data : []);
+          }
+        } catch (error) {
+          console.error("Error al buscar clientes:", error);
+          setClientesEncontrados([]);
+        }
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      setClientesEncontrados([]);
+    }
+  }, [busquedaCliente]);
+
   // Cargar cajeros cuando se selecciona una sucursal
   useEffect(() => {
     if (sucursalSeleccionada && !showSucursalModal) {
@@ -427,6 +457,68 @@ const PuntoVentaPage: React.FC = () => {
     }
   };
 
+  const handleCrearCliente = async () => {
+    if (!cedulaCliente.trim() || !nombreCliente.trim()) {
+      alert("La cédula y el nombre son requeridos");
+      return;
+    }
+
+    setCreandoCliente(true);
+    try {
+      const token = localStorage.getItem("token");
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const clienteData = {
+        cedula: cedulaCliente.trim(),
+        nombre: nombreCliente.trim(),
+        direccion: direccionCliente.trim() || undefined,
+        telefono: telefonoCliente.trim() || undefined,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/clientes`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(clienteData),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ detail: "Error al crear cliente" }));
+        throw new Error(errorData.detail || "Error al crear cliente");
+      }
+
+      const nuevoCliente = await res.json();
+      setClienteSeleccionado(nuevoCliente);
+      setShowClienteModal(false);
+      setCedulaCliente("");
+      setNombreCliente("");
+      setDireccionCliente("");
+      setTelefonoCliente("");
+      alert("Cliente creado exitosamente");
+    } catch (error: any) {
+      console.error("Error al crear cliente:", error);
+      alert(error.message || "Error al crear cliente. Por favor, intente nuevamente.");
+    } finally {
+      setCreandoCliente(false);
+    }
+  };
+
+  const handleSeleccionarCliente = (cliente: Cliente) => {
+    setClienteSeleccionado(cliente);
+    setBusquedaCliente("");
+    setClientesEncontrados([]);
+  };
+
+  const handleLimpiarCliente = () => {
+    setClienteSeleccionado(null);
+    setBusquedaCliente("");
+    setClientesEncontrados([]);
+  };
+
   const handleConfirmarVenta = async () => {
     if (!puedeConfirmar()) {
       alert("El monto pagado debe ser igual o mayor al total");
@@ -478,7 +570,7 @@ const PuntoVentaPage: React.FC = () => {
         tasa_dia: tasaDelDia,
         sucursal: sucursalSeleccionada.id,
         cajero: usuario?.correo || cajeroSeleccionado.NOMBRE,
-        cliente: "",
+        cliente: clienteSeleccionado?._id || clienteSeleccionado?.id || "",
         notas: "",
       };
 
@@ -656,6 +748,62 @@ const PuntoVentaPage: React.FC = () => {
                 Actualizar
               </Button>
             </div>
+          </div>
+        </div>
+        
+        {/* Sección de Cliente - Parte superior central */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="flex items-center gap-4 justify-center">
+            <Button
+              onClick={() => setShowClienteModal(true)}
+              className="flex items-center gap-2"
+            >
+              <span>+</span> Crear Cliente
+            </Button>
+            
+            <div className="flex-1 max-w-md relative">
+              <Input
+                type="text"
+                placeholder="Buscar cliente por cédula o nombre..."
+                value={busquedaCliente}
+                onChange={(e) => setBusquedaCliente(e.target.value)}
+                className="w-full"
+              />
+              {clientesEncontrados.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {clientesEncontrados.map((cliente) => (
+                    <button
+                      key={cliente._id || cliente.id}
+                      onClick={() => handleSeleccionarCliente(cliente)}
+                      className="w-full text-left p-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="font-semibold">{cliente.nombre}</div>
+                      <div className="text-sm text-gray-600">
+                        Cédula: {cliente.cedula}
+                        {cliente.telefono && ` | Tel: ${cliente.telefono}`}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {clienteSeleccionado && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                <div>
+                  <div className="text-sm font-semibold text-blue-900">{clienteSeleccionado.nombre}</div>
+                  <div className="text-xs text-blue-700">Cédula: {clienteSeleccionado.cedula}</div>
+                </div>
+                <Button
+                  onClick={handleLimpiarCliente}
+                  variant="outline"
+                  size="sm"
+                  className="ml-2"
+                >
+                  ×
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
