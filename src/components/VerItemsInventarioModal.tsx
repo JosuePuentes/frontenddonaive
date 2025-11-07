@@ -136,7 +136,7 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
         
         if (item.lotes && item.lotes.length > 0) {
           // Si tiene lotes, crear una fila por cada lote
-          item.lotes.forEach((lote, loteIndex) => {
+          item.lotes.forEach((lote) => {
             filasExcel.push([
               item.codigo || "",
               item.descripcion || "",
@@ -358,7 +358,7 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                   
                   // Si tiene lotes, crear una fila por cada lote
                   if (item.lotes && item.lotes.length > 0) {
-                    return item.lotes.map((lote, loteIndex) => {
+                    return item.lotes.map((lote) => {
                       const fechaVenc = lote.fecha_vencimiento 
                         ? new Date(lote.fecha_vencimiento).toLocaleDateString('es-VE')
                         : "-";
