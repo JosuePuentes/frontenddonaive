@@ -375,12 +375,12 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                           <td>${item.codigo || "-"}</td>
                           <td>${item.descripcion || "-"}</td>
                           <td>${item.marca || "-"}</td>
-                          <td class="text-right">${Number(costo).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
-                          <td class="text-right">${Number(precio).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                          <td class="text-right">$${Number(costo).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td class="text-right">$${Number(precio).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           <td class="text-right">${Number(cantidad).toLocaleString('es-VE')}</td>
                           <td>${lote.lote || "-"}${lote.cantidad ? ` (${lote.cantidad})` : ""}</td>
                           <td style="${colorFecha}">${fechaVenc}</td>
-                          <td class="text-right">${utilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</td>
+                          <td class="text-right">$${utilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           <td class="text-right">${porcentajeGanancia.toFixed(2)}%</td>
                         </tr>
                       `;
@@ -405,12 +405,12 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                 }).join('')}
                 <tr class="totals-row">
                   <td colspan="3"><strong>TOTALES</strong></td>
-                  <td class="text-right"><strong>${totalCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</strong></td>
-                  <td class="text-right"><strong>${totalPrecio.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</strong></td>
+                  <td class="text-right"><strong>$${totalCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                  <td class="text-right"><strong>$${totalPrecio.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                   <td class="text-right"><strong>${totalExistencia.toLocaleString('es-VE')}</strong></td>
                   <td></td>
                   <td></td>
-                  <td class="text-right"><strong>${totalUtilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs</strong></td>
+                  <td class="text-right"><strong>$${totalUtilidad.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                   <td></td>
                 </tr>
               </tbody>
@@ -546,16 +546,16 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                         <td className="px-4 py-3 text-slate-700">{item.descripcion || "-"}</td>
                         <td className="px-4 py-3 text-slate-600">{item.marca || "-"}</td>
                         <td className="px-4 py-3 text-right text-slate-700">
-                          {costo.toLocaleString("es-VE", {
+                          ${costo.toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
-                          })} Bs
+                          })}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                          {precio.toLocaleString("es-VE", {
+                          ${precio.toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
-                          })} Bs
+                          })}
                         </td>
                         <td className="px-4 py-3 text-right text-slate-700">{cantidad}</td>
                         <td className="px-4 py-3 text-slate-700">
@@ -607,10 +607,10 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-green-600 font-medium">
-                          {utilidad.toLocaleString("es-VE", {
+                          ${utilidad.toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
-                          })} Bs
+                          })}
                         </td>
                         <td className="px-4 py-3 text-right text-blue-600 font-medium">
                           {porcentajeGanancia.toFixed(2)}%
@@ -625,24 +625,24 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                       Totales
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                      {items.reduce((sum, item) => {
+                      ${items.reduce((sum, item) => {
                         const costo = item.costo_unitario || item.costo || 0;
                         const cantidad = item.cantidad || item.existencia || 0;
                         return sum + (Number(costo) * Number(cantidad));
                       }, 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
-                      })} Bs
+                      })}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                      {items.reduce((sum, item) => {
+                      ${items.reduce((sum, item) => {
                         const precio = item.precio_unitario || item.precio || 0;
                         const cantidad = item.cantidad || item.existencia || 0;
                         return sum + (Number(precio) * Number(cantidad));
                       }, 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
-                      })} Bs
+                      })}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
                       {items.reduce((sum, item) => {
@@ -651,7 +651,7 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                       }, 0)}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-green-600">
-                      {items.reduce((sum, item) => {
+                      ${items.reduce((sum, item) => {
                         const costo = item.costo_unitario || item.costo || 0;
                         const precio = item.precio_unitario || item.precio || 0;
                         const cantidad = item.cantidad || item.existencia || 0;
@@ -660,7 +660,7 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                       }, 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
-                      })} Bs
+                      })}
                     </td>
                     <td colSpan={2}></td>
                     <td></td>
