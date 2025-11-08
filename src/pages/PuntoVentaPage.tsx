@@ -1444,6 +1444,9 @@ const PuntoVentaPage: React.FC = () => {
           >
             <DialogHeader>
               <DialogTitle>Seleccionar Sucursal</DialogTitle>
+              <DialogDescription>
+                Seleccione la sucursal donde realizará las ventas
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {sucursales.map((sucursal) => (
@@ -1459,36 +1462,27 @@ const PuntoVentaPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de Fondo de Caja - SIEMPRE renderizado */}
+        {/* Modal de Fondo de Caja - Renderizado cuando hay cajero pero no fondo */}
         <Dialog 
           open={showFondoModal}
           onOpenChange={(open) => {
-            console.log("onOpenChange del modal de fondo llamado con open =", open, "showFondoModal actual:", showFondoModal);
-            // Solo validar cuando se intenta cerrar (open = false)
+            // No permitir cerrar el modal sin configurar el fondo
             if (!open) {
-              // Verificar si hay fondo de caja configurado
               const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
-              // Verificar si hay valores ingresados en los campos
               const tieneValoresIngresados = (fondoEfectivoBs && parseFloat(fondoEfectivoBs) > 0) || 
                                             (fondoEfectivoUsd && parseFloat(fondoEfectivoUsd) > 0);
               
-              console.log("Intentando cerrar modal - tieneFondo:", tieneFondo, "tieneValoresIngresados:", tieneValoresIngresados);
-              
               if (!tieneFondo && !tieneValoresIngresados) {
                 alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
-                // No permitir cerrar - forzar que se mantenga abierto
                 setShowFondoModal(true);
                 return;
               }
             }
-            // Permitir abrir/cerrar normalmente
-            console.log("Permitiendo cambio de estado del modal a:", open);
             setShowFondoModal(open);
           }}
         >
           <DialogContent
             onInteractOutside={(e) => {
-              // Prevenir cerrar haciendo click fuera del modal
               const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
               const tieneValoresIngresados = (fondoEfectivoBs && parseFloat(fondoEfectivoBs) > 0) || 
                                             (fondoEfectivoUsd && parseFloat(fondoEfectivoUsd) > 0);
@@ -1499,7 +1493,6 @@ const PuntoVentaPage: React.FC = () => {
               }
             }}
             onEscapeKeyDown={(e) => {
-              // Prevenir cerrar con ESC
               const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
               const tieneValoresIngresados = (fondoEfectivoBs && parseFloat(fondoEfectivoBs) > 0) || 
                                             (fondoEfectivoUsd && parseFloat(fondoEfectivoUsd) > 0);
@@ -1509,9 +1502,8 @@ const PuntoVentaPage: React.FC = () => {
                 alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
               }
             }}
-            className="max-w-md z-[9999] !fixed"
+            className="max-w-md z-[9999]"
             showCloseButton={false}
-            style={{ zIndex: 9999 }}
           >
             <DialogHeader>
               <DialogTitle>Fondo de Caja - Requerido</DialogTitle>
@@ -1657,6 +1649,124 @@ const PuntoVentaPage: React.FC = () => {
               >
                 Volver
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  // Si hay sucursal y cajero pero NO hay fondo, bloquear el acceso al POS
+  if (!fondoCaja || (fondoCaja.efectivoBs === 0 && fondoCaja.efectivoUsd === 0)) {
+    return (
+      <>
+        {/* Modal de Fondo de Caja - Bloquea el acceso hasta que se configure */}
+        <Dialog 
+          open={true}
+          onOpenChange={(open) => {
+            // No permitir cerrar el modal sin configurar el fondo
+            if (!open) {
+              const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+              const tieneValoresIngresados = (fondoEfectivoBs && parseFloat(fondoEfectivoBs) > 0) || 
+                                            (fondoEfectivoUsd && parseFloat(fondoEfectivoUsd) > 0);
+              
+              if (!tieneFondo && !tieneValoresIngresados) {
+                alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
+                return;
+              }
+            }
+            setShowFondoModal(open);
+          }}
+        >
+          <DialogContent
+            onInteractOutside={(e) => {
+              e.preventDefault();
+              alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
+            }}
+            onEscapeKeyDown={(e) => {
+              e.preventDefault();
+              alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
+            }}
+            className="max-w-md z-[9999]"
+            showCloseButton={false}
+          >
+            <DialogHeader>
+              <DialogTitle>Fondo de Caja - Requerido</DialogTitle>
+              <DialogDescription>
+                Debe ingresar el fondo de caja antes de continuar
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Efectivo en Bs *</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fondoEfectivoBs}
+                  onChange={(e) => setFondoEfectivoBs(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Método de Pago para Bs</label>
+                <select
+                  value={fondoBancoBs}
+                  onChange={(e) => setFondoBancoBs(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="">Seleccione un banco (opcional)</option>
+                  {bancos
+                    .filter(b => b.divisa === "BS")
+                    .map((banco) => (
+                      <option key={banco._id || banco.id} value={banco._id || banco.id}>
+                        {getNombreMetodo(banco.tipo_metodo)} - {banco.nombre_banco}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Efectivo en USD *</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fondoEfectivoUsd}
+                  onChange={(e) => setFondoEfectivoUsd(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Método de Pago para USD</label>
+                <select
+                  value={fondoBancoUsd}
+                  onChange={(e) => setFondoBancoUsd(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="">Seleccione un banco (opcional)</option>
+                  {bancos
+                    .filter(b => b.divisa === "USD")
+                    .map((banco) => (
+                      <option key={banco._id || banco.id} value={banco._id || banco.id}>
+                        {getNombreMetodo(banco.tipo_metodo)} - {banco.nombre_banco}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Importante:</strong> Debe ingresar al menos un monto de fondo (Bs o USD) para continuar.
+                </p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button 
+                  onClick={handleConfirmarFondo} 
+                  className="flex-1"
+                  disabled={!fondoEfectivoBs && !fondoEfectivoUsd}
+                >
+                  Confirmar
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

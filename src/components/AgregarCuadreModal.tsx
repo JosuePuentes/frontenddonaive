@@ -339,7 +339,7 @@ const AgregarCuadreModal: React.FC<Props> = ({
             </div>
           )}
           
-          {/* Sección de Fondo de Caja - Editable si viene desde punto de venta */}
+          {/* Sección de Fondo de Caja - Solo lectura cuando viene desde punto de venta (al cerrar caja) */}
           {deshabilitarCajero && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <h3 className="text-sm font-bold text-blue-800 mb-3">Fondo de Caja</h3>
@@ -352,13 +352,8 @@ const AgregarCuadreModal: React.FC<Props> = ({
                     type="number"
                     step="any"
                     value={fondoCajaLocal?.efectivoBs || 0}
-                    onChange={(e) => {
-                      setFondoCajaLocal({
-                        ...(fondoCajaLocal || { efectivoBs: 0, efectivoUsd: 0 }),
-                        efectivoBs: parseFloat(e.target.value) || 0,
-                      });
-                    }}
-                    className="w-full border rounded-lg p-2"
+                    readOnly
+                    className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700 cursor-not-allowed"
                     placeholder="0.00"
                   />
                 </div>
@@ -370,19 +365,14 @@ const AgregarCuadreModal: React.FC<Props> = ({
                     type="number"
                     step="any"
                     value={fondoCajaLocal?.efectivoUsd || 0}
-                    onChange={(e) => {
-                      setFondoCajaLocal({
-                        ...(fondoCajaLocal || { efectivoBs: 0, efectivoUsd: 0 }),
-                        efectivoUsd: parseFloat(e.target.value) || 0,
-                      });
-                    }}
-                    className="w-full border rounded-lg p-2"
+                    readOnly
+                    className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700 cursor-not-allowed"
                     placeholder="0.00"
                   />
                 </div>
               </div>
               <p className="text-xs text-blue-600 mt-2">
-                El fondo se restará del total para no afectar las ventas. Puede editarlo antes de confirmar el cuadre.
+                El fondo se restará del total para no afectar las ventas. El fondo no se puede modificar al cerrar caja.
               </p>
             </div>
           )}
