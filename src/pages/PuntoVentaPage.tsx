@@ -1920,70 +1920,35 @@ const PuntoVentaPage: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Método de Pago</label>
-                <select
-                  value={metodoPagoActual.tipo}
-                  onChange={(e) =>
-                    setMetodoPagoActual({ ...metodoPagoActual, tipo: e.target.value })
+            <div>
+              <label className="block text-sm font-medium mb-1">Seleccionar Banco *</label>
+              <select
+                value={bancoSeleccionadoPago}
+                onChange={(e) => {
+                  setBancoSeleccionadoPago(e.target.value);
+                  // Actualizar tipo y divisa según el banco seleccionado
+                  const banco = bancos.find(b => (b._id || b.id) === e.target.value);
+                  if (banco) {
+                    // Convertir "BS" del backend a "Bs" para el método de pago (compatibilidad)
+                    const divisaParaMetodo = banco.divisa === "BS" ? "Bs" : banco.divisa;
+                    setMetodoPagoActual({ 
+                      tipo: "banco", 
+                      divisa: divisaParaMetodo as "Bs" | "USD" 
+                    });
+                  } else {
+                    setMetodoPagoActual({ tipo: "banco", divisa: "USD" });
                   }
-                  className="w-full border rounded px-3 py-2"
-                >
-                  <option value="efectivo">Efectivo</option>
-                  <option value="tarjeta">Tarjeta</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="zelle">Zelle</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Divisa</label>
-                <select
-                  value={metodoPagoActual.divisa}
-                  onChange={(e) =>
-                    setMetodoPagoActual({ ...metodoPagoActual, divisa: e.target.value })
-                  }
-                  className="w-full border rounded px-3 py-2"
-                >
-                  <option value="USD">USD</option>
-                  <option value="Bs">Bs</option>
-                </select>
-              </div>
+                }}
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value="">Seleccione un banco</option>
+                {bancos.map((banco) => (
+                  <option key={banco._id || banco.id} value={banco._id || banco.id}>
+                    {banco.nombre_banco} ({banco.divisa === "USD" ? "$" : "Bs"})
+                  </option>
+                ))}
+              </select>
             </div>
-
-            {metodoPagoActual.tipo === "banco" && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Seleccionar Banco *</label>
-                <select
-                  value={bancoSeleccionadoPago}
-                  onChange={(e) => {
-                    setBancoSeleccionadoPago(e.target.value);
-                    // Actualizar divisa según el banco seleccionado
-                    const banco = bancos.find(b => (b._id || b.id) === e.target.value);
-                    if (banco) {
-                      // Convertir "BS" del backend a "Bs" para el método de pago (compatibilidad)
-                      const divisaParaMetodo = banco.divisa === "BS" ? "Bs" : banco.divisa;
-                      setMetodoPagoActual({ ...metodoPagoActual, divisa: divisaParaMetodo as "Bs" | "USD" });
-                    }
-                  }}
-                  className="w-full border rounded px-3 py-2"
-                >
-                  <option value="">Seleccione un banco</option>
-                  {bancos
-                    .filter(b => {
-                      // Normalizar divisa para comparar (backend usa "BS", frontend puede usar "Bs")
-                      const bancoDivisa = b.divisa?.toUpperCase() || "USD";
-                      const metodoDivisa = metodoPagoActual.divisa?.toUpperCase() || "USD";
-                      return bancoDivisa === metodoDivisa;
-                    })
-                    .map((banco) => (
-                      <option key={banco._id || banco.id} value={banco._id || banco.id}>
-                        {banco.nombre_banco} - {banco.numero_cuenta} (Saldo: {banco.divisa === "USD" ? "$" : ""}{banco.saldo.toFixed(2)}{banco.divisa === "BS" ? " Bs" : ""})
-                      </option>
-                    ))}
-                </select>
-              </div>
-            )}
 
             <div>
               <label className="block text-sm font-medium mb-1">Monto</label>
