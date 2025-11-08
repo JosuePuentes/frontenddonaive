@@ -411,11 +411,14 @@ const PuntoVentaPage: React.FC = () => {
   const handleSeleccionarCajero = (cajero: Cajero) => {
     setCajeroSeleccionado(cajero);
     setShowCajeroModal(false);
-    // Abrir modal de fondo después de seleccionar cajero
-    // Pequeño delay para asegurar que el modal de cajero se cierre primero
-    setTimeout(() => {
-      setShowFondoModal(true);
-    }, 100);
+    // Abrir modal de fondo después de seleccionar cajero SOLO si no hay fondo configurado
+    const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+    if (!tieneFondo) {
+      // Pequeño delay para asegurar que el modal de cajero se cierre primero
+      setTimeout(() => {
+        setShowFondoModal(true);
+      }, 200);
+    }
   };
   
   // Estados para el modal de fondo
@@ -430,9 +433,17 @@ const PuntoVentaPage: React.FC = () => {
       return;
     }
     
+    const fondoBs = parseFloat(fondoEfectivoBs) || 0;
+    const fondoUsd = parseFloat(fondoEfectivoUsd) || 0;
+    
+    if (fondoBs <= 0 && fondoUsd <= 0) {
+      alert("Debe ingresar al menos un monto de fondo (Bs o USD) mayor a 0");
+      return;
+    }
+    
     setFondoCaja({
-      efectivoBs: parseFloat(fondoEfectivoBs) || 0,
-      efectivoUsd: parseFloat(fondoEfectivoUsd) || 0,
+      efectivoBs: fondoBs,
+      efectivoUsd: fondoUsd,
       metodoPagoBs: fondoBancoBs || undefined,
       metodoPagoUsd: fondoBancoUsd || undefined,
     });
@@ -448,6 +459,9 @@ const PuntoVentaPage: React.FC = () => {
     setFondoEfectivoUsd("");
     setFondoBancoBs("");
     setFondoBancoUsd("");
+    // Cerrar cualquier modal abierto
+    setShowFondoModal(false);
+    setShowCajeroModal(false);
     // Limpiar carrito y otros estados
     setCarrito([]);
     setClienteSeleccionado(null);
@@ -1313,6 +1327,7 @@ const PuntoVentaPage: React.FC = () => {
         </Dialog>
 
         {/* Modal de Fondo de Caja */}
+        {showFondoModal && (
         <Dialog 
           open={showFondoModal} 
           onOpenChange={(open) => {
@@ -1437,6 +1452,7 @@ const PuntoVentaPage: React.FC = () => {
             </div>
           </DialogContent>
         </Dialog>
+        )}
 
         {/* Modal de selección de cajero */}
         <Dialog 
