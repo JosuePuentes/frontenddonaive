@@ -2831,6 +2831,7 @@ const PuntoVentaPage: React.FC = () => {
           costoInventarioPrellenado={costoInventarioTotal}
           deshabilitarCajero={true}
           fondoCaja={fondoCaja}
+          facturasProcesadas={facturasProcesadas}
           onCerrarCajaCompleto={handleCerrarCajaFinal}
         />
       )}

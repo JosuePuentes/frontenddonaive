@@ -18,6 +18,7 @@ interface Props {
     metodoPagoBs?: string;
     metodoPagoUsd?: string;
   } | null;
+  facturasProcesadas?: any[]; // Facturas para calcular totales
   onCerrarCajaCompleto?: () => void;
 }
 
@@ -40,6 +41,7 @@ const AgregarCuadreModal: React.FC<Props> = ({
   costoInventarioPrellenado,
   deshabilitarCajero = false,
   fondoCaja,
+  facturasProcesadas = [],
   onCerrarCajaCompleto
 }) => {
   // Estados para los campos del cuadre
@@ -47,29 +49,124 @@ const AgregarCuadreModal: React.FC<Props> = ({
   const [turno, setTurno] = useState<string>("Mañana");
   const [cajero, setCajero] = useState<string>(cajeroPrellenado || "");
   const [tasa, setTasa] = useState<number | undefined>(tasaPrellenada);
-
-  const [totalCajaSistemaBs, setTotalCajaSistemaBs] = useState<
-    number | undefined
-  >(totalCajaSistemaUsd && tasaPrellenada ? totalCajaSistemaUsd * tasaPrellenada : undefined);
   
-  // Actualizar totalCajaSistemaBs cuando cambie totalCajaSistemaUsd o tasa
-  useEffect(() => {
-    if (totalCajaSistemaUsd && tasaPrellenada) {
-      setTotalCajaSistemaBs(totalCajaSistemaUsd * tasaPrellenada);
+  // Calcular totales desde facturas procesadas
+  const calcularTotalesDesdeFacturas = () => {
+    if (!facturasProcesadas || facturasProcesadas.length === 0) {
+      return {
+        totalCajaSistemaUsd: totalCajaSistemaUsd || 0,
+        devolucionesBs: 0,
+        recargaBs: 0,
+        pagomovilBs: 0,
+        costoInventario: costoInventarioPrellenado || 0,
+        efectivoBs: 0,
+        efectivoUsd: 0,
+        zelleUsd: 0,
+        valesUsd: 0,
+        tarjetaDebitoBs: 0,
+        tarjetaCreditoBs: 0,
+      };
     }
-  }, [totalCajaSistemaUsd, tasaPrellenada]);
-  const [devolucionesBs, setDevolucionesBs] = useState<number | undefined>();
-  const [recargaBs, setRecargaBs] = useState<number | undefined>();
-  const [pagomovilBs, setPagomovilBs] = useState<number | undefined>();
-  const [efectivoBs, setEfectivoBs] = useState<number | undefined>();
+    
+    let totalCajaUsd = 0;
+    let devolucionesBs = 0;
+    let recargaBs = 0;
+    let pagomovilBs = 0;
+    let costoInventario = 0;
+    let efectivoBs = 0;
+    let efectivoUsd = 0;
+    let zelleUsd = 0;
+    let valesUsd = 0;
+    let tarjetaDebitoBs = 0;
+    let tarjetaCreditoBs = 0;
+    
+    facturasProcesadas.forEach((factura: any) => {
+      // Total Caja Sistema USD
+      totalCajaUsd += factura.total_usd || 0;
+      
+      // Devoluciones (si existe el campo)
+      devolucionesBs += factura.devoluciones_bs || 0;
+      
+      // Items: Recarga y Costo Inventario
+      if (factura.items && Array.isArray(factura.items)) {
+        factura.items.forEach((item: any) => {
+          // Recarga: buscar items con nombre que contenga "recarga"
+          if (item.nombre && item.nombre.toLowerCase().includes("recarga")) {
+            recargaBs += (item.subtotal || 0);
+          }
+          
+          // Costo Inventario: sumar costos de todos los items
+          const costoItem = item.costo_unitario || item.precio_unitario_original_usd || 0;
+          costoInventario += costoItem * (item.cantidad || 0);
+        });
+      }
+      
+      // Métodos de pago
+      if (factura.metodos_pago && Array.isArray(factura.metodos_pago)) {
+        factura.metodos_pago.forEach((metodo: any) => {
+          const monto = metodo.monto || 0;
+          const tipo = metodo.tipo || "";
+          const divisa = metodo.divisa || "";
+          
+          if (tipo === "pago_movil" && divisa === "Bs") {
+            pagomovilBs += monto;
+          } else if (tipo === "efectivo" && divisa === "Bs") {
+            efectivoBs += monto;
+          } else if (tipo === "efectivo" && divisa === "USD") {
+            efectivoUsd += monto;
+          } else if (tipo === "zelle" && divisa === "USD") {
+            zelleUsd += monto;
+          } else if (tipo === "vales" && divisa === "USD") {
+            valesUsd += monto;
+          } else if (tipo === "tarjeta_debit" && divisa === "Bs") {
+            tarjetaDebitoBs += monto;
+          } else if (tipo === "tarjeta_credito" && divisa === "Bs") {
+            tarjetaCreditoBs += monto;
+          }
+        });
+      }
+    });
+    
+    return {
+      totalCajaSistemaUsd: totalCajaUsd,
+      devolucionesBs,
+      recargaBs,
+      pagomovilBs,
+      costoInventario: costoInventario || costoInventarioPrellenado || 0,
+      efectivoBs,
+      efectivoUsd,
+      zelleUsd,
+      valesUsd,
+      tarjetaDebitoBs,
+      tarjetaCreditoBs,
+    };
+  };
+  
+  const totalesFacturas = calcularTotalesDesdeFacturas();
 
-  const [efectivoUsd, setEfectivoUsd] = useState<number | undefined>();
-  const [zelleUsd, setZelleUsd] = useState<number | undefined>();
-
-  const [valesUsd, setValesUsd] = useState<number | undefined>(undefined); // Inicialmente vacío
+  // Estados inicializados con valores calculados desde facturas (si vienen desde punto de venta)
+  const [devolucionesBs, setDevolucionesBs] = useState<number | undefined>(
+    deshabilitarCajero ? totalesFacturas.devolucionesBs : undefined
+  );
+  const recargaBsCalculado = totalesFacturas.recargaBs;
+  const [recargaBsIngresado, setRecargaBsIngresado] = useState<number | undefined>(undefined);
+  const pagomovilBsCalculado = totalesFacturas.pagomovilBs;
+  const [pagomovilBsIngresado, setPagomovilBsIngresado] = useState<number | undefined>(undefined);
+  const efectivoBsCalculado = totalesFacturas.efectivoBs;
+  const [efectivoBsIngresado, setEfectivoBsIngresado] = useState<number | undefined>(undefined);
+  const efectivoUsdCalculado = totalesFacturas.efectivoUsd;
+  const [efectivoUsdIngresado, setEfectivoUsdIngresado] = useState<number | undefined>(undefined);
+  const zelleUsdCalculado = totalesFacturas.zelleUsd;
+  const zelleUsd = deshabilitarCajero ? totalesFacturas.zelleUsd : undefined;
+  const valesUsdCalculado = totalesFacturas.valesUsd;
+  const valesUsd = deshabilitarCajero ? totalesFacturas.valesUsd : undefined;
   const [costoInventario, setCostoInventario] = useState<number | undefined>(
-    costoInventarioPrellenado
-  ); // Nuevo estado para Costo Inventario
+    totalesFacturas.costoInventario || costoInventarioPrellenado
+  );
+  
+  // Valores calculados para tarjetas (puntos de venta)
+  const tarjetaDebitoBsCalculado = totalesFacturas.tarjetaDebitoBs;
+  const tarjetaCreditoBsCalculado = totalesFacturas.tarjetaCreditoBs;
 
   // Estado local para el fondo de caja (solo lectura cuando viene desde punto de venta)
   const [fondoCajaLocal] = useState<{
@@ -84,14 +181,27 @@ const AgregarCuadreModal: React.FC<Props> = ({
   const [loading, setLoading] = useState<boolean>(false); // Nuevo estado para controlar el loading
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Nuevo estado para puntos de venta
+  // Nuevo estado para puntos de venta (con totales calculados)
   const [puntosVenta, setPuntosVenta] = useState<
     Array<{
       banco: string;
       puntoDebito: number | string | undefined;
+      puntoDebitoIngresado?: number | undefined;
       puntoCredito: number | string | undefined;
+      puntoCreditoIngresado?: number | undefined;
     }>
   >([{ banco: "", puntoDebito: "", puntoCredito: "" }]);
+  
+  // Inicializar puntos de venta con totales calculados si vienen desde punto de venta
+  useEffect(() => {
+    if (deshabilitarCajero && totalesFacturas.tarjetaDebitoBs > 0 || totalesFacturas.tarjetaCreditoBs > 0) {
+      setPuntosVenta([{
+        banco: "",
+        puntoDebito: totalesFacturas.tarjetaDebitoBs,
+        puntoCredito: totalesFacturas.tarjetaCreditoBs,
+      }]);
+    }
+  }, [deshabilitarCajero]);
 
   const [cajeros, setCajeros] = useState<Cajero[]>([]);
   // Para guardar hasta 3 objectNames, inicializado con 3 nulos
@@ -102,32 +212,44 @@ const AgregarCuadreModal: React.FC<Props> = ({
     null,
   ]);
 
-  // Cálculos automáticos
-  // Recarga Bs y Devoluciones Bs son solo visuales, no afectan los totales
-  const totalBsIngresados =
-    (pagomovilBs ?? 0) +
-    puntosVenta.reduce((acc, pv) => acc + Number(pv.puntoDebito || 0), 0) +
-    puntosVenta.reduce((acc, pv) => acc + Number(pv.puntoCredito || 0), 0) +
-    (efectivoBs ?? 0);
-  const totalBsMenosVales = totalBsIngresados; // Ya no se resta devolucionesBs
-  const totalCajaSistemaMenosVales =
-    (totalCajaSistemaBs ?? 0) - (valesUsd ? valesUsd * (tasa ?? 0) : 0);
-  const totalBsEnUsd = (tasa ?? 0) > 0 ? totalBsMenosVales / (tasa ?? 0) : 0;
-  
-  // Restar el fondo de caja del total para que no afecte las ventas
+  // Fondo actual (solo visible, no afecta cálculos)
   const fondoActual = fondoCajaLocal || fondoCaja;
-  const fondoTotalUsd = fondoActual && (tasa ?? 0) > 0
-    ? fondoActual.efectivoUsd + (fondoActual.efectivoBs / (tasa ?? 1))
-    : 0;
-  const totalGeneralUsd = totalBsEnUsd + (efectivoUsd ?? 0) + (zelleUsd ?? 0) - fondoTotalUsd;
   
-  // Cálculo de diferenciaUsd, sobranteUsd y faltanteUsd con 4 decimales para guardar en la base de datos
+  // Cálculos automáticos
+  // Usar valores ingresados si existen, sino usar calculados
+  const recargaBsFinal = recargaBsIngresado ?? recargaBsCalculado;
+  const pagomovilBsFinal = pagomovilBsIngresado ?? pagomovilBsCalculado;
+  const efectivoBsFinal = efectivoBsIngresado ?? efectivoBsCalculado;
+  const efectivoUsdFinal = efectivoUsdIngresado ?? efectivoUsdCalculado;
+  const zelleUsdFinal = zelleUsd ?? zelleUsdCalculado;
+  const valesUsdFinal = valesUsd ?? valesUsdCalculado;
+  
+  // Total Bs: efectivo Bs + tarjetas débito/crédito + pago móvil
+  const totalBsIngresados =
+    efectivoBsFinal +
+    puntosVenta.reduce((acc, pv) => {
+      const debito = pv.puntoDebitoIngresado ?? Number(pv.puntoDebito || tarjetaDebitoBsCalculado);
+      const credito = pv.puntoCreditoIngresado ?? Number(pv.puntoCredito || tarjetaCreditoBsCalculado);
+      return acc + debito + credito;
+    }, 0) +
+    pagomovilBsFinal;
+  
+  // Total Caja Sistema USD (desde facturas)
+  const totalCajaSistemaUsdFinal = totalesFacturas.totalCajaSistemaUsd;
+  
+  // Total Caja - Vales (en USD)
+  const totalCajaMenosValesUsd = totalCajaSistemaUsdFinal - valesUsdFinal;
+  
+  // Total Bs en USD
+  const totalBsEnUsd = (tasa ?? 0) > 0 ? totalBsIngresados / (tasa ?? 0) : 0;
+  
+  // NO restar el fondo de caja (solo visible)
+  // Cálculo de diferenciaUsd, sobranteUsd y faltanteUsd con 4 decimales
+  const totalIngresadoUsd = totalBsEnUsd + efectivoUsdFinal + zelleUsdFinal;
   const diferenciaUsd =
     (tasa ?? 0) > 0
       ? Number(
-          (totalGeneralUsd - totalCajaSistemaMenosVales / (tasa ?? 0)).toFixed(
-            4
-          )
+          (totalIngresadoUsd - totalCajaMenosValesUsd).toFixed(4)
         )
       : 0;
 
@@ -143,13 +265,13 @@ const AgregarCuadreModal: React.FC<Props> = ({
     )
       return "El campo 'Costo Inventario' es obligatorio y debe ser mayor a 0.";
     if (
-      (totalCajaSistemaBs ?? 0) < 0 ||
       (devolucionesBs ?? 0) < 0 ||
-      (recargaBs ?? 0) < 0 ||
-      (pagomovilBs ?? 0) < 0 ||
-      (efectivoBs ?? 0) < 0 ||
-      (efectivoUsd ?? 0) < 0 ||
-      (zelleUsd ?? 0) < 0
+      recargaBsFinal < 0 ||
+      pagomovilBsFinal < 0 ||
+      efectivoBsFinal < 0 ||
+      efectivoUsdFinal < 0 ||
+      zelleUsdFinal < 0 ||
+      valesUsdFinal < 0
     )
       return "Los montos no pueden ser negativos.";
     return "";
@@ -187,6 +309,13 @@ const AgregarCuadreModal: React.FC<Props> = ({
       costoInventarioPrellenado
     );
     
+    // Preparar puntos de venta con valores ingresados o calculados
+    const puntosVentaFormateados = puntosVenta.map((pv) => ({
+      banco: pv.banco,
+      puntoDebito: pv.puntoDebitoIngresado ?? Number(pv.puntoDebito || 0),
+      puntoCredito: pv.puntoCreditoIngresado ?? Number(pv.puntoCredito || 0),
+    }));
+    
     const cuadre = {
       dia,
       cajaNumero,
@@ -194,19 +323,18 @@ const AgregarCuadreModal: React.FC<Props> = ({
       turno,
       cajero,
       cajeroId: cajeros.find((c) => c.NOMBRE === cajero)?.ID || "",
-      totalCajaSistemaBs,
-      devolucionesBs,
-      recargaBs,
-      pagomovilBs,
-      puntosVenta,
-      efectivoBs,
-      valesUsd: valesUsd ?? 0,
-      totalBs: Number(totalBsMenosVales.toFixed(4)),
+      totalCajaSistemaBs: totalCajaSistemaUsdFinal * (tasa ?? 0), // Convertir USD a Bs para compatibilidad
+      devolucionesBs: devolucionesBs ?? 0,
+      recargaBs: recargaBsFinal,
+      pagomovilBs: pagomovilBsFinal,
+      puntosVenta: puntosVentaFormateados,
+      efectivoBs: efectivoBsFinal,
+      valesUsd: valesUsdFinal,
+      totalBs: Number(totalBsIngresados.toFixed(4)),
       totalBsEnUsd: Number(totalBsEnUsd.toFixed(4)),
-      totalCajaSistemaMenosVales: Number(totalCajaSistemaMenosVales.toFixed(4)),
-      efectivoUsd,
-      zelleUsd,
-      totalGeneralUsd: Number(totalGeneralUsd.toFixed(4)),
+      totalCajaSistemaMenosVales: Number(totalCajaMenosValesUsd.toFixed(4)),
+      efectivoUsd: efectivoUsdFinal,
+      zelleUsd: zelleUsdFinal,
       diferenciaUsd,
       sobranteUsd: diferenciaUsd > 0 ? Number(diferenciaUsd.toFixed(4)) : 0,
       faltanteUsd:
@@ -302,13 +430,6 @@ const AgregarCuadreModal: React.FC<Props> = ({
       .catch(() => setCajeros([]));
   }, [farmacia]);
 
-  const handleNumericInput = (
-    value: string,
-    setter: (val: number | undefined) => void
-  ) => {
-    const numericValue = value.replace(/^0+(?!\.)/, ""); // Eliminar ceros iniciales excepto si es un número decimal
-    setter(numericValue === "" ? undefined : Number(numericValue));
-  };
 
   return (
     <div className="fixed inset-0 bg-white bg-opacity-40 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -372,7 +493,7 @@ const AgregarCuadreModal: React.FC<Props> = ({
                 </div>
               </div>
               <p className="text-xs text-blue-600 mt-2">
-                El fondo se restará del total para no afectar las ventas. El fondo no se puede modificar al cerrar caja.
+                El fondo de caja es solo visible y no afecta los cálculos. El fondo no se puede modificar al cerrar caja.
               </p>
             </div>
           )}
@@ -443,11 +564,18 @@ const AgregarCuadreModal: React.FC<Props> = ({
                 step="any"
                 value={tasa}
                 onChange={(e) => setTasa(Number(e.target.value))}
-                className="w-full border rounded-lg p-2"
+                className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
                 required
                 min={0.01}
+                readOnly={deshabilitarCajero}
+                disabled={deshabilitarCajero}
                 onWheel={(e) => e.currentTarget.blur()}
               />
+              {deshabilitarCajero && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Tasa desde punto de venta
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
@@ -492,18 +620,21 @@ const AgregarCuadreModal: React.FC<Props> = ({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Total Caja Sistema Bs
+                Total Caja Sistema $
               </label>
               <input
                 type="number"
                 step="any"
-                value={totalCajaSistemaBs}
-                onChange={(e) => setTotalCajaSistemaBs(Number(e.target.value))}
-                className="w-full border rounded-lg p-2"
+                value={totalCajaSistemaUsdFinal.toFixed(2)}
+                readOnly
+                className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
                 required
                 min={0}
                 onWheel={(e) => e.currentTarget.blur()}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Total en USD de todas las facturas
+              </p>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
@@ -512,43 +643,76 @@ const AgregarCuadreModal: React.FC<Props> = ({
               <input
                 type="number"
                 step="any"
-                value={devolucionesBs}
+                value={devolucionesBs ?? 0}
                 onChange={(e) => setDevolucionesBs(Number(e.target.value))}
                 className="w-full border rounded-lg p-2"
                 required
                 min={0}
                 onWheel={(e) => e.currentTarget.blur()}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Total de devoluciones en Bs
+              </p>
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 Recarga Bs
               </label>
-              <input
-                type="number"
-                step="any"
-                value={recargaBs}
-                onChange={(e) => setRecargaBs(Number(e.target.value))}
-                className="w-full border rounded-lg p-2"
-                required
-                min={0}
-                onWheel={(e) => e.currentTarget.blur()}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={recargaBsCalculado.toFixed(2)}
+                    readOnly
+                    className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Calculado desde facturas</p>
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={recargaBsIngresado ?? ""}
+                    onChange={(e) => setRecargaBsIngresado(e.target.value === "" ? undefined : Number(e.target.value))}
+                    placeholder="Indique monto obtenido"
+                    className="w-full border rounded-lg p-2"
+                    min={0}
+                    onWheel={(e) => e.currentTarget.blur()}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Indique monto obtenido</p>
+                </div>
+              </div>
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 Pago Móvil Bs
               </label>
-              <input
-                type="number"
-                step="any"
-                value={pagomovilBs}
-                onChange={(e) => setPagomovilBs(Number(e.target.value))}
-                className="w-full border rounded-lg p-2"
-                required
-                min={0}
-                onWheel={(e) => e.currentTarget.blur()}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={pagomovilBsCalculado.toFixed(2)}
+                    readOnly
+                    className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Calculado desde facturas</p>
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={pagomovilBsIngresado ?? ""}
+                    onChange={(e) => setPagomovilBsIngresado(e.target.value === "" ? undefined : Number(e.target.value))}
+                    placeholder="Indique monto obtenido"
+                    className="w-full border rounded-lg p-2"
+                    min={0}
+                    onWheel={(e) => e.currentTarget.blur()}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Indique monto obtenido</p>
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
@@ -611,41 +775,65 @@ const AgregarCuadreModal: React.FC<Props> = ({
                     </div>
                     <div className="flex-1 flex flex-col min-w-[120px]">
                       <label className="text-xs text-gray-500 mb-0.5">
-                        Débito Bs
+                        Débito Bs (Calculado)
                       </label>
                       <input
                         type="number"
                         step="any"
-                        placeholder="Débito Bs"
-                        value={pv.puntoDebito}
+                        value={tarjetaDebitoBsCalculado.toFixed(2)}
+                        readOnly
+                        className="border rounded-lg p-2 w-full bg-gray-100 text-gray-700"
+                      />
+                      <p className="text-xs text-gray-500 mt-0.5">Desde facturas</p>
+                    </div>
+                    <div className="flex-1 flex flex-col min-w-[120px]">
+                      <label className="text-xs text-gray-500 mb-0.5">
+                        Débito Bs (Indique monto)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="Indique monto obtenido"
+                        value={pv.puntoDebitoIngresado ?? ""}
                         onChange={(e) => {
                           const arr = [...puntosVenta];
-                          arr[idx].puntoDebito = Number(e.target.value);
+                          arr[idx].puntoDebitoIngresado = e.target.value === "" ? undefined : Number(e.target.value);
                           setPuntosVenta(arr);
                         }}
                         className="border rounded-lg p-2 w-full"
                         min={0}
-                        required
                         onWheel={(e) => e.currentTarget.blur()}
                       />
                     </div>
                     <div className="flex-1 flex flex-col min-w-[120px]">
                       <label className="text-xs text-gray-500 mb-0.5">
-                        Crédito Bs
+                        Crédito Bs (Calculado)
                       </label>
                       <input
                         type="number"
                         step="any"
-                        placeholder="Crédito Bs"
-                        value={pv.puntoCredito}
+                        value={tarjetaCreditoBsCalculado.toFixed(2)}
+                        readOnly
+                        className="border rounded-lg p-2 w-full bg-gray-100 text-gray-700"
+                      />
+                      <p className="text-xs text-gray-500 mt-0.5">Desde facturas</p>
+                    </div>
+                    <div className="flex-1 flex flex-col min-w-[120px]">
+                      <label className="text-xs text-gray-500 mb-0.5">
+                        Crédito Bs (Indique monto)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="Indique monto obtenido"
+                        value={pv.puntoCreditoIngresado ?? ""}
                         onChange={(e) => {
                           const arr = [...puntosVenta];
-                          arr[idx].puntoCredito = Number(e.target.value);
+                          arr[idx].puntoCreditoIngresado = e.target.value === "" ? undefined : Number(e.target.value);
                           setPuntosVenta(arr);
                         }}
                         className="border rounded-lg p-2 w-full"
                         min={0}
-                        required
                         onWheel={(e) => e.currentTarget.blur()}
                       />
                     </div>
@@ -665,20 +853,35 @@ const AgregarCuadreModal: React.FC<Props> = ({
                 + Agregar punto de venta
               </button>
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 Efectivo Bs
               </label>
-              <input
-                type="number"
-                step="any"
-                value={efectivoBs}
-                onChange={(e) => setEfectivoBs(Number(e.target.value))}
-                className="w-full border rounded-lg p-2"
-                required
-                min={0}
-                onWheel={(e) => e.currentTarget.blur()}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={efectivoBsCalculado.toFixed(2)}
+                    readOnly
+                    className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Calculado desde facturas</p>
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={efectivoBsIngresado ?? ""}
+                    onChange={(e) => setEfectivoBsIngresado(e.target.value === "" ? undefined : Number(e.target.value))}
+                    placeholder="Indique monto obtenido"
+                    className="w-full border rounded-lg p-2"
+                    min={0}
+                    onWheel={(e) => e.currentTarget.blur()}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Indique monto obtenido</p>
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
@@ -687,15 +890,15 @@ const AgregarCuadreModal: React.FC<Props> = ({
               <input
                 type="number"
                 step="any"
-                value={valesUsd ?? 0} // Mostrar vacío si es undefined
-                onChange={(e) =>
-                  handleNumericInput(e.target.value, setValesUsd)
-                }
-                className="w-full border rounded-lg p-2"
+                value={valesUsdFinal.toFixed(2)}
+                readOnly
+                className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
                 min={0}
                 onWheel={(e) => e.currentTarget.blur()}
-              />{" "}
-              {/* Cambiado de valesBs a valesUsd */}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Total de ventas con método de pago vales
+              </p>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
@@ -703,21 +906,27 @@ const AgregarCuadreModal: React.FC<Props> = ({
               </label>
               <input
                 type="number"
-                value={totalBsMenosVales.toFixed(4)}
+                value={totalBsIngresados.toFixed(4)}
                 readOnly
                 className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Efectivo Bs + Tarjetas Débito/Crédito + Pago Móvil
+              </p>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Total Caja Sistema Bs - Vales
+                Total Caja - Vales
               </label>
               <input
                 type="number"
-                value={totalCajaSistemaMenosVales.toFixed(4)}
+                value={totalCajaMenosValesUsd.toFixed(4)}
                 readOnly
                 className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Total Caja Sistema $ menos Vales
+              </p>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
@@ -730,22 +939,36 @@ const AgregarCuadreModal: React.FC<Props> = ({
                 className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
               />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 Efectivo $
               </label>
-              <input
-                type="number"
-                step="any"
-                value={efectivoUsd}
-                onChange={(e) => setEfectivoUsd(Number(e.target.value))}
-                className="w-full border rounded-lg p-2"
-                required
-                min={0}
-                onWheel={(e) => e.currentTarget.blur()}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={efectivoUsdCalculado.toFixed(2)}
+                    readOnly
+                    className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Calculado desde facturas</p>
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={efectivoUsdIngresado ?? ""}
+                    onChange={(e) => setEfectivoUsdIngresado(e.target.value === "" ? undefined : Number(e.target.value))}
+                    placeholder="Indique monto obtenido"
+                    className="w-full border rounded-lg p-2"
+                    min={0}
+                    onWheel={(e) => e.currentTarget.blur()}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Indique monto obtenido</p>
+                </div>
+              </div>
             </div>
-
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 Zelle $
@@ -753,24 +976,15 @@ const AgregarCuadreModal: React.FC<Props> = ({
               <input
                 type="number"
                 step="any"
-                value={zelleUsd}
-                onChange={(e) => setZelleUsd(Number(e.target.value))}
-                className="w-full border rounded-lg p-2"
-                required
+                value={zelleUsdFinal.toFixed(2)}
+                readOnly
+                className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
                 min={0}
                 onWheel={(e) => e.currentTarget.blur()}
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Total General $ (calculado)
-              </label>
-              <input
-                type="number"
-                value={Number(totalGeneralUsd.toFixed(4))}
-                readOnly
-                className="w-full border rounded-lg p-2 bg-gray-100 text-gray-700"
-              />
+              <p className="text-xs text-gray-500 mt-1">
+                Total de ventas con método de pago Zelle
+              </p>
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1">
