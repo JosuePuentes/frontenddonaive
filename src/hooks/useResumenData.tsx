@@ -26,6 +26,15 @@ type VentasFarmacia = {
   totalGeneralSinRecargas: number;
   valesUsd: number;
   totalCosto: number;
+  // Nuevos campos de ventas del punto de venta
+  desgloseBs?: {
+    pago_movil: number;
+    efectivo: number;
+    tarjeta_debit: number;
+    tarjeta_credito: number;
+    recargas: number;
+    devoluciones: number;
+  };
 };
 
 interface PuntoVenta {
@@ -92,6 +101,25 @@ export function useResumenData() {
   }>({});
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [cuentasPorPagar, setCuentasPorPagar] = useState<CuentaPorPagar[]>([]);
+  const [ventasPuntoVenta, setVentasPuntoVenta] = useState<{
+    [key: string]: {
+      total_efectivo_usd: number;
+      total_zelle_usd: number;
+      total_usd_recibido: number;
+      total_vales_usd: number;
+      total_bs: number;
+      desglose_bs: {
+        pago_movil: number;
+        efectivo: number;
+        tarjeta_debit: number;
+        tarjeta_credito: number;
+        recargas: number;
+        devoluciones: number;
+      };
+      total_costo_inventario: number;
+      total_ventas: number;
+    };
+  }>({});
 
   const setDateRange = useCallback((start: Date, end: Date) => {
     const formatDate = (date: Date) => date.toISOString().split("T")[0];
@@ -224,6 +252,36 @@ export function useResumenData() {
     setMesActual();
   }, [setMesActual]);
 
+  // Obtener ventas del punto de venta cuando cambien las fechas
+  useEffect(() => {
+    const fetchVentasPuntoVenta = async () => {
+      if (!fechaInicio || !fechaFin) {
+        setVentasPuntoVenta({});
+        return;
+      }
+      try {
+        const token = localStorage.getItem("access_token");
+        const headers: HeadersInit = {};
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        const url = `${API_BASE_URL}/punto-venta/ventas/resumen?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+        const res = await fetch(url, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setVentasPuntoVenta(data.ventas_por_sucursal || {});
+        } else {
+          console.error("Error al obtener ventas del punto de venta");
+          setVentasPuntoVenta({});
+        }
+      } catch (error) {
+        console.error("Error al obtener ventas del punto de venta:", error);
+        setVentasPuntoVenta({});
+      }
+    };
+    fetchVentasPuntoVenta();
+  }, [fechaInicio, fechaFin]);
+
   useEffect(() => {
     const ventasPorFarmacia: { [key: string]: VentasFarmacia } = {};
     farmacias.forEach((farm) => {
@@ -279,6 +337,45 @@ export function useResumenData() {
           totalCosto += Number(c.costo);
         }
       });
+      // Sumar datos de ventas del punto de venta
+      const ventasPV = ventasPuntoVenta[farm.id] || {
+        total_efectivo_usd: 0,
+        total_zelle_usd: 0,
+        total_usd_recibido: 0,
+        total_vales_usd: 0,
+        total_bs: 0,
+        desglose_bs: {
+          pago_movil: 0,
+          efectivo: 0,
+          tarjeta_debit: 0,
+          tarjeta_credito: 0,
+          recargas: 0,
+          devoluciones: 0,
+        },
+        total_costo_inventario: 0,
+        total_ventas: 0,
+      };
+
+      // Sumar efectivo USD y zelle USD de las ventas del punto de venta
+      efectivoUsd += ventasPV.total_efectivo_usd;
+      zelleUsd += ventasPV.total_zelle_usd;
+      totalUsd += ventasPV.total_usd_recibido;
+      valesUsd += ventasPV.total_vales_usd;
+      totalBs += ventasPV.total_bs;
+      totalCosto += ventasPV.total_costo_inventario;
+
+      // Recalcular totalGeneral y totalGeneralSinRecargas con los nuevos totales
+      const tasaPromedio = data.length > 0 
+        ? data.reduce((acc, c) => acc + Number(c.tasa || 0), 0) / data.length 
+        : 0;
+      if (tasaPromedio > 0) {
+        totalGeneral = totalUsd + totalBs / tasaPromedio;
+        totalGeneralSinRecargas = totalUsd + (totalBs - ventasPV.desglose_bs.recargas) / tasaPromedio;
+      } else {
+        totalGeneral = totalUsd;
+        totalGeneralSinRecargas = totalUsd;
+      }
+
       ventasPorFarmacia[farm.id] = {
         totalVentas: Number(totalGeneral.toFixed(2)),
         totalBs: Number(totalBs.toFixed(2)),
@@ -290,10 +387,11 @@ export function useResumenData() {
         totalGeneralSinRecargas: Number(totalGeneralSinRecargas.toFixed(2)),
         valesUsd: Number(valesUsd.toFixed(2)),
         totalCosto: Number(totalCosto.toFixed(2)),
+        desgloseBs: ventasPV.desglose_bs,
       };
     });
     setVentas(ventasPorFarmacia);
-  }, [cuadresPorFarmacia, farmacias, fechaInicio, fechaFin]);
+  }, [cuadresPorFarmacia, farmacias, fechaInicio, fechaFin, ventasPuntoVenta]);
   useEffect(() => {
     const fetchPagosPorRango = async () => {
       if (!fechaInicio || !fechaFin) {
