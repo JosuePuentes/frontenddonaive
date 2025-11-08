@@ -549,14 +549,23 @@ const PuntoVentaPage: React.FC = () => {
       return;
     }
 
+    // Validar que se haya seleccionado un banco (ahora solo se usan bancos)
+    if (!bancoSeleccionadoPago) {
+      alert("Seleccione un banco");
+      return;
+    }
+
     const nuevoMetodo: MetodoPago = {
-      tipo: metodoPagoActual.tipo as any,
+      tipo: "banco", // Siempre es banco ahora
       monto,
       divisa: metodoPagoActual.divisa as "Bs" | "USD",
+      banco_id: bancoSeleccionadoPago,
     };
 
     setMetodosPago([...metodosPago, nuevoMetodo]);
     setMontoPago("");
+    setBancoSeleccionadoPago("");
+    setMetodoPagoActual({ tipo: "banco", divisa: "USD" }); // Resetear para siguiente pago
   };
 
   // Calcular total pagado en USD (convertir Bs a USD si es necesario)
