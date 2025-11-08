@@ -88,7 +88,7 @@ const AppRouter = () => (
       }
     />
     <Route
-      path="/resumenfarmacias"
+      path="/resumendeventa"
       element={
         <PermissionRoute permiso="ver_resumen_mensual">
           <ResumenFarmaciasVentas />

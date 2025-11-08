@@ -10,7 +10,7 @@ const allLinks = [
         icon: BarChart,
         items: [
             { to: '/gastoscxc-cuadres', label: 'Gastos, Cuentas y Cuadres', permiso: 'agregar_cuadre' },
-            { to: '/resumenfarmacias', label: 'Resumen de Ventas', permiso: 'ver_resumen_mensual' },
+            { to: '/resumendeventa', label: 'Resumen de Ventas', permiso: 'ver_resumen_mensual' },
             { to: '/ventatotal', label: 'Venta Total', permiso: 'ver_ventas_totales' },
             { to: '/metas', label: 'Metas', permiso: 'ver_about' },
             { to: '/gestionmetas', label: 'Crear Meta', permiso: 'metas' },
