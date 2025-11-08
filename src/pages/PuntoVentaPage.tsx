@@ -1706,7 +1706,7 @@ const PuntoVentaPage: React.FC = () => {
                         className="w-20 px-2 py-1 border rounded"
                       />
                       <div className="text-right min-w-[140px]">
-                        <div className="font-semibold">${item.subtotal_usd.toFixed(2)} USD</div>
+                        <div className="font-semibold">${(item.subtotal_usd || 0).toFixed(2)} USD</div>
                         {tasaDelDia > 0 && (
                           <div className="text-sm text-gray-600">
                             {(item.subtotal || 0).toLocaleString("es-VE", {
@@ -1782,7 +1782,7 @@ const PuntoVentaPage: React.FC = () => {
               <div>
                 <div className="font-semibold">{productoSeleccionado.nombre}</div>
                 <div className="text-sm text-gray-600">
-                  Precio: ${(productoSeleccionado.precio_usd || productoSeleccionado.precio).toFixed(2)} USD
+                  Precio: ${((productoSeleccionado.precio_usd || productoSeleccionado.precio || 0)).toFixed(2)} USD
                   {tasaDelDia > 0 && (
                     <> = {(((productoSeleccionado.precio_usd || productoSeleccionado.precio || 0) * (tasaDelDia || 0)) || 0).toLocaleString("es-VE", {
                       minimumFractionDigits: 2,
@@ -2208,7 +2208,7 @@ const PuntoVentaPage: React.FC = () => {
                           />
                           <p className="text-xs text-gray-500 mt-1">
                             Máximo: {metodoVuelto.divisa === "USD" 
-                              ? `$${calcularVuelto().toFixed(2)} USD`
+                              ? `$${(calcularVuelto() || 0).toFixed(2)} USD`
                               : `${((calcularVuelto() || 0) * (tasaDelDia || 0)).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs`
                             }
                           </p>
