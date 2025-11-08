@@ -1,9 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ResumeCardFarmacia from "@/components/ResumeCardFarmacia";
 import { useResumenData } from "@/hooks/useResumenData";
 import { ReportButton } from "@/components/reports/ReportButton";
 import { useReports } from "@/hooks/useReports";
 import { generateReportConfigs } from '@/config/reportConfigs';
+import { fetchWithAuth } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import ModalDevolucionCompra from "@/components/ModalDevolucionCompra";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const ResumenFarmaciasVentas: React.FC = () => {
   const {
@@ -36,6 +41,13 @@ const ResumenFarmaciasVentas: React.FC = () => {
 
   // Cargar farmacias del usuario
   const [farmacias, setFarmacias] = useState<{ id: string; nombre: string }[]>([]);
+  
+  // Estados para facturas procesadas
+  const [facturasProcesadas, setFacturasProcesadas] = useState<{ [key: string]: any[] }>({});
+  const [cargandoFacturas, setCargandoFacturas] = useState<{ [key: string]: boolean }>({});
+  const [mostrarFacturasPorFarmacia, setMostrarFacturasPorFarmacia] = useState<{ [key: string]: boolean }>({});
+  const [facturaParaDevolucion, setFacturaParaDevolucion] = useState<any | null>(null);
+  const [showModalDevolucion, setShowModalDevolucion] = useState(false);
 
   React.useEffect(() => {
     const usuarioRaw = localStorage.getItem("usuario");
@@ -52,6 +64,54 @@ const ResumenFarmaciasVentas: React.FC = () => {
       }
     }
   }, []);
+
+  // Función para obtener facturas procesadas por farmacia
+  const obtenerFacturasProcesadas = async (farmaciaId: string) => {
+    setCargandoFacturas(prev => ({ ...prev, [farmaciaId]: true }));
+    try {
+      const res = await fetchWithAuth(
+        `${API_BASE_URL}/punto-venta/ventas/usuario?sucursal=${farmaciaId}&limit=100&fecha_inicio=${fechaInicio || ''}&fecha_fin=${fechaFin || ''}`
+      );
+      
+      if (res.ok) {
+        const data = await res.json();
+        setFacturasProcesadas(prev => ({ ...prev, [farmaciaId]: data.facturas || [] }));
+      } else {
+        console.error("Error al obtener facturas procesadas");
+        setFacturasProcesadas(prev => ({ ...prev, [farmaciaId]: [] }));
+      }
+    } catch (error) {
+      console.error("Error al obtener facturas procesadas:", error);
+      setFacturasProcesadas(prev => ({ ...prev, [farmaciaId]: [] }));
+    } finally {
+      setCargandoFacturas(prev => ({ ...prev, [farmaciaId]: false }));
+    }
+  };
+
+  // Función para manejar el toggle de facturas procesadas
+  const handleToggleFacturasProcesadas = (farmaciaId: string) => {
+    const mostrar = !mostrarFacturasPorFarmacia[farmaciaId];
+    setMostrarFacturasPorFarmacia(prev => ({ ...prev, [farmaciaId]: mostrar }));
+    
+    if (mostrar && !facturasProcesadas[farmaciaId]) {
+      obtenerFacturasProcesadas(farmaciaId);
+    }
+  };
+
+  // Función para manejar devolución
+  const handleDevolucion = (factura: any) => {
+    setFacturaParaDevolucion(factura);
+    setShowModalDevolucion(true);
+  };
+
+  // Función para cerrar modal de devolución y refrescar facturas
+  const handleCerrarModalDevolucion = (farmaciaId?: string) => {
+    setShowModalDevolucion(false);
+    setFacturaParaDevolucion(null);
+    if (farmaciaId) {
+      obtenerFacturasProcesadas(farmaciaId);
+    }
+  };
 
   const handleGenerateReport = async (params: any) => {
     try {
@@ -371,10 +431,91 @@ const ResumenFarmaciasVentas: React.FC = () => {
                     : "Ver detalles completos"}
                 </button>
                 {detallesVisibles[farm.id] && calcularDetalles(farm.id)}
+                
+                {/* Sección de Facturas Procesadas */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    className="text-blue-700 underline text-sm font-semibold mb-2"
+                    onClick={() => handleToggleFacturasProcesadas(farm.id)}
+                  >
+                    {mostrarFacturasPorFarmacia[farm.id]
+                      ? "▼ Ocultar Facturas Procesadas"
+                      : "▶ Ver Facturas Procesadas"}
+                    {facturasProcesadas[farm.id] && ` (${facturasProcesadas[farm.id].length})`}
+                  </button>
+                  
+                  {mostrarFacturasPorFarmacia[farm.id] && (
+                    <div className="mt-2">
+                      {cargandoFacturas[farm.id] ? (
+                        <div className="text-center py-4 text-gray-600 text-sm">
+                          Cargando facturas...
+                        </div>
+                      ) : facturasProcesadas[farm.id]?.length === 0 ? (
+                        <div className="text-center py-4 text-gray-500 text-sm">
+                          No hay facturas procesadas en este período
+                        </div>
+                      ) : (
+                        <div className="max-h-64 overflow-y-auto space-y-2">
+                          {facturasProcesadas[farm.id]?.map((factura) => (
+                            <div
+                              key={factura._id}
+                              className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:bg-gray-100 transition-colors"
+                            >
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="font-semibold text-gray-800 text-sm">
+                                    Factura #{factura.numero_factura || factura._id}
+                                  </div>
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    {new Date(factura.fecha).toLocaleString('es-VE', {
+                                      year: 'numeric',
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </div>
+                                  {factura.cliente && (
+                                    <div className="text-xs text-gray-600">
+                                      Cliente: {factura.cliente.nombre}
+                                    </div>
+                                  )}
+                                  <div className="text-xs font-semibold text-green-600 mt-1">
+                                    Total: ${factura.total_usd?.toFixed(2) || '0.00'} USD
+                                  </div>
+                                </div>
+                                <Button
+                                  onClick={() => handleDevolucion(factura)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="ml-2 text-red-600 border-red-300 hover:bg-red-50"
+                                >
+                                  Devolución
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
+        
+        {/* Modal de Devolución */}
+        {showModalDevolucion && facturaParaDevolucion && (
+          <ModalDevolucionCompra
+            factura={facturaParaDevolucion}
+            onClose={() => handleCerrarModalDevolucion()}
+            onSuccess={() => {
+              const farmaciaId = facturaParaDevolucion.sucursal?._id || facturaParaDevolucion.sucursal;
+              handleCerrarModalDevolucion(farmaciaId);
+            }}
+          />
+        )}
       </div>
     </div>
   );

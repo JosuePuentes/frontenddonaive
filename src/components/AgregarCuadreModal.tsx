@@ -71,6 +71,14 @@ const AgregarCuadreModal: React.FC<Props> = ({
     costoInventarioPrellenado
   ); // Nuevo estado para Costo Inventario
 
+  // Estado local para el fondo de caja (editable cuando viene desde punto de venta)
+  const [fondoCajaLocal, setFondoCajaLocal] = useState<{
+    efectivoBs: number;
+    efectivoUsd: number;
+    metodoPagoBs?: string;
+    metodoPagoUsd?: string;
+  } | null>(fondoCaja || null);
+
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false); // Nuevo estado para controlar el loading
@@ -107,8 +115,9 @@ const AgregarCuadreModal: React.FC<Props> = ({
   const totalBsEnUsd = (tasa ?? 0) > 0 ? totalBsMenosVales / (tasa ?? 0) : 0;
   
   // Restar el fondo de caja del total para que no afecte las ventas
-  const fondoTotalUsd = fondoCaja && (tasa ?? 0) > 0
-    ? fondoCaja.efectivoUsd + (fondoCaja.efectivoBs / (tasa ?? 1))
+  const fondoActual = fondoCajaLocal || fondoCaja;
+  const fondoTotalUsd = fondoActual && (tasa ?? 0) > 0
+    ? fondoActual.efectivoUsd + (fondoActual.efectivoBs / (tasa ?? 1))
     : 0;
   const totalGeneralUsd = totalBsEnUsd + (efectivoUsd ?? 0) + (zelleUsd ?? 0) - fondoTotalUsd;
   
@@ -204,11 +213,11 @@ const AgregarCuadreModal: React.FC<Props> = ({
         diferenciaUsd < 0 ? Number(Math.abs(diferenciaUsd).toFixed(4)) : 0,
       delete: false,
       estado: "wait",
-      fondoCaja: fondoCaja ? {
-        efectivoBs: fondoCaja.efectivoBs,
-        efectivoUsd: fondoCaja.efectivoUsd,
-        metodoPagoBs: fondoCaja.metodoPagoBs,
-        metodoPagoUsd: fondoCaja.metodoPagoUsd,
+      fondoCaja: fondoActual ? {
+        efectivoBs: fondoActual.efectivoBs,
+        efectivoUsd: fondoActual.efectivoUsd,
+        metodoPagoBs: fondoActual.metodoPagoBs,
+        metodoPagoUsd: fondoActual.metodoPagoUsd,
       } : undefined,
       nombreFarmacia: (() => {
         const usuario = (() => {
@@ -330,8 +339,56 @@ const AgregarCuadreModal: React.FC<Props> = ({
             </div>
           )}
           
-          {/* Mostrar Fondo de Caja en la parte superior si existe */}
-          {fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0) && (
+          {/* Sección de Fondo de Caja - Editable si viene desde punto de venta */}
+          {deshabilitarCajero && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h3 className="text-sm font-bold text-blue-800 mb-3">Fondo de Caja</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Efectivo en Bs
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={fondoCajaLocal?.efectivoBs || 0}
+                    onChange={(e) => {
+                      setFondoCajaLocal({
+                        ...(fondoCajaLocal || { efectivoBs: 0, efectivoUsd: 0 }),
+                        efectivoBs: parseFloat(e.target.value) || 0,
+                      });
+                    }}
+                    className="w-full border rounded-lg p-2"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Efectivo en USD
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={fondoCajaLocal?.efectivoUsd || 0}
+                    onChange={(e) => {
+                      setFondoCajaLocal({
+                        ...(fondoCajaLocal || { efectivoBs: 0, efectivoUsd: 0 }),
+                        efectivoUsd: parseFloat(e.target.value) || 0,
+                      });
+                    }}
+                    className="w-full border rounded-lg p-2"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-blue-600 mt-2">
+                El fondo se restará del total para no afectar las ventas. Puede editarlo antes de confirmar el cuadre.
+              </p>
+            </div>
+          )}
+          
+          {/* Mostrar Fondo de Caja en modo solo lectura si NO viene desde punto de venta */}
+          {!deshabilitarCajero && fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0) && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <h3 className="text-sm font-bold text-blue-800 mb-2">Fondo de Caja</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
