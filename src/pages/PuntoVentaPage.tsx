@@ -399,6 +399,12 @@ const PuntoVentaPage: React.FC = () => {
     }
   }, [sucursalSeleccionada, showSucursalModal]);
 
+  // Debug: Monitorear cambios en showFondoModal
+  useEffect(() => {
+    console.log("showFondoModal cambió a:", showFondoModal);
+    console.log("fondoCaja actual:", fondoCaja);
+  }, [showFondoModal, fondoCaja]);
+
   const handleSeleccionarSucursal = (sucursal: Sucursal) => {
     setSucursalSeleccionada(sucursal);
     setShowSucursalModal(false);
@@ -415,10 +421,14 @@ const PuntoVentaPage: React.FC = () => {
     const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
     if (!tieneFondo) {
       // Pequeño delay para asegurar que el modal de cajero se cierre primero
-      setTimeout(() => {
-        console.log("Abriendo modal de fondo de caja");
-        setShowFondoModal(true);
-      }, 300);
+      // Usar requestAnimationFrame para asegurar que el DOM se actualice primero
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          console.log("Abriendo modal de fondo de caja, showFondoModal será:", true);
+          setShowFondoModal(true);
+          console.log("Estado después de setShowFondoModal");
+        }, 100);
+      });
     } else {
       console.log("Ya hay fondo configurado, no se abre modal");
     }
@@ -1337,7 +1347,7 @@ const PuntoVentaPage: React.FC = () => {
         <Dialog 
           open={showFondoModal} 
           onOpenChange={(open) => {
-            // No permitir cerrar el modal sin confirmar el fondo
+            // Solo validar cuando se intenta cerrar (open = false)
             if (!open) {
               // Verificar si hay fondo de caja configurado
               const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
@@ -1347,9 +1357,11 @@ const PuntoVentaPage: React.FC = () => {
               
               if (!tieneFondo && !tieneValoresIngresados) {
                 alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
+                // No permitir cerrar
                 return;
               }
             }
+            // Permitir abrir/cerrar normalmente
             setShowFondoModal(open);
           }}
         >
@@ -1376,7 +1388,8 @@ const PuntoVentaPage: React.FC = () => {
                 alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
               }
             }}
-            className="max-w-md"
+            className="max-w-md z-[100]"
+            showCloseButton={false}
           >
             <DialogHeader>
               <DialogTitle>Fondo de Caja - Requerido</DialogTitle>
