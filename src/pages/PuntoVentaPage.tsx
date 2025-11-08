@@ -471,7 +471,7 @@ const PuntoVentaPage: React.FC = () => {
     setShowCajeroModal(false);
     
     // Intentar cargar fondo desde localStorage
-    if (sucursalSeleccionada) {
+    if (sucursalSeleccionada && sucursalSeleccionada.id) {
       const cajeroId = cajero._id || cajero.ID;
       if (cajeroId) {
         const fondoGuardado = cargarFondoCajaDesdeStorage(cajeroId, sucursalSeleccionada.id);
@@ -592,7 +592,7 @@ const PuntoVentaPage: React.FC = () => {
     
     // Guardar en localStorage para que persista entre recargas
     const cajeroId = cajeroSeleccionado._id || cajeroSeleccionado.ID;
-    if (cajeroId) {
+    if (cajeroId && sucursalSeleccionada && sucursalSeleccionada.id) {
       guardarFondoCajaEnStorage(cajeroId, sucursalSeleccionada.id, fondo);
     }
     
@@ -604,7 +604,7 @@ const PuntoVentaPage: React.FC = () => {
     console.log("Limpiando estado de caja...");
     
     // Limpiar fondo de localStorage antes de limpiar el estado
-    if (cajeroSeleccionado && sucursalSeleccionada) {
+    if (cajeroSeleccionado && sucursalSeleccionada && sucursalSeleccionada.id) {
       const cajeroId = cajeroSeleccionado._id || cajeroSeleccionado.ID;
       if (cajeroId) {
         limpiarFondoCajaDeStorage(cajeroId, sucursalSeleccionada.id);
