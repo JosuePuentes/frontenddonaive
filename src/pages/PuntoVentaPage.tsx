@@ -2038,36 +2038,6 @@ const PuntoVentaPage: React.FC = () => {
                   </span>
                 </div>
               )}
-              {(() => {
-                const totalUsd = calcularTotalUsd();
-                const pagadoUsd = calcularTotalPagadoUsd();
-                const faltaUsd = totalUsd - pagadoUsd;
-                const faltaBs = tasaDelDia > 0 ? faltaUsd * tasaDelDia : 0;
-                
-                if (faltaUsd > 0.01) {
-                  return (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-semibold text-red-800">Falta por pagar:</span>
-                        <span className="font-bold text-red-900">${faltaUsd.toFixed(2)} USD</span>
-                      </div>
-                      {tasaDelDia > 0 && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-red-700">Falta por pagar (Bs):</span>
-                          <span className="font-semibold text-red-800">
-                            {faltaBs.toLocaleString("es-VE", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}{" "}
-                            Bs
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                return null;
-              })()}
               {calcularVuelto() > 0 && (
                 <>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
