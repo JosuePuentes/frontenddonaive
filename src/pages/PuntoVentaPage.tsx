@@ -405,6 +405,40 @@ const PuntoVentaPage: React.FC = () => {
     console.log("fondoCaja actual:", fondoCaja);
   }, [showFondoModal, fondoCaja]);
 
+  // Abrir modal de fondo automáticamente cuando se selecciona un cajero sin fondo
+  useEffect(() => {
+    console.log("useEffect fondo modal - cajeroSeleccionado:", cajeroSeleccionado?.NOMBRE);
+    console.log("useEffect fondo modal - showCajeroModal:", showCajeroModal);
+    console.log("useEffect fondo modal - fondoCaja:", fondoCaja);
+    console.log("useEffect fondo modal - showFondoModal:", showFondoModal);
+    
+    if (cajeroSeleccionado && !showCajeroModal) {
+      // Verificar si hay fondo configurado
+      const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+      
+      console.log("Condiciones: tieneFondo =", tieneFondo, "showFondoModal =", showFondoModal);
+      
+      if (!tieneFondo && !showFondoModal) {
+        console.log("✅ Condiciones cumplidas, abriendo modal de fondo en 500ms");
+        const timer = setTimeout(() => {
+          console.log("🚀 Abriendo modal de fondo AHORA - setShowFondoModal(true)");
+          setShowFondoModal(true);
+          // Verificar después de un momento
+          setTimeout(() => {
+            console.log("Verificación: showFondoModal debería ser true ahora");
+          }, 100);
+        }, 500);
+        
+        return () => {
+          console.log("Limpiando timer del modal de fondo");
+          clearTimeout(timer);
+        };
+      } else {
+        console.log("❌ No se abre modal - tieneFondo:", tieneFondo, "showFondoModal:", showFondoModal);
+      }
+    }
+  }, [cajeroSeleccionado, showCajeroModal, fondoCaja, showFondoModal]);
+
   const handleSeleccionarSucursal = (sucursal: Sucursal) => {
     setSucursalSeleccionada(sucursal);
     setShowSucursalModal(false);
@@ -415,21 +449,10 @@ const PuntoVentaPage: React.FC = () => {
   };
 
   const handleSeleccionarCajero = (cajero: Cajero) => {
+    console.log("Cajero seleccionado:", cajero.NOMBRE);
     setCajeroSeleccionado(cajero);
-    // Abrir modal de fondo después de seleccionar cajero SOLO si no hay fondo configurado
-    const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
-    if (!tieneFondo) {
-      // Primero cerrar el modal de cajero
-      setShowCajeroModal(false);
-      // Luego abrir el modal de fondo con un delay más largo
-      setTimeout(() => {
-        console.log("Abriendo modal de fondo de caja");
-        setShowFondoModal(true);
-      }, 500);
-    } else {
-      console.log("Ya hay fondo configurado, no se abre modal");
-      setShowCajeroModal(false);
-    }
+    // Cerrar el modal de cajero - el useEffect se encargará de abrir el modal de fondo
+    setShowCajeroModal(false);
   };
   
   // Estados para el modal de fondo
