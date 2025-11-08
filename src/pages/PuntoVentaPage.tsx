@@ -416,21 +416,19 @@ const PuntoVentaPage: React.FC = () => {
 
   const handleSeleccionarCajero = (cajero: Cajero) => {
     setCajeroSeleccionado(cajero);
-    setShowCajeroModal(false);
     // Abrir modal de fondo después de seleccionar cajero SOLO si no hay fondo configurado
     const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
     if (!tieneFondo) {
-      // Pequeño delay para asegurar que el modal de cajero se cierre primero
-      // Usar requestAnimationFrame para asegurar que el DOM se actualice primero
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          console.log("Abriendo modal de fondo de caja, showFondoModal será:", true);
-          setShowFondoModal(true);
-          console.log("Estado después de setShowFondoModal");
-        }, 100);
-      });
+      // Primero cerrar el modal de cajero
+      setShowCajeroModal(false);
+      // Luego abrir el modal de fondo con un delay más largo
+      setTimeout(() => {
+        console.log("Abriendo modal de fondo de caja");
+        setShowFondoModal(true);
+      }, 500);
     } else {
       console.log("Ya hay fondo configurado, no se abre modal");
+      setShowCajeroModal(false);
     }
   };
   
@@ -465,6 +463,7 @@ const PuntoVentaPage: React.FC = () => {
   
   // Limpiar todo cuando se cierra la caja
   const handleCerrarCajaCompleto = () => {
+    console.log("Limpiando estado de caja...");
     // Limpiar estado del cajero y fondo
     setCajeroSeleccionado(null);
     setFondoCaja(null);
@@ -472,7 +471,7 @@ const PuntoVentaPage: React.FC = () => {
     setFondoEfectivoUsd("");
     setFondoBancoBs("");
     setFondoBancoUsd("");
-    // Limpiar totales de ventas del día
+    // Limpiar totales de ventas del día - IMPORTANTE: limpiar antes de cerrar modales
     setTotalCajaSistemaUsd(0);
     setCostoInventarioTotal(0);
     // Cerrar cualquier modal abierto
@@ -483,8 +482,12 @@ const PuntoVentaPage: React.FC = () => {
     setCarrito([]);
     setClienteSeleccionado(null);
     setMetodosPago([]);
+    // Limpiar facturas procesadas
+    setFacturasProcesadas([]);
+    setMostrarFacturasProcesadas(false);
     // Abrir modal de selección de sucursal
     setShowSucursalModal(true);
+    console.log("Estado de caja limpiado completamente");
   };
   
   // Función para manejar el cierre completo de caja (después de guardar el cuadre)
@@ -966,8 +969,10 @@ const PuntoVentaPage: React.FC = () => {
       return;
     }
     
-    // Obtener ventas del día antes de abrir el modal
-    await obtenerVentasDelDia();
+    // Solo obtener ventas del día si no hay totales ya calculados (evitar recalcular si ya se cerró)
+    if (totalCajaSistemaUsd === 0 && costoInventarioTotal === 0) {
+      await obtenerVentasDelDia();
+    }
     setShowCerrarCajaModal(true);
   };
 
