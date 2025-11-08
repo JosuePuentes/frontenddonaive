@@ -204,6 +204,12 @@ const AgregarCuadreModal: React.FC<Props> = ({
         diferenciaUsd < 0 ? Number(Math.abs(diferenciaUsd).toFixed(4)) : 0,
       delete: false,
       estado: "wait",
+      fondoCaja: fondoCaja ? {
+        efectivoBs: fondoCaja.efectivoBs,
+        efectivoUsd: fondoCaja.efectivoUsd,
+        metodoPagoBs: fondoCaja.metodoPagoBs,
+        metodoPagoUsd: fondoCaja.metodoPagoUsd,
+      } : undefined,
       nombreFarmacia: (() => {
         const usuario = (() => {
           try {
@@ -323,6 +329,37 @@ const AgregarCuadreModal: React.FC<Props> = ({
               {success}
             </div>
           )}
+          
+          {/* Mostrar Fondo de Caja en la parte superior si existe */}
+          {fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0) && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h3 className="text-sm font-bold text-blue-800 mb-2">Fondo de Caja</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Efectivo Bs:</span>
+                  <span className="font-semibold ml-2">
+                    {fondoCaja.efectivoBs.toLocaleString("es-VE", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })} Bs
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Efectivo USD:</span>
+                  <span className="font-semibold ml-2">
+                    ${fondoCaja.efectivoUsd.toLocaleString("es-VE", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-blue-600 mt-2">
+                El fondo se restará del total para no afectar las ventas
+              </p>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
