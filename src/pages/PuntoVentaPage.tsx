@@ -1281,7 +1281,7 @@ const PuntoVentaPage: React.FC = () => {
           <div className="text-right">
             <div className="text-sm text-gray-600 mb-2">
               <span className="font-semibold">Tasa del día:</span>{" "}
-              {tasaDelDia.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs/USD
+              {(tasaDelDia || 0).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs/USD
             </div>
             <div className="flex gap-2">
               <Input
@@ -1670,14 +1670,14 @@ const PuntoVentaPage: React.FC = () => {
                             {item.descuento_aplicado ? (
                               <>
                                 <span className="line-through text-gray-400">
-                                  {item.precio_unitario_original?.toLocaleString("es-VE", {
+                                  {(item.precio_unitario_original || 0).toLocaleString("es-VE", {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })} Bs
                                 </span>
                                 {" "}
                                 <span className="text-green-600 font-semibold">
-                                  {item.precio_unitario.toLocaleString("es-VE", {
+                                  {(item.precio_unitario || 0).toLocaleString("es-VE", {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })} Bs
@@ -1709,7 +1709,7 @@ const PuntoVentaPage: React.FC = () => {
                         <div className="font-semibold">${item.subtotal_usd.toFixed(2)} USD</div>
                         {tasaDelDia > 0 && (
                           <div className="text-sm text-gray-600">
-                            {item.subtotal.toLocaleString("es-VE", {
+                            {(item.subtotal || 0).toLocaleString("es-VE", {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}{" "}
@@ -1755,7 +1755,7 @@ const PuntoVentaPage: React.FC = () => {
                 <div className="flex justify-between">
                   <span>Total (Bs):</span>
                   <span className="font-semibold">
-                    {calcularTotalBs().toLocaleString("es-VE", {
+                    {(calcularTotalBs() || 0).toLocaleString("es-VE", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}{" "}
@@ -1784,7 +1784,7 @@ const PuntoVentaPage: React.FC = () => {
                 <div className="text-sm text-gray-600">
                   Precio: ${(productoSeleccionado.precio_usd || productoSeleccionado.precio).toFixed(2)} USD
                   {tasaDelDia > 0 && (
-                    <> = {((productoSeleccionado.precio_usd || productoSeleccionado.precio) * tasaDelDia).toLocaleString("es-VE", {
+                    <> = {(((productoSeleccionado.precio_usd || productoSeleccionado.precio || 0) * (tasaDelDia || 0)) || 0).toLocaleString("es-VE", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })} Bs</>
@@ -1905,7 +1905,7 @@ const PuntoVentaPage: React.FC = () => {
                 <div className="flex justify-between">
                   <span>Total a pagar (Bs):</span>
                   <span className="font-bold">
-                    {calcularTotalBs().toLocaleString("es-VE", {
+                    {(calcularTotalBs() || 0).toLocaleString("es-VE", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}{" "}
@@ -2012,7 +2012,7 @@ const PuntoVentaPage: React.FC = () => {
                           {esVuelto ? '🔄 ' : ''}
                           {banco ? `${banco.nombre_banco} (${metodo.divisa})` : `${metodo.tipo.toUpperCase()} (${metodo.divisa})`}:{" "}
                           {metodo.divisa === "USD" ? "$" : ""}
-                          {Math.abs(metodo.monto).toLocaleString("es-VE", {
+                          {Math.abs(metodo.monto || 0).toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}{" "}
@@ -2044,7 +2044,7 @@ const PuntoVentaPage: React.FC = () => {
                 <div className="flex justify-between mb-2">
                   <span>Total pagado (Bs):</span>
                   <span className="font-semibold">
-                    {calcularTotalPagadoBs().toLocaleString("es-VE", {
+                    {(calcularTotalPagadoBs() || 0).toLocaleString("es-VE", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}{" "}
@@ -2063,7 +2063,7 @@ const PuntoVentaPage: React.FC = () => {
                       <div className="flex justify-between items-center mb-3">
                         <span className="text-sm text-yellow-700">Vuelto (Bs):</span>
                         <span className="font-semibold text-yellow-800">
-                          {(calcularVuelto() * tasaDelDia).toLocaleString("es-VE", {
+                          {((calcularVuelto() || 0) * (tasaDelDia || 0)).toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}{" "}
@@ -2192,7 +2192,7 @@ const PuntoVentaPage: React.FC = () => {
                                 if (montoEnUSD > vueltoPendiente + 0.01) {
                                   const maxBs = vueltoPendiente * tasaDelDia;
                                   setMetodoVuelto({ ...metodoVuelto, monto: maxBs.toFixed(2) });
-                                  alert(`El monto no puede ser mayor al vuelto pendiente (${maxBs.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs)`);
+                                  alert(`El monto no puede ser mayor al vuelto pendiente (${(maxBs || 0).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs)`);
                                 } else {
                                   setMetodoVuelto({ ...metodoVuelto, monto: valor });
                                 }
@@ -2209,7 +2209,7 @@ const PuntoVentaPage: React.FC = () => {
                           <p className="text-xs text-gray-500 mt-1">
                             Máximo: {metodoVuelto.divisa === "USD" 
                               ? `$${calcularVuelto().toFixed(2)} USD`
-                              : `${(calcularVuelto() * tasaDelDia).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs`
+                              : `${((calcularVuelto() || 0) * (tasaDelDia || 0)).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs`
                             }
                           </p>
                         </div>
