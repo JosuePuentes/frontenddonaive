@@ -416,8 +416,11 @@ const PuntoVentaPage: React.FC = () => {
     if (!tieneFondo) {
       // Pequeño delay para asegurar que el modal de cajero se cierre primero
       setTimeout(() => {
+        console.log("Abriendo modal de fondo de caja");
         setShowFondoModal(true);
-      }, 200);
+      }, 300);
+    } else {
+      console.log("Ya hay fondo configurado, no se abre modal");
     }
   };
   
@@ -459,9 +462,13 @@ const PuntoVentaPage: React.FC = () => {
     setFondoEfectivoUsd("");
     setFondoBancoBs("");
     setFondoBancoUsd("");
+    // Limpiar totales de ventas del día
+    setTotalCajaSistemaUsd(0);
+    setCostoInventarioTotal(0);
     // Cerrar cualquier modal abierto
     setShowFondoModal(false);
     setShowCajeroModal(false);
+    setShowCerrarCajaModal(false);
     // Limpiar carrito y otros estados
     setCarrito([]);
     setClienteSeleccionado(null);
@@ -1327,7 +1334,6 @@ const PuntoVentaPage: React.FC = () => {
         </Dialog>
 
         {/* Modal de Fondo de Caja */}
-        {showFondoModal && (
         <Dialog 
           open={showFondoModal} 
           onOpenChange={(open) => {
@@ -1452,7 +1458,6 @@ const PuntoVentaPage: React.FC = () => {
             </div>
           </DialogContent>
         </Dialog>
-        )}
 
         {/* Modal de selección de cajero */}
         <Dialog 
