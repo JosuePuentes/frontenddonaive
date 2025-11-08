@@ -156,6 +156,7 @@ const AgregarCuadreModal: React.FC<Props> = ({
           
           // Costo Inventario: obtener costo desde el inventario de la sucursal
           const productoId = item.producto_id || item._id || item.id;
+          // Priorizar costo del inventario, luego costo_unitario del item, luego 0
           const costoItem = costosInventario.get(productoId) || item.costo_unitario || 0;
           costoInventario += costoItem * (item.cantidad || 0);
         });
@@ -192,7 +193,8 @@ const AgregarCuadreModal: React.FC<Props> = ({
       devolucionesBs,
       recargaBs,
       pagomovilBs,
-      costoInventario: costoInventario || costoInventarioPrellenado || 0,
+      // Priorizar costoInventarioPrellenado (calculado en PuntoVentaPage) sobre el cálculo local
+      costoInventario: costoInventarioPrellenado || costoInventario || 0,
       efectivoBs,
       efectivoUsd,
       zelleUsd,
@@ -203,6 +205,28 @@ const AgregarCuadreModal: React.FC<Props> = ({
   };
   
   const totalesFacturas = calcularTotalesDesdeFacturas();
+  
+  // Recalcular costo cuando costosInventario se carga
+  useEffect(() => {
+    if (deshabilitarCajero && costosInventario.size > 0 && facturasProcesadas.length > 0) {
+      let nuevoCosto = 0;
+      facturasProcesadas.forEach((factura: any) => {
+        if (factura.items && Array.isArray(factura.items)) {
+          factura.items.forEach((item: any) => {
+            const productoId = item.producto_id || item._id || item.id;
+            const costoItem = costosInventario.get(productoId) || item.costo_unitario || 0;
+            nuevoCosto += costoItem * (item.cantidad || 0);
+          });
+        }
+      });
+      
+      // Solo actualizar si el nuevo costo es mayor que el actual y mayor que 0
+      if (nuevoCosto > 0 && (costoInventario === undefined || costoInventario === 0 || nuevoCosto > costoInventario)) {
+        console.log("Actualizando costoInventario desde inventario:", nuevoCosto);
+        setCostoInventario(nuevoCosto);
+      }
+    }
+  }, [costosInventario, facturasProcesadas, deshabilitarCajero]);
 
   // Estados inicializados con valores calculados desde facturas (si vienen desde punto de venta)
   const [devolucionesBs, setDevolucionesBs] = useState<number | undefined>(
@@ -220,9 +244,17 @@ const AgregarCuadreModal: React.FC<Props> = ({
   const zelleUsd = deshabilitarCajero ? totalesFacturas.zelleUsd : undefined;
   const valesUsdCalculado = totalesFacturas.valesUsd;
   const valesUsd = deshabilitarCajero ? totalesFacturas.valesUsd : undefined;
+  // Priorizar costoInventarioPrellenado sobre el cálculo desde facturas
   const [costoInventario, setCostoInventario] = useState<number | undefined>(
-    totalesFacturas.costoInventario || costoInventarioPrellenado
+    costoInventarioPrellenado || totalesFacturas.costoInventario
   );
+  
+  // Actualizar costoInventario cuando cambia costoInventarioPrellenado
+  useEffect(() => {
+    if (costoInventarioPrellenado && costoInventarioPrellenado > 0) {
+      setCostoInventario(costoInventarioPrellenado);
+    }
+  }, [costoInventarioPrellenado]);
   
   // Valores calculados para tarjetas (puntos de venta)
   const tarjetaDebitoBsCalculado = totalesFacturas.tarjetaDebitoBs;
