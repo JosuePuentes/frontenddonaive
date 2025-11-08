@@ -71,8 +71,8 @@ const AgregarCuadreModal: React.FC<Props> = ({
     costoInventarioPrellenado
   ); // Nuevo estado para Costo Inventario
 
-  // Estado local para el fondo de caja (editable cuando viene desde punto de venta)
-  const [fondoCajaLocal, setFondoCajaLocal] = useState<{
+  // Estado local para el fondo de caja (solo lectura cuando viene desde punto de venta)
+  const [fondoCajaLocal] = useState<{
     efectivoBs: number;
     efectivoUsd: number;
     metodoPagoBs?: string;
