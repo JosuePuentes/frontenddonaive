@@ -494,6 +494,25 @@ export function useResumenData() {
           );
         }
       });
+      
+      // Sumar datos de ventas del punto de venta
+      const ventasPV = ventasPuntoVenta[farmId] || {
+        desglose_bs: {
+          pago_movil: 0,
+          efectivo: 0,
+          tarjeta_debit: 0,
+          tarjeta_credito: 0,
+          recargas: 0,
+          devoluciones: 0,
+        },
+      };
+      
+      sumaRecargaBs += ventasPV.desglose_bs.recargas;
+      sumaPagomovilBs += ventasPV.desglose_bs.pago_movil;
+      sumaEfectivoBs += ventasPV.desglose_bs.efectivo;
+      sumaPuntoDebito += ventasPV.desglose_bs.tarjeta_debit;
+      sumaPuntoCredito += ventasPV.desglose_bs.tarjeta_credito;
+      sumaDevolucionesBs += ventasPV.desglose_bs.devoluciones;
       const formatBs = (amount: number) =>
         amount.toLocaleString("es-VE", {
           minimumFractionDigits: 2,
@@ -535,7 +554,7 @@ export function useResumenData() {
         </div>
       );
     },
-    [cuadresPorFarmacia, fechaInicio, fechaFin]
+    [cuadresPorFarmacia, fechaInicio, fechaFin, ventasPuntoVenta]
   );
 
   const gastosPorFarmacia = useMemo(() => {
