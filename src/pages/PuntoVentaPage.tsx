@@ -402,13 +402,20 @@ const PuntoVentaPage: React.FC = () => {
   const handleSeleccionarSucursal = (sucursal: Sucursal) => {
     setSucursalSeleccionada(sucursal);
     setShowSucursalModal(false);
+    // Abrir modal de cajero después de seleccionar sucursal
+    setTimeout(() => {
+      setShowCajeroModal(true);
+    }, 100);
   };
 
   const handleSeleccionarCajero = (cajero: Cajero) => {
     setCajeroSeleccionado(cajero);
     setShowCajeroModal(false);
     // Abrir modal de fondo después de seleccionar cajero
-    setShowFondoModal(true);
+    // Pequeño delay para asegurar que el modal de cajero se cierre primero
+    setTimeout(() => {
+      setShowFondoModal(true);
+    }, 100);
   };
   
   // Estados para el modal de fondo
@@ -1310,23 +1317,51 @@ const PuntoVentaPage: React.FC = () => {
           open={showFondoModal} 
           onOpenChange={(open) => {
             // No permitir cerrar el modal sin confirmar el fondo
-            if (!open && !fondoCaja) {
-              return;
+            if (!open) {
+              // Verificar si hay fondo de caja configurado
+              const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+              // Verificar si hay valores ingresados en los campos
+              const tieneValoresIngresados = (fondoEfectivoBs && parseFloat(fondoEfectivoBs) > 0) || 
+                                            (fondoEfectivoUsd && parseFloat(fondoEfectivoUsd) > 0);
+              
+              if (!tieneFondo && !tieneValoresIngresados) {
+                alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
+                return;
+              }
             }
             setShowFondoModal(open);
           }}
         >
           <DialogContent
             onInteractOutside={(e) => {
-              e.preventDefault();
+              // Prevenir cerrar haciendo click fuera del modal
+              const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+              const tieneValoresIngresados = (fondoEfectivoBs && parseFloat(fondoEfectivoBs) > 0) || 
+                                            (fondoEfectivoUsd && parseFloat(fondoEfectivoUsd) > 0);
+              
+              if (!tieneFondo && !tieneValoresIngresados) {
+                e.preventDefault();
+                alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
+              }
             }}
             onEscapeKeyDown={(e) => {
-              e.preventDefault();
+              // Prevenir cerrar con ESC
+              const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+              const tieneValoresIngresados = (fondoEfectivoBs && parseFloat(fondoEfectivoBs) > 0) || 
+                                            (fondoEfectivoUsd && parseFloat(fondoEfectivoUsd) > 0);
+              
+              if (!tieneFondo && !tieneValoresIngresados) {
+                e.preventDefault();
+                alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
+              }
             }}
             className="max-w-md"
           >
             <DialogHeader>
-              <DialogTitle>Fondo de Caja</DialogTitle>
+              <DialogTitle>Fondo de Caja - Requerido</DialogTitle>
+              <p className="text-sm text-gray-600 mt-1">
+                Debe ingresar el fondo de caja antes de continuar
+              </p>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -1385,8 +1420,17 @@ const PuntoVentaPage: React.FC = () => {
                     ))}
                 </select>
               </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Importante:</strong> Debe ingresar al menos un monto de fondo (Bs o USD) para continuar.
+                </p>
+              </div>
               <div className="flex gap-2 justify-end">
-                <Button onClick={handleConfirmarFondo} className="flex-1">
+                <Button 
+                  onClick={handleConfirmarFondo} 
+                  className="flex-1"
+                  disabled={!fondoEfectivoBs && !fondoEfectivoUsd}
+                >
                   Confirmar
                 </Button>
               </div>
