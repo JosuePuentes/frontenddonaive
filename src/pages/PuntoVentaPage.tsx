@@ -1070,7 +1070,14 @@ const PuntoVentaPage: React.FC = () => {
     
     // Verificar que haya fondo configurado
     if (!fondoCaja || (fondoCaja.efectivoBs === 0 && fondoCaja.efectivoUsd === 0)) {
-      alert("Debe configurar el fondo de caja antes de cerrar");
+      // Si no hay fondo, abrir el modal de fondo en lugar de mostrar alert
+      console.log("No hay fondo configurado, abriendo modal de fondo");
+      setShowFondoModal(true);
+      // Forzar renderizado del modal
+      setTimeout(() => {
+        console.log("Forzando apertura del modal de fondo desde handleCerrarCaja");
+        setShowFondoModal(true);
+      }, 100);
       return;
     }
     
@@ -1452,11 +1459,11 @@ const PuntoVentaPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de Fondo de Caja */}
+        {/* Modal de Fondo de Caja - SIEMPRE renderizado */}
         <Dialog 
           open={showFondoModal}
           onOpenChange={(open) => {
-            console.log("onOpenChange del modal de fondo llamado con open =", open);
+            console.log("onOpenChange del modal de fondo llamado con open =", open, "showFondoModal actual:", showFondoModal);
             // Solo validar cuando se intenta cerrar (open = false)
             if (!open) {
               // Verificar si hay fondo de caja configurado
@@ -1469,7 +1476,8 @@ const PuntoVentaPage: React.FC = () => {
               
               if (!tieneFondo && !tieneValoresIngresados) {
                 alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
-                // No permitir cerrar - no llamar a setShowFondoModal
+                // No permitir cerrar - forzar que se mantenga abierto
+                setShowFondoModal(true);
                 return;
               }
             }
@@ -1501,8 +1509,9 @@ const PuntoVentaPage: React.FC = () => {
                 alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
               }
             }}
-            className="max-w-md z-[9999]"
+            className="max-w-md z-[9999] !fixed"
             showCloseButton={false}
+            style={{ zIndex: 9999 }}
           >
             <DialogHeader>
               <DialogTitle>Fondo de Caja - Requerido</DialogTitle>
