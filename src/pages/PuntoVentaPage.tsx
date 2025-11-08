@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -451,9 +451,9 @@ const PuntoVentaPage: React.FC = () => {
   const handleSeleccionarCajero = (cajero: Cajero) => {
     console.log("Cajero seleccionado:", cajero.NOMBRE);
     
-    // Si se cambia de cajero, limpiar el fondo anterior
+    // Si se cambia de cajero, limpiar TODO del cajero anterior
     if (cajeroSeleccionado && cajeroSeleccionado._id !== cajero._id) {
-      console.log("Cambiando de cajero, limpiando fondo anterior");
+      console.log("Cambiando de cajero, limpiando TODO del cajero anterior:", cajeroSeleccionado.NOMBRE);
       setFondoCaja(null);
       setFondoEfectivoBs("");
       setFondoEfectivoUsd("");
@@ -462,30 +462,28 @@ const PuntoVentaPage: React.FC = () => {
       // Limpiar ventas del cajero anterior
       setTotalCajaSistemaUsd(0);
       setCostoInventarioTotal(0);
+      // Limpiar facturas procesadas
+      setFacturasProcesadas([]);
     }
     
     setCajeroSeleccionado(cajero);
     // Cerrar el modal de cajero
     setShowCajeroModal(false);
     
-    // Forzar apertura del modal de fondo después de un delay
-    // Verificar correctamente si hay fondo (no solo truthy check)
-    const tieneFondo = fondoCaja !== null && fondoCaja !== undefined && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
-    console.log("handleSeleccionarCajero - tieneFondo:", tieneFondo, "fondoCaja:", fondoCaja);
+    // SIEMPRE limpiar el fondo cuando se selecciona un cajero (incluso si es el mismo)
+    // Esto asegura que cada vez que se selecciona un cajero, se pida el fondo
+    setFondoCaja(null);
     
-    if (!tieneFondo) {
-      console.log("No hay fondo, abriendo modal en 600ms");
+    // Forzar apertura del modal de fondo después de un delay
+    console.log("Abriendo modal de fondo para cajero:", cajero.NOMBRE);
+    setTimeout(() => {
+      console.log("FORZANDO apertura del modal de fondo - setShowFondoModal(true)");
+      setShowFondoModal(true);
+      // Verificar inmediatamente después
       setTimeout(() => {
-        console.log("FORZANDO apertura del modal de fondo - setShowFondoModal(true)");
-        setShowFondoModal(true);
-        // Verificar inmediatamente después
-        setTimeout(() => {
-          console.log("Verificación inmediata: showFondoModal debería ser true");
-        }, 50);
-      }, 600);
-    } else {
-      console.log("Ya hay fondo configurado, no se abre modal");
-    }
+        console.log("Verificación inmediata: showFondoModal debería ser true");
+      }, 50);
+    }, 600);
   };
   
   // Estados para el modal de fondo
@@ -971,30 +969,64 @@ const PuntoVentaPage: React.FC = () => {
 
   // Función para obtener ventas del día y calcular totales
   const obtenerVentasDelDia = async () => {
-    if (!sucursalSeleccionada || !cajeroSeleccionado) return;
+    if (!sucursalSeleccionada || !cajeroSeleccionado) {
+      console.log("No se pueden obtener ventas: falta sucursal o cajero");
+      return;
+    }
+
+    // Solo obtener ventas si hay fondo configurado para este cajero
+    if (!fondoCaja || (fondoCaja.efectivoBs === 0 && fondoCaja.efectivoUsd === 0)) {
+      console.log("No hay fondo configurado, no se obtienen ventas");
+      setTotalCajaSistemaUsd(0);
+      setCostoInventarioTotal(0);
+      return;
+    }
 
     try {
       const hoy = new Date().toISOString().split('T')[0];
       const usuario = getUsuarioActual();
-      const cajero = usuario?.correo || cajeroSeleccionado.NOMBRE;
+      // Usar el nombre del cajero seleccionado como identificador principal
+      const cajeroNombre = cajeroSeleccionado.NOMBRE;
+      const cajeroCorreo = usuario?.correo;
+      
+      console.log("Obteniendo ventas para cajero:", cajeroNombre, "correo:", cajeroCorreo, "sucursal:", sucursalSeleccionada.id);
       
       // Obtener ventas del día para la sucursal Y el cajero específico
       const resVentas = await fetchWithAuth(
-        `${API_BASE_URL}/punto-venta/ventas/usuario?fecha=${hoy}&sucursal=${sucursalSeleccionada.id}&cajero=${encodeURIComponent(cajero)}&limit=1000`
+        `${API_BASE_URL}/punto-venta/ventas/usuario?fecha=${hoy}&sucursal=${sucursalSeleccionada.id}&cajero=${encodeURIComponent(cajeroNombre)}&limit=1000`
       );
       
       if (resVentas.ok) {
         const data = await resVentas.json();
         const ventasArray = Array.isArray(data.facturas) ? data.facturas : (Array.isArray(data) ? data : []);
         
-        // Filtrar solo las ventas del día actual y del cajero actual
+        console.log("Ventas recibidas del backend:", ventasArray.length);
+        
+        // Filtrar solo las ventas del día actual y del cajero actual (filtro estricto)
         const ventasDelDia = ventasArray.filter((venta: any) => {
           const fechaVenta = new Date(venta.fecha);
           const hoyDate = new Date(hoy);
           const esMismoDia = fechaVenta.toDateString() === hoyDate.toDateString();
-          const esMismoCajero = venta.cajero === cajero || venta.cajero === cajeroSeleccionado.NOMBRE;
-          return esMismoDia && esMismoCajero;
+          
+          // Verificar que el cajero coincida exactamente (nombre o correo)
+          const cajeroVenta = venta.cajero || venta.cajero_nombre || "";
+          const esMismoCajero = cajeroVenta === cajeroNombre || 
+                               cajeroVenta === cajeroCorreo ||
+                               (venta.usuario && venta.usuario === cajeroCorreo);
+          
+          const resultado = esMismoDia && esMismoCajero;
+          if (!resultado && esMismoDia) {
+            console.log("Venta filtrada (cajero diferente):", {
+              cajeroVenta,
+              cajeroNombre,
+              cajeroCorreo,
+              venta: venta.numero_factura || venta._id
+            });
+          }
+          return resultado;
         });
+        
+        console.log("Ventas filtradas para el cajero actual:", ventasDelDia.length);
         
         // Calcular total de caja en USD (suma de todas las ventas del cajero)
         const totalUsd = ventasDelDia.reduce((sum: number, venta: any) => {
@@ -1036,10 +1068,15 @@ const PuntoVentaPage: React.FC = () => {
       return;
     }
     
-    // Solo obtener ventas del día si no hay totales ya calculados (evitar recalcular si ya se cerró)
-    if (totalCajaSistemaUsd === 0 && costoInventarioTotal === 0) {
-      await obtenerVentasDelDia();
+    // Verificar que haya fondo configurado
+    if (!fondoCaja || (fondoCaja.efectivoBs === 0 && fondoCaja.efectivoUsd === 0)) {
+      alert("Debe configurar el fondo de caja antes de cerrar");
+      return;
     }
+    
+    // Siempre obtener ventas del día para asegurar que son del cajero actual
+    console.log("Obteniendo ventas para cerrar caja del cajero:", cajeroSeleccionado.NOMBRE);
+    await obtenerVentasDelDia();
     setShowCerrarCajaModal(true);
   };
 
@@ -1464,14 +1501,14 @@ const PuntoVentaPage: React.FC = () => {
                 alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
               }
             }}
-            className="max-w-md z-[100]"
+            className="max-w-md z-[9999]"
             showCloseButton={false}
           >
             <DialogHeader>
               <DialogTitle>Fondo de Caja - Requerido</DialogTitle>
-              <p className="text-sm text-gray-600 mt-1">
+              <DialogDescription>
                 Debe ingresar el fondo de caja antes de continuar
-              </p>
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
