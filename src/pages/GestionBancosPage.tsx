@@ -3,7 +3,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Search, Edit, Trash2, RefreshCw, Plus, History, ArrowUp, ArrowDown, ArrowRightLeft } from "lucide-react";
+import { Search, Edit, Trash2, RefreshCw, Plus, History, ArrowUp, ArrowDown, ArrowRightLeft, Smartphone, Wallet, CreditCard, Receipt, Banknote } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,6 +24,7 @@ interface Banco {
   nombre_titular: string;
   saldo: number;
   divisa: "USD" | "BS"; // Backend espera "BS" en mayúsculas
+  tipo_metodo?: "pago_movil" | "efectivo" | "zelle" | "tarjeta_debit" | "tarjeta_credito" | "vales";
   activo?: boolean;
 }
 
@@ -62,6 +63,7 @@ const GestionBancosPage: React.FC = () => {
   const [nombreTitular, setNombreTitular] = useState("");
   const [saldo, setSaldo] = useState("");
   const [divisa, setDivisa] = useState<"USD" | "BS">("USD");
+  const [tipoMetodo, setTipoMetodo] = useState<"pago_movil" | "efectivo" | "zelle" | "tarjeta_debit" | "tarjeta_credito" | "vales">("pago_movil");
 
   // Formulario de movimiento
   const [montoMovimiento, setMontoMovimiento] = useState("");
@@ -112,6 +114,7 @@ const GestionBancosPage: React.FC = () => {
         nombre_titular: nombreTitular.trim(),
         saldo: saldo ? parseFloat(saldo) : 0,
         divisa: divisa.toUpperCase(), // Asegurar que sea "USD" o "BS"
+        tipo_metodo: tipoMetodo,
       };
 
       const res = await fetchWithAuth(`${API_BASE_URL}/bancos`, {
@@ -143,6 +146,7 @@ const GestionBancosPage: React.FC = () => {
     setNombreTitular(banco.nombre_titular);
     setSaldo(banco.saldo.toString());
     setDivisa(banco.divisa);
+    setTipoMetodo(banco.tipo_metodo || "pago_movil");
     setShowModalEditar(true);
   };
 
@@ -160,6 +164,7 @@ const GestionBancosPage: React.FC = () => {
         nombre_titular: nombreTitular.trim(),
         saldo: parseFloat(saldo) || 0,
         divisa: divisa.toUpperCase(), // Asegurar que sea "USD" o "BS"
+        tipo_metodo: tipoMetodo,
       };
 
       const bancoId = bancoSeleccionado._id || bancoSeleccionado.id;
@@ -319,12 +324,33 @@ const GestionBancosPage: React.FC = () => {
     }
   };
 
+  // Función para obtener el nombre del tipo de método
+  const getNombreMetodo = (tipoMetodo?: string) => {
+    switch (tipoMetodo) {
+      case "pago_movil":
+        return "Pago Móvil";
+      case "efectivo":
+        return "Efectivo";
+      case "zelle":
+        return "Zelle";
+      case "tarjeta_debit":
+        return "Tarjeta Débit";
+      case "tarjeta_credito":
+        return "Tarjeta de Crédito";
+      case "vales":
+        return "Vales";
+      default:
+        return "Pago Móvil";
+    }
+  };
+
   const limpiarFormulario = () => {
     setNumeroCuenta("");
     setNombreBanco("");
     setNombreTitular("");
     setSaldo("");
     setDivisa("USD");
+    setTipoMetodo("pago_movil");
     setMontoMovimiento("");
     setDescripcionMovimiento("");
     setReferenciaMovimiento("");
@@ -426,6 +452,7 @@ const GestionBancosPage: React.FC = () => {
                   <TableHead>Número de Cuenta</TableHead>
                   <TableHead>Banco</TableHead>
                   <TableHead>Titular</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>Divisa</TableHead>
                   <TableHead className="text-right">Saldo</TableHead>
                   <TableHead className="text-center">Acciones</TableHead>
@@ -437,6 +464,7 @@ const GestionBancosPage: React.FC = () => {
                     <TableCell className="font-medium">{banco.numero_cuenta}</TableCell>
                     <TableCell>{banco.nombre_banco}</TableCell>
                     <TableCell>{banco.nombre_titular}</TableCell>
+                    <TableCell>{getNombreMetodo(banco.tipo_metodo)}</TableCell>
                     <TableCell>{banco.divisa}</TableCell>
                     <TableCell className="text-right font-semibold">
                       {banco.divisa === "USD" ? "$" : ""}
@@ -553,6 +581,21 @@ const GestionBancosPage: React.FC = () => {
               </select>
             </div>
             <div>
+              <label className="block text-sm font-medium mb-1">Tipo de Método de Pago *</label>
+              <select
+                value={tipoMetodo}
+                onChange={(e) => setTipoMetodo(e.target.value as "pago_movil" | "efectivo" | "zelle" | "tarjeta_debit" | "vales")}
+                className="w-full px-3 py-2 border rounded-md"
+              >
+                <option value="pago_movil">Pago Móvil</option>
+                <option value="efectivo">Efectivo</option>
+                <option value="zelle">Zelle</option>
+                <option value="tarjeta_debit">Tarjeta Débit</option>
+                <option value="tarjeta_credito">Tarjeta de Crédito</option>
+                <option value="vales">Vales</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">Saldo Inicial</label>
               <Input
                 type="number"
@@ -621,6 +664,21 @@ const GestionBancosPage: React.FC = () => {
               >
                 <option value="USD">USD</option>
                 <option value="BS">BS</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Tipo de Método de Pago *</label>
+              <select
+                value={tipoMetodo}
+                onChange={(e) => setTipoMetodo(e.target.value as "pago_movil" | "efectivo" | "zelle" | "tarjeta_debit" | "vales")}
+                className="w-full px-3 py-2 border rounded-md"
+              >
+                <option value="pago_movil">Pago Móvil</option>
+                <option value="efectivo">Efectivo</option>
+                <option value="zelle">Zelle</option>
+                <option value="tarjeta_debit">Tarjeta Débit</option>
+                <option value="tarjeta_credito">Tarjeta de Crédito</option>
+                <option value="vales">Vales</option>
               </select>
             </div>
             <div>

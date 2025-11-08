@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { fetchWithAuth } from "@/lib/api";
 import AgregarCuadreModal from "@/components/AgregarCuadreModal";
 import { TicketFactura } from "@/components/TicketFactura";
+import { Smartphone, Wallet, CreditCard, Receipt, Banknote } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -67,6 +68,7 @@ interface Banco {
   nombre_titular: string;
   saldo: number;
   divisa: "USD" | "BS"; // Backend espera "BS" en mayúsculas
+  tipo_metodo?: "pago_movil" | "efectivo" | "zelle" | "tarjeta_debit" | "tarjeta_credito" | "vales";
   activo?: boolean;
 }
 
@@ -189,6 +191,46 @@ const PuntoVentaPage: React.FC = () => {
       console.error("Error al obtener usuario:", error);
     }
     return null;
+  };
+
+  // Función para obtener el ícono según el tipo de método
+  const getIconoMetodo = (tipoMetodo?: string) => {
+    switch (tipoMetodo) {
+      case "pago_movil":
+        return <Smartphone className="w-4 h-4 inline-block mr-1" />;
+      case "efectivo":
+        return <Banknote className="w-4 h-4 inline-block mr-1" />;
+      case "zelle":
+        return <Wallet className="w-4 h-4 inline-block mr-1" />;
+      case "tarjeta_debit":
+        return <CreditCard className="w-4 h-4 inline-block mr-1" />;
+      case "tarjeta_credito":
+        return <CreditCard className="w-4 h-4 inline-block mr-1" />;
+      case "vales":
+        return <Receipt className="w-4 h-4 inline-block mr-1" />;
+      default:
+        return <Smartphone className="w-4 h-4 inline-block mr-1" />;
+    }
+  };
+
+  // Función para obtener el nombre del tipo de método
+  const getNombreMetodo = (tipoMetodo?: string) => {
+    switch (tipoMetodo) {
+      case "pago_movil":
+        return "Pago Móvil";
+      case "efectivo":
+        return "Efectivo";
+      case "zelle":
+        return "Zelle";
+      case "tarjeta_debit":
+        return "Tarjeta Débit";
+      case "tarjeta_credito":
+        return "Tarjeta de Crédito";
+      case "vales":
+        return "Vales";
+      default:
+        return "Pago Móvil";
+    }
   };
 
   // Cargar bancos
@@ -1953,10 +1995,22 @@ const PuntoVentaPage: React.FC = () => {
                 <option value="">Seleccione un banco</option>
                 {bancos.map((banco) => (
                   <option key={banco._id || banco.id} value={banco._id || banco.id}>
-                    {banco.nombre_banco} ({banco.divisa === "USD" ? "$" : "Bs"})
+                    {getNombreMetodo(banco.tipo_metodo)} - {banco.nombre_banco} ({banco.divisa === "USD" ? "$" : "Bs"})
                   </option>
                 ))}
               </select>
+              {bancoSeleccionadoPago && (() => {
+                const bancoSeleccionado = bancos.find(b => (b._id || b.id) === bancoSeleccionadoPago);
+                if (bancoSeleccionado) {
+                  return (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                      {getIconoMetodo(bancoSeleccionado.tipo_metodo)}
+                      <span>{getNombreMetodo(bancoSeleccionado.tipo_metodo)}</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             <div>
@@ -1996,7 +2050,14 @@ const PuntoVentaPage: React.FC = () => {
                       >
                         <span className={esVuelto ? 'text-yellow-800 font-semibold' : ''}>
                           {esVuelto ? '🔄 ' : ''}
-                          {banco ? `${banco.nombre_banco} (${metodo.divisa})` : `${metodo.tipo.toUpperCase()} (${metodo.divisa})`}:{" "}
+                          {banco ? (
+                            <>
+                              {getIconoMetodo(banco.tipo_metodo)}
+                              {getNombreMetodo(banco.tipo_metodo)} - {banco.nombre_banco} (${metodo.divisa === "USD" ? "$" : "Bs"})
+                            </>
+                          ) : (
+                            `${metodo.tipo.toUpperCase()} (${metodo.divisa})`
+                          )}:{" "}
                           {metodo.divisa === "USD" ? "$" : ""}
                           {Math.abs(metodo.monto || 0).toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
@@ -2142,10 +2203,22 @@ const PuntoVentaPage: React.FC = () => {
                                 })
                                 .map((banco) => (
                                   <option key={banco._id || banco.id} value={banco._id || banco.id}>
-                                    {banco.nombre_banco} - {banco.numero_cuenta} (Saldo: {banco.divisa === "USD" ? "$" : ""}{banco.saldo.toFixed(2)}{banco.divisa === "BS" ? " Bs" : ""})
+                                    {getNombreMetodo(banco.tipo_metodo)} - {banco.nombre_banco} ({banco.divisa === "USD" ? "$" : "Bs"})
                                   </option>
                                 ))}
                             </select>
+                            {bancoSeleccionadoVuelto && (() => {
+                              const bancoSeleccionado = bancos.find(b => (b._id || b.id) === bancoSeleccionadoVuelto);
+                              if (bancoSeleccionado) {
+                                return (
+                                  <div className="mt-1 flex items-center gap-1 text-xs text-yellow-700">
+                                    {getIconoMetodo(bancoSeleccionado.tipo_metodo)}
+                                    <span>{getNombreMetodo(bancoSeleccionado.tipo_metodo)}</span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                         )}
                         <div>
