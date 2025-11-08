@@ -419,12 +419,20 @@ const AgregarCuadreModal: React.FC<Props> = ({
         const farmacias = usuario?.farmacias || {};
         return farmacias[farmacia] || "";
       })(),
-      costoInventario: costoInventario,
+      costoInventario: costoInventario ?? 0, // Asegurar que siempre tenga un valor numérico
       imagenesCuadre: imagenesCuadre
         .filter((img): img is string => img !== null)
         .slice(0, 4),
       desde_punto_venta: desdePuntoVenta, // CRÍTICO: indica que NO se debe sumar al pendiente
     };
+    
+    // Validar que costoInventario tenga un valor válido antes de enviar
+    if (!cuadre.costoInventario || cuadre.costoInventario <= 0) {
+      console.error("Error: costoInventario no tiene un valor válido:", cuadre.costoInventario);
+      console.error("Estado actual de costoInventario:", costoInventario);
+      console.error("totalesFacturas.costoInventario:", totalesFacturas.costoInventario);
+      console.error("costoInventarioPrellenado:", costoInventarioPrellenado);
+    }
 
     console.log("Cuadre object being sent:", cuadre); // Log the cuadre object
     console.log("Valor de valesUsd antes de enviar:", valesUsd); // Log adicional para depuración
