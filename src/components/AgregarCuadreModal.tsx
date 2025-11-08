@@ -12,6 +12,13 @@ interface Props {
   totalCajaSistemaUsd?: number;
   costoInventarioPrellenado?: number;
   deshabilitarCajero?: boolean;
+  fondoCaja?: {
+    efectivoBs: number;
+    efectivoUsd: number;
+    metodoPagoBs?: string;
+    metodoPagoUsd?: string;
+  } | null;
+  onCerrarCajaCompleto?: () => void;
 }
 
 interface Cajero {
@@ -31,7 +38,9 @@ const AgregarCuadreModal: React.FC<Props> = ({
   tasaPrellenada,
   totalCajaSistemaUsd,
   costoInventarioPrellenado,
-  deshabilitarCajero = false
+  deshabilitarCajero = false,
+  fondoCaja,
+  onCerrarCajaCompleto
 }) => {
   // Estados para los campos del cuadre
   const [cajaNumero, setCajaNumero] = useState<number>(1);
@@ -96,7 +105,13 @@ const AgregarCuadreModal: React.FC<Props> = ({
   const totalCajaSistemaMenosVales =
     (totalCajaSistemaBs ?? 0) - (valesUsd ? valesUsd * (tasa ?? 0) : 0);
   const totalBsEnUsd = (tasa ?? 0) > 0 ? totalBsMenosVales / (tasa ?? 0) : 0;
-  const totalGeneralUsd = totalBsEnUsd + (efectivoUsd ?? 0) + (zelleUsd ?? 0);
+  
+  // Restar el fondo de caja del total para que no afecte las ventas
+  const fondoTotalUsd = fondoCaja && (tasa ?? 0) > 0
+    ? fondoCaja.efectivoUsd + (fondoCaja.efectivoBs / (tasa ?? 1))
+    : 0;
+  const totalGeneralUsd = totalBsEnUsd + (efectivoUsd ?? 0) + (zelleUsd ?? 0) - fondoTotalUsd;
+  
   // Cálculo de diferenciaUsd, sobranteUsd y faltanteUsd con 4 decimales para guardar en la base de datos
   const diferenciaUsd =
     (tasa ?? 0) > 0
@@ -229,6 +244,10 @@ const AgregarCuadreModal: React.FC<Props> = ({
       setSuccess("¡Cuadre guardado exitosamente!");
       setError("");
       setTimeout(() => {
+        // Si viene desde punto de venta, llamar a onCerrarCajaCompleto para limpiar todo
+        if (onCerrarCajaCompleto) {
+          onCerrarCajaCompleto();
+        }
         onClose();
       }, 300);
     } catch (err: any) {

@@ -139,6 +139,15 @@ const PuntoVentaPage: React.FC = () => {
   
   // Estados para cerrar caja
   const [showCerrarCajaModal, setShowCerrarCajaModal] = useState(false);
+  
+  // Estados para apertura de caja (fondo)
+  const [showFondoModal, setShowFondoModal] = useState(false);
+  const [fondoCaja, setFondoCaja] = useState<{
+    efectivoBs: number;
+    efectivoUsd: number;
+    metodoPagoBs?: string; // banco_id para Bs
+    metodoPagoUsd?: string; // banco_id para USD
+  } | null>(null);
   const [totalCajaSistemaUsd, setTotalCajaSistemaUsd] = useState<number>(0);
   const [costoInventarioTotal, setCostoInventarioTotal] = useState<number>(0);
   
@@ -398,6 +407,52 @@ const PuntoVentaPage: React.FC = () => {
   const handleSeleccionarCajero = (cajero: Cajero) => {
     setCajeroSeleccionado(cajero);
     setShowCajeroModal(false);
+    // Abrir modal de fondo después de seleccionar cajero
+    setShowFondoModal(true);
+  };
+  
+  // Estados para el modal de fondo
+  const [fondoEfectivoBs, setFondoEfectivoBs] = useState<string>("");
+  const [fondoEfectivoUsd, setFondoEfectivoUsd] = useState<string>("");
+  const [fondoBancoBs, setFondoBancoBs] = useState<string>("");
+  const [fondoBancoUsd, setFondoBancoUsd] = useState<string>("");
+  
+  const handleConfirmarFondo = () => {
+    if (!fondoEfectivoBs && !fondoEfectivoUsd) {
+      alert("Debe ingresar al menos un monto de fondo (Bs o USD)");
+      return;
+    }
+    
+    setFondoCaja({
+      efectivoBs: parseFloat(fondoEfectivoBs) || 0,
+      efectivoUsd: parseFloat(fondoEfectivoUsd) || 0,
+      metodoPagoBs: fondoBancoBs || undefined,
+      metodoPagoUsd: fondoBancoUsd || undefined,
+    });
+    setShowFondoModal(false);
+  };
+  
+  // Limpiar todo cuando se cierra la caja
+  const handleCerrarCajaCompleto = () => {
+    // Limpiar estado del cajero y fondo
+    setCajeroSeleccionado(null);
+    setFondoCaja(null);
+    setFondoEfectivoBs("");
+    setFondoEfectivoUsd("");
+    setFondoBancoBs("");
+    setFondoBancoUsd("");
+    // Limpiar carrito y otros estados
+    setCarrito([]);
+    setClienteSeleccionado(null);
+    setMetodosPago([]);
+    // Abrir modal de selección de sucursal
+    setShowSucursalModal(true);
+  };
+  
+  // Función para manejar el cierre completo de caja (después de guardar el cuadre)
+  const handleCerrarCajaFinal = () => {
+    handleCerrarCajaCompleto();
+    setShowCerrarCajaModal(false);
   };
 
   const handleSeleccionarProducto = (producto: Producto) => {
@@ -1246,6 +1301,95 @@ const PuntoVentaPage: React.FC = () => {
                   <div className="font-semibold">{sucursal.nombre}</div>
                 </button>
               ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Fondo de Caja */}
+        <Dialog 
+          open={showFondoModal} 
+          onOpenChange={(open) => {
+            // No permitir cerrar el modal sin confirmar el fondo
+            if (!open && !fondoCaja) {
+              return;
+            }
+            setShowFondoModal(open);
+          }}
+        >
+          <DialogContent
+            onInteractOutside={(e) => {
+              e.preventDefault();
+            }}
+            onEscapeKeyDown={(e) => {
+              e.preventDefault();
+            }}
+            className="max-w-md"
+          >
+            <DialogHeader>
+              <DialogTitle>Fondo de Caja</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Efectivo en Bs *</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fondoEfectivoBs}
+                  onChange={(e) => setFondoEfectivoBs(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Método de Pago para Bs</label>
+                <select
+                  value={fondoBancoBs}
+                  onChange={(e) => setFondoBancoBs(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="">Seleccione un banco (opcional)</option>
+                  {bancos
+                    .filter(b => b.divisa === "BS")
+                    .map((banco) => (
+                      <option key={banco._id || banco.id} value={banco._id || banco.id}>
+                        {getNombreMetodo(banco.tipo_metodo)} - {banco.nombre_banco}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Efectivo en USD *</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fondoEfectivoUsd}
+                  onChange={(e) => setFondoEfectivoUsd(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Método de Pago para USD</label>
+                <select
+                  value={fondoBancoUsd}
+                  onChange={(e) => setFondoBancoUsd(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="">Seleccione un banco (opcional)</option>
+                  {bancos
+                    .filter(b => b.divisa === "USD")
+                    .map((banco) => (
+                      <option key={banco._id || banco.id} value={banco._id || banco.id}>
+                        {getNombreMetodo(banco.tipo_metodo)} - {banco.nombre_banco}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button onClick={handleConfirmarFondo} className="flex-1">
+                  Confirmar
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -2362,7 +2506,7 @@ const PuntoVentaPage: React.FC = () => {
       </Dialog>
 
       {/* Modal de Cerrar Caja */}
-      {showCerrarCajaModal && sucursalSeleccionada && (
+      {showCerrarCajaModal && sucursalSeleccionada && cajeroSeleccionado && (
         <AgregarCuadreModal
           farmacia={sucursalSeleccionada.id}
           dia={new Date().toISOString().split('T')[0]}
@@ -2376,6 +2520,8 @@ const PuntoVentaPage: React.FC = () => {
           totalCajaSistemaUsd={totalCajaSistemaUsd}
           costoInventarioPrellenado={costoInventarioTotal}
           deshabilitarCajero={true}
+          fondoCaja={fondoCaja}
+          onCerrarCajaCompleto={handleCerrarCajaFinal}
         />
       )}
 
