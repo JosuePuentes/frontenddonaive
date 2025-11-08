@@ -470,20 +470,30 @@ const PuntoVentaPage: React.FC = () => {
     // Cerrar el modal de cajero
     setShowCajeroModal(false);
     
-    // SIEMPRE limpiar el fondo cuando se selecciona un cajero (incluso si es el mismo)
-    // Esto asegura que cada vez que se selecciona un cajero, se pida el fondo
-    setFondoCaja(null);
+    // Solo pedir fondo si NO hay fondo configurado para este cajero
+    // Si es el mismo cajero y ya tiene fondo, no pedirlo de nuevo
+    const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+    const esMismoCajero = cajeroSeleccionado && cajeroSeleccionado._id === cajero._id;
     
-    // Forzar apertura del modal de fondo después de un delay
-    console.log("Abriendo modal de fondo para cajero:", cajero.NOMBRE);
-    setTimeout(() => {
-      console.log("FORZANDO apertura del modal de fondo - setShowFondoModal(true)");
-      setShowFondoModal(true);
-      // Verificar inmediatamente después
+    if (!tieneFondo || !esMismoCajero) {
+      // Si no hay fondo o es un cajero diferente, limpiar y pedir fondo
+      if (!esMismoCajero) {
+        setFondoCaja(null);
+      }
+      
+      // Forzar apertura del modal de fondo después de un delay
+      console.log("Abriendo modal de fondo para cajero:", cajero.NOMBRE);
       setTimeout(() => {
-        console.log("Verificación inmediata: showFondoModal debería ser true");
-      }, 50);
-    }, 600);
+        console.log("FORZANDO apertura del modal de fondo - setShowFondoModal(true)");
+        setShowFondoModal(true);
+        // Verificar inmediatamente después
+        setTimeout(() => {
+          console.log("Verificación inmediata: showFondoModal debería ser true");
+        }, 50);
+      }, 600);
+    } else {
+      console.log("Cajero ya tiene fondo configurado, no se pide de nuevo");
+    }
   };
   
   // Estados para el modal de fondo
@@ -1034,13 +1044,54 @@ const PuntoVentaPage: React.FC = () => {
         }, 0);
         setTotalCajaSistemaUsd(totalUsd);
         
-        // Calcular costo total del inventario (suma de costos de productos vendidos del cajero)
+        // Calcular costo total del inventario desde el inventario de la sucursal
+        // Primero obtener todos los items del inventario de la sucursal
+        let itemsInventario: any[] = [];
+        try {
+          // Obtener inventario de la sucursal
+          const resInventario = await fetchWithAuth(
+            `${API_BASE_URL}/inventarios?sucursal=${sucursalSeleccionada.id}`
+          );
+          if (resInventario.ok) {
+            const inventarios = await resInventario.json();
+            const inventarioSucursal = Array.isArray(inventarios) 
+              ? inventarios.find((inv: any) => inv.farmacia === sucursalSeleccionada.id || inv.sucursal === sucursalSeleccionada.id)
+              : null;
+            
+            if (inventarioSucursal) {
+              // Obtener items del inventario
+              const resItems = await fetchWithAuth(
+                `${API_BASE_URL}/inventarios/${inventarioSucursal._id || inventarioSucursal.id}/items`
+              );
+              if (resItems.ok) {
+                itemsInventario = await resItems.json();
+                if (!Array.isArray(itemsInventario)) {
+                  itemsInventario = [];
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error al obtener inventario:", error);
+        }
+        
+        // Crear un mapa de costos por producto_id
+        const costosPorProducto = new Map<string, number>();
+        itemsInventario.forEach((item: any) => {
+          const productoId = item._id || item.id || item.producto_id;
+          const costo = item.costo_unitario || item.costo || 0;
+          if (productoId && costo > 0) {
+            costosPorProducto.set(productoId, costo);
+          }
+        });
+        
+        // Calcular costo total usando los costos del inventario
         const costoTotal = ventasDelDia.reduce((sum: number, venta: any) => {
           if (Array.isArray(venta.items)) {
             const costoVenta = venta.items.reduce((itemSum: number, item: any) => {
-              // El costo viene en el item. El backend debe enviar costo_unitario en cada item
-              // Si no está, intentamos calcularlo desde precio_unitario_original / tasa
-              const costoItem = item.costo_unitario || (item.precio_unitario_original_usd || 0);
+              const productoId = item.producto_id || item._id || item.id;
+              // Buscar el costo en el inventario
+              const costoItem = costosPorProducto.get(productoId) || item.costo_unitario || 0;
               return itemSum + (costoItem * (item.cantidad || 0));
             }, 0);
             return sum + costoVenta;

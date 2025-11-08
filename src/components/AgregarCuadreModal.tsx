@@ -50,6 +50,65 @@ const AgregarCuadreModal: React.FC<Props> = ({
   const [cajero, setCajero] = useState<string>(cajeroPrellenado || "");
   const [tasa, setTasa] = useState<number | undefined>(tasaPrellenada);
   
+  // Estado para almacenar costos del inventario
+  const [costosInventario, setCostosInventario] = useState<Map<string, number>>(new Map());
+  
+  // Cargar costos del inventario de la sucursal
+  useEffect(() => {
+    const cargarCostosInventario = async () => {
+      if (!farmacia || !deshabilitarCajero) return;
+      
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return;
+        
+        // Obtener inventario de la sucursal
+        const resInventario = await fetch(`${API_BASE_URL}/inventarios?sucursal=${farmacia}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (resInventario.ok) {
+          const inventarios = await resInventario.json();
+          const inventarioSucursal = Array.isArray(inventarios) 
+            ? inventarios.find((inv: any) => inv.farmacia === farmacia || inv.sucursal === farmacia)
+            : null;
+          
+          if (inventarioSucursal) {
+            // Obtener items del inventario
+            const resItems = await fetch(`${API_BASE_URL}/inventarios/${inventarioSucursal._id || inventarioSucursal.id}/items`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            
+            if (resItems.ok) {
+              const itemsInventario = await resItems.json();
+              const itemsArray = Array.isArray(itemsInventario) ? itemsInventario : [];
+              
+              // Crear mapa de costos por producto_id
+              const costosMap = new Map<string, number>();
+              itemsArray.forEach((item: any) => {
+                const productoId = item._id || item.id || item.producto_id;
+                const costo = item.costo_unitario || item.costo || 0;
+                if (productoId && costo > 0) {
+                  costosMap.set(productoId, costo);
+                }
+              });
+              
+              setCostosInventario(costosMap);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar costos del inventario:", error);
+      }
+    };
+    
+    cargarCostosInventario();
+  }, [farmacia, deshabilitarCajero]);
+  
   // Calcular totales desde facturas procesadas
   const calcularTotalesDesdeFacturas = () => {
     if (!facturasProcesadas || facturasProcesadas.length === 0) {
@@ -95,8 +154,9 @@ const AgregarCuadreModal: React.FC<Props> = ({
             recargaBs += (item.subtotal || 0);
           }
           
-          // Costo Inventario: sumar costos de todos los items
-          const costoItem = item.costo_unitario || item.precio_unitario_original_usd || 0;
+          // Costo Inventario: obtener costo desde el inventario de la sucursal
+          const productoId = item.producto_id || item._id || item.id;
+          const costoItem = costosInventario.get(productoId) || item.costo_unitario || 0;
           costoInventario += costoItem * (item.cantidad || 0);
         });
       }
