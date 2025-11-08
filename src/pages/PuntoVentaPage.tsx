@@ -450,9 +450,33 @@ const PuntoVentaPage: React.FC = () => {
 
   const handleSeleccionarCajero = (cajero: Cajero) => {
     console.log("Cajero seleccionado:", cajero.NOMBRE);
+    
+    // Si se cambia de cajero, limpiar el fondo anterior
+    if (cajeroSeleccionado && cajeroSeleccionado._id !== cajero._id) {
+      console.log("Cambiando de cajero, limpiando fondo anterior");
+      setFondoCaja(null);
+      setFondoEfectivoBs("");
+      setFondoEfectivoUsd("");
+      setFondoBancoBs("");
+      setFondoBancoUsd("");
+      // Limpiar ventas del cajero anterior
+      setTotalCajaSistemaUsd(0);
+      setCostoInventarioTotal(0);
+    }
+    
     setCajeroSeleccionado(cajero);
-    // Cerrar el modal de cajero - el useEffect se encargará de abrir el modal de fondo
+    // Cerrar el modal de cajero
     setShowCajeroModal(false);
+    
+    // Forzar apertura del modal de fondo después de un delay
+    const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+    if (!tieneFondo) {
+      console.log("No hay fondo, abriendo modal en 600ms");
+      setTimeout(() => {
+        console.log("FORZANDO apertura del modal de fondo");
+        setShowFondoModal(true);
+      }, 600);
+    }
   };
   
   // Estados para el modal de fondo
@@ -938,28 +962,39 @@ const PuntoVentaPage: React.FC = () => {
 
   // Función para obtener ventas del día y calcular totales
   const obtenerVentasDelDia = async () => {
-    if (!sucursalSeleccionada) return;
+    if (!sucursalSeleccionada || !cajeroSeleccionado) return;
 
     try {
       const hoy = new Date().toISOString().split('T')[0];
+      const usuario = getUsuarioActual();
+      const cajero = usuario?.correo || cajeroSeleccionado.NOMBRE;
       
-      // Obtener ventas del día para la sucursal
+      // Obtener ventas del día para la sucursal Y el cajero específico
       const resVentas = await fetchWithAuth(
-        `${API_BASE_URL}/punto-venta/ventas?fecha=${hoy}&sucursal=${sucursalSeleccionada.id}`
+        `${API_BASE_URL}/punto-venta/ventas/usuario?fecha=${hoy}&sucursal=${sucursalSeleccionada.id}&cajero=${encodeURIComponent(cajero)}&limit=1000`
       );
       
       if (resVentas.ok) {
-        const ventas = await resVentas.json();
-        const ventasArray = Array.isArray(ventas) ? ventas : [];
+        const data = await resVentas.json();
+        const ventasArray = Array.isArray(data.facturas) ? data.facturas : (Array.isArray(data) ? data : []);
         
-        // Calcular total de caja en USD (suma de todas las ventas)
-        const totalUsd = ventasArray.reduce((sum: number, venta: any) => {
+        // Filtrar solo las ventas del día actual y del cajero actual
+        const ventasDelDia = ventasArray.filter((venta: any) => {
+          const fechaVenta = new Date(venta.fecha);
+          const hoyDate = new Date(hoy);
+          const esMismoDia = fechaVenta.toDateString() === hoyDate.toDateString();
+          const esMismoCajero = venta.cajero === cajero || venta.cajero === cajeroSeleccionado.NOMBRE;
+          return esMismoDia && esMismoCajero;
+        });
+        
+        // Calcular total de caja en USD (suma de todas las ventas del cajero)
+        const totalUsd = ventasDelDia.reduce((sum: number, venta: any) => {
           return sum + (venta.total_usd || 0);
         }, 0);
         setTotalCajaSistemaUsd(totalUsd);
         
-        // Calcular costo total del inventario (suma de costos de productos vendidos)
-        const costoTotal = ventasArray.reduce((sum: number, venta: any) => {
+        // Calcular costo total del inventario (suma de costos de productos vendidos del cajero)
+        const costoTotal = ventasDelDia.reduce((sum: number, venta: any) => {
           if (Array.isArray(venta.items)) {
             const costoVenta = venta.items.reduce((itemSum: number, item: any) => {
               // El costo viene en el item. El backend debe enviar costo_unitario en cada item
@@ -1371,9 +1406,10 @@ const PuntoVentaPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de Fondo de Caja */}
+        {/* Modal de Fondo de Caja - Forzar renderizado */}
+        {showFondoModal && (
         <Dialog 
-          open={showFondoModal} 
+          open={true}
           onOpenChange={(open) => {
             // Solo validar cuando se intenta cerrar (open = false)
             if (!open) {
@@ -1499,6 +1535,7 @@ const PuntoVentaPage: React.FC = () => {
             </div>
           </DialogContent>
         </Dialog>
+        )}
 
         {/* Modal de selección de cajero */}
         <Dialog 
