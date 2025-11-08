@@ -470,6 +470,17 @@ const PuntoVentaPage: React.FC = () => {
     // Cerrar el modal de cajero
     setShowCajeroModal(false);
     
+    // Intentar cargar fondo desde localStorage
+    if (sucursalSeleccionada) {
+      const fondoGuardado = cargarFondoCajaDesdeStorage(cajero._id || cajero.ID, sucursalSeleccionada.id);
+      if (fondoGuardado) {
+        console.log("Fondo de caja encontrado en localStorage, restaurando...");
+        setFondoCaja(fondoGuardado);
+        // No pedir fondo si ya existe
+        return;
+      }
+    }
+    
     // Solo pedir fondo si NO hay fondo configurado para este cajero
     // Si es el mismo cajero y ya tiene fondo, no pedirlo de nuevo
     const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
@@ -502,6 +513,52 @@ const PuntoVentaPage: React.FC = () => {
   const [fondoBancoBs, setFondoBancoBs] = useState<string>("");
   const [fondoBancoUsd, setFondoBancoUsd] = useState<string>("");
   
+  // Función para obtener la clave de localStorage para el fondo de caja
+  const getFondoCajaKey = (cajeroId: string, sucursalId: string) => {
+    const hoy = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    return `fondoCaja_${cajeroId}_${sucursalId}_${hoy}`;
+  };
+  
+  // Función para cargar fondo de caja desde localStorage
+  const cargarFondoCajaDesdeStorage = (cajeroId: string, sucursalId: string) => {
+    try {
+      const key = getFondoCajaKey(cajeroId, sucursalId);
+      const fondoGuardado = localStorage.getItem(key);
+      if (fondoGuardado) {
+        const fondo = JSON.parse(fondoGuardado);
+        if (fondo && (fondo.efectivoBs > 0 || fondo.efectivoUsd > 0)) {
+          console.log("Fondo de caja cargado desde localStorage:", fondo);
+          return fondo;
+        }
+      }
+    } catch (error) {
+      console.error("Error al cargar fondo de caja desde localStorage:", error);
+    }
+    return null;
+  };
+  
+  // Función para guardar fondo de caja en localStorage
+  const guardarFondoCajaEnStorage = (cajeroId: string, sucursalId: string, fondo: any) => {
+    try {
+      const key = getFondoCajaKey(cajeroId, sucursalId);
+      localStorage.setItem(key, JSON.stringify(fondo));
+      console.log("Fondo de caja guardado en localStorage con clave:", key);
+    } catch (error) {
+      console.error("Error al guardar fondo de caja en localStorage:", error);
+    }
+  };
+  
+  // Función para limpiar fondo de caja de localStorage
+  const limpiarFondoCajaDeStorage = (cajeroId: string, sucursalId: string) => {
+    try {
+      const key = getFondoCajaKey(cajeroId, sucursalId);
+      localStorage.removeItem(key);
+      console.log("Fondo de caja eliminado de localStorage con clave:", key);
+    } catch (error) {
+      console.error("Error al limpiar fondo de caja de localStorage:", error);
+    }
+  };
+  
   const handleConfirmarFondo = () => {
     if (!fondoEfectivoBs && !fondoEfectivoUsd) {
       alert("Debe ingresar al menos un monto de fondo (Bs o USD)");
@@ -516,18 +573,35 @@ const PuntoVentaPage: React.FC = () => {
       return;
     }
     
-    setFondoCaja({
+    if (!cajeroSeleccionado || !sucursalSeleccionada) {
+      alert("Error: No hay cajero o sucursal seleccionada");
+      return;
+    }
+    
+    const fondo = {
       efectivoBs: fondoBs,
       efectivoUsd: fondoUsd,
       metodoPagoBs: fondoBancoBs || undefined,
       metodoPagoUsd: fondoBancoUsd || undefined,
-    });
+    };
+    
+    setFondoCaja(fondo);
+    
+    // Guardar en localStorage para que persista entre recargas
+    guardarFondoCajaEnStorage(cajeroSeleccionado._id || cajeroSeleccionado.ID, sucursalSeleccionada.id, fondo);
+    
     setShowFondoModal(false);
   };
   
   // Limpiar todo cuando se cierra la caja
   const handleCerrarCajaCompleto = () => {
     console.log("Limpiando estado de caja...");
+    
+    // Limpiar fondo de localStorage antes de limpiar el estado
+    if (cajeroSeleccionado && sucursalSeleccionada) {
+      limpiarFondoCajaDeStorage(cajeroSeleccionado._id || cajeroSeleccionado.ID, sucursalSeleccionada.id);
+    }
+    
     // Limpiar estado del cajero y fondo
     setCajeroSeleccionado(null);
     setFondoCaja(null);
