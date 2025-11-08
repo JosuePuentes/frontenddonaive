@@ -3,7 +3,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Search, Edit, Trash2, RefreshCw, Plus, History, ArrowUp, ArrowDown, ArrowRightLeft, Smartphone, Wallet, CreditCard, Receipt, Banknote } from "lucide-react";
+import { Search, Edit, Trash2, RefreshCw, Plus, History, ArrowUp, ArrowDown, ArrowRightLeft } from "lucide-react";
 import {
   Table,
   TableBody,
