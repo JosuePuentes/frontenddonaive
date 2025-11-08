@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import ResumeCardFarmacia from "@/components/ResumeCardFarmacia";
 import { useResumenData } from "@/hooks/useResumenData";
 import { ReportButton } from "@/components/reports/ReportButton";
