@@ -427,6 +427,8 @@ export function useResumenData() {
     farmacias.forEach((farm) => {
       const data = cuadresPorFarmacia[farm.id] || [];
       let totalPendiente = 0;
+      
+      // Sumar cuadres con estado "wait"
       data.forEach((c) => {
         if (c.estado !== "wait") return;
         if (
@@ -450,10 +452,39 @@ export function useResumenData() {
         const tasa = Number(c.tasa || 0);
         totalPendiente += tasa > 0 ? sumaUsd + sumaBs / tasa : sumaUsd;
       });
+      
+      // Sumar ventas del punto de venta que no están en cuadres verificados
+      // Estas son todas las ventas del período que aún no se han incluido en un cuadre "verified"
+      const ventasPV = ventasPuntoVenta[farm.id];
+      if (ventasPV) {
+        // Obtener el total de ventas verificadas (ya incluidas en cuadres)
+        const ventasVerificadas = ventas[farm.id]?.totalVentas || 0;
+        
+        // Calcular el total de ventas del punto de venta en USD
+        const tasaPromedio = data.length > 0 
+          ? data.reduce((acc, c) => acc + Number(c.tasa || 0), 0) / data.length 
+          : 0;
+        const totalVentasPVUsd = tasaPromedio > 0
+          ? ventasPV.total_usd_recibido + (ventasPV.total_bs / tasaPromedio)
+          : ventasPV.total_usd_recibido;
+        
+        // El pendiente son las ventas del punto de venta que aún no están verificadas
+        // Si hay ventas verificadas, restamos esa parte
+        // Si no hay ventas verificadas, todo el total de ventas PV va al pendiente
+        if (ventasVerificadas > 0) {
+          // Si ya hay ventas verificadas, el pendiente es la diferencia
+          // (esto significa que algunas ventas ya están en cuadres verificados)
+          totalPendiente += Math.max(0, totalVentasPVUsd - ventasVerificadas);
+        } else {
+          // Si no hay ventas verificadas, todo el total de ventas PV va al pendiente
+          totalPendiente += totalVentasPVUsd;
+        }
+      }
+      
       pendientes[farm.id] = Number(totalPendiente.toFixed(2));
     });
     return pendientes;
-  }, [farmacias, cuadresPorFarmacia, fechaInicio, fechaFin]);
+  }, [farmacias, cuadresPorFarmacia, fechaInicio, fechaFin, ventasPuntoVenta, ventas]);
 
   const sortedFarmacias = useMemo(() => {
     return [...farmacias].sort((a, b) => {

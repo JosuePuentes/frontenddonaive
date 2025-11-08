@@ -91,9 +91,6 @@ const ResumeCardFarmacia: React.FC<ResumeCardFarmaciaProps> = ({
           <div className="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full shadow border border-yellow-300">
             ⏳ Pendiente: {formatCurrency(pendienteVerificar)}
           </div>
-          <div className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full shadow border border-blue-300">
-            Total Estimado: {formatCurrency(totalVentas + pendienteVerificar)}
-          </div>
         </div>
       )}
 
@@ -106,14 +103,16 @@ const ResumeCardFarmacia: React.FC<ResumeCardFarmaciaProps> = ({
         {nombre}
       </h3>
 
-      {/* Total de Ventas Principal */}
-      <div
-        className={`text-4xl font-extrabold mb-2 ${
-          top ? "text-yellow-600" : "text-green-600"
-        } text-center`}
-      >
-        {formatCurrency(totalVentas)}
-      </div>
+      {/* Total de Ventas Principal - Solo mostrar si hay ventas verificadas */}
+      {totalVentas > 0 && (
+        <div
+          className={`text-4xl font-extrabold mb-2 ${
+            top ? "text-yellow-600" : "text-green-600"
+          } text-center`}
+        >
+          {formatCurrency(totalVentas)}
+        </div>
+      )}
       {/* Total Inventario visual */}
       <div className="flex items-center gap-2 mb-4 text-base text-blue-700 font-semibold relative">
         <i className="fas fa-boxes-stacked text-blue-500"></i>
