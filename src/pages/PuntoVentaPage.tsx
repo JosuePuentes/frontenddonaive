@@ -413,10 +413,10 @@ const PuntoVentaPage: React.FC = () => {
     console.log("useEffect fondo modal - showFondoModal:", showFondoModal);
     
     if (cajeroSeleccionado && !showCajeroModal) {
-      // Verificar si hay fondo configurado
-      const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+      // Verificar si hay fondo configurado - CORREGIR: verificar correctamente null/undefined
+      const tieneFondo = fondoCaja !== null && fondoCaja !== undefined && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
       
-      console.log("Condiciones: tieneFondo =", tieneFondo, "showFondoModal =", showFondoModal);
+      console.log("Condiciones: tieneFondo =", tieneFondo, "(fondoCaja:", fondoCaja, "), showFondoModal =", showFondoModal);
       
       if (!tieneFondo && !showFondoModal) {
         console.log("✅ Condiciones cumplidas, abriendo modal de fondo en 500ms");
@@ -469,13 +469,22 @@ const PuntoVentaPage: React.FC = () => {
     setShowCajeroModal(false);
     
     // Forzar apertura del modal de fondo después de un delay
-    const tieneFondo = fondoCaja && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+    // Verificar correctamente si hay fondo (no solo truthy check)
+    const tieneFondo = fondoCaja !== null && fondoCaja !== undefined && (fondoCaja.efectivoBs > 0 || fondoCaja.efectivoUsd > 0);
+    console.log("handleSeleccionarCajero - tieneFondo:", tieneFondo, "fondoCaja:", fondoCaja);
+    
     if (!tieneFondo) {
       console.log("No hay fondo, abriendo modal en 600ms");
       setTimeout(() => {
-        console.log("FORZANDO apertura del modal de fondo");
+        console.log("FORZANDO apertura del modal de fondo - setShowFondoModal(true)");
         setShowFondoModal(true);
+        // Verificar inmediatamente después
+        setTimeout(() => {
+          console.log("Verificación inmediata: showFondoModal debería ser true");
+        }, 50);
       }, 600);
+    } else {
+      console.log("Ya hay fondo configurado, no se abre modal");
     }
   };
   
@@ -1406,11 +1415,11 @@ const PuntoVentaPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de Fondo de Caja - Forzar renderizado */}
-        {showFondoModal && (
+        {/* Modal de Fondo de Caja */}
         <Dialog 
-          open={true}
+          open={showFondoModal}
           onOpenChange={(open) => {
+            console.log("onOpenChange del modal de fondo llamado con open =", open);
             // Solo validar cuando se intenta cerrar (open = false)
             if (!open) {
               // Verificar si hay fondo de caja configurado
@@ -1419,13 +1428,16 @@ const PuntoVentaPage: React.FC = () => {
               const tieneValoresIngresados = (fondoEfectivoBs && parseFloat(fondoEfectivoBs) > 0) || 
                                             (fondoEfectivoUsd && parseFloat(fondoEfectivoUsd) > 0);
               
+              console.log("Intentando cerrar modal - tieneFondo:", tieneFondo, "tieneValoresIngresados:", tieneValoresIngresados);
+              
               if (!tieneFondo && !tieneValoresIngresados) {
                 alert("Debe ingresar al menos un monto de fondo de caja (Bs o USD) antes de continuar");
-                // No permitir cerrar
+                // No permitir cerrar - no llamar a setShowFondoModal
                 return;
               }
             }
             // Permitir abrir/cerrar normalmente
+            console.log("Permitiendo cambio de estado del modal a:", open);
             setShowFondoModal(open);
           }}
         >
@@ -1535,7 +1547,6 @@ const PuntoVentaPage: React.FC = () => {
             </div>
           </DialogContent>
         </Dialog>
-        )}
 
         {/* Modal de selección de cajero */}
         <Dialog 
