@@ -1081,6 +1081,9 @@ const PuntoVentaPage: React.FC = () => {
       return;
     }
     
+    // Obtener facturas procesadas para calcular totales
+    await obtenerFacturasProcesadas();
+    
     // Siempre obtener ventas del día para asegurar que son del cajero actual
     console.log("Obteniendo ventas para cerrar caja del cajero:", cajeroSeleccionado.NOMBRE);
     await obtenerVentasDelDia();
