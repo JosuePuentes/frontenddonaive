@@ -23,7 +23,7 @@ interface Banco {
   nombre_banco: string;
   nombre_titular: string;
   saldo: number;
-  divisa: "USD" | "Bs";
+  divisa: "USD" | "BS"; // Backend espera "BS" en mayúsculas
   activo?: boolean;
 }
 
@@ -61,7 +61,7 @@ const GestionBancosPage: React.FC = () => {
   const [nombreBanco, setNombreBanco] = useState("");
   const [nombreTitular, setNombreTitular] = useState("");
   const [saldo, setSaldo] = useState("");
-  const [divisa, setDivisa] = useState<"USD" | "Bs">("USD");
+  const [divisa, setDivisa] = useState<"USD" | "BS">("USD");
 
   // Formulario de movimiento
   const [montoMovimiento, setMontoMovimiento] = useState("");
@@ -75,7 +75,12 @@ const GestionBancosPage: React.FC = () => {
       const res = await fetchWithAuth(`${API_BASE_URL}/bancos`);
       if (res.ok) {
         const data = await res.json();
-        setBancos(data.bancos || data || []);
+        // Normalizar divisa a mayúsculas (backend puede enviar "BS" o "Bs")
+        const bancosNormalizados = (data.bancos || data || []).map((banco: any) => ({
+          ...banco,
+          divisa: banco.divisa?.toUpperCase() || "USD" // Normalizar a "USD" o "BS"
+        }));
+        setBancos(bancosNormalizados);
       } else {
         const errorData = await res.json().catch(() => ({ detail: "Error al obtener bancos" }));
         throw new Error(errorData.detail || "Error al obtener bancos");
@@ -106,7 +111,7 @@ const GestionBancosPage: React.FC = () => {
         nombre_banco: nombreBanco.trim(),
         nombre_titular: nombreTitular.trim(),
         saldo: saldo ? parseFloat(saldo) : 0,
-        divisa: divisa,
+        divisa: divisa.toUpperCase(), // Asegurar que sea "USD" o "BS"
       };
 
       const res = await fetchWithAuth(`${API_BASE_URL}/bancos`, {
@@ -154,7 +159,7 @@ const GestionBancosPage: React.FC = () => {
         nombre_banco: nombreBanco.trim(),
         nombre_titular: nombreTitular.trim(),
         saldo: parseFloat(saldo) || 0,
-        divisa: divisa,
+        divisa: divisa.toUpperCase(), // Asegurar que sea "USD" o "BS"
       };
 
       const bancoId = bancoSeleccionado._id || bancoSeleccionado.id;
@@ -439,7 +444,7 @@ const GestionBancosPage: React.FC = () => {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
-                      {banco.divisa === "Bs" ? " Bs" : ""}
+                      {banco.divisa === "BS" ? " Bs" : ""}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center items-center">
@@ -540,11 +545,11 @@ const GestionBancosPage: React.FC = () => {
               <label className="block text-sm font-medium mb-1">Divisa *</label>
               <select
                 value={divisa}
-                onChange={(e) => setDivisa(e.target.value as "USD" | "Bs")}
+                onChange={(e) => setDivisa(e.target.value as "USD" | "BS")}
                 className="w-full px-3 py-2 border rounded-md"
               >
                 <option value="USD">USD</option>
-                <option value="Bs">Bs</option>
+                <option value="BS">BS</option>
               </select>
             </div>
             <div>
@@ -611,11 +616,11 @@ const GestionBancosPage: React.FC = () => {
               <label className="block text-sm font-medium mb-1">Divisa *</label>
               <select
                 value={divisa}
-                onChange={(e) => setDivisa(e.target.value as "USD" | "Bs")}
+                onChange={(e) => setDivisa(e.target.value as "USD" | "BS")}
                 className="w-full px-3 py-2 border rounded-md"
               >
                 <option value="USD">USD</option>
-                <option value="Bs">Bs</option>
+                <option value="BS">BS</option>
               </select>
             </div>
             <div>
@@ -786,7 +791,7 @@ const GestionBancosPage: React.FC = () => {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
-                        {bancoSeleccionado?.divisa === "Bs" ? " Bs" : ""}
+                        {bancoSeleccionado?.divisa === "BS" ? " Bs" : ""}
                       </TableCell>
                     </TableRow>
                   ))}

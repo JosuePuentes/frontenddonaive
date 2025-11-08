@@ -66,7 +66,7 @@ interface Banco {
   nombre_banco: string;
   nombre_titular: string;
   saldo: number;
-  divisa: "USD" | "Bs";
+  divisa: "USD" | "BS"; // Backend espera "BS" en mayúsculas
   activo?: boolean;
 }
 
@@ -197,7 +197,12 @@ const PuntoVentaPage: React.FC = () => {
       const res = await fetchWithAuth(`${API_BASE_URL}/bancos`);
       if (res.ok) {
         const data = await res.json();
-        setBancos(data.bancos || data || []);
+        // Normalizar divisa a mayúsculas (backend puede enviar "BS" o "Bs")
+        const bancosNormalizados = (data.bancos || data || []).map((banco: any) => ({
+          ...banco,
+          divisa: banco.divisa?.toUpperCase() || "USD" // Normalizar a "USD" o "BS"
+        }));
+        setBancos(bancosNormalizados);
       } else {
         console.error("Error al obtener bancos");
         setBancos([]);
@@ -1956,17 +1961,24 @@ const PuntoVentaPage: React.FC = () => {
                     // Actualizar divisa según el banco seleccionado
                     const banco = bancos.find(b => (b._id || b.id) === e.target.value);
                     if (banco) {
-                      setMetodoPagoActual({ ...metodoPagoActual, divisa: banco.divisa });
+                      // Convertir "BS" del backend a "Bs" para el método de pago (compatibilidad)
+                      const divisaParaMetodo = banco.divisa === "BS" ? "Bs" : banco.divisa;
+                      setMetodoPagoActual({ ...metodoPagoActual, divisa: divisaParaMetodo as "Bs" | "USD" });
                     }
                   }}
                   className="w-full border rounded px-3 py-2"
                 >
                   <option value="">Seleccione un banco</option>
                   {bancos
-                    .filter(b => b.divisa === metodoPagoActual.divisa)
+                    .filter(b => {
+                      // Normalizar divisa para comparar (backend usa "BS", frontend puede usar "Bs")
+                      const bancoDivisa = b.divisa?.toUpperCase() || "USD";
+                      const metodoDivisa = metodoPagoActual.divisa?.toUpperCase() || "USD";
+                      return bancoDivisa === metodoDivisa;
+                    })
                     .map((banco) => (
                       <option key={banco._id || banco.id} value={banco._id || banco.id}>
-                        {banco.nombre_banco} - {banco.numero_cuenta} (Saldo: {banco.divisa === "USD" ? "$" : ""}{banco.saldo.toFixed(2)}{banco.divisa === "Bs" ? " Bs" : ""})
+                        {banco.nombre_banco} - {banco.numero_cuenta} (Saldo: {banco.divisa === "USD" ? "$" : ""}{banco.saldo.toFixed(2)}{banco.divisa === "BS" ? " Bs" : ""})
                       </option>
                     ))}
                 </select>
@@ -2139,17 +2151,24 @@ const PuntoVentaPage: React.FC = () => {
                                 // Actualizar divisa según el banco seleccionado
                                 const banco = bancos.find(b => (b._id || b.id) === e.target.value);
                                 if (banco) {
-                                  setMetodoVuelto({ ...metodoVuelto, divisa: banco.divisa });
+                                  // Convertir "BS" del backend a "Bs" para el método de pago (compatibilidad)
+                                  const divisaParaMetodo = banco.divisa === "BS" ? "Bs" : banco.divisa;
+                                  setMetodoVuelto({ ...metodoVuelto, divisa: divisaParaMetodo as "Bs" | "USD" });
                                 }
                               }}
                               className="w-full border rounded px-2 py-1 text-sm"
                             >
                               <option value="">Seleccione un banco</option>
                               {bancos
-                                .filter(b => b.divisa === metodoVuelto.divisa)
+                                .filter(b => {
+                                  // Normalizar divisa para comparar (backend usa "BS", frontend puede usar "Bs")
+                                  const bancoDivisa = b.divisa?.toUpperCase() || "USD";
+                                  const metodoDivisa = metodoVuelto.divisa?.toUpperCase() || "USD";
+                                  return bancoDivisa === metodoDivisa;
+                                })
                                 .map((banco) => (
                                   <option key={banco._id || banco.id} value={banco._id || banco.id}>
-                                    {banco.nombre_banco} - {banco.numero_cuenta} (Saldo: {banco.divisa === "USD" ? "$" : ""}{banco.saldo.toFixed(2)}{banco.divisa === "Bs" ? " Bs" : ""})
+                                    {banco.nombre_banco} - {banco.numero_cuenta} (Saldo: {banco.divisa === "USD" ? "$" : ""}{banco.saldo.toFixed(2)}{banco.divisa === "BS" ? " Bs" : ""})
                                   </option>
                                 ))}
                             </select>
