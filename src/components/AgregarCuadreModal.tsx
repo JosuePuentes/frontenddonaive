@@ -205,54 +205,6 @@ const AgregarCuadreModal: React.FC<Props> = ({
   };
   
   const totalesFacturas = calcularTotalesDesdeFacturas();
-  
-  // Recalcular costo cuando costosInventario se carga
-  useEffect(() => {
-    if (deshabilitarCajero && costosInventario.size > 0 && facturasProcesadas.length > 0) {
-      let nuevoCosto = 0;
-      let itemsConCosto = 0;
-      let itemsSinCosto = 0;
-      
-      facturasProcesadas.forEach((factura: any) => {
-        if (factura.items && Array.isArray(factura.items)) {
-          factura.items.forEach((item: any) => {
-            const productoId = item.producto_id || item._id || item.id;
-            const costoItem = costosInventario.get(productoId);
-            
-            if (costoItem && costoItem > 0) {
-              nuevoCosto += costoItem * (item.cantidad || 0);
-              itemsConCosto++;
-            } else {
-              // Intentar usar costo_unitario del item como fallback
-              const costoFallback = item.costo_unitario || 0;
-              if (costoFallback > 0) {
-                nuevoCosto += costoFallback * (item.cantidad || 0);
-                itemsConCosto++;
-              } else {
-                itemsSinCosto++;
-                console.warn(`Item sin costo en modal: producto_id=${productoId}, nombre=${item.nombre || 'N/A'}`);
-              }
-            }
-          });
-        }
-      });
-      
-      console.log(`Recálculo de costo: nuevoCosto=${nuevoCosto}, itemsConCosto=${itemsConCosto}, itemsSinCosto=${itemsSinCosto}`);
-      
-      // Actualizar si el nuevo costo es mayor que 0
-      if (nuevoCosto > 0) {
-        // Priorizar el nuevo costo si es mayor que el actual o si el actual es 0
-        if (costoInventario === undefined || costoInventario === 0 || nuevoCosto > costoInventario) {
-          console.log("✅ Actualizando costoInventario desde inventario:", nuevoCosto);
-          setCostoInventario(nuevoCosto);
-        } else {
-          console.log("Manteniendo costoInventario actual (mayor o igual):", costoInventario);
-        }
-      } else if (itemsSinCosto > 0) {
-        console.warn(`⚠️ No se pudo calcular costo: ${itemsSinCosto} items sin costo en inventario`);
-      }
-    }
-  }, [costosInventario, facturasProcesadas, deshabilitarCajero, costoInventario]);
 
   // Estados inicializados con valores calculados desde facturas (si vienen desde punto de venta)
   const [devolucionesBs, setDevolucionesBs] = useState<number | undefined>(
@@ -370,6 +322,57 @@ const AgregarCuadreModal: React.FC<Props> = ({
           (totalIngresadoUsd - totalCajaMenosValesUsd).toFixed(4)
         )
       : 0;
+
+  // Recalcular costo cuando costosInventario se carga (después de todas las declaraciones)
+  useEffect(() => {
+    if (deshabilitarCajero && costosInventario.size > 0 && facturasProcesadas.length > 0) {
+      let nuevoCosto = 0;
+      let itemsConCosto = 0;
+      let itemsSinCosto = 0;
+      
+      facturasProcesadas.forEach((factura: any) => {
+        if (factura.items && Array.isArray(factura.items)) {
+          factura.items.forEach((item: any) => {
+            const productoId = item.producto_id || item._id || item.id;
+            const costoItem = costosInventario.get(productoId);
+            
+            if (costoItem && costoItem > 0) {
+              nuevoCosto += costoItem * (item.cantidad || 0);
+              itemsConCosto++;
+            } else {
+              // Intentar usar costo_unitario del item como fallback
+              const costoFallback = item.costo_unitario || 0;
+              if (costoFallback > 0) {
+                nuevoCosto += costoFallback * (item.cantidad || 0);
+                itemsConCosto++;
+              } else {
+                itemsSinCosto++;
+                console.warn(`Item sin costo en modal: producto_id=${productoId}, nombre=${item.nombre || 'N/A'}`);
+              }
+            }
+          });
+        }
+      });
+      
+      console.log(`Recálculo de costo: nuevoCosto=${nuevoCosto}, itemsConCosto=${itemsConCosto}, itemsSinCosto=${itemsSinCosto}`);
+      
+      // Actualizar si el nuevo costo es mayor que 0
+      if (nuevoCosto > 0) {
+        // Priorizar el nuevo costo si es mayor que el actual o si el actual es 0
+        setCostoInventario((current) => {
+          if (current === undefined || current === 0 || nuevoCosto > current) {
+            console.log("✅ Actualizando costoInventario desde inventario:", nuevoCosto);
+            return nuevoCosto;
+          } else {
+            console.log("Manteniendo costoInventario actual (mayor o igual):", current);
+            return current;
+          }
+        });
+      } else if (itemsSinCosto > 0) {
+        console.warn(`⚠️ No se pudo calcular costo: ${itemsSinCosto} items sin costo en inventario`);
+      }
+    }
+  }, [costosInventario, facturasProcesadas, deshabilitarCajero]);
 
   const validar = () => {
     if (!cajero.trim()) return "El campo 'Cajero' es obligatorio.";
