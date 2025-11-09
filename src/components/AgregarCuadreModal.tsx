@@ -210,23 +210,49 @@ const AgregarCuadreModal: React.FC<Props> = ({
   useEffect(() => {
     if (deshabilitarCajero && costosInventario.size > 0 && facturasProcesadas.length > 0) {
       let nuevoCosto = 0;
+      let itemsConCosto = 0;
+      let itemsSinCosto = 0;
+      
       facturasProcesadas.forEach((factura: any) => {
         if (factura.items && Array.isArray(factura.items)) {
           factura.items.forEach((item: any) => {
             const productoId = item.producto_id || item._id || item.id;
-            const costoItem = costosInventario.get(productoId) || item.costo_unitario || 0;
-            nuevoCosto += costoItem * (item.cantidad || 0);
+            const costoItem = costosInventario.get(productoId);
+            
+            if (costoItem && costoItem > 0) {
+              nuevoCosto += costoItem * (item.cantidad || 0);
+              itemsConCosto++;
+            } else {
+              // Intentar usar costo_unitario del item como fallback
+              const costoFallback = item.costo_unitario || 0;
+              if (costoFallback > 0) {
+                nuevoCosto += costoFallback * (item.cantidad || 0);
+                itemsConCosto++;
+              } else {
+                itemsSinCosto++;
+                console.warn(`Item sin costo en modal: producto_id=${productoId}, nombre=${item.nombre || 'N/A'}`);
+              }
+            }
           });
         }
       });
       
-      // Solo actualizar si el nuevo costo es mayor que el actual y mayor que 0
-      if (nuevoCosto > 0 && (costoInventario === undefined || costoInventario === 0 || nuevoCosto > costoInventario)) {
-        console.log("Actualizando costoInventario desde inventario:", nuevoCosto);
-        setCostoInventario(nuevoCosto);
+      console.log(`Recálculo de costo: nuevoCosto=${nuevoCosto}, itemsConCosto=${itemsConCosto}, itemsSinCosto=${itemsSinCosto}`);
+      
+      // Actualizar si el nuevo costo es mayor que 0
+      if (nuevoCosto > 0) {
+        // Priorizar el nuevo costo si es mayor que el actual o si el actual es 0
+        if (costoInventario === undefined || costoInventario === 0 || nuevoCosto > costoInventario) {
+          console.log("✅ Actualizando costoInventario desde inventario:", nuevoCosto);
+          setCostoInventario(nuevoCosto);
+        } else {
+          console.log("Manteniendo costoInventario actual (mayor o igual):", costoInventario);
+        }
+      } else if (itemsSinCosto > 0) {
+        console.warn(`⚠️ No se pudo calcular costo: ${itemsSinCosto} items sin costo en inventario`);
       }
     }
-  }, [costosInventario, facturasProcesadas, deshabilitarCajero]);
+  }, [costosInventario, facturasProcesadas, deshabilitarCajero, costoInventario]);
 
   // Estados inicializados con valores calculados desde facturas (si vienen desde punto de venta)
   const [devolucionesBs, setDevolucionesBs] = useState<number | undefined>(
@@ -451,19 +477,30 @@ const AgregarCuadreModal: React.FC<Props> = ({
         const farmacias = usuario?.farmacias || {};
         return farmacias[farmacia] || "";
       })(),
-      costoInventario: costoInventario ?? 0, // Asegurar que siempre tenga un valor numérico
+      costoInventario: costoInventario && costoInventario > 0 ? costoInventario : (costoInventarioPrellenado && costoInventarioPrellenado > 0 ? costoInventarioPrellenado : 0),
       imagenesCuadre: imagenesCuadre
         .filter((img): img is string => img !== null)
         .slice(0, 4),
       desde_punto_venta: desdePuntoVenta, // CRÍTICO: indica que NO se debe sumar al pendiente
     };
     
-    // Validar que costoInventario tenga un valor válido antes de enviar
+    // Validar y loggear costoInventario antes de enviar
+    console.log("=== VALIDACIÓN DE COSTO INVENTARIO ===");
+    console.log("costoInventario (estado):", costoInventario);
+    console.log("costoInventarioPrellenado:", costoInventarioPrellenado);
+    console.log("totalesFacturas.costoInventario:", totalesFacturas.costoInventario);
+    console.log("costoInventario final a enviar:", cuadre.costoInventario);
+    console.log("costosInventario.size:", costosInventario.size);
+    console.log("facturasProcesadas.length:", facturasProcesadas.length);
+    
     if (!cuadre.costoInventario || cuadre.costoInventario <= 0) {
-      console.error("Error: costoInventario no tiene un valor válido:", cuadre.costoInventario);
-      console.error("Estado actual de costoInventario:", costoInventario);
-      console.error("totalesFacturas.costoInventario:", totalesFacturas.costoInventario);
-      console.error("costoInventarioPrellenado:", costoInventarioPrellenado);
+      console.error("⚠️ ADVERTENCIA: costoInventario es 0 o inválido. El backend usará 0.0 por defecto.");
+      console.error("Esto puede indicar que:");
+      console.error("1. No hay facturas procesadas");
+      console.error("2. Los costos del inventario no se cargaron correctamente");
+      console.error("3. Los producto_id no coinciden entre facturas e inventario");
+    } else {
+      console.log("✅ costoInventario válido:", cuadre.costoInventario);
     }
 
     console.log("Cuadre object being sent:", cuadre); // Log the cuadre object

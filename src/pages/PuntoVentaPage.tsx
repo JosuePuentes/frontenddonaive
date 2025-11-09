@@ -1169,18 +1169,38 @@ const PuntoVentaPage: React.FC = () => {
         });
         
         // Calcular costo total usando los costos del inventario
-        const costoTotal = ventasDelDia.reduce((sum: number, venta: any) => {
+        let costoTotal = 0;
+        let itemsSinCosto = 0;
+        
+        ventasDelDia.forEach((venta: any) => {
           if (Array.isArray(venta.items)) {
-            const costoVenta = venta.items.reduce((itemSum: number, item: any) => {
+            venta.items.forEach((item: any) => {
               const productoId = item.producto_id || item._id || item.id;
               // Buscar el costo en el inventario
-              const costoItem = costosPorProducto.get(productoId) || item.costo_unitario || 0;
-              return itemSum + (costoItem * (item.cantidad || 0));
-            }, 0);
-            return sum + costoVenta;
+              const costoItem = costosPorProducto.get(productoId);
+              
+              if (costoItem && costoItem > 0) {
+                costoTotal += costoItem * (item.cantidad || 0);
+              } else {
+                // Si no se encuentra en el inventario, intentar usar costo_unitario del item
+                const costoItemFallback = item.costo_unitario || 0;
+                if (costoItemFallback > 0) {
+                  costoTotal += costoItemFallback * (item.cantidad || 0);
+                } else {
+                  itemsSinCosto++;
+                  console.warn(`Item sin costo encontrado: producto_id=${productoId}, nombre=${item.nombre || 'N/A'}`);
+                }
+              }
+            });
           }
-          return sum;
-        }, 0);
+        });
+        
+        if (itemsSinCosto > 0) {
+          console.warn(`Advertencia: ${itemsSinCosto} items no tienen costo asignado en el inventario`);
+        }
+        
+        console.log("Costo total calculado desde inventario:", costoTotal);
+        console.log("Total de items en inventario cargados:", costosPorProducto.size);
         setCostoInventarioTotal(costoTotal);
       } else {
         // Si no hay endpoint específico, usar valores por defecto
