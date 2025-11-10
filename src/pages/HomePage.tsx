@@ -46,10 +46,18 @@ const HomePage: React.FC = () => {
                                 transition={{ duration: 0.8 }}
                                 className="text-left"
                             >
-                        <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 leading-tight">
-                            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                                DONAIVE
-                            </span>
+                        <h1 className="font-bold text-white mb-6 leading-tight">
+                            <div className="flex flex-col">
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-6xl md:text-8xl">
+                                    FUTURO
+                                </span>
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl mt-2">
+                                    FINANZAS
+                                </span>
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-4xl md:text-6xl mt-2">
+                                    DIGITALES
+                                </span>
+                            </div>
                         </h1>
                         <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed">
                             Transformamos y potenciamos los resultados de tu empresa con una combinación única de <span className="text-green-600">asesoría financiera</span> y <span className="text-green-600">desarrollo web</span>
