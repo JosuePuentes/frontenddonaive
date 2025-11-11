@@ -46,19 +46,36 @@ const HomePage: React.FC = () => {
                                 transition={{ duration: 0.8 }}
                                 className="text-left"
                             >
-                        <h1 className="font-bold text-white mb-6 leading-tight">
-                            <div className="flex flex-col">
-                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-6xl md:text-8xl">
-                                    FUTURO
-                                </span>
-                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl mt-2">
-                                    FINANZAS
-                                </span>
-                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-4xl md:text-6xl mt-2">
-                                    DIGITALES
-                                </span>
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6 mb-6">
+                            <h1 className="font-bold text-white leading-tight">
+                                <div className="flex flex-col">
+                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-6xl md:text-8xl">
+                                        FUTURO
+                                    </span>
+                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl mt-2">
+                                        FINANZAS
+                                    </span>
+                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-4xl md:text-6xl mt-2">
+                                        DIGITALES
+                                    </span>
+                                </div>
+                            </h1>
+                            {/* Imagen de finanzas digitales al lado derecho */}
+                            <div className="relative flex-shrink-0 w-full lg:w-96 xl:w-[500px] h-auto">
+                                <img 
+                                    src="/finanzas-digitales.png" 
+                                    alt="Finanzas y Tecnología Global" 
+                                    className="w-full h-auto object-contain opacity-90"
+                                    style={{
+                                        maskImage: 'linear-gradient(to left, black 0%, black 70%, transparent 100%)',
+                                        WebkitMaskImage: 'linear-gradient(to left, black 0%, black 70%, transparent 100%)',
+                                        filter: 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.3))'
+                                    }}
+                                />
+                                {/* Overlay con desvanecido acorde al color del proyecto */}
+                                <div className="absolute inset-0 bg-gradient-to-l from-slate-900/30 via-blue-900/20 to-transparent pointer-events-none"></div>
                             </div>
-                        </h1>
+                        </div>
                         <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed">
                             Transformamos y potenciamos los resultados de tu empresa con una combinación única de <span className="text-green-600">asesoría financiera</span> y <span className="text-green-600">desarrollo web</span>
                         </p>
