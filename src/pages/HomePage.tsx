@@ -20,19 +20,19 @@ const HomePage: React.FC = () => {
                 }}></div>
                 
                 {/* Imagen de fondo con desvanecido - lado derecho */}
-                <div className="absolute right-0 top-0 bottom-0 w-1/2 md:w-2/5 opacity-30 pointer-events-none">
+                <div className="absolute right-0 top-0 bottom-0 w-1/2 md:w-2/5 pointer-events-none">
                     <div className="relative h-full w-full">
                         <img 
                             src="/hero-image.png" 
                             alt="Finanzas y Tecnología Global" 
-                            className="w-full h-full object-cover object-right"
+                            className="w-full h-full object-cover object-right opacity-70"
                             style={{
-                                maskImage: 'linear-gradient(to left, black 0%, transparent 100%)',
-                                WebkitMaskImage: 'linear-gradient(to left, black 0%, transparent 100%)'
+                                maskImage: 'linear-gradient(to left, transparent 0%, black 20%, black 80%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to left, transparent 0%, black 20%, black 80%, transparent 100%)'
                             }}
                         />
                         {/* Overlay adicional para desvanecido más suave */}
-                        <div className="absolute inset-0 bg-gradient-to-l from-slate-900 via-transparent to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-l from-slate-900/40 via-transparent to-transparent"></div>
                     </div>
                 </div>
                 
@@ -83,30 +83,6 @@ const HomePage: React.FC = () => {
                                        Empresas Aliadas
                                    </button>
                                </motion.div>
-                            </motion.div>
-                        </div>
-                        
-                        {/* Imagen del lado derecho con desvanecido */}
-                        <div className="flex-1 lg:max-w-xl mt-8 lg:mt-0 relative">
-                            <motion.div
-                                initial={{ opacity: 0, x: 30 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.8, delay: 0.2 }}
-                                className="relative"
-                            >
-                                <div className="relative w-full h-auto">
-                                    <img 
-                                        src="/hero-image.png" 
-                                        alt="Finanzas y Tecnología Global" 
-                                        className="w-full h-auto object-contain opacity-80"
-                                        style={{
-                                            maskImage: 'linear-gradient(to left, black 0%, transparent 100%)',
-                                            WebkitMaskImage: 'linear-gradient(to left, black 0%, transparent 100%)'
-                                        }}
-                                    />
-                                    {/* Overlay para desvanecido adicional */}
-                                    <div className="absolute inset-0 bg-gradient-to-l from-slate-900/50 via-transparent to-transparent pointer-events-none"></div>
-                                </div>
                             </motion.div>
                         </div>
                     </div>
