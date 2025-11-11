@@ -85,6 +85,30 @@ const HomePage: React.FC = () => {
                                </motion.div>
                             </motion.div>
                         </div>
+                        
+                        {/* Imagen del lado derecho con desvanecido */}
+                        <div className="flex-1 lg:max-w-xl mt-8 lg:mt-0 relative">
+                            <motion.div
+                                initial={{ opacity: 0, x: 30 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.8, delay: 0.2 }}
+                                className="relative"
+                            >
+                                <div className="relative w-full h-auto">
+                                    <img 
+                                        src="/hero-image.png" 
+                                        alt="Finanzas y Tecnología Global" 
+                                        className="w-full h-auto object-contain opacity-80"
+                                        style={{
+                                            maskImage: 'linear-gradient(to left, black 0%, transparent 100%)',
+                                            WebkitMaskImage: 'linear-gradient(to left, black 0%, transparent 100%)'
+                                        }}
+                                    />
+                                    {/* Overlay para desvanecido adicional */}
+                                    <div className="absolute inset-0 bg-gradient-to-l from-slate-900/50 via-transparent to-transparent pointer-events-none"></div>
+                                </div>
+                            </motion.div>
+                        </div>
                     </div>
                 </div>
                 
