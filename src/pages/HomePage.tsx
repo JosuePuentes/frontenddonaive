@@ -2,9 +2,6 @@ import { motion } from 'framer-motion';
 import { ArrowRight, TrendingUp, Globe, Shield, Users, Target, Zap } from 'lucide-react';
 import { Link } from 'react-router';
 
-// Ruta de la imagen - probar diferentes formatos si no carga
-const finanzasImage = '/Gemini_Generated_Image_bogy14bogy14bogy.png';
-
 const HomePage: React.FC = () => {
     const handleWhatsAppContact = () => {
         const phoneNumber = '584146772709';
@@ -59,10 +56,10 @@ const HomePage: React.FC = () => {
                                         FINANZAS
                                     </span>
                                     {/* Imagen de finanzas digitales al lado de FINANZAS */}
-                                    <div className="relative flex-shrink-0 w-48 md:w-64 lg:w-80 xl:w-96 h-auto">
+                                    <div className="relative flex-shrink-0 w-64 md:w-80 lg:w-96 xl:w-[500px] 2xl:w-[600px] h-auto">
                                         <img 
-                                            src={finanzasImage} 
-                                            alt="Finanzas y Tecnología Global" 
+                                            src="/Gemini_Generated_Image_bogy14bogy14bogy.png" 
+                                            alt="" 
                                             className="w-full h-auto object-contain opacity-85"
                                             style={{
                                                 maskImage: 'linear-gradient(to left, black 0%, black 60%, transparent 100%)',
@@ -73,6 +70,10 @@ const HomePage: React.FC = () => {
                                                 console.error('Error cargando imagen:', e);
                                                 const target = e.target as HTMLImageElement;
                                                 console.log('Ruta intentada:', target.src);
+                                                // Intentar con diferentes rutas
+                                                if (!target.src.includes('hero-image')) {
+                                                    target.src = '/hero-image.png';
+                                                }
                                             }}
                                             onLoad={() => {
                                                 console.log('Imagen cargada correctamente');
