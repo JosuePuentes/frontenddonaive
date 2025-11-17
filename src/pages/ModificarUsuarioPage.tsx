@@ -5,8 +5,9 @@ import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import ModalEditarUsuario from "../components/ModalEditarUsuario";
+import ModalCrearUsuario from "../components/ModalCrearUsuario";
 import { useModificarUsuario } from "../hooks/useModificarUsuario";
-import { Search, Edit, Trash2, EyeOff, RefreshCw } from "lucide-react";
+import { Search, Edit, Trash2, EyeOff, RefreshCw, UserPlus } from "lucide-react";
 import type { Usuario } from "../types/UsuarioTypes";
 
 const ModificarUsuarioPage: React.FC = () => {
@@ -15,6 +16,7 @@ const ModificarUsuarioPage: React.FC = () => {
     loading,
     error,
     fetchUsuarios,
+    crearUsuario,
     actualizarUsuario,
     eliminarUsuario,
     setError
@@ -22,6 +24,7 @@ const ModificarUsuarioPage: React.FC = () => {
 
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<Usuario | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalCrearOpen, setIsModalCrearOpen] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [usuarioAEliminar, setUsuarioAEliminar] = useState<Usuario | null>(null);
@@ -71,6 +74,15 @@ const ModificarUsuarioPage: React.FC = () => {
       
       setIsModalOpen(false);
       setUsuarioSeleccionado(null);
+    } catch (err) {
+      // El error ya se maneja en el hook
+    }
+  };
+
+  const handleCrearUsuario = async (nuevoUsuario: Omit<Usuario, '_id'>) => {
+    try {
+      await crearUsuario(nuevoUsuario);
+      setIsModalCrearOpen(false);
     } catch (err) {
       // El error ya se maneja en el hook
     }
@@ -167,6 +179,15 @@ const ModificarUsuarioPage: React.FC = () => {
             </div>
             
             <div className="flex gap-2">
+              <Button
+                onClick={() => setIsModalCrearOpen(true)}
+                disabled={loading}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                size="sm"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Crear Usuario
+              </Button>
               <Button
                 onClick={fetchUsuarios}
                 disabled={loading}
@@ -333,6 +354,14 @@ const ModificarUsuarioPage: React.FC = () => {
         }}
         usuario={usuarioSeleccionado}
         onGuardar={handleGuardarUsuario}
+        loading={loading}
+      />
+
+      {/* Modal de creación */}
+      <ModalCrearUsuario
+        isOpen={isModalCrearOpen}
+        onClose={() => setIsModalCrearOpen(false)}
+        onGuardar={handleCrearUsuario}
         loading={loading}
       />
     </div>
