@@ -46,36 +46,46 @@ const HomePage: React.FC = () => {
                                 transition={{ duration: 0.8 }}
                                 className="text-left"
                             >
-                        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6 mb-6">
-                            <h1 className="font-bold text-white leading-tight">
-                                <div className="flex flex-col">
-                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-6xl md:text-8xl">
-                                        FUTURO
-                                    </span>
-                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl mt-2">
+                        <h1 className="font-bold text-white leading-tight mb-6">
+                            <div className="flex flex-col">
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-6xl md:text-8xl">
+                                    FUTURO
+                                </span>
+                                <div className="flex flex-row items-center gap-4 mt-2">
+                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl">
                                         FINANZAS
                                     </span>
-                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-4xl md:text-6xl mt-2">
-                                        DIGITALES
-                                    </span>
+                                    {/* Imagen de finanzas digitales al lado de FINANZAS */}
+                                    <div className="relative flex-shrink-0 w-48 md:w-64 lg:w-80 xl:w-96 h-auto">
+                                        <img 
+                                            src="/finanzas-digitales.png" 
+                                            alt="Finanzas y Tecnología Global" 
+                                            className="w-full h-auto object-contain opacity-85"
+                                            style={{
+                                                maskImage: 'linear-gradient(to left, black 0%, black 60%, transparent 100%)',
+                                                WebkitMaskImage: 'linear-gradient(to left, black 0%, black 60%, transparent 100%)',
+                                                filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.4))'
+                                            }}
+                                            onError={(e) => {
+                                                // Si la imagen no se carga, intentar con hero-image.png como fallback
+                                                const target = e.target as HTMLImageElement;
+                                                if (target.src !== `${window.location.origin}/hero-image.png`) {
+                                                    target.src = '/hero-image.png';
+                                                } else {
+                                                    // Si tampoco existe hero-image, ocultar la imagen
+                                                    target.style.display = 'none';
+                                                }
+                                            }}
+                                        />
+                                        {/* Overlay con desvanecido acorde al color del proyecto */}
+                                        <div className="absolute inset-0 bg-gradient-to-l from-slate-900/40 via-blue-900/25 to-transparent pointer-events-none"></div>
+                                    </div>
                                 </div>
-                            </h1>
-                            {/* Imagen de finanzas digitales al lado derecho */}
-                            <div className="relative flex-shrink-0 w-full lg:w-96 xl:w-[500px] h-auto">
-                                <img 
-                                    src="/finanzas-digitales.png" 
-                                    alt="Finanzas y Tecnología Global" 
-                                    className="w-full h-auto object-contain opacity-90"
-                                    style={{
-                                        maskImage: 'linear-gradient(to left, black 0%, black 70%, transparent 100%)',
-                                        WebkitMaskImage: 'linear-gradient(to left, black 0%, black 70%, transparent 100%)',
-                                        filter: 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.3))'
-                                    }}
-                                />
-                                {/* Overlay con desvanecido acorde al color del proyecto */}
-                                <div className="absolute inset-0 bg-gradient-to-l from-slate-900/30 via-blue-900/20 to-transparent pointer-events-none"></div>
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-4xl md:text-6xl mt-2">
+                                    DIGITALES
+                                </span>
                             </div>
-                        </div>
+                        </h1>
                         <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed">
                             Transformamos y potenciamos los resultados de tu empresa con una combinación única de <span className="text-green-600">asesoría financiera</span> y <span className="text-green-600">desarrollo web</span>
                         </p>
