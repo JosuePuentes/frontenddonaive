@@ -39,7 +39,7 @@ const FiltrosCuentasPorPagar: React.FC<FiltrosCuentasPorPagarProps> = ({
     <h2 className="text-xl font-semibold text-slate-700 mb-4">Filtros</h2>
     {farmacias.length > 1 && (
       <div className="mb-6">
-        <span className="font-medium text-slate-700 mr-3">Farmacias:</span>
+        <span className="font-medium text-slate-700 mr-3">Negocios:</span>
         <div className="flex flex-wrap gap-2 mt-2">
           {farmacias.map(f => (
             <button

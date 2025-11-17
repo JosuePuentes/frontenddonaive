@@ -57,39 +57,22 @@ const HomePage: React.FC = () => {
                                         FINANZAS
                                     </span>
                                     {/* Imagen de finanzas digitales al lado de FINANZAS */}
-                                    <div className="relative flex-shrink-0 w-80 md:w-96 lg:w-[450px] xl:w-[550px] 2xl:w-[650px] h-auto ml-4 md:ml-6 overflow-hidden">
-                                        <div 
-                                            className="relative w-full h-full"
+                                    <div className="relative flex-shrink-0 w-64 md:w-80 lg:w-96 xl:w-[500px] 2xl:w-[600px] h-auto">
+                                        <img 
+                                            src={finanzasImage}
+                                            alt="" 
+                                            className="w-full h-auto object-contain opacity-85"
                                             style={{
-                                                clipPath: 'inset(10% 15% 15% 10%)',
-                                                WebkitClipPath: 'inset(10% 15% 15% 10%)'
+                                                maskImage: 'linear-gradient(to left, black 0%, black 60%, transparent 100%)',
+                                                WebkitMaskImage: 'linear-gradient(to left, black 0%, black 60%, transparent 100%)',
+                                                filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.4))'
                                             }}
-                                        >
-                                            <img 
-                                                src={finanzasImage}
-                                                alt="" 
-                                                className="w-full h-auto object-cover object-center opacity-90 scale-110"
-                                                style={{
-                                                    maskImage: 'linear-gradient(to left, black 0%, black 60%, transparent 100%)',
-                                                    WebkitMaskImage: 'linear-gradient(to left, black 0%, black 60%, transparent 100%)',
-                                                    filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.4))',
-                                                    objectPosition: 'center center'
-                                                }}
-                                                onLoad={() => {
-                                                    console.log('✅ Imagen cargada correctamente');
-                                                }}
-                                            />
-                                        </div>
+                                            onLoad={() => {
+                                                console.log('✅ Imagen cargada correctamente');
+                                            }}
+                                        />
                                         {/* Overlay con desvanecido acorde al color del proyecto */}
                                         <div className="absolute inset-0 bg-gradient-to-l from-slate-900/40 via-blue-900/25 to-transparent pointer-events-none"></div>
-                                        {/* Ocultar la esquina inferior derecha donde está la estrellita de IA */}
-                                        <div 
-                                            className="absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-br from-slate-900 via-blue-900 to-transparent pointer-events-none"
-                                            style={{
-                                                clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
-                                                WebkitClipPath: 'polygon(100% 0, 100% 100%, 0 100%)'
-                                            }}
-                                        ></div>
                                     </div>
                                 </div>
                                 <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-4xl md:text-6xl mt-2">
