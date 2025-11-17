@@ -51,7 +51,7 @@ const HomePage: React.FC = () => {
                                 <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">
                                     Futuro
                                 </span>
-                                <span className="text-5xl md:text-7xl lg:text-8xl text-white">y</span>
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">y</span>
                                 <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">
                                     Finanzas Digitales
                                 </span>
