@@ -57,7 +57,7 @@ const HomePage: React.FC = () => {
                                 </span>
                             </div>
                         </h1>
-                        <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed">
+                        <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed mt-8 md:mt-12">
                             Transformamos y potenciamos los resultados de tu empresa con una combinación única de <span className="text-green-600">asesoría financiera</span> y <span className="text-green-600">desarrollo web</span>
                         </p>
                         <p className="text-lg text-gray-300 mb-12 max-w-3xl">
