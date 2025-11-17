@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, TrendingUp, Globe, Shield, Users, Target, Zap } from 'lucide-react';
 import { Link } from 'react-router';
-import finanzasImage from '@/assets/finanzas-digitales.png';
 
 const HomePage: React.FC = () => {
     const handleWhatsAppContact = () => {
@@ -56,24 +55,6 @@ const HomePage: React.FC = () => {
                                     <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl">
                                         FINANZAS
                                     </span>
-                                    {/* Imagen de finanzas digitales al lado de FINANZAS */}
-                                    <div className="relative flex-shrink-0 w-64 md:w-80 lg:w-96 xl:w-[500px] 2xl:w-[600px] h-auto">
-                                        <img 
-                                            src={finanzasImage}
-                                            alt="" 
-                                            className="w-full h-auto object-contain opacity-85"
-                                            style={{
-                                                maskImage: 'linear-gradient(to left, black 0%, black 60%, transparent 100%)',
-                                                WebkitMaskImage: 'linear-gradient(to left, black 0%, black 60%, transparent 100%)',
-                                                filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.4))'
-                                            }}
-                                            onLoad={() => {
-                                                console.log('✅ Imagen cargada correctamente');
-                                            }}
-                                        />
-                                        {/* Overlay con desvanecido acorde al color del proyecto */}
-                                        <div className="absolute inset-0 bg-gradient-to-l from-slate-900/40 via-blue-900/25 to-transparent pointer-events-none"></div>
-                                    </div>
                                 </div>
                                 <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-4xl md:text-6xl mt-2">
                                     DIGITALES
