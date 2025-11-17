@@ -47,17 +47,13 @@ const HomePage: React.FC = () => {
                                 className="text-left"
                             >
                         <h1 className="font-bold text-white leading-tight mb-6">
-                            <div className="flex flex-col">
-                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-6xl md:text-8xl">
-                                    FUTURO
+                            <div className="flex flex-row items-center gap-3 flex-wrap">
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">
+                                    Futuro
                                 </span>
-                                <div className="flex flex-row items-center gap-4 mt-2">
-                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl">
-                                        FINANZAS
-                                    </span>
-                                </div>
-                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-4xl md:text-6xl mt-2">
-                                    DIGITALES
+                                <span className="text-5xl md:text-7xl lg:text-8xl text-white">y</span>
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">
+                                    Finanzas Digitales
                                 </span>
                             </div>
                         </h1>
