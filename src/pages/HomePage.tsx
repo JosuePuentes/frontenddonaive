@@ -46,15 +46,41 @@ const HomePage: React.FC = () => {
                                 transition={{ duration: 0.8 }}
                                 className="text-left"
                             >
-                        <h1 className="font-bold text-white leading-tight mb-6">
-                            <div className="flex flex-row items-center gap-3 flex-wrap">
-                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">
-                                    Futuro
-                                </span>
-                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">y</span>
-                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">
-                                    Finanzas Digitales
-                                </span>
+                        <h1 className="font-bold text-white leading-tight mb-6 relative">
+                            <div className="relative inline-block">
+                                {/* Imagen de fondo con fondo eliminado */}
+                                <div 
+                                    className="absolute inset-0 rounded-lg overflow-hidden"
+                                    style={{
+                                        backgroundImage: 'url(/hero-image.png)',
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        backgroundRepeat: 'no-repeat',
+                                        filter: 'brightness(1.8) contrast(1.5) saturate(1.4)',
+                                        mixBlendMode: 'screen',
+                                        opacity: 0.5
+                                    }}
+                                >
+                                    {/* Overlay para eliminar completamente el fondo oscuro */}
+                                    <div 
+                                        className="absolute inset-0"
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.3) 0%, rgba(30, 58, 138, 0.2) 50%, rgba(67, 56, 202, 0.3) 100%)',
+                                            mixBlendMode: 'color-dodge'
+                                        }}
+                                    ></div>
+                                </div>
+                                
+                                {/* Contenido del título */}
+                                <div className="relative z-10 px-6 py-4 flex flex-row items-center gap-3 flex-wrap">
+                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl drop-shadow-lg">
+                                        Futuro
+                                    </span>
+                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl drop-shadow-lg">y</span>
+                                    <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl drop-shadow-lg">
+                                        Finanzas Digitales
+                                    </span>
+                                </div>
                             </div>
                         </h1>
                         <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed mt-8 md:mt-12">
