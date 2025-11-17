@@ -24,7 +24,7 @@ const HomePage: React.FC = () => {
                     <div className="relative h-full w-full">
                         <img 
                             src="/hero-image.png" 
-                            alt="Finanzas y Tecnología Global" 
+                            alt="" 
                             className="w-full h-full object-cover object-right opacity-70"
                             style={{
                                 maskImage: 'linear-gradient(to left, transparent 0%, black 20%, black 80%, transparent 100%)',
