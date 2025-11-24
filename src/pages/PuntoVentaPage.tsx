@@ -310,13 +310,16 @@ const PuntoVentaPage: React.FC = () => {
     let abortController: AbortController | null = null;
     let timeoutId: NodeJS.Timeout | null = null;
     
-    if (busquedaItem.trim().length >= 1 && sucursalSeleccionada) {
+    const busqueda = busquedaItem.trim();
+    
+    if (busqueda.length >= 1 && sucursalSeleccionada) {
       // Detectar si es un código de barras (solo números y longitud >= 8)
-      const esCodigoBarras = /^\d{8,}$/.test(busquedaItem.trim());
+      const esCodigoBarras = /^\d{8,}$/.test(busqueda);
       
       // Para códigos de barras, búsqueda inmediata (0ms)
-      // Para búsquedas normales, debounce de 100ms
-      const debounceTime = esCodigoBarras ? 0 : 100;
+      // Para búsquedas cortas (1-2 caracteres), debounce muy corto (20ms)
+      // Para búsquedas más largas, debounce de 30ms
+      const debounceTime = esCodigoBarras ? 0 : (busqueda.length <= 2 ? 20 : 30);
       
       timeoutId = setTimeout(async () => {
         // Crear nuevo AbortController para esta búsqueda
@@ -325,19 +328,19 @@ const PuntoVentaPage: React.FC = () => {
         
         try {
           const res = await fetchWithAuth(
-            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(busquedaItem.trim())}&sucursal=${sucursalSeleccionada.id}`,
+            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(busqueda)}&sucursal=${sucursalSeleccionada.id}`,
             { signal: abortController.signal }
           );
           
-          if (res.ok) {
+          if (res.ok && !abortController.signal.aborted) {
             const data = await res.json();
             setProductosEncontrados(Array.isArray(data) ? data : []);
-          } else {
+          } else if (!abortController.signal.aborted) {
             setProductosEncontrados([]);
           }
         } catch (error: any) {
           // Ignorar errores de cancelación
-          if (error.name !== 'AbortError') {
+          if (error.name !== 'AbortError' && !abortController?.signal.aborted) {
             console.error("Error al buscar productos:", error);
             setProductosEncontrados([]);
           }
