@@ -20,19 +20,19 @@ const HomePage: React.FC = () => {
                 }}></div>
                 
                 {/* Imagen de fondo con desvanecido - lado derecho */}
-                <div className="absolute right-0 top-0 bottom-0 w-1/2 md:w-2/5 opacity-30 pointer-events-none">
+                <div className="absolute right-0 top-0 bottom-0 w-1/2 md:w-2/5 pointer-events-none">
                     <div className="relative h-full w-full">
                         <img 
                             src="/hero-image.png" 
-                            alt="Finanzas y Tecnología Global" 
-                            className="w-full h-full object-cover object-right"
+                            alt="" 
+                            className="w-full h-full object-cover object-right opacity-70"
                             style={{
-                                maskImage: 'linear-gradient(to left, black 0%, transparent 100%)',
-                                WebkitMaskImage: 'linear-gradient(to left, black 0%, transparent 100%)'
+                                maskImage: 'linear-gradient(to left, transparent 0%, black 20%, black 80%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to left, transparent 0%, black 20%, black 80%, transparent 100%)'
                             }}
                         />
                         {/* Overlay adicional para desvanecido más suave */}
-                        <div className="absolute inset-0 bg-gradient-to-l from-slate-900 via-transparent to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-l from-slate-900/40 via-transparent to-transparent"></div>
                     </div>
                 </div>
                 
@@ -46,12 +46,18 @@ const HomePage: React.FC = () => {
                                 transition={{ duration: 0.8 }}
                                 className="text-left"
                             >
-                        <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 leading-tight">
-                            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                                DONAIVE
-                            </span>
+                        <h1 className="font-bold text-white leading-tight mb-6">
+                            <div className="flex flex-row items-center gap-3 flex-wrap">
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">
+                                    Futuro
+                                </span>
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">y</span>
+                                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-5xl md:text-7xl lg:text-8xl">
+                                    Finanzas Digitales
+                                </span>
+                            </div>
                         </h1>
-                        <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed">
+                        <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed mt-8 md:mt-12">
                             Transformamos y potenciamos los resultados de tu empresa con una combinación única de <span className="text-green-600">asesoría financiera</span> y <span className="text-green-600">desarrollo web</span>
                         </p>
                         <p className="text-lg text-gray-300 mb-12 max-w-3xl">
