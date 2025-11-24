@@ -2396,9 +2396,37 @@ const PuntoVentaPage: React.FC = () => {
                                         
                                         // Obtener el nombre de la sucursal: primero del objeto, si no existe buscar en la lista de sucursales
                                         let nombreSucursal = stockSucursal.sucursal_nombre;
-                                        if (!nombreSucursal || nombreSucursal.trim() === '') {
-                                          const sucursalEncontrada = sucursales.find(s => s.id === stockSucursal.sucursal_id);
+                                        
+                                        // Si no hay nombre o el nombre es igual al ID (solo números como "01", "02"), buscar en la lista
+                                        if (!nombreSucursal || nombreSucursal.trim() === '' || nombreSucursal === stockSucursal.sucursal_id || /^\d+$/.test(nombreSucursal)) {
+                                          // Debug: ver qué datos tenemos
+                                          if (index === 0) {
+                                            console.log("Stock por sucursal recibido:", stockSucursal);
+                                            console.log("Lista de sucursales disponibles:", sucursales);
+                                          }
+                                          
+                                          // Buscar por ID exacto
+                                          let sucursalEncontrada = sucursales.find(s => s.id === stockSucursal.sucursal_id);
+                                          
+                                          // Si no se encuentra, intentar buscar convirtiendo a string
+                                          if (!sucursalEncontrada) {
+                                            sucursalEncontrada = sucursales.find(s => String(s.id) === String(stockSucursal.sucursal_id));
+                                          }
+                                          
+                                          // Si aún no se encuentra, buscar por nombre que contenga el ID
+                                          if (!sucursalEncontrada && stockSucursal.sucursal_id) {
+                                            // Intentar buscar por ID como parte del nombre o ID
+                                            sucursalEncontrada = sucursales.find(s => 
+                                              String(s.id).includes(String(stockSucursal.sucursal_id)) || 
+                                              String(stockSucursal.sucursal_id).includes(String(s.id))
+                                            );
+                                          }
+                                          
                                           nombreSucursal = sucursalEncontrada?.nombre || stockSucursal.sucursal_id || 'Sucursal desconocida';
+                                          
+                                          if (index === 0) {
+                                            console.log("Nombre de sucursal encontrado:", nombreSucursal);
+                                          }
                                         }
                                         
                                         return (
