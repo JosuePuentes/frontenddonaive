@@ -104,6 +104,7 @@ const PuntoVentaPage: React.FC = () => {
   const [tasaInput, setTasaInput] = useState<string>("");
   const [busquedaItem, setBusquedaItem] = useState("");
   const [productosEncontrados, setProductosEncontrados] = useState<Producto[]>([]);
+  const [buscandoProductos, setBuscandoProductos] = useState(false);
   const [showCantidadModal, setShowCantidadModal] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [cantidadInput, setCantidadInput] = useState("1");
@@ -128,6 +129,7 @@ const PuntoVentaPage: React.FC = () => {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
   const [busquedaCliente, setBusquedaCliente] = useState("");
   const [clientesEncontrados, setClientesEncontrados] = useState<Cliente[]>([]);
+  const [buscandoClientes, setBuscandoClientes] = useState(false);
   const [creandoCliente, setCreandoCliente] = useState(false);
   
   // Formulario de cliente
@@ -155,6 +157,7 @@ const PuntoVentaPage: React.FC = () => {
   const [mostrarFacturasProcesadas, setMostrarFacturasProcesadas] = useState(false);
   const [facturasProcesadas, setFacturasProcesadas] = useState<any[]>([]);
   const [cargandoFacturas, setCargandoFacturas] = useState(false);
+  const [busquedaFactura, setBusquedaFactura] = useState("");
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<any | null>(null);
   const [showFacturaModal, setShowFacturaModal] = useState(false);
   
@@ -302,27 +305,55 @@ const PuntoVentaPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Búsqueda de productos en tiempo real con debounce
+  // Búsqueda de productos en tiempo real optimizada
   useEffect(() => {
-    if (busquedaItem.length >= 2 && sucursalSeleccionada) {
-      const timeoutId = setTimeout(async () => {
+    let abortController: AbortController | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    if (busquedaItem.trim().length >= 1 && sucursalSeleccionada) {
+      timeoutId = setTimeout(async () => {
+        // Crear nuevo AbortController para esta búsqueda
+        abortController = new AbortController();
+        setBuscandoProductos(true);
+        
         try {
           const res = await fetchWithAuth(
-            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(busquedaItem)}&sucursal=${sucursalSeleccionada.id}`
+            `${API_BASE_URL}/punto-venta/productos/buscar?q=${encodeURIComponent(busquedaItem.trim())}&sucursal=${sucursalSeleccionada.id}`,
+            { signal: abortController.signal }
           );
+          
           if (res.ok) {
             const data = await res.json();
             setProductosEncontrados(Array.isArray(data) ? data : []);
+          } else {
+            setProductosEncontrados([]);
           }
-        } catch (error) {
-          console.error("Error al buscar productos:", error);
-          setProductosEncontrados([]);
+        } catch (error: any) {
+          // Ignorar errores de cancelación
+          if (error.name !== 'AbortError') {
+            console.error("Error al buscar productos:", error);
+            setProductosEncontrados([]);
+          }
+        } finally {
+          // Solo actualizar el estado si la petición no fue cancelada
+          if (!abortController?.signal.aborted) {
+            setBuscandoProductos(false);
+          }
         }
-      }, 300);
+      }, 150); // Debounce reducido a 150ms para respuesta más rápida
 
-      return () => clearTimeout(timeoutId);
+      return () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        if (abortController) {
+          abortController.abort();
+        }
+        setBuscandoProductos(false);
+      };
     } else {
       setProductosEncontrados([]);
+      setBuscandoProductos(false);
     }
   }, [busquedaItem, sucursalSeleccionada]);
 
@@ -343,27 +374,55 @@ const PuntoVentaPage: React.FC = () => {
     }
   }, [productoConStockAbierto]);
 
-  // Búsqueda de clientes en tiempo real con debounce
+  // Búsqueda de clientes en tiempo real optimizada
   useEffect(() => {
-    if (busquedaCliente.length >= 2) {
-      const timeoutId = setTimeout(async () => {
+    let abortController: AbortController | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    if (busquedaCliente.trim().length >= 1) {
+      timeoutId = setTimeout(async () => {
+        // Crear nuevo AbortController para esta búsqueda
+        abortController = new AbortController();
+        setBuscandoClientes(true);
+        
         try {
           const res = await fetchWithAuth(
-            `${API_BASE_URL}/clientes/buscar?q=${encodeURIComponent(busquedaCliente)}`
+            `${API_BASE_URL}/clientes/buscar?q=${encodeURIComponent(busquedaCliente.trim())}`,
+            { signal: abortController.signal }
           );
+          
           if (res.ok) {
             const data = await res.json();
             setClientesEncontrados(Array.isArray(data) ? data : []);
+          } else {
+            setClientesEncontrados([]);
           }
-        } catch (error) {
-          console.error("Error al buscar clientes:", error);
-          setClientesEncontrados([]);
+        } catch (error: any) {
+          // Ignorar errores de cancelación
+          if (error.name !== 'AbortError') {
+            console.error("Error al buscar clientes:", error);
+            setClientesEncontrados([]);
+          }
+        } finally {
+          // Solo actualizar el estado si la petición no fue cancelada
+          if (!abortController?.signal.aborted) {
+            setBuscandoClientes(false);
+          }
         }
-      }, 300);
+      }, 150); // Debounce reducido a 150ms para respuesta más rápida
 
-      return () => clearTimeout(timeoutId);
+      return () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        if (abortController) {
+          abortController.abort();
+        }
+        setBuscandoClientes(false);
+      };
     } else {
       setClientesEncontrados([]);
+      setBuscandoClientes(false);
     }
   }, [busquedaCliente]);
 
@@ -1932,17 +1991,14 @@ const PuntoVentaPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden p-2">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+      <div className="bg-white rounded-lg shadow-md p-2 mb-2 flex-shrink-0">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Punto de Venta</h1>
-            <div className="text-sm text-gray-600 mt-1">
-              <span className="font-semibold">Sucursal:</span> {sucursalSeleccionada.nombre}
-            </div>
-            <div className="text-sm text-gray-600">
-              <span className="font-semibold">Cajero:</span> {cajeroSeleccionado.NOMBRE}
+            <h1 className="text-xl font-bold text-gray-800">Punto de Venta</h1>
+            <div className="text-xs text-gray-600">
+              <span className="font-semibold">Sucursal:</span> {sucursalSeleccionada.nombre} | <span className="font-semibold">Cajero:</span> {cajeroSeleccionado.NOMBRE}
             </div>
           </div>
           <div className="text-right">
@@ -1982,9 +2038,9 @@ const PuntoVentaPage: React.FC = () => {
         
         {/* Sección de Facturas Procesadas (Desplegable) */}
         {mostrarFacturasProcesadas && (
-          <div className="mt-4 border-t pt-4">
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-lg font-semibold text-gray-800">
+          <div className="mt-2 border-t pt-2">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-semibold text-gray-800">
                 Facturas Procesadas ({facturasProcesadas.length})
               </h2>
               <Button
@@ -1992,32 +2048,61 @@ const PuntoVentaPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 disabled={cargandoFacturas}
+                className="h-7 text-xs px-2"
               >
                 {cargandoFacturas ? "Cargando..." : "Actualizar"}
               </Button>
             </div>
             
+            {/* Buscador de facturas por nombre de cliente */}
+            <div className="mb-2">
+              <Input
+                type="text"
+                placeholder="Buscar por nombre de cliente..."
+                value={busquedaFactura}
+                onChange={(e) => setBusquedaFactura(e.target.value)}
+                className="w-full h-7 text-xs"
+              />
+            </div>
+            
             {cargandoFacturas ? (
-              <div className="text-center py-8 text-gray-600">
+              <div className="text-center py-2 text-gray-600 text-xs">
                 Cargando facturas...
               </div>
             ) : facturasProcesadas.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-2 text-gray-500 text-xs">
                 No hay facturas procesadas
               </div>
-            ) : (
-              <div className="max-h-96 overflow-y-auto space-y-2">
-                {facturasProcesadas.map((factura) => (
+            ) : (() => {
+              // Filtrar facturas por nombre de cliente
+              const facturasFiltradas = facturasProcesadas.filter((factura) => {
+                if (!busquedaFactura.trim()) return true;
+                const nombreCliente = factura.cliente?.nombre?.toLowerCase() || "";
+                const busqueda = busquedaFactura.toLowerCase().trim();
+                return nombreCliente.includes(busqueda);
+              });
+
+              if (facturasFiltradas.length === 0) {
+                return (
+                  <div className="text-center py-2 text-gray-500 text-xs">
+                    No se encontraron facturas con ese cliente
+                  </div>
+                );
+              }
+
+              return (
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {facturasFiltradas.map((factura) => (
                   <div
                     key={factura._id}
-                    className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:bg-gray-100 transition-colors"
+                    className="bg-gray-50 rounded p-2 border border-gray-200 hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <div className="font-semibold text-gray-800">
+                        <div className="font-semibold text-gray-800 text-xs">
                           Factura #{factura.numero_factura || factura._id}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-xs text-gray-600">
                           {new Date(factura.fecha).toLocaleString('es-VE', {
                             year: 'numeric',
                             month: '2-digit',
@@ -2026,20 +2111,19 @@ const PuntoVentaPage: React.FC = () => {
                             minute: '2-digit'
                           })}
                         </div>
-                        {factura.cliente && (
-                          <div className="text-sm text-gray-600">
-                            Cliente: {factura.cliente.nombre}
-                          </div>
-                        )}
-                        <div className="text-sm font-semibold text-green-600 mt-1">
-                          Total: ${factura.total_usd?.toFixed(2) || '0.00'} USD
+                        <div className="text-xs text-gray-700 font-medium">
+                          Cliente: {factura.cliente?.nombre || 'Sin cliente'}
+                        </div>
+                        <div className="text-xs font-semibold text-green-600">
+                          ${factura.total_usd?.toFixed(2) || '0.00'} USD
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
+                      <div className="flex gap-1 ml-2">
                         <Button
                           onClick={() => handleVerFactura(factura)}
                           variant="outline"
                           size="sm"
+                          className="h-6 text-xs px-2"
                         >
                           Ver
                         </Button>
@@ -2047,31 +2131,33 @@ const PuntoVentaPage: React.FC = () => {
                           onClick={() => handleImprimirFactura(factura)}
                           variant="outline"
                           size="sm"
+                          className="h-6 text-xs px-2"
                         >
                           Imprimir
                         </Button>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
         
         {/* Botón Cerrar Caja */}
-        <div className="mt-4 pt-4 border-t border-gray-200 flex justify-center">
+        <div className="mt-2 pt-2 border-t border-gray-200 flex justify-center">
           <Button
             onClick={handleCerrarCaja}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 text-lg shadow-lg"
-            size="lg"
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 text-sm shadow-lg"
+            size="sm"
           >
             🏪 Cerrar Caja
           </Button>
         </div>
         
         {/* Sección de Cliente - Parte superior central */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="mt-2 pt-2 border-t border-gray-200">
           <div className="flex items-center gap-4 justify-center">
             <Button
               onClick={() => setShowClienteModal(true)}
@@ -2081,14 +2167,26 @@ const PuntoVentaPage: React.FC = () => {
             </Button>
             
             <div className="flex-1 max-w-md relative">
-              <Input
-                type="text"
-                placeholder="Buscar cliente por cédula o nombre..."
-                value={busquedaCliente}
-                onChange={(e) => setBusquedaCliente(e.target.value)}
-                className="w-full"
-              />
-              {clientesEncontrados.length > 0 && (
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="Buscar cliente por cédula o nombre..."
+                  value={busquedaCliente}
+                  onChange={(e) => setBusquedaCliente(e.target.value)}
+                  className="w-full"
+                />
+                {buscandoClientes && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  </div>
+                )}
+              </div>
+              {buscandoClientes && busquedaCliente.trim().length >= 1 && (
+                <div className="mt-1 text-sm text-gray-500 text-center py-1">
+                  Buscando clientes...
+                </div>
+              )}
+              {!buscandoClientes && clientesEncontrados.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {clientesEncontrados.map((cliente) => (
                     <button
@@ -2143,21 +2241,33 @@ const PuntoVentaPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
         {/* Panel izquierdo: Búsqueda y carrito */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
           {/* Búsqueda de productos */}
-          <Card className="p-4">
-            <h2 className="text-lg font-semibold mb-4">Buscar Producto</h2>
-            <Input
-              type="text"
-              placeholder="Buscar por nombre o código..."
-              value={busquedaItem}
-              onChange={(e) => setBusquedaItem(e.target.value)}
-              className="w-full"
-            />
-            {productosEncontrados.length > 0 && (
-              <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
+          <Card className="p-2 flex-shrink-0">
+            <h2 className="text-sm font-semibold mb-2">Buscar Producto</h2>
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Buscar por nombre o código..."
+                value={busquedaItem}
+                onChange={(e) => setBusquedaItem(e.target.value)}
+                className="w-full"
+              />
+              {buscandoProductos && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                </div>
+              )}
+            </div>
+            {buscandoProductos && busquedaItem.trim().length >= 1 && (
+              <div className="mt-2 text-sm text-gray-500 text-center py-2">
+                Buscando productos...
+              </div>
+            )}
+            {!buscandoProductos && productosEncontrados.length > 0 && (
+              <div className="mt-2 space-y-1 flex-1 overflow-y-auto min-h-0">
                 {productosEncontrados.map((producto) => {
                   const stock = producto.cantidad ?? producto.stock ?? 0;
                   const precio = producto.precio_usd || producto.precio;
@@ -2179,20 +2289,20 @@ const PuntoVentaPage: React.FC = () => {
                   return (
                     <div
                       key={producto.id}
-                      className="w-full p-3 rounded-lg border hover:bg-blue-50 transition-colors"
+                      className="w-full p-2 rounded border hover:bg-blue-50 transition-colors"
                     >
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start justify-between gap-2">
                         <button
                           onClick={() => handleSeleccionarProducto(producto)}
                           disabled={!tieneStock}
-                          className={`flex-1 text-left ${
+                          className={`flex-1 text-left min-w-0 ${
                             tieneStock 
                               ? 'cursor-pointer hover:bg-blue-50' 
                               : 'cursor-not-allowed opacity-50'
                           }`}
                         >
-                          <div className="font-semibold">{producto.nombre}</div>
-                          <div className="flex items-center gap-3 mt-1 flex-wrap">
+                          <div className="font-semibold text-sm truncate">{producto.nombre}</div>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap text-xs">
                             {producto.codigo && (
                               <div className="text-xs text-gray-500">Código: {producto.codigo}</div>
                             )}
@@ -2218,9 +2328,9 @@ const PuntoVentaPage: React.FC = () => {
                             )}
                           </div>
                         </button>
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           {/* Precio */}
-                          <div className={`text-right font-semibold ${tieneStock ? 'text-green-600' : 'text-red-600'}`}>
+                          <div className={`text-right font-semibold text-sm ${tieneStock ? 'text-green-600' : 'text-red-600'}`}>
                             ${precio.toFixed(2)}
                           </div>
                           {/* Stock con dropdown */}
@@ -2302,17 +2412,17 @@ const PuntoVentaPage: React.FC = () => {
           </Card>
 
           {/* Carrito */}
-          <Card className="p-4">
-            <h2 className="text-lg font-semibold mb-4">Carrito de Compras</h2>
+          <Card className="p-2 flex-1 flex flex-col overflow-hidden min-h-0">
+            <h2 className="text-sm font-semibold mb-2">Carrito de Compras</h2>
             {carrito.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">El carrito está vacío</div>
+              <div className="text-center text-gray-500 py-4 text-sm">El carrito está vacío</div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1 flex-1 overflow-y-auto min-h-0">
                 {carrito.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-semibold">{item.producto.nombre}</div>
-                      <div className="text-sm text-gray-600">
+                  <div key={index} className="flex items-center justify-between p-2 border rounded text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-xs truncate">{item.producto.nombre}</div>
+                      <div className="text-xs text-gray-600">
                         {item.descuento_aplicado ? (
                           <>
                             <span className="line-through text-gray-400">
@@ -2362,7 +2472,7 @@ const PuntoVentaPage: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <input
                         type="number"
                         min="1"
@@ -2370,12 +2480,12 @@ const PuntoVentaPage: React.FC = () => {
                         onChange={(e) =>
                           handleActualizarCantidad(index, parseFloat(e.target.value) || 1)
                         }
-                        className="w-20 px-2 py-1 border rounded"
+                        className="w-16 px-1 py-0.5 border rounded text-xs"
                       />
-                      <div className="text-right min-w-[140px]">
-                        <div className="font-semibold">${(item.subtotal_usd || 0).toFixed(2)} USD</div>
+                      <div className="text-right min-w-[100px]">
+                        <div className="font-semibold text-xs">${(item.subtotal_usd || 0).toFixed(2)}</div>
                         {tasaDelDia > 0 && (
-                          <div className="text-sm text-gray-600">
+                          <div className="text-xs text-gray-600">
                             {(item.subtotal || 0).toLocaleString("es-VE", {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
@@ -2388,8 +2498,9 @@ const PuntoVentaPage: React.FC = () => {
                         onClick={() => handleEliminarItem(index)}
                         variant="destructive"
                         size="sm"
+                        className="h-6 px-2 text-xs"
                       >
-                        Eliminar
+                        ×
                       </Button>
                     </div>
                   </div>
@@ -2400,9 +2511,9 @@ const PuntoVentaPage: React.FC = () => {
         </div>
 
         {/* Panel derecho: Resumen y totalizar */}
-        <div className="lg:col-span-1">
-          <Card className="p-4 sticky top-4">
-            <h2 className="text-lg font-semibold mb-4">Resumen</h2>
+        <div className="w-80 flex-shrink-0">
+          <Card className="p-2 h-full flex flex-col">
+            <h2 className="text-sm font-semibold mb-2">Resumen</h2>
             {clienteSeleccionado?.porcentaje_descuento && clienteSeleccionado.porcentaje_descuento > 0 && (
               <div className="bg-green-50 border border-green-200 rounded p-2 mb-3">
                 <div className="text-sm text-green-700 font-semibold">
@@ -2413,13 +2524,13 @@ const PuntoVentaPage: React.FC = () => {
                 </div>
               </div>
             )}
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between">
+            <div className="space-y-2 mb-2 flex-shrink-0">
+              <div className="flex justify-between text-sm">
                 <span>Total (USD):</span>
                 <span className="font-semibold">${calcularTotalUsd().toFixed(2)}</span>
               </div>
               {tasaDelDia > 0 && (
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span>Total (Bs):</span>
                   <span className="font-semibold">
                     {(calcularTotalBs() || 0).toLocaleString("es-VE", {
@@ -2431,7 +2542,7 @@ const PuntoVentaPage: React.FC = () => {
                 </div>
               )}
             </div>
-            <Button onClick={handleTotalizar} className="w-full" size="lg" disabled={carrito.length === 0}>
+            <Button onClick={handleTotalizar} className="w-full" size="sm" disabled={carrito.length === 0}>
               Totalizar
             </Button>
           </Card>

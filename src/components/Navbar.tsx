@@ -39,16 +39,6 @@ const allLinks = [
             { to: '/vergastos', label: 'Ver Gastos (Admin)', permiso: 'verificar_gastos' },
         ]
     },
-    {
-        category: 'Cuentas Por Pagar',
-        icon: Users,
-        items: [
-            { to: '/cuentasporpagar', label: 'Agregar Cuenta Por Pagar', permiso: 'agregar_cuadre' },
-            { to: '/vercuentasporpagar', label: 'Ver Cuentas por Pagar', permiso: 'verificar_gastos' },
-            { to: '/verificacioncuentasporpagar', label: 'Verificación Cuentas por Pagar', permiso: 'verificar_gastos' },
-            { to: '/pagoscpp', label: 'Ver Pagos CxP', permiso: 'verificar_gastos' },
-        ]
-    },
     
     {
         category: 'RRHH',
