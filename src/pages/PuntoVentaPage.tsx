@@ -2298,8 +2298,20 @@ const PuntoVentaPage: React.FC = () => {
               </div>
             )}
             {!buscandoProductos && productosEncontrados.length > 0 && (
-              <div className="mt-2 space-y-1 flex-1 overflow-y-auto min-h-0">
-                {productosEncontrados.map((producto) => {
+              <div className="mt-2 space-y-1 max-h-96 overflow-y-auto border rounded-lg p-2">
+                {[...productosEncontrados]
+                  .sort((a, b) => {
+                    // Ordenar: primero los que tienen stock, luego los que no tienen
+                    const stockA = a.cantidad ?? a.stock ?? 0;
+                    const stockB = b.cantidad ?? b.stock ?? 0;
+                    // Si ambos tienen stock o ambos no tienen, mantener orden original
+                    if ((stockA > 0 && stockB > 0) || (stockA === 0 && stockB === 0)) {
+                      return 0;
+                    }
+                    // Los que tienen stock van primero
+                    return stockB > stockA ? 1 : -1;
+                  })
+                  .map((producto) => {
                   const stock = producto.cantidad ?? producto.stock ?? 0;
                   const precio = producto.precio_usd || producto.precio;
                   const tieneStock = stock > 0;
