@@ -1328,7 +1328,13 @@ const PuntoVentaPage: React.FC = () => {
       
       if (res.ok) {
         const data = await res.json();
-        setFacturasProcesadas(data.facturas || []);
+        const facturas = data.facturas || [];
+        // Debug: verificar estructura de clientes
+        if (facturas.length > 0) {
+          console.log("Ejemplo de factura recibida:", facturas[0]);
+          console.log("Cliente en factura:", facturas[0].cliente);
+        }
+        setFacturasProcesadas(facturas);
       } else {
         console.error("Error al obtener facturas procesadas");
         setFacturasProcesadas([]);
@@ -2087,7 +2093,13 @@ const PuntoVentaPage: React.FC = () => {
               // Filtrar facturas por nombre de cliente
               const facturasFiltradas = facturasProcesadas.filter((factura) => {
                 if (!busquedaFactura.trim()) return true;
-                const nombreCliente = factura.cliente?.nombre?.toLowerCase() || "";
+                // Obtener nombre del cliente manejando diferentes estructuras
+                let nombreCliente = "";
+                if (factura.cliente) {
+                  if (typeof factura.cliente === 'object') {
+                    nombreCliente = (factura.cliente.nombre || factura.cliente.NOMBRE || "").toLowerCase();
+                  }
+                }
                 const busqueda = busquedaFactura.toLowerCase().trim();
                 return nombreCliente.includes(busqueda);
               });
@@ -2122,7 +2134,15 @@ const PuntoVentaPage: React.FC = () => {
                           })}
                         </div>
                         <div className="text-xs text-gray-700 font-medium">
-                          Cliente: {factura.cliente?.nombre || 'Sin cliente'}
+                          Cliente: {(() => {
+                            // Manejar diferentes estructuras de cliente
+                            if (!factura.cliente) return 'Sin cliente';
+                            if (typeof factura.cliente === 'string') return 'Sin cliente';
+                            if (factura.cliente.nombre) return factura.cliente.nombre;
+                            // Si el cliente es un objeto pero no tiene nombre, intentar otras propiedades
+                            if (factura.cliente.NOMBRE) return factura.cliente.NOMBRE;
+                            return 'Sin cliente';
+                          })()}
                         </div>
                         <div className="text-xs font-semibold text-green-600">
                           ${factura.total_usd?.toFixed(2) || '0.00'} USD
@@ -2374,6 +2394,13 @@ const PuntoVentaPage: React.FC = () => {
                                         const stockSuc = stockSucursal.cantidad ?? stockSucursal.stock ?? 0;
                                         const esSucursalActual = stockSucursal.sucursal_id === sucursalSeleccionada?.id;
                                         
+                                        // Obtener el nombre de la sucursal: primero del objeto, si no existe buscar en la lista de sucursales
+                                        let nombreSucursal = stockSucursal.sucursal_nombre;
+                                        if (!nombreSucursal || nombreSucursal.trim() === '') {
+                                          const sucursalEncontrada = sucursales.find(s => s.id === stockSucursal.sucursal_id);
+                                          nombreSucursal = sucursalEncontrada?.nombre || stockSucursal.sucursal_id || 'Sucursal desconocida';
+                                        }
+                                        
                                         return (
                                           <div
                                             key={index}
@@ -2387,7 +2414,7 @@ const PuntoVentaPage: React.FC = () => {
                                           >
                                             <div className="flex justify-between items-center">
                                               <div className="font-medium text-gray-800">
-                                                {stockSucursal.sucursal_nombre}
+                                                {nombreSucursal}
                                                 {esSucursalActual && (
                                                   <span className="ml-2 text-xs text-blue-600 font-semibold">
                                                     (Actual)
