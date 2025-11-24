@@ -311,6 +311,13 @@ const PuntoVentaPage: React.FC = () => {
     let timeoutId: NodeJS.Timeout | null = null;
     
     if (busquedaItem.trim().length >= 1 && sucursalSeleccionada) {
+      // Detectar si es un código de barras (solo números y longitud >= 8)
+      const esCodigoBarras = /^\d{8,}$/.test(busquedaItem.trim());
+      
+      // Para códigos de barras, búsqueda inmediata (0ms)
+      // Para búsquedas normales, debounce de 100ms
+      const debounceTime = esCodigoBarras ? 0 : 100;
+      
       timeoutId = setTimeout(async () => {
         // Crear nuevo AbortController para esta búsqueda
         abortController = new AbortController();
@@ -340,7 +347,7 @@ const PuntoVentaPage: React.FC = () => {
             setBuscandoProductos(false);
           }
         }
-      }, 150); // Debounce reducido a 150ms para respuesta más rápida
+      }, debounceTime);
 
       return () => {
         if (timeoutId) {
@@ -2250,10 +2257,11 @@ const PuntoVentaPage: React.FC = () => {
             <div className="relative">
               <Input
                 type="text"
-                placeholder="Buscar por nombre o código..."
+                placeholder="Buscar por nombre, código o código de barras..."
                 value={busquedaItem}
                 onChange={(e) => setBusquedaItem(e.target.value)}
                 className="w-full"
+                autoFocus
               />
               {buscandoProductos && (
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
