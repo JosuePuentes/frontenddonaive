@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { fetchWithAuth } from "@/lib/api";
 import AgregarCuadreModal from "@/components/AgregarCuadreModal";
 import { TicketFactura } from "@/components/TicketFactura";
+import ModalDevolucionCompra from "@/components/ModalDevolucionCompra";
 import { Smartphone, Wallet, CreditCard, Receipt, Banknote } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -160,6 +161,8 @@ const PuntoVentaPage: React.FC = () => {
   const [busquedaFactura, setBusquedaFactura] = useState("");
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<any | null>(null);
   const [showFacturaModal, setShowFacturaModal] = useState(false);
+  const [facturaParaDevolucion, setFacturaParaDevolucion] = useState<any | null>(null);
+  const [showModalDevolucion, setShowModalDevolucion] = useState(false);
   
   // Estados para bancos
   const [bancos, setBancos] = useState<Banco[]>([]);
@@ -1362,6 +1365,20 @@ const PuntoVentaPage: React.FC = () => {
     setShowFacturaModal(true);
   };
 
+  // Función para manejar devolución de compra
+  const handleDevolucionCompra = (factura: any) => {
+    setFacturaParaDevolucion(factura);
+    setShowModalDevolucion(true);
+  };
+
+  // Función para cerrar modal de devolución y refrescar facturas
+  const handleCerrarModalDevolucion = () => {
+    setShowModalDevolucion(false);
+    setFacturaParaDevolucion(null);
+    // Refrescar facturas procesadas
+    obtenerFacturasProcesadas();
+  };
+
   // Función para imprimir una factura
   const handleImprimirFactura = (factura: any) => {
     // Preparar datos del ticket
@@ -2164,6 +2181,14 @@ const PuntoVentaPage: React.FC = () => {
                           className="h-6 text-xs px-2"
                         >
                           Imprimir
+                        </Button>
+                        <Button
+                          onClick={() => handleDevolucionCompra(factura)}
+                          variant="outline"
+                          size="sm"
+                          className="h-6 text-xs px-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-300"
+                        >
+                          Devolución
                         </Button>
                       </div>
                     </div>
@@ -3393,6 +3418,13 @@ const PuntoVentaPage: React.FC = () => {
               {/* Botones de Acción */}
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button
+                  onClick={() => handleDevolucionCompra(facturaSeleccionada)}
+                  variant="default"
+                  className="bg-yellow-600 hover:bg-yellow-700"
+                >
+                  Devolución de Compra
+                </Button>
+                <Button
                   onClick={() => handleImprimirFactura(facturaSeleccionada)}
                   variant="default"
                 >
@@ -3427,6 +3459,15 @@ const PuntoVentaPage: React.FC = () => {
           porcentajeDescuento={ticketData.porcentajeDescuento}
           vuelto={ticketData.vuelto}
           onImpreso={() => setTicketData(null)}
+        />
+      )}
+
+      {/* Modal de Devolución de Compra */}
+      {showModalDevolucion && facturaParaDevolucion && (
+        <ModalDevolucionCompra
+          factura={facturaParaDevolucion}
+          onClose={handleCerrarModalDevolucion}
+          onSuccess={handleCerrarModalDevolucion}
         />
       )}
     </div>

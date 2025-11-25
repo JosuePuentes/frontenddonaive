@@ -25,6 +25,25 @@ interface ItemCarrito {
   subtotal_usd: number;
 }
 
+interface Banco {
+  _id?: string;
+  id?: string;
+  numero_cuenta: string;
+  nombre_banco: string;
+  nombre_titular: string;
+  saldo: number;
+  divisa: "USD" | "BS";
+  tipo_metodo?: "pago_movil" | "efectivo" | "zelle" | "tarjeta_debit" | "tarjeta_credito" | "vales";
+  activo?: boolean;
+}
+
+interface MetodoPago {
+  tipo: string;
+  monto: number;
+  divisa: "Bs" | "USD";
+  banco_id?: string;
+}
+
 interface ModalDevolucionCompraProps {
   factura: any;
   onClose: () => void;
@@ -45,6 +64,10 @@ const ModalDevolucionCompra: React.FC<ModalDevolucionCompraProps> = ({
   const [tasaDelDia, setTasaDelDia] = useState<number>(factura.tasa_dia || 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+  const [bancos, setBancos] = useState<Banco[]>([]);
+  const [metodosPago, setMetodosPago] = useState<MetodoPago[]>([]);
+  const [bancoSeleccionado, setBancoSeleccionado] = useState<string>("");
+  const [montoPago, setMontoPago] = useState("");
 
   const sucursalId = factura.sucursal?._id || factura.sucursal;
 
@@ -63,6 +86,21 @@ const ModalDevolucionCompra: React.FC<ModalDevolucionCompraProps> = ({
       }
     };
     obtenerTasa();
+
+    // Obtener bancos
+    const obtenerBancos = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_BASE_URL}/bancos`);
+        if (res.ok) {
+          const data = await res.json();
+          const bancosActivos = (data.bancos || []).filter((b: Banco) => b.activo !== false);
+          setBancos(bancosActivos);
+        }
+      } catch (error) {
+        console.error("Error al obtener bancos:", error);
+      }
+    };
+    obtenerBancos();
   }, []);
 
   // Buscar productos
@@ -173,6 +211,61 @@ const ModalDevolucionCompra: React.FC<ModalDevolucionCompraProps> = ({
     return totalNuevo - totalOriginal;
   };
 
+  const calcularTotalPagadoUsd = () => {
+    return metodosPago.reduce((total, metodo) => {
+      if (metodo.divisa === "USD") {
+        return total + metodo.monto;
+      } else {
+        // Convertir Bs a USD usando la tasa del día
+        return total + (metodo.monto / tasaDelDia);
+      }
+    }, 0);
+  };
+
+  const handleAgregarMetodoPago = () => {
+    if (!bancoSeleccionado) {
+      alert("Seleccione un banco");
+      return;
+    }
+
+    const monto = parseFloat(montoPago);
+    if (isNaN(monto) || monto <= 0) {
+      alert("Ingrese un monto válido");
+      return;
+    }
+
+    const banco = bancos.find(b => (b._id || b.id) === bancoSeleccionado);
+    if (!banco) {
+      alert("Banco no encontrado");
+      return;
+    }
+
+    const divisaParaMetodo = banco.divisa === "BS" ? "Bs" : banco.divisa;
+
+    const nuevoMetodo: MetodoPago = {
+      tipo: "banco",
+      monto: monto,
+      divisa: divisaParaMetodo as "Bs" | "USD",
+      banco_id: bancoSeleccionado,
+    };
+
+    setMetodosPago([...metodosPago, nuevoMetodo]);
+    setMontoPago("");
+    setBancoSeleccionado("");
+  };
+
+  const getNombreMetodo = (tipo?: string) => {
+    const nombres: Record<string, string> = {
+      efectivo: "Efectivo",
+      zelle: "Zelle",
+      pago_movil: "Pago Móvil",
+      tarjeta_debit: "Tarjeta Débito",
+      tarjeta_credito: "Tarjeta Crédito",
+      vales: "Vales",
+    };
+    return nombres[tipo || ""] || "Otro";
+  };
+
   const handleConfirmarDevolucion = async () => {
     if (carrito.length === 0) {
       setError("Debe seleccionar al menos un producto para la nueva factura");
@@ -201,18 +294,25 @@ const ModalDevolucionCompra: React.FC<ModalDevolucionCompraProps> = ({
         descuento_aplicado: 0,
       }));
 
-      // Preparar métodos de pago
-      // Si la diferencia es positiva, el cliente debe pagar más
-      // Si es negativa o cero, no se cobra nada adicional (ya pagó)
-      const metodosPago: any[] = [];
+      // Validar métodos de pago si hay diferencia positiva
       if (diferencia > 0.01) {
-        // El cliente debe pagar la diferencia
-        metodosPago.push({
-          tipo: "efectivo",
-          monto: diferencia,
-          divisa: "USD",
-        });
+        const totalPagado = calcularTotalPagadoUsd();
+        const diferenciaAbsoluta = Math.abs(diferencia - totalPagado);
+        
+        if (diferenciaAbsoluta > 0.01) {
+          setError(`El total pagado ($${totalPagado.toFixed(2)} USD) no coincide con la diferencia a pagar ($${diferencia.toFixed(2)} USD)`);
+          setLoading(false);
+          return;
+        }
       }
+
+      // Preparar métodos de pago para enviar al backend
+      const metodosPagoParaEnviar = diferencia > 0.01 ? metodosPago.map(mp => ({
+        tipo: mp.tipo,
+        monto: mp.monto,
+        divisa: mp.divisa,
+        banco_id: mp.banco_id,
+      })) : [];
 
       // Llamar al endpoint de devolución
       const res = await fetchWithAuth(`${API_BASE_URL}/punto-venta/devolucion`, {
@@ -223,7 +323,7 @@ const ModalDevolucionCompra: React.FC<ModalDevolucionCompraProps> = ({
         body: JSON.stringify({
           factura_id: factura._id,
           items_nuevos: items,
-          metodos_pago: metodosPago,
+          metodos_pago: metodosPagoParaEnviar,
           diferencia_usd: diferencia,
           total_nuevo_usd: totalNuevo,
           total_original_usd: factura.total_usd || 0,
@@ -406,6 +506,108 @@ const ModalDevolucionCompra: React.FC<ModalDevolucionCompraProps> = ({
           </div>
         </div>
 
+        {/* Sección de métodos de pago (solo si hay diferencia positiva) */}
+        {diferencia > 0.01 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <h3 className="font-semibold text-green-800 mb-3">Métodos de Pago para la Diferencia</h3>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Seleccionar Banco *</label>
+                <select
+                  value={bancoSeleccionado}
+                  onChange={(e) => setBancoSeleccionado(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="">Seleccione un banco</option>
+                  {bancos.map((banco) => (
+                    <option key={banco._id || banco.id} value={banco._id || banco.id}>
+                      {getNombreMetodo(banco.tipo_metodo)} - {banco.nombre_banco} ({banco.divisa === "USD" ? "$" : "Bs"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Monto</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={montoPago}
+                  onChange={(e) => setMontoPago(e.target.value)}
+                  placeholder="Ingrese el monto"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAgregarMetodoPago();
+                    }
+                  }}
+                />
+              </div>
+
+              <Button onClick={handleAgregarMetodoPago} className="w-full" variant="outline">
+                Agregar Método de Pago
+              </Button>
+
+              {metodosPago.length > 0 && (
+                <div className="border-t pt-3 mt-3">
+                  <h4 className="font-semibold mb-2 text-sm">Métodos de Pago Agregados:</h4>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {metodosPago.map((metodo, index) => {
+                      const banco = metodo.banco_id ? bancos.find(b => (b._id || b.id) === metodo.banco_id) : null;
+                      const montoEnUsd = metodo.divisa === "USD" ? metodo.monto : metodo.monto / tasaDelDia;
+                      return (
+                        <div
+                          key={index}
+                          className="flex justify-between items-center p-2 bg-white rounded border"
+                        >
+                          <span className="text-sm">
+                            {banco ? (
+                              <>
+                                {getNombreMetodo(banco.tipo_metodo)} - {banco.nombre_banco} ({metodo.divisa === "USD" ? "$" : "Bs"})
+                                {metodo.divisa === "Bs" && ` ($${montoEnUsd.toFixed(2)} USD)`}
+                              </>
+                            ) : (
+                              `${metodo.tipo.toUpperCase()} (${metodo.divisa})`
+                            )}: {metodo.divisa === "USD" ? "$" : ""}
+                            {metodo.monto.toLocaleString("es-VE", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            {metodo.divisa === "Bs" ? "Bs" : ""}
+                          </span>
+                          <Button
+                            onClick={() => setMetodosPago(metodosPago.filter((_, i) => i !== index))}
+                            variant="destructive"
+                            size="sm"
+                          >
+                            Eliminar
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-2 pt-2 border-t">
+                    <div className="flex justify-between text-sm font-semibold">
+                      <span>Total Pagado (USD):</span>
+                      <span>${calcularTotalPagadoUsd().toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Diferencia a Pagar:</span>
+                      <span>${diferencia.toFixed(2)}</span>
+                    </div>
+                    {Math.abs(calcularTotalPagadoUsd() - diferencia) > 0.01 && (
+                      <div className="text-xs text-red-600 mt-1">
+                        ⚠️ El total pagado no coincide con la diferencia
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Modal de cantidad */}
         {showCantidadModal && productoSeleccionado && (
           <Dialog open={showCantidadModal} onOpenChange={setShowCantidadModal}>
@@ -454,7 +656,11 @@ const ModalDevolucionCompra: React.FC<ModalDevolucionCompraProps> = ({
         <div className="flex gap-2">
           <Button
             onClick={handleConfirmarDevolucion}
-            disabled={loading || carrito.length === 0}
+            disabled={
+              loading || 
+              carrito.length === 0 || 
+              (diferencia > 0.01 && (metodosPago.length === 0 || Math.abs(calcularTotalPagadoUsd() - diferencia) > 0.01))
+            }
             className="flex-1 bg-green-600 hover:bg-green-700"
           >
             {loading ? "Procesando..." : "Confirmar Devolución"}
@@ -469,4 +675,6 @@ const ModalDevolucionCompra: React.FC<ModalDevolucionCompraProps> = ({
 };
 
 export default ModalDevolucionCompra;
+
+
 

@@ -33,9 +33,10 @@ El frontend necesita un endpoint para procesar devoluciones de compra. Cuando se
   ],
   "metodos_pago": [
     {
-      "tipo": "efectivo",
+      "tipo": "banco",
       "monto": 5.50,
-      "divisa": "USD"
+      "divisa": "USD",
+      "banco_id": "banco_id_123"
     }
   ],
   "diferencia_usd": 5.50,
@@ -53,6 +54,10 @@ El frontend necesita un endpoint para procesar devoluciones de compra. Cuando se
 - **`factura_id`**: ID de la factura original que se va a devolver
 - **`items_nuevos`**: Array de productos para la nueva factura
 - **`metodos_pago`**: Array de métodos de pago (solo se envía si `diferencia_usd > 0`)
+  - **`tipo`**: Tipo de método (generalmente "banco")
+  - **`monto`**: Monto a pagar
+  - **`divisa`**: Divisa del pago ("USD" o "Bs")
+  - **`banco_id`**: ID del banco utilizado para el pago (requerido)
 - **`diferencia_usd`**: Diferencia entre el nuevo total y el original (positivo = cliente paga más, negativo = se devuelve dinero)
 - **`total_nuevo_usd`**: Total de la nueva factura en USD
 - **`total_original_usd`**: Total de la factura original en USD
@@ -165,7 +170,39 @@ for item_nuevo in items_nuevos:
     # ... (ver INSTRUCCIONES_BACKEND_DESCUENTO_STOCK_VENTAS.md)
 ```
 
-### Paso 4: Crear Nueva Factura
+### Paso 4: Procesar Métodos de Pago (si hay diferencia positiva)
+
+Si `diferencia_usd > 0.01`, procesar los métodos de pago:
+
+```python
+if diferencia_usd > 0.01 and metodos_pago:
+    # Validar que el total de métodos de pago coincida con la diferencia
+    total_pagado = 0
+    for metodo in metodos_pago:
+        if metodo["divisa"] == "USD":
+            total_pagado += metodo["monto"]
+        else:  # Bs
+            total_pagado += metodo["monto"] / tasa_dia
+    
+    if abs(total_pagado - diferencia_usd) > 0.01:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El total pagado (${total_pagado:.2f} USD) no coincide con la diferencia (${diferencia_usd:.2f} USD)"
+        )
+    
+    # Actualizar saldos de bancos
+    for metodo in metodos_pago:
+        if metodo.get("banco_id"):
+            banco = await db.bancos.find_one({"_id": ObjectId(metodo["banco_id"])})
+            if banco:
+                nuevo_saldo = banco.get("saldo", 0) + metodo["monto"]
+                await db.bancos.update_one(
+                    {"_id": ObjectId(metodo["banco_id"])},
+                    {"$set": {"saldo": nuevo_saldo}}
+                )
+```
+
+### Paso 5: Crear Nueva Factura
 
 ```python
 # Generar número de factura
@@ -186,14 +223,17 @@ nueva_factura = {
     "porcentaje_descuento": 0,
     "es_devolucion": True,  # Marcar como devolución
     "factura_original_id": ObjectId(factura_id),  # Referencia a la factura original
-    "diferencia_usd": diferencia_usd
+    "diferencia_usd": diferencia_usd,
+    "estado": "procesada"  # IMPORTANTE: Debe aparecer en facturas procesadas
 }
 
 resultado = await db.ventas.insert_one(nueva_factura)
 nueva_factura_id = resultado.inserted_id
 ```
 
-### Paso 5: Eliminar o Marcar la Factura Original
+**IMPORTANTE**: La nueva factura debe tener `estado: "procesada"` para que aparezca inmediatamente en la lista de facturas procesadas del punto de venta.
+
+### Paso 6: Eliminar o Marcar la Factura Original
 
 **Opción 1: Eliminar físicamente (NO RECOMENDADO)**
 ```python
@@ -213,7 +253,7 @@ await db.ventas.update_one(
 )
 ```
 
-### Paso 6: Actualizar Costo del Inventario
+### Paso 7: Actualizar Costo del Inventario
 
 ```python
 # Recalcular costo total del inventario
@@ -287,15 +327,25 @@ await db.inventarios.update_one(
 
 3. **Stock**: Asegurarse de que el stock se devuelva correctamente, especialmente si hay lotes.
 
-4. **Métodos de Pago**: Solo crear métodos de pago si `diferencia_usd > 0.01`. Si la diferencia es negativa, el cliente ya pagó de más y no se debe cobrar nada adicional.
+4. **Métodos de Pago**: 
+   - Solo crear métodos de pago si `diferencia_usd > 0.01`
+   - Los métodos de pago deben incluir `banco_id` para actualizar los saldos de los bancos
+   - Validar que el total de métodos de pago coincida exactamente con la diferencia
+   - Actualizar los saldos de los bancos correspondientes
+   - Si la diferencia es negativa o cero, el cliente ya pagó de más y no se debe cobrar nada adicional
 
-5. **Validaciones**:
+5. **Visibilidad de la Nueva Factura**: 
+   - La nueva factura debe tener `estado: "procesada"` para que aparezca inmediatamente en la lista de facturas procesadas
+   - El endpoint `GET /punto-venta/ventas/usuario` debe incluir facturas con `estado: "procesada"` y `es_devolucion: true`
+   - La factura original debe marcarse como `estado: "devuelta"` pero NO debe eliminarse
+
+6. **Validaciones**:
    - Verificar que la factura original existe
    - Verificar que pertenece a la sucursal correcta
    - Verificar stock disponible para los nuevos productos
    - Validar que los montos sean correctos
 
-6. **Auditoría**: Registrar la devolución en un log o tabla de auditoría para trazabilidad.
+7. **Auditoría**: Registrar la devolución en un log o tabla de auditoría para trazabilidad.
 
 ---
 
@@ -342,7 +392,34 @@ async def procesar_devolucion(
         for item_nuevo in items_nuevos:
             await descontar_stock(item_nuevo, inventario_id, db)
         
-        # Paso 4: Crear nueva factura
+        # Paso 4: Procesar métodos de pago si hay diferencia positiva
+        if diferencia_usd > 0.01 and metodos_pago:
+            # Validar total pagado
+            total_pagado = 0
+            for metodo in metodos_pago:
+                if metodo["divisa"] == "USD":
+                    total_pagado += metodo["monto"]
+                else:  # Bs
+                    total_pagado += metodo["monto"] / tasa_dia
+            
+            if abs(total_pagado - diferencia_usd) > 0.01:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El total pagado (${total_pagado:.2f} USD) no coincide con la diferencia (${diferencia_usd:.2f} USD)"
+                )
+            
+            # Actualizar saldos de bancos
+            for metodo in metodos_pago:
+                if metodo.get("banco_id"):
+                    banco = await db.bancos.find_one({"_id": ObjectId(metodo["banco_id"])})
+                    if banco:
+                        nuevo_saldo = banco.get("saldo", 0) + metodo["monto"]
+                        await db.bancos.update_one(
+                            {"_id": ObjectId(metodo["banco_id"])},
+                            {"$set": {"saldo": nuevo_saldo}}
+                        )
+        
+        # Paso 5: Crear nueva factura
         numero_factura = await generar_numero_factura(sucursal, db)
         
         nueva_factura = {
@@ -359,13 +436,14 @@ async def procesar_devolucion(
             "porcentaje_descuento": 0,
             "es_devolucion": True,
             "factura_original_id": ObjectId(factura_id),
-            "diferencia_usd": diferencia_usd
+            "diferencia_usd": diferencia_usd,
+            "estado": "procesada"  # IMPORTANTE: Para que aparezca en facturas procesadas
         }
         
         resultado = await db.ventas.insert_one(nueva_factura)
         nueva_factura_id = resultado.inserted_id
         
-        # Paso 5: Marcar factura original como devuelta
+        # Paso 6: Marcar factura original como devuelta
         await db.ventas.update_one(
             {"_id": ObjectId(factura_id)},
             {"$set": {
@@ -375,7 +453,7 @@ async def procesar_devolucion(
             }}
         )
         
-        # Paso 6: Actualizar costo del inventario
+        # Paso 7: Actualizar costo del inventario
         await actualizar_costo_inventario(inventario_id, db)
         
         return {
@@ -410,7 +488,12 @@ async def procesar_devolucion(
 - [ ] Marcar factura original como "devuelta" (no eliminar)
 - [ ] Actualizar costo del inventario
 - [ ] Manejar métodos de pago solo si hay diferencia positiva
+- [ ] Validar que el total de métodos de pago coincida con la diferencia
+- [ ] Actualizar saldos de bancos cuando se procesen métodos de pago
+- [ ] Asegurar que la nueva factura tenga `estado: "procesada"` para que aparezca en la lista
 - [ ] Usar transacciones para asegurar consistencia
 - [ ] Agregar logging/auditoría de devoluciones
 - [ ] Probar con diferentes escenarios (diferencia positiva, negativa, cero)
+
+
 
