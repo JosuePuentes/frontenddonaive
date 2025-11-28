@@ -12,9 +12,9 @@ interface Proveedor {
   nombre: string;
   rif: string;
   telefono: string;
-  dias_credito: number;
-  descuento_comercial: number;
-  descuento_pronto_pago: number;
+  dias_credito?: number;
+  descuento_comercial?: number;
+  descuento_pronto_pago?: number;
 }
 
 interface Lote {
