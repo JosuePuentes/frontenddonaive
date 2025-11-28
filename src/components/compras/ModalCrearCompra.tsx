@@ -420,6 +420,9 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
   // Calcular total (subtotal + IVA)
   const total = subtotal + totalIva;
   
+  // Calcular cantidad total de productos
+  const cantidadTotalProductos = itemsCompra.reduce((sum, item) => sum + item.cantidad, 0);
+  
   const totalCosto = subtotal; // Para compatibilidad
   const totalUtilidad = itemsCompra.reduce((sum, item) => {
     const utilidadEnDinero = (item.costoAjustado * item.utilidad / 100) * item.cantidad;
@@ -922,7 +925,11 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
             <h3 className="text-lg font-semibold text-slate-800 mb-4">Confirmar Compra</h3>
             <div className="space-y-3 mb-6">
               <div className="flex justify-between">
-                <span className="text-slate-600">Número de Items:</span>
+                <span className="text-slate-600">Cantidad Total de Productos:</span>
+                <span className="font-semibold">{cantidadTotalProductos}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Items Diferentes:</span>
                 <span className="font-semibold">{itemsCompra.length}</span>
               </div>
               <div className="flex justify-between">
