@@ -18,6 +18,12 @@ interface Proveedor {
   descuento_pronto_pago: number;
 }
 
+interface Lote {
+  lote: string;
+  fecha_vencimiento?: string;
+  cantidad?: number;
+}
+
 interface ProductoInventario {
   _id?: string;
   codigo: string;
@@ -26,6 +32,7 @@ interface ProductoInventario {
   costo_unitario?: number;
   precio_unitario?: number;
   cantidad?: number;
+  lotes?: Lote[];
 }
 
 interface ItemCompra {
@@ -42,6 +49,7 @@ interface ItemCompra {
   lote: string;
   esNuevo: boolean; // Si es un producto nuevo o existente
   productoId?: string; // ID del producto si existe en inventario
+  lotesExistentes?: Lote[]; // Lotes existentes del producto en inventario
 }
 
 interface ModalCrearCompraProps {
@@ -102,22 +110,80 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      // Buscar productos sin filtro de sucursal para compras
-      const res = await fetch(
-        `${API_BASE_URL}/productos?search=${encodeURIComponent(busquedaProducto)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      // Buscar en todos los inventarios usando el endpoint de items
+      // Primero obtener todos los inventarios
+      const resInventarios = await fetch(`${API_BASE_URL}/inventarios`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      if (res.ok) {
-        const data = await res.json();
-        setProductosEncontrados(Array.isArray(data) ? data : []);
+      if (!resInventarios.ok) {
+        throw new Error("Error al obtener inventarios");
       }
+
+      const inventarios = await resInventarios.json();
+      const inventariosArray = Array.isArray(inventarios) ? inventarios : [];
+
+      // Buscar en todos los inventarios
+      const todosLosProductos: ProductoInventario[] = [];
+      const busquedaLower = busquedaProducto.toLowerCase().trim();
+
+      for (const inventario of inventariosArray) {
+        try {
+          const resItems = await fetch(
+            `${API_BASE_URL}/inventarios/${inventario._id}/items`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (resItems.ok) {
+            const items = await resItems.json();
+            const itemsArray = Array.isArray(items) ? items : [];
+
+            // Filtrar items que coincidan con la búsqueda
+            const itemsFiltrados = itemsArray.filter((item: any) => {
+              const codigo = (item.codigo || "").toLowerCase();
+              const descripcion = (item.descripcion || "").toLowerCase();
+              const marca = (item.marca || "").toLowerCase();
+              return (
+                codigo.includes(busquedaLower) ||
+                descripcion.includes(busquedaLower) ||
+                marca.includes(busquedaLower)
+              );
+            });
+
+            // Agregar a la lista (evitar duplicados por código)
+            itemsFiltrados.forEach((item: any) => {
+              const existe = todosLosProductos.some(
+                (p) => p.codigo === item.codigo
+              );
+              if (!existe) {
+                todosLosProductos.push({
+                  _id: item._id,
+                  codigo: item.codigo,
+                  descripcion: item.descripcion,
+                  marca: item.marca,
+                  costo_unitario: item.costo_unitario || item.costo,
+                  precio_unitario: item.precio_unitario || item.precio,
+                  cantidad: item.cantidad || item.existencia,
+                  lotes: item.lotes || [],
+                });
+              }
+            });
+          }
+        } catch (err) {
+          console.error(`Error al obtener items del inventario ${inventario._id}:`, err);
+        }
+      }
+
+      setProductosEncontrados(todosLosProductos);
     } catch (err) {
       console.error("Error al buscar productos:", err);
+      setProductosEncontrados([]);
     } finally {
       setBuscandoProductos(false);
     }
@@ -133,12 +199,22 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
 
   // Agregar producto existente
   const agregarProductoExistente = (producto: ProductoInventario) => {
+    // Verificar si el producto ya está en la compra
+    const yaExiste = itemsCompra.find(item => item.codigo === producto.codigo);
+    if (yaExiste) {
+      setError("Este producto ya está en la compra. Puedes editar la cantidad directamente.");
+      return;
+    }
+
     const costo = producto.costo_unitario || 0;
     const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
       ? costo * (1 + diferenciaPorcentaje / 100)
       : costo;
     const utilidad = (producto.precio_unitario || 0) - costo;
     const precioVenta = costoAjustado + utilidad;
+
+    // Mantener los lotes existentes del producto
+    const lotesExistentes = producto.lotes || [];
 
     const nuevoItem: ItemCompra = {
       id: `item-${Date.now()}-${Math.random()}`,
@@ -154,11 +230,13 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
       lote: "",
       esNuevo: false,
       productoId: producto._id,
+      lotesExistentes: lotesExistentes,
     };
 
     setItemsCompra([...itemsCompra, nuevoItem]);
     setBusquedaProducto("");
     setProductosEncontrados([]);
+    setError(null);
   };
 
   // Agregar nuevo producto
@@ -232,6 +310,54 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
     ));
   };
 
+  // Actualizar costo de item
+  const actualizarCosto = (id: string, costo: number) => {
+    setItemsCompra(itemsCompra.map(item => {
+      if (item.id === id) {
+        const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
+          ? costo * (1 + diferenciaPorcentaje / 100)
+          : costo;
+        const precioVenta = costoAjustado + item.utilidad;
+        return {
+          ...item,
+          costo: costo,
+          costoAjustado: costoAjustado,
+          precioVenta: precioVenta,
+        };
+      }
+      return item;
+    }));
+  };
+
+  // Actualizar utilidad de item
+  const actualizarUtilidad = (id: string, utilidad: number) => {
+    setItemsCompra(itemsCompra.map(item => {
+      if (item.id === id) {
+        const precioVenta = item.costoAjustado + utilidad;
+        return {
+          ...item,
+          utilidad: utilidad,
+          precioVenta: precioVenta,
+        };
+      }
+      return item;
+    }));
+  };
+
+  // Actualizar lote de item
+  const actualizarLote = (id: string, lote: string) => {
+    setItemsCompra(itemsCompra.map(item =>
+      item.id === id ? { ...item, lote: lote } : item
+    ));
+  };
+
+  // Actualizar fecha de vencimiento de item
+  const actualizarFechaVencimiento = (id: string, fecha: string) => {
+    setItemsCompra(itemsCompra.map(item =>
+      item.id === id ? { ...item, fechaVencimiento: fecha } : item
+    ));
+  };
+
   // Calcular totales
   const totalCosto = itemsCompra.reduce((sum, item) => sum + (item.costoAjustado * item.cantidad), 0);
   const totalUtilidad = itemsCompra.reduce((sum, item) => sum + (item.utilidad * item.cantidad), 0);
@@ -275,6 +401,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
             lote: item.lote || null,
             es_nuevo: item.esNuevo,
             producto_id: item.productoId || null,
+            lotes_existentes: item.lotesExistentes || [],
           })),
         }),
       });
@@ -331,18 +458,40 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                   <div className="max-h-80 overflow-y-auto space-y-2">
                     {productosEncontrados.map((producto) => (
                       <Card
-                        key={producto._id}
-                        className="p-2 hover:bg-slate-50 cursor-pointer"
+                        key={producto._id || producto.codigo}
+                        className="p-3 hover:bg-slate-50 cursor-pointer border-l-4 border-l-blue-500 transition-all"
                         onClick={() => agregarProductoExistente(producto)}
                       >
-                        <p className="font-medium text-sm">{producto.codigo}</p>
-                        <p className="text-xs text-slate-600">{producto.descripcion}</p>
-                        {producto.marca && (
-                          <p className="text-xs text-slate-500">Marca: {producto.marca}</p>
-                        )}
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm text-slate-800">{producto.codigo}</p>
+                            <p className="text-xs text-slate-600 mt-1">{producto.descripcion}</p>
+                            {producto.marca && (
+                              <p className="text-xs text-slate-500 mt-1">Marca: {producto.marca}</p>
+                            )}
+                            <div className="mt-2 flex gap-3 text-xs">
+                              <span className="text-slate-600">
+                                <strong>Costo:</strong> ${(producto.costo_unitario || 0).toFixed(2)}
+                              </span>
+                              <span className="text-slate-600">
+                                <strong>Existencia:</strong> {producto.cantidad || 0}
+                              </span>
+                            </div>
+                            {producto.lotes && producto.lotes.length > 0 && (
+                              <div className="mt-2 text-xs text-blue-600">
+                                <strong>Lotes:</strong> {producto.lotes.length} lote(s) existente(s)
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </Card>
                     ))}
                   </div>
+                )}
+                {!buscandoProductos && busquedaProducto.trim() && productosEncontrados.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-4">
+                    No se encontraron productos. Puedes crear uno nuevo.
+                  </p>
                 )}
               </div>
             </Card>
@@ -453,11 +602,11 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                         <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Código</th>
                         <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Descripción</th>
                         <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Marca</th>
-                        <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Costo</th>
+                        <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Costo (Editable)</th>
                         {pagarEnDolarNegro && (
                           <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Costo Ajustado</th>
                         )}
-                        <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Utilidad</th>
+                        <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Utilidad (Editable)</th>
                         <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Precio Venta</th>
                         <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Cantidad</th>
                         <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Lote</th>
@@ -480,16 +629,29 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                           </td>
                           <td className="border border-slate-300 px-4 py-3">{item.descripcion}</td>
                           <td className="border border-slate-300 px-4 py-3">{item.marca || "-"}</td>
-                          <td className="border border-slate-300 px-4 py-3 text-right font-medium">
-                            ${item.costo.toFixed(2)}
+                          <td className="border border-slate-300 px-4 py-3">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={item.costo}
+                              onChange={(e) => actualizarCosto(item.id, parseFloat(e.target.value) || 0)}
+                              className="w-24 text-right"
+                            />
                           </td>
                           {pagarEnDolarNegro && (
                             <td className="border border-slate-300 px-4 py-3 text-right font-medium text-orange-600">
                               ${item.costoAjustado.toFixed(2)}
                             </td>
                           )}
-                          <td className="border border-slate-300 px-4 py-3 text-right font-medium">
-                            ${item.utilidad.toFixed(2)}
+                          <td className="border border-slate-300 px-4 py-3">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.utilidad}
+                              onChange={(e) => actualizarUtilidad(item.id, parseFloat(e.target.value) || 0)}
+                              className="w-24 text-right"
+                            />
                           </td>
                           <td className="border border-slate-300 px-4 py-3 text-right font-semibold text-green-600">
                             ${item.precioVenta.toFixed(2)}
@@ -503,12 +665,47 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                               className="w-24 text-center"
                             />
                           </td>
-                          <td className="border border-slate-300 px-4 py-3">{item.lote || "-"}</td>
                           <td className="border border-slate-300 px-4 py-3">
-                            {item.fechaVencimiento 
-                              ? new Date(item.fechaVencimiento).toLocaleDateString('es-VE')
-                              : "-"
-                            }
+                            <div className="space-y-2">
+                              {item.lotesExistentes && item.lotesExistentes.length > 0 && (
+                                <div className="text-xs text-slate-600 mb-2">
+                                  <div className="font-medium mb-1">Existentes:</div>
+                                  {item.lotesExistentes.map((lote, idx) => (
+                                    <div key={idx} className="text-slate-500">
+                                      {lote.lote} ({lote.cantidad || 0})
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <Input
+                                placeholder="Nuevo lote"
+                                value={item.lote}
+                                onChange={(e) => actualizarLote(item.id, e.target.value)}
+                                className="w-full text-xs"
+                              />
+                            </div>
+                          </td>
+                          <td className="border border-slate-300 px-4 py-3">
+                            <div className="space-y-2">
+                              {item.lotesExistentes && item.lotesExistentes.length > 0 && (
+                                <div className="text-xs text-slate-600 mb-2">
+                                  {item.lotesExistentes.map((lote, idx) => (
+                                    <div key={idx} className="text-slate-500">
+                                      {lote.fecha_vencimiento 
+                                        ? new Date(lote.fecha_vencimiento).toLocaleDateString('es-VE')
+                                        : "-"
+                                      }
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <Input
+                                type="date"
+                                value={item.fechaVencimiento}
+                                onChange={(e) => actualizarFechaVencimiento(item.id, e.target.value)}
+                                className="w-full text-xs"
+                              />
+                            </div>
                           </td>
                           <td className="border border-slate-300 px-4 py-3 text-center">
                             <Button
