@@ -58,6 +58,12 @@ const allLinks = [
             { to: '/valesporfarmacia', label: 'Vales por Negocio', permiso: 'ver_cuadres_dia' },
             { to: '/agregarinventariocosto', label: 'Agregar Costo Inv', permiso: 'acceso_admin' },
             { to: '/verinventarios', label: 'Ver Inventarios', permiso: 'acceso_admin' },
+        ]
+    },
+    {
+        category: 'Compras',
+        icon: ShoppingCart,
+        items: [
             { to: '/compras', label: 'Módulo de Compras', permiso: 'compras' },
         ]
     },
