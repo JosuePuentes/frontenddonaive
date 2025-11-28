@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, DollarSign, FileText, Download, Printer } from "lucide-react";
+import { DollarSign, FileText, Download, Printer } from "lucide-react";
 import UpFilePagosCPP from "@/components/upfile/UpFilePagosCPP";
 import ImageDisplay from "@/components/upfile/ImageDisplay";
 import { fetchWithAuth } from "@/lib/api";
@@ -211,7 +211,6 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    const fecha = new Date(compra.fecha).toLocaleDateString('es-VE');
     const html = generarHTMLImpresion();
     
     printWindow.document.write(html);

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, DollarSign, Filter } from "lucide-react";
+import { FileText, Filter } from "lucide-react";
 import ModalDetalleCuentaPorPagar from "@/components/compras/ModalDetalleCuentaPorPagar";
 import { fetchWithAuth } from "@/lib/api";
 
@@ -167,7 +166,7 @@ const CuentasPorPagarPage: React.FC = () => {
   });
 
   // Calcular totales
-  const totalAdeudado = comprasFiltradas.reduce((sum, c) => sum + c.monto_restante, 0);
+  const totalAdeudado = comprasFiltradas.reduce((sum, c) => sum + (c.monto_restante || 0), 0);
   const totalAbonado = comprasFiltradas.reduce((sum, c) => sum + (c.monto_abonado || 0), 0);
   const totalFactura = comprasFiltradas.reduce((sum, c) => sum + c.total_precio_venta, 0);
 
