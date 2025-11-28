@@ -209,8 +209,10 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
     const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
       ? costo * (1 + diferenciaPorcentaje / 100)
       : costo;
-    const utilidad = (producto.precio_unitario || 0) - costo;
-    const precioVenta = costoAjustado + utilidad;
+    // Calcular utilidad como porcentaje
+    const precioUnitario = producto.precio_unitario || 0;
+    const utilidad = costo > 0 ? ((precioUnitario - costo) / costo) * 100 : 0;
+    const precioVenta = costoAjustado * (1 + utilidad / 100);
 
     // Mantener los lotes existentes del producto
     const lotesExistentes = producto.lotes || [];
@@ -246,11 +248,11 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
     }
 
     const costo = parseFloat(costoNuevo);
-    const utilidad = parseFloat(utilidadNuevo);
+    const utilidad = parseFloat(utilidadNuevo); // Utilidad como porcentaje
     const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
       ? costo * (1 + diferenciaPorcentaje / 100)
       : costo;
-    const precioVenta = costoAjustado + utilidad;
+    const precioVenta = costoAjustado * (1 + utilidad / 100);
 
     const nuevoItem: ItemCompra = {
       id: `item-${Date.now()}-${Math.random()}`,
@@ -288,7 +290,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
       const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
         ? item.costo * (1 + diferenciaPorcentaje / 100)
         : item.costo;
-      const precioVenta = costoAjustado + item.utilidad;
+      const precioVenta = costoAjustado * (1 + item.utilidad / 100);
       return {
         ...item,
         costoAjustado,
@@ -316,7 +318,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
         const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
           ? costo * (1 + diferenciaPorcentaje / 100)
           : costo;
-        const precioVenta = costoAjustado + item.utilidad;
+        const precioVenta = costoAjustado * (1 + item.utilidad / 100);
         return {
           ...item,
           costo: costo,
@@ -328,11 +330,11 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
     }));
   };
 
-  // Actualizar utilidad de item
+  // Actualizar utilidad de item (utilidad como porcentaje)
   const actualizarUtilidad = (id: string, utilidad: number) => {
     setItemsCompra(itemsCompra.map(item => {
       if (item.id === id) {
-        const precioVenta = item.costoAjustado + utilidad;
+        const precioVenta = item.costoAjustado * (1 + utilidad / 100);
         return {
           ...item,
           utilidad: utilidad,
@@ -359,7 +361,10 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
 
   // Calcular totales
   const totalCosto = itemsCompra.reduce((sum, item) => sum + (item.costoAjustado * item.cantidad), 0);
-  const totalUtilidad = itemsCompra.reduce((sum, item) => sum + (item.utilidad * item.cantidad), 0);
+  const totalUtilidad = itemsCompra.reduce((sum, item) => {
+    const utilidadEnDinero = (item.costoAjustado * item.utilidad / 100) * item.cantidad;
+    return sum + utilidadEnDinero;
+  }, 0);
   const totalPrecioVenta = itemsCompra.reduce((sum, item) => sum + (item.precioVenta * item.cantidad), 0);
 
   // Guardar compra
@@ -594,7 +599,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                   <Input
                     type="number"
                     step="0.01"
-                    placeholder="Utilidad *"
+                    placeholder="Utilidad (%) *"
                     value={utilidadNuevo}
                     onChange={(e) => setUtilidadNuevo(e.target.value)}
                   />
@@ -705,13 +710,16 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                             </td>
                           )}
                           <td className="border border-slate-300 px-2 py-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={item.utilidad}
-                              onChange={(e) => actualizarUtilidad(item.id, parseFloat(e.target.value) || 0)}
-                              className="w-20 text-right text-xs h-7"
-                            />
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.utilidad}
+                                onChange={(e) => actualizarUtilidad(item.id, parseFloat(e.target.value) || 0)}
+                                className="w-16 text-right text-xs h-7"
+                              />
+                              <span className="text-xs text-slate-500">%</span>
+                            </div>
                           </td>
                           <td className="border border-slate-300 px-2 py-2 text-right text-xs font-medium text-green-600">
                             ${item.precioVenta.toFixed(2)}
