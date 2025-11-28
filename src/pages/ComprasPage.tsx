@@ -13,14 +13,15 @@ interface Proveedor {
   nombre: string;
   rif: string;
   telefono: string;
-  dias_credito: number;
-  descuento_comercial: number;
-  descuento_pronto_pago: number;
+  dias_credito?: number;
+  descuento_comercial?: number;
+  descuento_pronto_pago?: number;
 }
 
 const ComprasPage: React.FC = () => {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState<Proveedor | null>(null);
+  const [proveedorEditando, setProveedorEditando] = useState<Proveedor | null>(null);
   const [showModalProveedor, setShowModalProveedor] = useState(false);
   const [showModalCompra, setShowModalCompra] = useState(false);
   const [dolarBcv, setDolarBcv] = useState<number>(0);
@@ -73,12 +74,19 @@ const ComprasPage: React.FC = () => {
   }, []);
 
   const handleCrearProveedor = () => {
+    setProveedorEditando(null);
+    setShowModalProveedor(true);
+  };
+
+  const handleEditarProveedor = (proveedor: Proveedor) => {
+    setProveedorEditando(proveedor);
     setShowModalProveedor(true);
   };
 
   const handleProveedorCreado = () => {
     fetchProveedores();
     setShowModalProveedor(false);
+    setProveedorEditando(null);
   };
 
   const handleSeleccionarProveedor = (proveedor: Proveedor) => {
@@ -200,33 +208,49 @@ const ComprasPage: React.FC = () => {
                     {proveedor.nombre}
                   </h3>
                   <div className="space-y-1 text-sm text-slate-600">
-                    <p><strong>RIF:</strong> {proveedor.rif}</p>
-                    <p><strong>Teléfono:</strong> {proveedor.telefono}</p>
-                    <p><strong>Días de Crédito:</strong> {proveedor.dias_credito}</p>
-                    <p><strong>Desc. Comercial:</strong> {proveedor.descuento_comercial}%</p>
-                    <p><strong>Desc. Pronto Pago:</strong> {proveedor.descuento_pronto_pago}%</p>
+                    <p><strong>RIF:</strong> {proveedor.rif || "-"}</p>
+                    <p><strong>Teléfono:</strong> {proveedor.telefono || "-"}</p>
+                    <p><strong>Días de Crédito:</strong> {proveedor.dias_credito !== undefined && proveedor.dias_credito !== null ? proveedor.dias_credito : 0}</p>
+                    <p><strong>Desc. Comercial:</strong> {proveedor.descuento_comercial !== undefined && proveedor.descuento_comercial !== null ? `${proveedor.descuento_comercial}%` : "0%"}</p>
+                    <p><strong>Desc. Pronto Pago:</strong> {proveedor.descuento_pronto_pago !== undefined && proveedor.descuento_pronto_pago !== null ? `${proveedor.descuento_pronto_pago}%` : "0%"}</p>
                   </div>
-                  <Button
-                    className="w-full mt-4"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSeleccionarProveedor(proveedor);
-                    }}
-                  >
-                    Crear Compra
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditarProveedor(proveedor);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSeleccionarProveedor(proveedor);
+                      }}
+                    >
+                      Crear Compra
+                    </Button>
+                  </div>
                 </Card>
               ))}
             </div>
           )}
         </Card>
 
-        {/* Modal de Crear Proveedor */}
+        {/* Modal de Crear/Editar Proveedor */}
         {showModalProveedor && (
           <ModalCrearProveedor
             open={showModalProveedor}
-            onClose={() => setShowModalProveedor(false)}
+            onClose={() => {
+              setShowModalProveedor(false);
+              setProveedorEditando(null);
+            }}
             onSuccess={handleProveedorCreado}
+            proveedor={proveedorEditando}
           />
         )}
 

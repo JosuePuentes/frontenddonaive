@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,16 +6,28 @@ import { X } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+interface Proveedor {
+  _id?: string;
+  nombre: string;
+  rif: string;
+  telefono: string;
+  dias_credito?: number;
+  descuento_comercial?: number;
+  descuento_pronto_pago?: number;
+}
+
 interface ModalCrearProveedorProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  proveedor?: Proveedor | null;
 }
 
 const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
   open,
   onClose,
   onSuccess,
+  proveedor,
 }) => {
   const [nombre, setNombre] = useState("");
   const [rif, setRif] = useState("");
@@ -25,6 +37,26 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
   const [descuentoProntoPago, setDescuentoProntoPago] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Cargar datos del proveedor si se está editando
+  useEffect(() => {
+    if (proveedor) {
+      setNombre(proveedor.nombre || "");
+      setRif(proveedor.rif || "");
+      setTelefono(proveedor.telefono || "");
+      setDiasCredito(proveedor.dias_credito?.toString() || "");
+      setDescuentoComercial(proveedor.descuento_comercial?.toString() || "");
+      setDescuentoProntoPago(proveedor.descuento_pronto_pago?.toString() || "");
+    } else {
+      // Limpiar formulario si es nuevo
+      setNombre("");
+      setRif("");
+      setTelefono("");
+      setDiasCredito("");
+      setDescuentoComercial("");
+      setDescuentoProntoPago("");
+    }
+  }, [proveedor, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +72,14 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      const res = await fetch(`${API_BASE_URL}/proveedores`, {
-        method: "POST",
+      const url = proveedor?._id 
+        ? `${API_BASE_URL}/proveedores/${proveedor._id}`
+        : `${API_BASE_URL}/proveedores`;
+      
+      const method = proveedor?._id ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -58,7 +96,7 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || errorData?.message || "Error al crear proveedor");
+        throw new Error(errorData?.detail || errorData?.message || `Error al ${proveedor?._id ? 'actualizar' : 'crear'} proveedor`);
       }
 
       // Limpiar formulario
@@ -70,8 +108,8 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
       setDescuentoProntoPago("");
       onSuccess();
     } catch (err: any) {
-      setError(err.message || "Error al crear proveedor");
-      console.error("Error al crear proveedor:", err);
+      setError(err.message || `Error al ${proveedor?._id ? 'actualizar' : 'crear'} proveedor`);
+      console.error(`Error al ${proveedor?._id ? 'actualizar' : 'crear'} proveedor:`, err);
     } finally {
       setLoading(false);
     }
@@ -82,7 +120,7 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-800">
-            Crear Nuevo Proveedor
+            {proveedor?._id ? "Editar Proveedor" : "Crear Nuevo Proveedor"}
           </DialogTitle>
         </DialogHeader>
 
@@ -180,7 +218,7 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creando..." : "Crear Proveedor"}
+              {loading ? (proveedor?._id ? "Actualizando..." : "Creando...") : (proveedor?._id ? "Actualizar Proveedor" : "Crear Proveedor")}
             </Button>
           </div>
         </form>
