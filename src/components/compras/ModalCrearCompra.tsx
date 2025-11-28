@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -424,30 +423,31 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
     }
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent 
-        className="flex flex-col p-6"
+    <div 
+      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-white w-full h-full flex flex-col overflow-hidden"
         style={{
           maxWidth: '100vw',
-          width: '100vw',
-          height: '100vh',
           maxHeight: '100vh',
-          margin: 0,
-          borderRadius: 0,
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          transform: 'none',
         }}
       >
-        <DialogHeader className="flex-shrink-0 pb-4 border-b">
+        {/* Header */}
+        <div className="flex-shrink-0 pb-4 border-b px-6 pt-6">
           <div className="flex justify-between items-start">
-            <div>
-              <DialogTitle className="text-2xl font-bold text-slate-800">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-slate-800">
                 Crear Compra - {proveedor.nombre}
-              </DialogTitle>
+              </h2>
               <div className="mt-3 grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                 <div>
                   <span className="text-slate-600 font-medium">RIF:</span>{" "}
@@ -483,11 +483,18 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                 </div>
               </div>
             </div>
+            <button
+              onClick={onClose}
+              className="ml-4 text-slate-500 hover:text-slate-700 transition-colors"
+              aria-label="Cerrar"
+            >
+              <X className="h-6 w-6" />
+            </button>
           </div>
-        </DialogHeader>
+        </div>
 
         {error && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded-md text-sm flex-shrink-0">
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded-md text-sm flex-shrink-0 mx-6 mt-4">
             {error}
           </div>
         )}
@@ -807,8 +814,8 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 
