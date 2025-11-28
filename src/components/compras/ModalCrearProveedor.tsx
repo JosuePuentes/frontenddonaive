@@ -96,7 +96,6 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
         },
         body: JSON.stringify(bodyData),
       });
-      });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
