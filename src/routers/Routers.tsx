@@ -40,6 +40,7 @@ import RegisterPage from "@/pages/RegisterPage";
 import GestionClientesPage from "@/pages/GestionClientesPage";
 import PuntoVentaPage from "@/pages/PuntoVentaPage";
 import GestionBancosPage from "@/pages/GestionBancosPage";
+import ComprasPage from "@/pages/ComprasPage";
 
 const AppRouter = () => (
   <Routes>
@@ -254,6 +255,14 @@ const AppRouter = () => (
       element={
         <PermissionRoute permiso="acceso_admin">
           <RetiroPage />
+        </PermissionRoute>
+      }
+    />
+    <Route
+      path="/compras"
+      element={
+        <PermissionRoute permiso="acceso_admin">
+          <ComprasPage />
         </PermissionRoute>
       }
     />
