@@ -455,23 +455,33 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        // Determinar divisa y tasa según si se paga en dólar negro
+        const divisa = pagarEnDolarNegro ? "USD" : "USD"; // Por defecto USD, ajustar si es necesario
+        const tasa = pagarEnDolarNegro ? dolarNegro : dolarBcv;
+        
         body: JSON.stringify({
           proveedor_id: proveedor._id,
-          sucursal_id: sucursalId,
+          farmacia: sucursalId, // Backend espera "farmacia" no "sucursal_id"
+          divisa: divisa,
+          tasa: tasa,
           pagar_en_dolar_negro: pagarEnDolarNegro,
           dolar_bcv: dolarBcv,
           dolar_negro: dolarNegro,
           items: itemsCompra.map(item => ({
             codigo: item.codigo,
-            descripcion: item.descripcion,
+            nombre: item.descripcion, // Backend espera "nombre" no "descripcion"
+            descripcion: item.descripcion, // Mantener por compatibilidad
             marca: item.marca,
-            costo: item.costo,
+            costo_unitario: item.costo, // Backend espera "costo_unitario" no "costo"
+            costo: item.costo, // Mantener por compatibilidad
             costo_ajustado: item.costoAjustado,
+            precio_unitario: item.precioVenta, // Backend espera "precio_unitario"
+            precio_venta: item.precioVenta, // Mantener por compatibilidad
             lleva_iva: item.llevaIva,
             iva: item.iva,
             utilidad: item.utilidad,
-            precio_venta: item.precioVenta,
             cantidad: item.cantidad,
+            total: item.precioVenta * item.cantidad, // Backend espera "total" calculado
             fecha_vencimiento: item.fechaVencimiento || null,
             lote: item.lote || null,
             es_nuevo: item.esNuevo,
