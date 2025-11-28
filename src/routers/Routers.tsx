@@ -261,7 +261,7 @@ const AppRouter = () => (
     <Route
       path="/compras"
       element={
-        <PermissionRoute permiso="acceso_admin">
+        <PermissionRoute permiso="compras">
           <ComprasPage />
         </PermissionRoute>
       }

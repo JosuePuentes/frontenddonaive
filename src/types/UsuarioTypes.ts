@@ -25,7 +25,8 @@ export const PERMISOS_DISPONIBLES = [
   "verificar_gastos",
   "punto_venta",
   "gestionar_clientes",
-  "gestionar_bancos"
+  "gestionar_bancos",
+  "compras"
 ] as const;
 
 export const FARMACIAS_DISPONIBLES = [
