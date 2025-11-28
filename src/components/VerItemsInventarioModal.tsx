@@ -268,6 +268,24 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
         return sum + (utilidad * Number(cantidad));
       }, 0);
 
+      // Procesar items con descuento aplicado para el PDF
+      const itemsConDescuento = items.map(item => {
+        const costo = item.costo_unitario || item.costo || 0;
+        const precioOriginal = item.precio_unitario || item.precio || 0;
+        const precio = porcentajeDescuento > 0 
+          ? precioOriginal * (1 - porcentajeDescuento / 100)
+          : precioOriginal;
+        const utilidad = item.utilidad_contable ?? (precio - costo);
+        const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
+        return {
+          ...item,
+          precioCalculado: precio,
+          utilidadCalculada: utilidad,
+          porcentajeGananciaCalculado: porcentajeGanancia,
+          precioOriginal: precioOriginal
+        };
+      });
+
       const html = `
         <!DOCTYPE html>
         <html>
@@ -366,16 +384,12 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                ${items.map(item => {
+                ${itemsConDescuento.map(item => {
                   const costo = item.costo_unitario || item.costo || 0;
-                  const precioOriginal = item.precio_unitario || item.precio || 0;
-                  const descuento = ${porcentajeDescuento};
-                  const precio = descuento > 0 
-                    ? precioOriginal * (1 - descuento / 100)
-                    : precioOriginal;
+                  const precio = item.precioCalculado;
                   const cantidad = item.cantidad || item.existencia || 0;
-                  const utilidad = item.utilidad_contable ?? (precio - costo);
-                  const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
+                  const utilidad = item.utilidadCalculada;
+                  const porcentajeGanancia = item.porcentajeGananciaCalculado;
                   
                   // Si tiene lotes, crear una fila por cada lote
                   if (item.lotes && item.lotes.length > 0) {
