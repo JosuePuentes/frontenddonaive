@@ -426,7 +426,22 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="!max-w-[100vw] !w-[100vw] !h-screen !max-h-screen !m-0 !rounded-none !translate-x-0 !translate-y-0 !top-0 !left-0 !right-0 !bottom-0 flex flex-col p-6">
+      <DialogContent 
+        className="flex flex-col p-6"
+        style={{
+          maxWidth: '100vw',
+          width: '100vw',
+          height: '100vh',
+          maxHeight: '100vh',
+          margin: 0,
+          borderRadius: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          transform: 'none',
+        }}
+      >
         <DialogHeader className="flex-shrink-0 pb-4 border-b">
           <div className="flex justify-between items-start">
             <div>
@@ -436,23 +451,35 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
               <div className="mt-3 grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                 <div>
                   <span className="text-slate-600 font-medium">RIF:</span>{" "}
-                  <span className="text-slate-800">{proveedor.rif}</span>
+                  <span className="text-slate-800">{proveedor.rif || "-"}</span>
                 </div>
                 <div>
                   <span className="text-slate-600 font-medium">Teléfono:</span>{" "}
-                  <span className="text-slate-800">{proveedor.telefono}</span>
+                  <span className="text-slate-800">{proveedor.telefono || "-"}</span>
                 </div>
                 <div>
                   <span className="text-slate-600 font-medium">Días de Crédito:</span>{" "}
-                  <span className="text-slate-800">{proveedor.dias_credito || 0}</span>
+                  <span className="text-slate-800">
+                    {proveedor.dias_credito !== undefined && proveedor.dias_credito !== null 
+                      ? proveedor.dias_credito 
+                      : 0}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-600 font-medium">Desc. Comercial:</span>{" "}
-                  <span className="text-slate-800">{proveedor.descuento_comercial || 0}%</span>
+                  <span className="text-slate-800">
+                    {proveedor.descuento_comercial !== undefined && proveedor.descuento_comercial !== null 
+                      ? `${proveedor.descuento_comercial}%` 
+                      : "0%"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-600 font-medium">Desc. Pronto Pago:</span>{" "}
-                  <span className="text-slate-800">{proveedor.descuento_pronto_pago || 0}%</span>
+                  <span className="text-slate-800">
+                    {proveedor.descuento_pronto_pago !== undefined && proveedor.descuento_pronto_pago !== null 
+                      ? `${proveedor.descuento_pronto_pago}%` 
+                      : "0%"}
+                  </span>
                 </div>
               </div>
             </div>
