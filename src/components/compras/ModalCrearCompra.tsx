@@ -299,7 +299,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-800">
             Crear Compra - {proveedor.nombre}
@@ -312,7 +312,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Panel izquierdo - Búsqueda y formulario */}
           <div className="lg:col-span-1 space-y-4">
             <Card className="p-4">
@@ -328,7 +328,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                   <p className="text-sm text-slate-500">Buscando...</p>
                 )}
                 {productosEncontrados.length > 0 && (
-                  <div className="max-h-60 overflow-y-auto space-y-2">
+                  <div className="max-h-80 overflow-y-auto space-y-2">
                     {productosEncontrados.map((producto) => (
                       <Card
                         key={producto._id}
@@ -446,7 +446,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
               {itemsCompra.length === 0 ? (
                 <p className="text-slate-500 text-center py-8">No hay productos agregados</p>
               ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
                   {itemsCompra.map((item) => (
                     <Card key={item.id} className="p-3">
                       <div className="flex justify-between items-start">
