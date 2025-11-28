@@ -3,6 +3,7 @@ import UploadInventarioExcel from "../components/UploadInventarioExcel";
 import ModificarItemInventarioModal from "../components/ModificarItemInventarioModal";
 import VerItemsInventarioModal from "../components/VerItemsInventarioModal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Download, Trash2, Edit, Eye } from "lucide-react";
 
 interface Inventario {
@@ -12,6 +13,7 @@ interface Inventario {
   costo: number;
   usuarioCorreo: string;
   totalExistencias?: number; // Total de existencias de todos los items
+  porcentaje_descuento?: number; // Porcentaje de descuento aplicado al inventario
 }
 
 interface FarmaciaChip {
@@ -36,6 +38,8 @@ const VisualizarInventariosPage: React.FC = () => {
   const [refreshItemsTrigger, setRefreshItemsTrigger] = useState(0);
   const [totalesExistencias, setTotalesExistencias] = useState<{ [key: string]: number }>({});
   const [totalesCostoInventario, setTotalesCostoInventario] = useState<{ [key: string]: number }>({});
+  const [descuentosPorInventario, setDescuentosPorInventario] = useState<{ [key: string]: number }>({});
+  const [guardandoDescuento, setGuardandoDescuento] = useState<{ [key: string]: boolean }>({});
 
   const fetchInventarios = async (): Promise<Inventario[]> => {
     setLoading(true);
@@ -70,6 +74,16 @@ const VisualizarInventariosPage: React.FC = () => {
       const data = await res.json();
       const inventariosArray = Array.isArray(data) ? data : [];
       setInventarios(inventariosArray);
+      
+      // Inicializar descuentos desde los inventarios
+      const descuentosIniciales: { [key: string]: number } = {};
+      inventariosArray.forEach((inv: Inventario) => {
+        if (inv.porcentaje_descuento !== undefined && inv.porcentaje_descuento !== null) {
+          descuentosIniciales[inv._id] = inv.porcentaje_descuento;
+        }
+      });
+      setDescuentosPorInventario(descuentosIniciales);
+      
       return inventariosArray;
     } catch (err: any) {
       // No mostrar error si es una redirección
@@ -199,6 +213,76 @@ const VisualizarInventariosPage: React.FC = () => {
   const handleCerrarVerItems = () => {
     setShowVerItemsModal(false);
     setInventarioParaVer(null);
+  };
+
+  const handleCambiarDescuento = async (inventarioId: string, porcentaje: number) => {
+    // Validar que el porcentaje esté entre 0 y 100
+    if (porcentaje < 0 || porcentaje > 100) {
+      setError("El porcentaje de descuento debe estar entre 0 y 100");
+      return;
+    }
+
+    // Actualizar el estado local inmediatamente
+    setDescuentosPorInventario(prev => ({
+      ...prev,
+      [inventarioId]: porcentaje
+    }));
+
+    // Marcar como guardando
+    setGuardandoDescuento(prev => ({
+      ...prev,
+      [inventarioId]: true
+    }));
+
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No se encontró el token de autenticación");
+
+      // Intentar actualizar el inventario en el backend
+      const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          porcentaje_descuento: porcentaje,
+        }),
+      });
+
+      if (!res.ok) {
+        // Si el endpoint no existe, solo guardar localmente
+        if (res.status === 404 || res.status === 405) {
+          console.warn("El endpoint PATCH /inventarios/{id} no está disponible. El descuento se guardará solo localmente.");
+        } else {
+          const errorData = await res.json().catch(() => null);
+          throw new Error(errorData?.detail || errorData?.message || "Error al guardar el descuento");
+        }
+      }
+
+      // Actualizar el inventario en el estado local
+      setInventarios(prev => prev.map(inv => 
+        inv._id === inventarioId 
+          ? { ...inv, porcentaje_descuento: porcentaje }
+          : inv
+      ));
+    } catch (err: any) {
+      console.error("Error al guardar descuento:", err);
+      // Revertir el cambio local si falla
+      setDescuentosPorInventario(prev => {
+        const inventario = inventarios.find(inv => inv._id === inventarioId);
+        return {
+          ...prev,
+          [inventarioId]: inventario?.porcentaje_descuento ?? 0
+        };
+      });
+      setError(err.message || "Error al guardar el descuento");
+    } finally {
+      setGuardandoDescuento(prev => ({
+        ...prev,
+        [inventarioId]: false
+      }));
+    }
   };
 
   const handleCerrarModal = async () => {
@@ -458,6 +542,9 @@ const VisualizarInventariosPage: React.FC = () => {
                       Total Existencias
                     </th>
                     <th scope="col" className="px-5 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                      % Descuento
+                    </th>
+                    <th scope="col" className="px-5 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                       Acciones
                     </th>
                   </tr>
@@ -470,6 +557,8 @@ const VisualizarInventariosPage: React.FC = () => {
                     // Calcular costo total: suma de (existencia × costo) de todos los items
                     const costoTotalInventario = totalesCostoInventario[i._id] ?? 0;
                     const totalExist = totalesExistencias[i._id] ?? 0;
+                    const descuentoActual = descuentosPorInventario[i._id] ?? i.porcentaje_descuento ?? 0;
+                    const estaGuardando = guardandoDescuento[i._id] ?? false;
                     
                     return (
                       <tr key={i._id} className="hover:bg-slate-50 transition-colors duration-150 ease-in-out">
@@ -484,6 +573,39 @@ const VisualizarInventariosPage: React.FC = () => {
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-slate-700 text-right font-semibold">
                           {totalExist.toLocaleString('es-VE')}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-sm text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              value={descuentoActual}
+                              onChange={(e) => {
+                                const nuevoValor = parseFloat(e.target.value) || 0;
+                                handleCambiarDescuento(i._id, nuevoValor);
+                              }}
+                              onBlur={(e) => {
+                                const nuevoValor = parseFloat(e.target.value) || 0;
+                                if (nuevoValor < 0) {
+                                  handleCambiarDescuento(i._id, 0);
+                                } else if (nuevoValor > 100) {
+                                  handleCambiarDescuento(i._id, 100);
+                                }
+                              }}
+                              disabled={estaGuardando}
+                              className="w-20 text-center"
+                              placeholder="0"
+                            />
+                            <span className="text-xs text-slate-500">%</span>
+                            {estaGuardando && (
+                              <svg className="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -533,6 +655,7 @@ const VisualizarInventariosPage: React.FC = () => {
             inventarioId={inventarioParaVer._id}
             inventarioNombre={farmacias.find(f => f.id === inventarioParaVer.farmacia || f.nombre === inventarioParaVer.farmacia)?.nombre || inventarioParaVer.farmacia}
             refreshTrigger={refreshItemsTrigger}
+            porcentajeDescuento={descuentosPorInventario[inventarioParaVer._id] ?? inventarioParaVer.porcentaje_descuento ?? 0}
           />
         )}
 

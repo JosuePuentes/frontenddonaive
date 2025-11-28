@@ -36,6 +36,7 @@ interface VerItemsInventarioModalProps {
   inventarioId: string;
   inventarioNombre?: string;
   refreshTrigger?: number; // Para forzar refresh cuando cambie
+  porcentajeDescuento?: number; // Porcentaje de descuento a aplicar
 }
 
 const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
@@ -44,6 +45,7 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
   inventarioId,
   inventarioNombre,
   refreshTrigger,
+  porcentajeDescuento = 0,
 }) => {
   const [items, setItems] = useState<ItemInventario[]>([]);
   const [loading, setLoading] = useState(false);
@@ -129,7 +131,10 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
       
       items.forEach(item => {
         const costo = item.costo_unitario || item.costo || 0;
-        const precio = item.precio_unitario || item.precio || 0;
+        const precioOriginal = item.precio_unitario || item.precio || 0;
+        const precio = porcentajeDescuento > 0 
+          ? precioOriginal * (1 - porcentajeDescuento / 100)
+          : precioOriginal;
         const cantidad = item.cantidad || item.existencia || 0;
         const utilidad = item.utilidad_contable ?? (precio - costo);
         const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
@@ -181,7 +186,10 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
             return sum + (Number(costo) * Number(cantidad));
           }, 0),
           items.reduce((sum, item) => {
-            const precio = item.precio_unitario || item.precio || 0;
+            const precioOriginal = item.precio_unitario || item.precio || 0;
+            const precio = porcentajeDescuento > 0 
+              ? precioOriginal * (1 - porcentajeDescuento / 100)
+              : precioOriginal;
             const cantidad = item.cantidad || item.existencia || 0;
             return sum + (Number(precio) * Number(cantidad));
           }, 0),
@@ -193,7 +201,10 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
           "",
           items.reduce((sum, item) => {
             const costo = item.costo_unitario || item.costo || 0;
-            const precio = item.precio_unitario || item.precio || 0;
+            const precioOriginal = item.precio_unitario || item.precio || 0;
+            const precio = porcentajeDescuento > 0 
+              ? precioOriginal * (1 - porcentajeDescuento / 100)
+              : precioOriginal;
             const cantidad = item.cantidad || item.existencia || 0;
             const utilidad = item.utilidad_contable ?? (precio - costo);
             return sum + (utilidad * Number(cantidad));
@@ -235,7 +246,10 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
         return sum + (Number(costo) * Number(cantidad));
       }, 0);
       const totalPrecio = items.reduce((sum, item) => {
-        const precio = item.precio_unitario || item.precio || 0;
+        const precioOriginal = item.precio_unitario || item.precio || 0;
+        const precio = porcentajeDescuento > 0 
+          ? precioOriginal * (1 - porcentajeDescuento / 100)
+          : precioOriginal;
         const cantidad = item.cantidad || item.existencia || 0;
         return sum + (Number(precio) * Number(cantidad));
       }, 0);
@@ -245,7 +259,10 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
       }, 0);
       const totalUtilidad = items.reduce((sum, item) => {
         const costo = item.costo_unitario || item.costo || 0;
-        const precio = item.precio_unitario || item.precio || 0;
+        const precioOriginal = item.precio_unitario || item.precio || 0;
+        const precio = porcentajeDescuento > 0 
+          ? precioOriginal * (1 - porcentajeDescuento / 100)
+          : precioOriginal;
         const cantidad = item.cantidad || item.existencia || 0;
         const utilidad = item.utilidad_contable ?? (precio - costo);
         return sum + (utilidad * Number(cantidad));
@@ -351,7 +368,11 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
               <tbody>
                 ${items.map(item => {
                   const costo = item.costo_unitario || item.costo || 0;
-                  const precio = item.precio_unitario || item.precio || 0;
+                  const precioOriginal = item.precio_unitario || item.precio || 0;
+                  const descuento = ${porcentajeDescuento};
+                  const precio = descuento > 0 
+                    ? precioOriginal * (1 - descuento / 100)
+                    : precioOriginal;
                   const cantidad = item.cantidad || item.existencia || 0;
                   const utilidad = item.utilidad_contable ?? (precio - costo);
                   const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
@@ -440,6 +461,11 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-800">
             Items del Inventario {inventarioNombre && `- ${inventarioNombre}`}
+            {porcentajeDescuento > 0 && (
+              <span className="ml-2 text-sm font-normal text-green-600">
+                (Descuento: {porcentajeDescuento.toFixed(2)}%)
+              </span>
+            )}
           </DialogTitle>
           <p id="ver-items-description" className="sr-only">
             Lista de items/productos del inventario seleccionado.
@@ -535,7 +561,12 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                   {items.map((item, index) => {
                     // El backend usa costo_unitario y cantidad
                     const costo = item.costo_unitario || item.costo || 0;
-                    const precio = item.precio_unitario || item.precio || 0;
+                    const precioOriginal = item.precio_unitario || item.precio || 0;
+                    // Aplicar descuento al precio
+                    const precioConDescuento = porcentajeDescuento > 0 
+                      ? precioOriginal * (1 - porcentajeDescuento / 100)
+                      : precioOriginal;
+                    const precio = precioConDescuento;
                     const cantidad = item.cantidad || item.existencia || 0;
                     const utilidad = item.utilidad_contable ?? (precio - costo);
                     const porcentajeGanancia = item.porcentaje_ganancia ?? ((precio - costo) / costo) * 100;
@@ -552,10 +583,22 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                           })}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                          ${precio.toLocaleString("es-VE", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
+                          <div className="flex flex-col items-end">
+                            {porcentajeDescuento > 0 && precioOriginal !== precio && (
+                              <span className="text-xs text-slate-400 line-through">
+                                ${precioOriginal.toLocaleString("es-VE", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
+                            )}
+                            <span className={porcentajeDescuento > 0 ? "text-green-600" : ""}>
+                              ${precio.toLocaleString("es-VE", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-right text-slate-700">{cantidad}</td>
                         <td className="px-4 py-3 text-slate-700">
@@ -636,7 +679,10 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
                       ${items.reduce((sum, item) => {
-                        const precio = item.precio_unitario || item.precio || 0;
+                        const precioOriginal = item.precio_unitario || item.precio || 0;
+                        const precio = porcentajeDescuento > 0 
+                          ? precioOriginal * (1 - porcentajeDescuento / 100)
+                          : precioOriginal;
                         const cantidad = item.cantidad || item.existencia || 0;
                         return sum + (Number(precio) * Number(cantidad));
                       }, 0).toLocaleString("es-VE", {
@@ -653,7 +699,10 @@ const VerItemsInventarioModal: React.FC<VerItemsInventarioModalProps> = ({
                     <td className="px-4 py-3 text-right font-semibold text-green-600">
                       ${items.reduce((sum, item) => {
                         const costo = item.costo_unitario || item.costo || 0;
-                        const precio = item.precio_unitario || item.precio || 0;
+                        const precioOriginal = item.precio_unitario || item.precio || 0;
+                        const precio = porcentajeDescuento > 0 
+                          ? precioOriginal * (1 - porcentajeDescuento / 100)
+                          : precioOriginal;
                         const cantidad = item.cantidad || item.existencia || 0;
                         const utilidad = item.utilidad_contable ?? (precio - costo);
                         return sum + (utilidad * Number(cantidad));
