@@ -78,26 +78,34 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
       
       const method = proveedor?._id ? "PUT" : "POST";
 
+      const bodyData = {
+        nombre: nombre.trim(),
+        rif: rif.trim(),
+        telefono: telefono.trim(),
+        dias_credito: diasCredito.trim() ? parseInt(diasCredito) : 0,
+        descuento_comercial: descuentoComercial.trim() ? parseFloat(descuentoComercial) : 0,
+        descuento_pronto_pago: descuentoProntoPago.trim() ? parseFloat(descuentoProntoPago) : 0,
+      };
+      console.log("Enviando datos del proveedor:", bodyData);
+      
       const res = await fetch(url, {
         method: method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          nombre: nombre.trim(),
-          rif: rif.trim(),
-          telefono: telefono.trim(),
-          dias_credito: parseInt(diasCredito) || 0,
-          descuento_comercial: parseFloat(descuentoComercial) || 0,
-          descuento_pronto_pago: parseFloat(descuentoProntoPago) || 0,
-        }),
+        body: JSON.stringify(bodyData),
+      });
       });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
+        console.error("Error al guardar proveedor:", errorData);
         throw new Error(errorData?.detail || errorData?.message || `Error al ${proveedor?._id ? 'actualizar' : 'crear'} proveedor`);
       }
+
+      const responseData = await res.json();
+      console.log("Proveedor guardado exitosamente:", responseData);
 
       // Limpiar formulario
       setNombre("");

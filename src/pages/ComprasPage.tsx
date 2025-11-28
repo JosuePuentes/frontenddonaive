@@ -60,7 +60,16 @@ const ComprasPage: React.FC = () => {
 
       if (res.ok) {
         const data = await res.json();
-        setProveedores(Array.isArray(data) ? data : []);
+        const proveedoresData = Array.isArray(data) ? data : [];
+        // Asegurar que todos los campos numéricos existan
+        const proveedoresNormalizados = proveedoresData.map((p: any) => ({
+          ...p,
+          dias_credito: p.dias_credito !== undefined && p.dias_credito !== null ? p.dias_credito : 0,
+          descuento_comercial: p.descuento_comercial !== undefined && p.descuento_comercial !== null ? p.descuento_comercial : 0,
+          descuento_pronto_pago: p.descuento_pronto_pago !== undefined && p.descuento_pronto_pago !== null ? p.descuento_pronto_pago : 0,
+        }));
+        console.log("Proveedores cargados:", proveedoresNormalizados);
+        setProveedores(proveedoresNormalizados);
       }
     } catch (err) {
       console.error("Error al cargar proveedores:", err);
