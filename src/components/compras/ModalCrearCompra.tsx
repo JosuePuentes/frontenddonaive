@@ -299,22 +299,22 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-slate-800">
+      <DialogContent className="max-w-[100vw] w-screen h-screen max-h-screen m-0 rounded-none translate-x-0 translate-y-0 top-0 left-0 flex flex-col p-6">
+        <DialogHeader className="flex-shrink-0 pb-4 border-b">
+          <DialogTitle className="text-2xl font-bold text-slate-800">
             Crear Compra - {proveedor.nombre}
           </DialogTitle>
         </DialogHeader>
 
         {error && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded-md text-sm">
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded-md text-sm flex-shrink-0">
             {error}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 overflow-hidden min-h-0">
           {/* Panel izquierdo - Búsqueda y formulario */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="lg:col-span-1 space-y-4 overflow-y-auto">
             <Card className="p-4">
               <h3 className="font-semibold text-slate-800 mb-4">Buscar Producto</h3>
               <div className="space-y-2">
@@ -440,113 +440,118 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
           </div>
 
           {/* Panel derecho - Lista de items y totales */}
-          <div className="lg:col-span-2 space-y-4">
-            <Card className="p-4">
-              <h3 className="font-semibold text-slate-800 mb-4">Productos en la Compra</h3>
+          <div className="lg:col-span-3 space-y-4 overflow-hidden flex flex-col">
+            <Card className="p-4 flex-1 flex flex-col min-h-0">
+              <h3 className="font-semibold text-slate-800 mb-4 text-lg">Productos en la Compra</h3>
               {itemsCompra.length === 0 ? (
                 <p className="text-slate-500 text-center py-8">No hay productos agregados</p>
               ) : (
-                <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                  {itemsCompra.map((item) => (
-                    <Card key={item.id} className="p-3">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold">{item.codigo}</p>
-                            {item.esNuevo && (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                Nuevo
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-600">{item.descripcion}</p>
-                          {item.marca && (
-                            <p className="text-xs text-slate-500">Marca: {item.marca}</p>
-                          )}
-                          <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-                            <div>
-                              <span className="text-slate-500">Costo:</span>{" "}
-                              <span className="font-medium">${item.costo.toFixed(2)}</span>
-                            </div>
-                            {pagarEnDolarNegro && item.costoAjustado !== item.costo && (
-                              <div>
-                                <span className="text-slate-500">Costo Ajustado:</span>{" "}
-                                <span className="font-medium text-orange-600">
-                                  ${item.costoAjustado.toFixed(2)}
+                <div className="flex-1 overflow-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead className="bg-slate-100 sticky top-0 z-10">
+                      <tr>
+                        <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Código</th>
+                        <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Descripción</th>
+                        <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Marca</th>
+                        <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Costo</th>
+                        {pagarEnDolarNegro && (
+                          <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Costo Ajustado</th>
+                        )}
+                        <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Utilidad</th>
+                        <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Precio Venta</th>
+                        <th className="border border-slate-300 px-4 py-3 text-right font-semibold text-slate-700">Cantidad</th>
+                        <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Lote</th>
+                        <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Vencimiento</th>
+                        <th className="border border-slate-300 px-4 py-3 text-center font-semibold text-slate-700">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {itemsCompra.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50">
+                          <td className="border border-slate-300 px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{item.codigo}</span>
+                              {item.esNuevo && (
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                  Nuevo
                                 </span>
-                              </div>
-                            )}
-                            <div>
-                              <span className="text-slate-500">Utilidad:</span>{" "}
-                              <span className="font-medium">${item.utilidad.toFixed(2)}</span>
+                              )}
                             </div>
-                            <div>
-                              <span className="text-slate-500">Precio Venta:</span>{" "}
-                              <span className="font-medium text-green-600">
-                                ${item.precioVenta.toFixed(2)}
-                              </span>
-                            </div>
-                            {item.lote && (
-                              <div>
-                                <span className="text-slate-500">Lote:</span> {item.lote}
-                              </div>
-                            )}
-                            {item.fechaVencimiento && (
-                              <div>
-                                <span className="text-slate-500">Vencimiento:</span>{" "}
-                                {new Date(item.fechaVencimiento).toLocaleDateString('es-VE')}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-4">
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.cantidad}
-                            onChange={(e) => actualizarCantidad(item.id, parseInt(e.target.value) || 1)}
-                            className="w-20"
-                          />
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => eliminarItem(item.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
+                          </td>
+                          <td className="border border-slate-300 px-4 py-3">{item.descripcion}</td>
+                          <td className="border border-slate-300 px-4 py-3">{item.marca || "-"}</td>
+                          <td className="border border-slate-300 px-4 py-3 text-right font-medium">
+                            ${item.costo.toFixed(2)}
+                          </td>
+                          {pagarEnDolarNegro && (
+                            <td className="border border-slate-300 px-4 py-3 text-right font-medium text-orange-600">
+                              ${item.costoAjustado.toFixed(2)}
+                            </td>
+                          )}
+                          <td className="border border-slate-300 px-4 py-3 text-right font-medium">
+                            ${item.utilidad.toFixed(2)}
+                          </td>
+                          <td className="border border-slate-300 px-4 py-3 text-right font-semibold text-green-600">
+                            ${item.precioVenta.toFixed(2)}
+                          </td>
+                          <td className="border border-slate-300 px-4 py-3">
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.cantidad}
+                              onChange={(e) => actualizarCantidad(item.id, parseInt(e.target.value) || 1)}
+                              className="w-24 text-center"
+                            />
+                          </td>
+                          <td className="border border-slate-300 px-4 py-3">{item.lote || "-"}</td>
+                          <td className="border border-slate-300 px-4 py-3">
+                            {item.fechaVencimiento 
+                              ? new Date(item.fechaVencimiento).toLocaleDateString('es-VE')
+                              : "-"
+                            }
+                          </td>
+                          <td className="border border-slate-300 px-4 py-3 text-center">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => eliminarItem(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </Card>
 
             {/* Totales */}
-            <Card className="p-4 bg-slate-50">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Total Costo:</span>
-                  <span className="font-semibold">${totalCosto.toFixed(2)}</span>
+            <Card className="p-4 bg-slate-50 flex-shrink-0">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <span className="text-slate-600 text-sm">Total Costo:</span>
+                  <p className="text-xl font-semibold">${totalCosto.toFixed(2)}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Total Utilidad:</span>
-                  <span className="font-semibold text-green-600">${totalUtilidad.toFixed(2)}</span>
+                <div>
+                  <span className="text-slate-600 text-sm">Total Utilidad:</span>
+                  <p className="text-xl font-semibold text-green-600">${totalUtilidad.toFixed(2)}</p>
                 </div>
-                <div className="flex justify-between text-lg border-t pt-2">
-                  <span className="font-semibold text-slate-800">Total Precio Venta:</span>
-                  <span className="font-bold text-green-600">${totalPrecioVenta.toFixed(2)}</span>
+                <div>
+                  <span className="text-slate-800 text-sm font-semibold">Total Precio Venta:</span>
+                  <p className="text-2xl font-bold text-green-600">${totalPrecioVenta.toFixed(2)}</p>
                 </div>
               </div>
             </Card>
 
             {/* Botones de acción */}
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={onClose} disabled={loading}>
+            <div className="flex justify-end gap-3 flex-shrink-0 pt-2 border-t">
+              <Button variant="outline" onClick={onClose} disabled={loading} size="lg">
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
-              <Button onClick={guardarCompra} disabled={loading || itemsCompra.length === 0}>
+              <Button onClick={guardarCompra} disabled={loading || itemsCompra.length === 0} size="lg">
                 {loading ? "Guardando..." : "Guardar Compra"}
               </Button>
             </div>
