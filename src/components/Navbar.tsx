@@ -65,6 +65,7 @@ const allLinks = [
         icon: ShoppingCart,
         items: [
             { to: '/compras', label: 'Módulo de Compras', permiso: 'compras' },
+            { to: '/cuentas-por-pagar-compras', label: 'Cuentas por Pagar', permiso: 'compras' },
         ]
     },
     

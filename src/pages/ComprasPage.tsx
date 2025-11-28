@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, ShoppingCart, DollarSign } from "lucide-react";
 import ModalCrearProveedor from "@/components/compras/ModalCrearProveedor";
 import ModalCrearCompra from "@/components/compras/ModalCrearCompra";
+import { fetchWithAuth } from "@/lib/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -16,6 +18,11 @@ interface Proveedor {
   dias_credito?: number;
   descuento_comercial?: number;
   descuento_pronto_pago?: number;
+}
+
+interface Sucursal {
+  id: string;
+  nombre: string;
 }
 
 const ComprasPage: React.FC = () => {
@@ -30,6 +37,9 @@ const ComprasPage: React.FC = () => {
   const [diferenciaUsd, setDiferenciaUsd] = useState<number>(0);
   const [diferenciaPorcentaje, setDiferenciaPorcentaje] = useState<number>(0);
   const [loading, setLoading] = useState(false);
+  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  const [showSucursalModal, setShowSucursalModal] = useState(false);
+  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string>("");
 
   // Calcular diferencias cuando cambian los dólares
   useEffect(() => {
@@ -80,7 +90,30 @@ const ComprasPage: React.FC = () => {
 
   useEffect(() => {
     fetchProveedores();
+    fetchSucursales();
   }, []);
+
+  // Cargar sucursales
+  const fetchSucursales = async () => {
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/farmacias`);
+      if (res.ok) {
+        const data = await res.json();
+        const listaSucursales = data.farmacias
+          ? Object.entries(data.farmacias).map(([id, nombre]) => ({
+              id,
+              nombre: String(nombre),
+            }))
+          : Object.entries(data).map(([id, nombre]) => ({
+              id,
+              nombre: String(nombre),
+            }));
+        setSucursales(listaSucursales);
+      }
+    } catch (err) {
+      console.error("Error al cargar sucursales:", err);
+    }
+  };
 
   const handleCrearProveedor = () => {
     setProveedorEditando(null);
@@ -100,6 +133,15 @@ const ComprasPage: React.FC = () => {
 
   const handleSeleccionarProveedor = (proveedor: Proveedor) => {
     setProveedorSeleccionado(proveedor);
+    setShowSucursalModal(true);
+  };
+
+  const handleConfirmarSucursal = () => {
+    if (!sucursalSeleccionada) {
+      alert("Debe seleccionar una sucursal");
+      return;
+    }
+    setShowSucursalModal(false);
     setShowModalCompra(true);
   };
 
@@ -263,15 +305,58 @@ const ComprasPage: React.FC = () => {
           />
         )}
 
+        {/* Modal de Selección de Sucursal */}
+        {showSucursalModal && proveedorSeleccionado && (
+          <Dialog open={showSucursalModal} onOpenChange={(open) => !open && setShowSucursalModal(false)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Seleccionar Sucursal</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Sucursal para la Compra *
+                  </label>
+                  <select
+                    value={sucursalSeleccionada}
+                    onChange={(e) => setSucursalSeleccionada(e.target.value)}
+                    className="w-full border rounded px-3 py-2"
+                  >
+                    <option value="">Seleccione una sucursal</option>
+                    {sucursales.map((sucursal) => (
+                      <option key={sucursal.id} value={sucursal.id}>
+                        {sucursal.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => {
+                    setShowSucursalModal(false);
+                    setProveedorSeleccionado(null);
+                  }}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleConfirmarSucursal}>
+                    Continuar
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
         {/* Modal de Crear Compra */}
-        {showModalCompra && proveedorSeleccionado && (
+        {showModalCompra && proveedorSeleccionado && sucursalSeleccionada && (
           <ModalCrearCompra
             open={showModalCompra}
             onClose={() => {
               setShowModalCompra(false);
               setProveedorSeleccionado(null);
+              setSucursalSeleccionada("");
             }}
             proveedor={proveedorSeleccionado}
+            sucursalId={sucursalSeleccionada}
             dolarBcv={dolarBcv}
             dolarNegro={dolarNegro}
             diferenciaPorcentaje={diferenciaPorcentaje}

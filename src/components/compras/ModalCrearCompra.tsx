@@ -41,6 +41,8 @@ interface ItemCompra {
   marca: string;
   costo: number;
   costoAjustado: number; // Costo con ajuste de dólar negro si aplica
+  llevaIva: boolean; // Si el producto lleva IVA
+  iva: number; // Monto del IVA (16% del costo)
   utilidad: number;
   precioVenta: number;
   cantidad: number;
@@ -55,6 +57,7 @@ interface ModalCrearCompraProps {
   open: boolean;
   onClose: () => void;
   proveedor: Proveedor;
+  sucursalId: string;
   dolarBcv: number;
   dolarNegro: number;
   diferenciaPorcentaje: number;
@@ -65,6 +68,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
   open,
   onClose,
   proveedor,
+  sucursalId,
   dolarBcv,
   dolarNegro,
   diferenciaPorcentaje,
@@ -208,6 +212,8 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
     }
 
     const costo = producto.costo_unitario || 0;
+    const llevaIva = false; // Por defecto no lleva IVA
+    const iva = 0; // Se calculará cuando se active
     const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
       ? costo * (1 + diferenciaPorcentaje / 100)
       : costo;
@@ -226,6 +232,8 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
       marca: producto.marca || "",
       costo: costo,
       costoAjustado: costoAjustado,
+      llevaIva: llevaIva,
+      iva: iva,
       utilidad: utilidad,
       precioVenta: precioVenta,
       cantidad: 1,
@@ -250,6 +258,8 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
     }
 
     const costo = parseFloat(costoNuevo);
+    const llevaIva = false; // Por defecto no lleva IVA
+    const iva = 0; // Se calculará cuando se active
     const utilidad = parseFloat(utilidadNuevo); // Utilidad como porcentaje
     const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
       ? costo * (1 + diferenciaPorcentaje / 100)
@@ -263,6 +273,8 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
       marca: marcaNuevo.trim(),
       costo: costo,
       costoAjustado: costoAjustado,
+      llevaIva: llevaIva,
+      iva: iva,
       utilidad: utilidad,
       precioVenta: precioVenta,
       cantidad: parseInt(cantidadNuevo),
@@ -292,10 +304,14 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
       const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
         ? item.costo * (1 + diferenciaPorcentaje / 100)
         : item.costo;
-      const precioVenta = costoAjustado * (1 + item.utilidad / 100);
+      // Recalcular IVA si lleva IVA
+      const iva = item.llevaIva ? costoAjustado * 0.16 : 0;
+      const costoConIva = costoAjustado + iva;
+      const precioVenta = costoConIva * (1 + item.utilidad / 100);
       return {
         ...item,
         costoAjustado,
+        iva,
         precioVenta,
       };
     }));
@@ -320,11 +336,15 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
         const costoAjustado = pagarEnDolarNegro && diferenciaPorcentaje > 0
           ? costo * (1 + diferenciaPorcentaje / 100)
           : costo;
-        const precioVenta = costoAjustado * (1 + item.utilidad / 100);
+        // Recalcular IVA si lleva IVA
+        const iva = item.llevaIva ? costoAjustado * 0.16 : 0;
+        const costoConIva = costoAjustado + iva;
+        const precioVenta = costoConIva * (1 + item.utilidad / 100);
         return {
           ...item,
           costo: costo,
           costoAjustado: costoAjustado,
+          iva: iva,
           precioVenta: precioVenta,
         };
       }
@@ -336,10 +356,31 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
   const actualizarUtilidad = (id: string, utilidad: number) => {
     setItemsCompra(itemsCompra.map(item => {
       if (item.id === id) {
-        const precioVenta = item.costoAjustado * (1 + utilidad / 100);
+        // Recalcular precio de venta considerando IVA
+        const costoConIva = item.costoAjustado + item.iva;
+        const precioVenta = costoConIva * (1 + utilidad / 100);
         return {
           ...item,
           utilidad: utilidad,
+          precioVenta: precioVenta,
+        };
+      }
+      return item;
+    }));
+  };
+
+  // Actualizar IVA cuando se marca/desmarca
+  const actualizarIva = (id: string, llevaIva: boolean) => {
+    setItemsCompra(itemsCompra.map(item => {
+      if (item.id === id) {
+        const iva = llevaIva ? item.costoAjustado * 0.16 : 0;
+        // El costo ajustado con IVA se suma al costo base para el cálculo
+        const costoConIva = item.costoAjustado + iva;
+        const precioVenta = costoConIva * (1 + item.utilidad / 100);
+        return {
+          ...item,
+          llevaIva: llevaIva,
+          iva: iva,
           precioVenta: precioVenta,
         };
       }
@@ -362,7 +403,24 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
   };
 
   // Calcular totales
-  const totalCosto = itemsCompra.reduce((sum, item) => sum + (item.costoAjustado * item.cantidad), 0);
+  // Calcular subtotal (sin IVA)
+  const subtotal = itemsCompra.reduce((sum, item) => {
+    const costoConAjuste = item.costoAjustado * item.cantidad;
+    return sum + costoConAjuste;
+  }, 0);
+  
+  // Calcular total IVA
+  const totalIva = itemsCompra.reduce((sum, item) => {
+    if (item.llevaIva) {
+      return sum + (item.iva * item.cantidad);
+    }
+    return sum;
+  }, 0);
+  
+  // Calcular total (subtotal + IVA)
+  const total = subtotal + totalIva;
+  
+  const totalCosto = subtotal; // Para compatibilidad
   const totalUtilidad = itemsCompra.reduce((sum, item) => {
     const utilidadEnDinero = (item.costoAjustado * item.utilidad / 100) * item.cantidad;
     return sum + utilidadEnDinero;
@@ -396,6 +454,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
         },
         body: JSON.stringify({
           proveedor_id: proveedor._id,
+          sucursal_id: sucursalId,
           pagar_en_dolar_negro: pagarEnDolarNegro,
           dolar_bcv: dolarBcv,
           dolar_negro: dolarNegro,
@@ -405,6 +464,8 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
             marca: item.marca,
             costo: item.costo,
             costo_ajustado: item.costoAjustado,
+            lleva_iva: item.llevaIva,
+            iva: item.iva,
             utilidad: item.utilidad,
             precio_venta: item.precioVenta,
             cantidad: item.cantidad,
@@ -427,6 +488,9 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
         ...compraData.compra || compraData,
         proveedor: proveedor,
         items: itemsCompra,
+        subtotal,
+        totalIva,
+        total,
         totalCosto,
         totalUtilidad,
         totalPrecioVenta,
@@ -685,6 +749,7 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                         {pagarEnDolarNegro && (
                           <th className="border border-slate-300 px-2 py-2 text-right font-medium text-slate-700">Costo Ajust.</th>
                         )}
+                        <th className="border border-slate-300 px-2 py-2 text-center font-medium text-slate-700">IVA</th>
                         <th className="border border-slate-300 px-2 py-2 text-right font-medium text-slate-700">Utilidad</th>
                         <th className="border border-slate-300 px-2 py-2 text-right font-medium text-slate-700">P. Venta</th>
                         <th className="border border-slate-300 px-2 py-2 text-right font-medium text-slate-700">Cant.</th>
@@ -723,6 +788,17 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                               ${item.costoAjustado.toFixed(2)}
                             </td>
                           )}
+                          <td className="border border-slate-300 px-2 py-2 text-center">
+                            <div className="flex flex-col items-center gap-1">
+                              <Checkbox
+                                checked={item.llevaIva}
+                                onCheckedChange={(checked) => actualizarIva(item.id, !!checked)}
+                              />
+                              {item.llevaIva && (
+                                <span className="text-[10px] text-blue-600 font-medium">16%</span>
+                              )}
+                            </div>
+                          </td>
                           <td className="border border-slate-300 px-2 py-2">
                             <div className="flex items-center gap-1">
                               <Input
@@ -811,16 +887,16 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
             <Card className="p-3 bg-slate-50 flex-shrink-0">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <span className="text-slate-600 text-xs">Total Costo:</span>
-                  <p className="text-base font-semibold">${totalCosto.toFixed(2)}</p>
+                  <span className="text-slate-600 text-xs">Subtotal (sin IVA):</span>
+                  <p className="text-base font-semibold">${subtotal.toFixed(2)}</p>
                 </div>
                 <div>
-                  <span className="text-slate-600 text-xs">Total Utilidad:</span>
-                  <p className="text-base font-semibold text-green-600">${totalUtilidad.toFixed(2)}</p>
+                  <span className="text-slate-600 text-xs">Total IVA (16%):</span>
+                  <p className="text-base font-semibold text-blue-600">${totalIva.toFixed(2)}</p>
                 </div>
                 <div>
-                  <span className="text-slate-800 text-xs font-semibold">Total Precio Venta:</span>
-                  <p className="text-lg font-bold text-green-600">${totalPrecioVenta.toFixed(2)}</p>
+                  <span className="text-slate-800 text-xs font-semibold">Total:</span>
+                  <p className="text-lg font-bold text-green-600">${total.toFixed(2)}</p>
                 </div>
               </div>
             </Card>
@@ -850,16 +926,16 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                 <span className="font-semibold">{itemsCompra.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Total Costo:</span>
-                <span className="font-semibold">${totalCosto.toFixed(2)}</span>
+                <span className="text-slate-600">Subtotal (sin IVA):</span>
+                <span className="font-semibold">${subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Total Utilidad:</span>
-                <span className="font-semibold text-green-600">${totalUtilidad.toFixed(2)}</span>
+                <span className="text-slate-600">Total IVA (16%):</span>
+                <span className="font-semibold text-blue-600">${totalIva.toFixed(2)}</span>
               </div>
               <div className="flex justify-between border-t pt-2">
-                <span className="text-slate-800 font-semibold">Total Precio Venta:</span>
-                <span className="font-bold text-green-600 text-lg">${totalPrecioVenta.toFixed(2)}</span>
+                <span className="text-slate-800 font-semibold">Total:</span>
+                <span className="font-bold text-green-600 text-lg">${total.toFixed(2)}</span>
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -891,7 +967,12 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                 setPagarEnDolarNegro(false);
                 setBusquedaProducto("");
                 setError(null);
-                onSuccess();
+                // Redirigir a cuentas por pagar
+                if (window.location.pathname !== '/cuentas-por-pagar-compras') {
+                  window.location.href = '/cuentas-por-pagar-compras';
+                } else {
+                  onSuccess();
+                }
               }}>
                 Cerrar
               </Button>

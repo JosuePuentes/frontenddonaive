@@ -41,6 +41,7 @@ import GestionClientesPage from "@/pages/GestionClientesPage";
 import PuntoVentaPage from "@/pages/PuntoVentaPage";
 import GestionBancosPage from "@/pages/GestionBancosPage";
 import ComprasPage from "@/pages/ComprasPage";
+import CuentasPorPagarComprasPage from "@/pages/CuentasPorPagarPage";
 
 const AppRouter = () => (
   <Routes>
@@ -263,6 +264,14 @@ const AppRouter = () => (
       element={
         <PermissionRoute permiso="compras">
           <ComprasPage />
+        </PermissionRoute>
+      }
+    />
+    <Route
+      path="/cuentas-por-pagar-compras"
+      element={
+        <PermissionRoute permiso="compras">
+          <CuentasPorPagarComprasPage />
         </PermissionRoute>
       }
     />
