@@ -449,16 +449,16 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
+      // Determinar divisa y tasa según si se paga en dólar negro
+      const divisa = pagarEnDolarNegro ? "USD" : "USD"; // Por defecto USD, ajustar si es necesario
+      const tasa = pagarEnDolarNegro ? dolarNegro : dolarBcv;
+      
       const res = await fetch(`${API_BASE_URL}/compras`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        // Determinar divisa y tasa según si se paga en dólar negro
-        const divisa = pagarEnDolarNegro ? "USD" : "USD"; // Por defecto USD, ajustar si es necesario
-        const tasa = pagarEnDolarNegro ? dolarNegro : dolarBcv;
-        
         body: JSON.stringify({
           proveedor_id: proveedor._id,
           farmacia: sucursalId, // Backend espera "farmacia" no "sucursal_id"
