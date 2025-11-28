@@ -89,6 +89,8 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [compraGuardada, setCompraGuardada] = useState<any>(null);
 
   // Si se activa dólar negro, activar automáticamente
   useEffect(() => {
@@ -367,13 +369,18 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
   }, 0);
   const totalPrecioVenta = itemsCompra.reduce((sum, item) => sum + (item.precioVenta * item.cantidad), 0);
 
-  // Guardar compra
-  const guardarCompra = async () => {
+  // Mostrar modal de confirmación
+  const mostrarConfirmacion = () => {
     if (itemsCompra.length === 0) {
       setError("Debe agregar al menos un producto");
       return;
     }
+    setShowConfirmModal(true);
+  };
 
+  // Guardar compra (llamado después de confirmar)
+  const guardarCompra = async () => {
+    setShowConfirmModal(false);
     setLoading(true);
     setError(null);
 
@@ -415,11 +422,18 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
         throw new Error(errorData?.detail || errorData?.message || "Error al guardar compra");
       }
 
-      // Limpiar todo
-      setItemsCompra([]);
-      setPagarEnDolarNegro(false);
-      setBusquedaProducto("");
-      onSuccess();
+      const compraData = await res.json();
+      setCompraGuardada({
+        ...compraData.compra || compraData,
+        proveedor: proveedor,
+        items: itemsCompra,
+        totalCosto,
+        totalUtilidad,
+        totalPrecioVenta,
+        dolarBcv,
+        dolarNegro,
+        pagarEnDolarNegro,
+      });
     } catch (err: any) {
       setError(err.message || "Error al guardar compra");
       console.error("Error al guardar compra:", err);
@@ -817,15 +831,293 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
                 <X className="h-3 w-3 mr-1.5" />
                 Cancelar
               </Button>
-              <Button onClick={guardarCompra} disabled={loading || itemsCompra.length === 0} size="sm">
-                {loading ? "Guardando..." : "Guardar Compra"}
+              <Button onClick={mostrarConfirmacion} disabled={loading || itemsCompra.length === 0} size="sm">
+                Guardar Compra
               </Button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de Confirmación */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Confirmar Compra</h3>
+            <div className="space-y-3 mb-6">
+              <div className="flex justify-between">
+                <span className="text-slate-600">Número de Items:</span>
+                <span className="font-semibold">{itemsCompra.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Total Costo:</span>
+                <span className="font-semibold">${totalCosto.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Total Utilidad:</span>
+                <span className="font-semibold text-green-600">${totalUtilidad.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-2">
+                <span className="text-slate-800 font-semibold">Total Precio Venta:</span>
+                <span className="font-bold text-green-600 text-lg">${totalPrecioVenta.toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowConfirmModal(false)} disabled={loading}>
+                Cancelar
+              </Button>
+              <Button onClick={guardarCompra} disabled={loading}>
+                {loading ? "Guardando..." : "Confirmar y Guardar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Compra Guardada con opción de imprimir */}
+      {compraGuardada && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Compra Guardada Exitosamente</h3>
+            <div className="space-y-2 mb-6 text-sm">
+              <p><strong>Proveedor:</strong> {compraGuardada.proveedor.nombre}</p>
+              <p><strong>Items:</strong> {compraGuardada.items.length}</p>
+              <p><strong>Total:</strong> ${compraGuardada.totalPrecioVenta.toFixed(2)}</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setCompraGuardada(null);
+                setItemsCompra([]);
+                setPagarEnDolarNegro(false);
+                setBusquedaProducto("");
+                setError(null);
+                onSuccess();
+              }}>
+                Cerrar
+              </Button>
+              <Button onClick={() => imprimirCompra(compraGuardada)}>
+                Imprimir Compra
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+};
+
+// Función para imprimir la compra
+const imprimirCompra = (compraData: any) => {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+
+  const fecha = new Date().toLocaleDateString('es-VE', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const hora = new Date().toLocaleTimeString('es-VE', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Compra - ${compraData.proveedor.nombre}</title>
+  <style>
+    @media print {
+      @page {
+        margin: 1cm;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #000;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .info-section {
+      margin-bottom: 20px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .info-label {
+      font-weight: bold;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    .totals {
+      margin-top: 20px;
+      border-top: 2px solid #000;
+      padding-top: 10px;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    .total-final {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .footer {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>COMPRA DE MERCADERÍA</h1>
+    <p>Fecha: ${fecha} - Hora: ${hora}</p>
+  </div>
+
+  <div class="info-section">
+    <h2>Datos del Proveedor</h2>
+    <div class="info-row">
+      <span class="info-label">Nombre:</span>
+      <span>${compraData.proveedor.nombre}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">RIF:</span>
+      <span>${compraData.proveedor.rif || "-"}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Teléfono:</span>
+      <span>${compraData.proveedor.telefono || "-"}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Días de Crédito:</span>
+      <span>${compraData.proveedor.dias_credito || 0}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Desc. Comercial:</span>
+      <span>${compraData.proveedor.descuento_comercial || 0}%</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Desc. Pronto Pago:</span>
+      <span>${compraData.proveedor.descuento_pronto_pago || 0}%</span>
+    </div>
+  </div>
+
+  ${compraData.pagarEnDolarNegro ? `
+  <div class="info-section">
+    <h2>Información de Cambio</h2>
+    <div class="info-row">
+      <span class="info-label">Dólar BCV:</span>
+      <span>${compraData.dolarBcv.toFixed(2)} Bs</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Dólar Negro:</span>
+      <span>${compraData.dolarNegro.toFixed(2)} Bs</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Pago en Dólar Negro:</span>
+      <span>Sí</span>
+    </div>
+  </div>
+  ` : ''}
+
+  <h2>Items de la Compra</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Descripción</th>
+        <th>Marca</th>
+        <th>Cantidad</th>
+        <th>Costo</th>
+        ${compraData.pagarEnDolarNegro ? '<th>Costo Ajustado</th>' : ''}
+        <th>Utilidad %</th>
+        <th>Precio Venta</th>
+        <th>Lote</th>
+        <th>Vencimiento</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${compraData.items.map((item: any) => `
+        <tr>
+          <td>${item.codigo}</td>
+          <td>${item.descripcion}</td>
+          <td>${item.marca || "-"}</td>
+          <td>${item.cantidad}</td>
+          <td>$${item.costo.toFixed(2)}</td>
+          ${compraData.pagarEnDolarNegro ? `<td>$${item.costoAjustado.toFixed(2)}</td>` : ''}
+          <td>${item.utilidad.toFixed(2)}%</td>
+          <td>$${item.precioVenta.toFixed(2)}</td>
+          <td>${item.lote || "-"}</td>
+          <td>${item.fechaVencimiento ? new Date(item.fechaVencimiento).toLocaleDateString('es-VE') : "-"}</td>
+          <td>$${(item.precioVenta * item.cantidad).toFixed(2)}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="total-row">
+      <span>Total Costo:</span>
+      <span>$${compraData.totalCosto.toFixed(2)}</span>
+    </div>
+    <div class="total-row">
+      <span>Total Utilidad:</span>
+      <span>$${compraData.totalUtilidad.toFixed(2)}</span>
+    </div>
+    <div class="total-row total-final">
+      <span>TOTAL PRECIO VENTA:</span>
+      <span>$${compraData.totalPrecioVenta.toFixed(2)}</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Documento generado el ${fecha} a las ${hora}</p>
+  </div>
+</body>
+</html>
+  `;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+  
+  setTimeout(() => {
+    printWindow.print();
+  }, 250);
 };
 
 export default ModalCrearCompra;
