@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, Plus, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { fetchWithAuth } from "@/lib/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -446,28 +447,26 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
     setError(null);
 
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("No se encontró el token de autenticación");
-
       // Determinar divisa y tasa según si se paga en dólar negro
       const divisa = pagarEnDolarNegro ? "USD" : "USD"; // Por defecto USD, ajustar si es necesario
       const tasa = pagarEnDolarNegro ? dolarNegro : dolarBcv;
       
-      const res = await fetch(`${API_BASE_URL}/compras`, {
+      // Calcular total de la compra (subtotal + IVA)
+      const totalCompra = subtotal + totalIva;
+      
+      const res = await fetchWithAuth(`${API_BASE_URL}/compras`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           proveedor_id: proveedor._id,
           sucursal_id: sucursalId, // Backend usa sucursal_id (normaliza sucursal si viene)
           sucursal: sucursalId, // Enviar también para compatibilidad
+          farmacia: sucursalId, // Backend también puede esperar "farmacia"
           divisa: divisa,
           tasa: tasa,
           pagar_en_dolar_negro: pagarEnDolarNegro,
           dolar_bcv: dolarBcv,
           dolar_negro: dolarNegro,
+          total: totalCompra, // Total de la compra (subtotal + IVA)
           items: itemsCompra.map(item => ({
             codigo: item.codigo,
             nombre: item.descripcion, // Backend espera "nombre"
