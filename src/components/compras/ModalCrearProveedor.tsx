@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { fetchWithAuth } from "@/lib/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -69,9 +70,6 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("No se encontró el token de autenticación");
-
       const url = proveedor?._id 
         ? `${API_BASE_URL}/proveedores/${proveedor._id}`
         : `${API_BASE_URL}/proveedores`;
@@ -88,12 +86,8 @@ const ModalCrearProveedor: React.FC<ModalCrearProveedorProps> = ({
       };
       console.log("Enviando datos del proveedor:", bodyData);
       
-      const res = await fetch(url, {
+      const res = await fetchWithAuth(url, {
         method: method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(bodyData),
       });
 
