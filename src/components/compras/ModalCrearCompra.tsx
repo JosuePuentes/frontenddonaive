@@ -461,7 +461,8 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
         },
         body: JSON.stringify({
           proveedor_id: proveedor._id,
-          farmacia: sucursalId, // Backend espera "farmacia" no "sucursal_id"
+          sucursal_id: sucursalId, // Backend usa sucursal_id (normaliza sucursal si viene)
+          sucursal: sucursalId, // Enviar también para compatibilidad
           divisa: divisa,
           tasa: tasa,
           pagar_en_dolar_negro: pagarEnDolarNegro,
@@ -469,16 +470,16 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
           dolar_negro: dolarNegro,
           items: itemsCompra.map(item => ({
             codigo: item.codigo,
-            nombre: item.descripcion, // Backend espera "nombre" no "descripcion"
+            nombre: item.descripcion, // Backend espera "nombre"
             descripcion: item.descripcion, // Mantener por compatibilidad
             marca: item.marca,
-            costo_unitario: item.costo, // Backend espera "costo_unitario" no "costo"
+            costo_unitario: item.costo, // Backend espera "costo_unitario"
             costo: item.costo, // Mantener por compatibilidad
             costo_ajustado: item.costoAjustado,
             precio_unitario: item.precioVenta, // Backend espera "precio_unitario"
             precio_venta: item.precioVenta, // Mantener por compatibilidad
             lleva_iva: item.llevaIva,
-            iva: item.iva,
+            iva: item.iva, // Backend calcula automáticamente pero acepta el valor
             utilidad: item.utilidad,
             cantidad: item.cantidad,
             total: item.precioVenta * item.cantidad, // Backend espera "total" calculado
