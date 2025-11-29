@@ -1009,6 +1009,15 @@ const imprimirCompra = (compraData: any) => {
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
 
+  // Validar y normalizar datos
+  if (!compraData) {
+    console.error("compraData es undefined o null");
+    return;
+  }
+
+  const items = Array.isArray(compraData.items) ? compraData.items : [];
+  const proveedor = compraData.proveedor || { nombre: "-", rif: "-", telefono: "-" };
+
   const fecha = new Date().toLocaleDateString('es-VE', {
     year: 'numeric',
     month: '2-digit',
@@ -1110,27 +1119,27 @@ const imprimirCompra = (compraData: any) => {
     <h2>Datos del Proveedor</h2>
     <div class="info-row">
       <span class="info-label">Nombre:</span>
-      <span>${compraData.proveedor.nombre}</span>
+      <span>${proveedor.nombre || "-"}</span>
     </div>
     <div class="info-row">
       <span class="info-label">RIF:</span>
-      <span>${compraData.proveedor.rif || "-"}</span>
+      <span>${proveedor.rif || "-"}</span>
     </div>
     <div class="info-row">
       <span class="info-label">Teléfono:</span>
-      <span>${compraData.proveedor.telefono || "-"}</span>
+      <span>${proveedor.telefono || "-"}</span>
     </div>
     <div class="info-row">
       <span class="info-label">Días de Crédito:</span>
-      <span>${compraData.proveedor.dias_credito || 0}</span>
+      <span>${proveedor.dias_credito || 0}</span>
     </div>
     <div class="info-row">
       <span class="info-label">Desc. Comercial:</span>
-      <span>${compraData.proveedor.descuento_comercial || 0}%</span>
+      <span>${proveedor.descuento_comercial || 0}%</span>
     </div>
     <div class="info-row">
       <span class="info-label">Desc. Pronto Pago:</span>
-      <span>${compraData.proveedor.descuento_pronto_pago || 0}%</span>
+      <span>${proveedor.descuento_pronto_pago || 0}%</span>
     </div>
   </div>
 
@@ -1170,21 +1179,30 @@ const imprimirCompra = (compraData: any) => {
       </tr>
     </thead>
     <tbody>
-      ${compraData.items.map((item: any) => `
+      ${items.length > 0 ? items.map((item: any) => {
+        const costo = Number(item.costo || item.costo_unitario || 0);
+        const costoAjustado = Number(item.costoAjustado || item.costo_ajustado || 0);
+        const utilidad = Number(item.utilidad || 0);
+        const precioVenta = Number(item.precioVenta || item.precio_unitario || 0);
+        const cantidad = Number(item.cantidad || 0);
+        const subtotalItem = precioVenta * cantidad;
+        
+        return `
         <tr>
           <td>${item.codigo || "-"}</td>
           <td>${item.descripcion || item.nombre || "-"}</td>
           <td>${item.marca || "-"}</td>
-          <td>${item.cantidad || 0}</td>
-          <td>$${(item.costo || item.costo_unitario || 0).toFixed(2)}</td>
-          ${compraData.pagarEnDolarNegro ? `<td>$${(item.costoAjustado || item.costo_ajustado || 0).toFixed(2)}</td>` : ''}
-          <td>${(item.utilidad || 0).toFixed(2)}%</td>
-          <td>$${(item.precioVenta || item.precio_unitario || 0).toFixed(2)}</td>
+          <td>${cantidad}</td>
+          <td>$${costo.toFixed(2)}</td>
+          ${compraData.pagarEnDolarNegro ? `<td>$${costoAjustado.toFixed(2)}</td>` : ''}
+          <td>${utilidad.toFixed(2)}%</td>
+          <td>$${precioVenta.toFixed(2)}</td>
           <td>${item.lote || "-"}</td>
           <td>${item.fechaVencimiento || item.fecha_vencimiento ? new Date(item.fechaVencimiento || item.fecha_vencimiento).toLocaleDateString('es-VE') : "-"}</td>
-          <td>$${((item.precioVenta || item.precio_unitario || 0) * (item.cantidad || 0)).toFixed(2)}</td>
+          <td>$${subtotalItem.toFixed(2)}</td>
         </tr>
-      `).join('')}
+      `;
+      }).join('') : '<tr><td colspan="10" style="text-align: center;">No hay items</td></tr>'}
     </tbody>
   </table>
 
