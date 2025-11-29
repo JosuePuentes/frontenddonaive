@@ -973,9 +973,9 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-slate-800 mb-4">Compra Guardada Exitosamente</h3>
             <div className="space-y-2 mb-6 text-sm">
-              <p><strong>Proveedor:</strong> {compraGuardada.proveedor.nombre}</p>
-              <p><strong>Items:</strong> {compraGuardada.items.length}</p>
-              <p><strong>Total:</strong> ${compraGuardada.totalPrecioVenta.toFixed(2)}</p>
+              <p><strong>Proveedor:</strong> {compraGuardada.proveedor?.nombre || "-"}</p>
+              <p><strong>Items:</strong> {compraGuardada.items?.length || 0}</p>
+              <p><strong>Total:</strong> ${(compraGuardada.totalPrecioVenta || compraGuardada.total || 0).toFixed(2)}</p>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => {
@@ -1139,11 +1139,11 @@ const imprimirCompra = (compraData: any) => {
     <h2>Información de Cambio</h2>
     <div class="info-row">
       <span class="info-label">Dólar BCV:</span>
-      <span>${compraData.dolarBcv.toFixed(2)} Bs</span>
+      <span>${(compraData.dolarBcv || 0).toFixed(2)} Bs</span>
     </div>
     <div class="info-row">
       <span class="info-label">Dólar Negro:</span>
-      <span>${compraData.dolarNegro.toFixed(2)} Bs</span>
+      <span>${(compraData.dolarNegro || 0).toFixed(2)} Bs</span>
     </div>
     <div class="info-row">
       <span class="info-label">Pago en Dólar Negro:</span>
@@ -1172,34 +1172,50 @@ const imprimirCompra = (compraData: any) => {
     <tbody>
       ${compraData.items.map((item: any) => `
         <tr>
-          <td>${item.codigo}</td>
-          <td>${item.descripcion}</td>
+          <td>${item.codigo || "-"}</td>
+          <td>${item.descripcion || item.nombre || "-"}</td>
           <td>${item.marca || "-"}</td>
-          <td>${item.cantidad}</td>
-          <td>$${item.costo.toFixed(2)}</td>
-          ${compraData.pagarEnDolarNegro ? `<td>$${item.costoAjustado.toFixed(2)}</td>` : ''}
-          <td>${item.utilidad.toFixed(2)}%</td>
-          <td>$${item.precioVenta.toFixed(2)}</td>
+          <td>${item.cantidad || 0}</td>
+          <td>$${(item.costo || item.costo_unitario || 0).toFixed(2)}</td>
+          ${compraData.pagarEnDolarNegro ? `<td>$${(item.costoAjustado || item.costo_ajustado || 0).toFixed(2)}</td>` : ''}
+          <td>${(item.utilidad || 0).toFixed(2)}%</td>
+          <td>$${(item.precioVenta || item.precio_unitario || 0).toFixed(2)}</td>
           <td>${item.lote || "-"}</td>
-          <td>${item.fechaVencimiento ? new Date(item.fechaVencimiento).toLocaleDateString('es-VE') : "-"}</td>
-          <td>$${(item.precioVenta * item.cantidad).toFixed(2)}</td>
+          <td>${item.fechaVencimiento || item.fecha_vencimiento ? new Date(item.fechaVencimiento || item.fecha_vencimiento).toLocaleDateString('es-VE') : "-"}</td>
+          <td>$${((item.precioVenta || item.precio_unitario || 0) * (item.cantidad || 0)).toFixed(2)}</td>
         </tr>
       `).join('')}
     </tbody>
   </table>
 
   <div class="totals">
+    ${compraData.subtotal !== undefined ? `
+    <div class="total-row">
+      <span>Subtotal (sin IVA):</span>
+      <span>$${(compraData.subtotal || 0).toFixed(2)}</span>
+    </div>
+    ` : ''}
+    ${compraData.totalIva !== undefined ? `
+    <div class="total-row">
+      <span>Total IVA (16%):</span>
+      <span>$${(compraData.totalIva || 0).toFixed(2)}</span>
+    </div>
+    ` : ''}
+    ${compraData.totalCosto !== undefined ? `
     <div class="total-row">
       <span>Total Costo:</span>
-      <span>$${compraData.totalCosto.toFixed(2)}</span>
+      <span>$${(compraData.totalCosto || 0).toFixed(2)}</span>
     </div>
+    ` : ''}
+    ${compraData.totalUtilidad !== undefined ? `
     <div class="total-row">
       <span>Total Utilidad:</span>
-      <span>$${compraData.totalUtilidad.toFixed(2)}</span>
+      <span>$${(compraData.totalUtilidad || 0).toFixed(2)}</span>
     </div>
+    ` : ''}
     <div class="total-row total-final">
-      <span>TOTAL PRECIO VENTA:</span>
-      <span>$${compraData.totalPrecioVenta.toFixed(2)}</span>
+      <span>TOTAL:</span>
+      <span>$${(compraData.total || compraData.totalPrecioVenta || 0).toFixed(2)}</span>
     </div>
   </div>
 
