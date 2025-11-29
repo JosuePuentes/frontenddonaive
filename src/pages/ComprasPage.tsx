@@ -60,7 +60,11 @@ const ComprasPage: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("No se encontró el token de autenticación");
+      if (!token) {
+        console.error("No se encontró el token de autenticación");
+        setProveedores([]);
+        return;
+      }
 
       const res = await fetch(`${API_BASE_URL}/proveedores`, {
         headers: {
@@ -68,21 +72,42 @@ const ComprasPage: React.FC = () => {
         },
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const proveedoresData = Array.isArray(data) ? data : [];
-        // Asegurar que todos los campos numéricos existan
-        const proveedoresNormalizados = proveedoresData.map((p: any) => ({
-          ...p,
-          dias_credito: p.dias_credito !== undefined && p.dias_credito !== null ? p.dias_credito : 0,
-          descuento_comercial: p.descuento_comercial !== undefined && p.descuento_comercial !== null ? p.descuento_comercial : 0,
-          descuento_pronto_pago: p.descuento_pronto_pago !== undefined && p.descuento_pronto_pago !== null ? p.descuento_pronto_pago : 0,
-        }));
-        console.log("Proveedores cargados:", proveedoresNormalizados);
-        setProveedores(proveedoresNormalizados);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Error al obtener proveedores:", res.status, errorText);
+        setProveedores([]);
+        return;
       }
+
+      const data = await res.json();
+      console.log("Respuesta del backend /proveedores:", data);
+      
+      // Manejar diferentes formatos de respuesta
+      let proveedoresData: any[] = [];
+      if (Array.isArray(data)) {
+        proveedoresData = data;
+      } else if (data && Array.isArray(data.proveedores)) {
+        proveedoresData = data.proveedores;
+      } else if (data && data.proveedor) {
+        proveedoresData = [data.proveedor];
+      } else if (data && typeof data === 'object') {
+        // Si es un objeto con un array dentro
+        proveedoresData = Object.values(data).filter(Array.isArray).flat() as any[];
+      }
+      
+      // Asegurar que todos los campos numéricos existan
+      const proveedoresNormalizados = proveedoresData.map((p: any) => ({
+        ...p,
+        dias_credito: p.dias_credito !== undefined && p.dias_credito !== null ? p.dias_credito : 0,
+        descuento_comercial: p.descuento_comercial !== undefined && p.descuento_comercial !== null ? p.descuento_comercial : 0,
+        descuento_pronto_pago: p.descuento_pronto_pago !== undefined && p.descuento_pronto_pago !== null ? p.descuento_pronto_pago : 0,
+      }));
+      
+      console.log("Proveedores normalizados:", proveedoresNormalizados);
+      setProveedores(proveedoresNormalizados);
     } catch (err) {
       console.error("Error al cargar proveedores:", err);
+      setProveedores([]);
     } finally {
       setLoading(false);
     }
@@ -126,9 +151,12 @@ const ComprasPage: React.FC = () => {
   };
 
   const handleProveedorCreado = () => {
-    fetchProveedores();
     setShowModalProveedor(false);
     setProveedorEditando(null);
+    // Recargar proveedores después de un pequeño delay para asegurar que el backend haya guardado
+    setTimeout(() => {
+      fetchProveedores();
+    }, 500);
   };
 
   const handleSeleccionarProveedor = (proveedor: Proveedor) => {
