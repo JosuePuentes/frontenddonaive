@@ -165,10 +165,10 @@ const CuentasPorPagarPage: React.FC = () => {
     return cumpleEstado && cumpleSucursal;
   });
 
-  // Calcular totales
+  // Calcular totales con validación
   const totalAdeudado = comprasFiltradas.reduce((sum, c) => sum + (c.monto_restante || 0), 0);
   const totalAbonado = comprasFiltradas.reduce((sum, c) => sum + (c.monto_abonado || 0), 0);
-  const totalFactura = comprasFiltradas.reduce((sum, c) => sum + c.total_precio_venta, 0);
+  const totalFactura = comprasFiltradas.reduce((sum, c) => sum + (c.total_precio_venta || 0), 0);
 
   const handleVerDetalle = (compra: Compra) => {
     setCompraSeleccionada(compra);
@@ -206,15 +206,15 @@ const CuentasPorPagarPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-red-50 p-4 rounded-lg">
               <div className="text-sm text-slate-600 mb-1">Total Adeudado</div>
-              <div className="text-2xl font-bold text-red-600">${totalAdeudado.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-red-600">${(totalAdeudado || 0).toFixed(2)}</div>
             </div>
             <div className="bg-yellow-50 p-4 rounded-lg">
               <div className="text-sm text-slate-600 mb-1">Total Abonado</div>
-              <div className="text-2xl font-bold text-yellow-600">${totalAbonado.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-yellow-600">${(totalAbonado || 0).toFixed(2)}</div>
             </div>
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="text-sm text-slate-600 mb-1">Total Factura</div>
-              <div className="text-2xl font-bold text-blue-600">${totalFactura.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-blue-600">${(totalFactura || 0).toFixed(2)}</div>
             </div>
           </div>
         </Card>
@@ -343,9 +343,9 @@ const CuentasPorPagarPage: React.FC = () => {
                         )}
                       </td>
                       <td className="p-3 text-right">{compra.items?.length || 0}</td>
-                      <td className="p-3 text-right font-semibold">${compra.total_precio_venta.toFixed(2)}</td>
+                      <td className="p-3 text-right font-semibold">${(compra.total_precio_venta || 0).toFixed(2)}</td>
                       <td className="p-3 text-right text-yellow-600">${(compra.monto_abonado || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-red-600 font-semibold">${(compra.monto_restante || compra.total_precio_venta).toFixed(2)}</td>
+                      <td className="p-3 text-right text-red-600 font-semibold">${((compra.monto_restante !== undefined && compra.monto_restante !== null) ? compra.monto_restante : (compra.total_precio_venta || 0)).toFixed(2)}</td>
                       <td className="p-3 text-center">{getEstadoBadge(compra)}</td>
                       <td className="p-3 text-center">
                         <Button

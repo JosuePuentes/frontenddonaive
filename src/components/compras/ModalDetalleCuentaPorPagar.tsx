@@ -357,10 +357,10 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
       ${compra.items.map((item: any) => `
         <tr>
           <td>${item.codigo}</td>
-          <td>${item.descripcion}</td>
-          <td>${item.cantidad}</td>
-          <td>$${item.precio_venta.toFixed(2)}</td>
-          <td>$${(item.precio_venta * item.cantidad).toFixed(2)}</td>
+          <td>${item.descripcion || "-"}</td>
+          <td>${item.cantidad || 0}</td>
+          <td>$${((item.precio_venta || item.precio_unitario || 0)).toFixed(2)}</td>
+          <td>$${(((item.precio_venta || item.precio_unitario || 0) * (item.cantidad || 0))).toFixed(2)}</td>
         </tr>
       `).join('')}
     </tbody>
@@ -368,7 +368,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
   <div class="totals">
     <div class="total-row">
       <span>Total:</span>
-      <span>$${compra.total_precio_venta.toFixed(2)}</span>
+      <span>$${(compra.total_precio_venta || compra.total || 0).toFixed(2)}</span>
     </div>
   </div>
 </body>
@@ -438,11 +438,11 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
               </div>
               <div>
                 <div className="text-sm text-slate-600">Total Factura</div>
-                <div className="text-lg font-bold text-green-600">${compra.total_precio_venta.toFixed(2)}</div>
+                <div className="text-lg font-bold text-green-600">${(compra.total_precio_venta || compra.total || 0).toFixed(2)}</div>
               </div>
               <div>
                 <div className="text-sm text-slate-600">Monto Restante</div>
-                <div className="text-lg font-bold text-red-600">${(compra.monto_restante || compra.total_precio_venta).toFixed(2)}</div>
+                <div className="text-lg font-bold text-red-600">${((compra.monto_restante !== undefined && compra.monto_restante !== null) ? compra.monto_restante : (compra.total_precio_venta || compra.total || 0)).toFixed(2)}</div>
               </div>
             </div>
 
@@ -484,9 +484,9 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                       <td className="p-2">{item.codigo}</td>
                       <td className="p-2">{item.descripcion}</td>
                       <td className="p-2 text-right">{item.cantidad}</td>
-                      <td className="p-2 text-right">${item.precio_venta?.toFixed(2) || "0.00"}</td>
+                      <td className="p-2 text-right">${((item.precio_venta || item.precio_unitario || 0)).toFixed(2)}</td>
                       <td className="p-2 text-right font-semibold">
-                        ${((item.precio_venta || 0) * item.cantidad).toFixed(2)}
+                        ${(((item.precio_venta || item.precio_unitario || 0) * (item.cantidad || 0))).toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -573,7 +573,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                 value={montoPagar}
                 onChange={(e) => setMontoPagar(e.target.value)}
                 placeholder={divisaPago === "USD" 
-                  ? `Máximo: $${compra.monto_restante?.toFixed(2) || compra.total_precio_venta.toFixed(2)}`
+                  ? `Máximo: $${((compra.monto_restante !== undefined && compra.monto_restante !== null) ? compra.monto_restante : (compra.total_precio_venta || compra.total || 0)).toFixed(2)}`
                   : `Máximo: ${(compra.monto_restante || compra.total_precio_venta) * tasaBcv} Bs`
                 }
               />
