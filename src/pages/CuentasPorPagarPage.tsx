@@ -373,7 +373,7 @@ const CuentasPorPagarPage: React.FC = () => {
                       <td className="p-3 text-center">
                         {compra.estado === "pagada" ? (
                           <span className="text-green-600 font-semibold">Pagada</span>
-                        ) : compra.dias_restantes !== undefined ? (
+                        ) : compra.dias_restantes !== undefined && !isNaN(compra.dias_restantes) ? (
                           <span className={compra.dias_restantes < 0 ? "text-red-600 font-semibold" : compra.dias_restantes <= 5 ? "text-yellow-600 font-semibold" : "text-slate-600"}>
                             {compra.dias_restantes} días
                           </span>
