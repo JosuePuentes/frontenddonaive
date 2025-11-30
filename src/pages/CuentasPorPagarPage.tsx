@@ -64,55 +64,94 @@ const CuentasPorPagarPage: React.FC = () => {
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No se encontró el token de autenticación");
 
-      const res = await fetch(`${API_BASE_URL}/compras`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetchWithAuth(`${API_BASE_URL}/compras`);
 
       if (res.ok) {
         const data = await res.json();
-        const comprasData = Array.isArray(data) ? data : [];
+        const comprasData = Array.isArray(data) ? data : (data.compras || data.compra || []);
+        const comprasArray = Array.isArray(comprasData) ? comprasData : [];
+        
+        console.log("Compras recibidas del backend:", comprasArray);
         
         // Calcular estados y montos
-        const comprasConEstado = comprasData.map((compra: any) => {
-          const montoAbonado = compra.pagos?.reduce((sum: number, pago: any) => sum + (pago.monto_bs || 0), 0) || 0;
-          const montoRestante = compra.total_precio_venta - montoAbonado;
-          let estado: "sin_pago" | "abonado" | "pagada" = "sin_pago";
+        const comprasConEstado = comprasArray.map((compra: any) => {
+          // Validar y normalizar valores
+          const totalPrecioVenta = Number(compra.total_precio_venta || compra.total || 0);
+          const montoAbonado = compra.pagos?.reduce((sum: number, pago: any) => {
+            const monto = Number(pago.monto_bs || pago.monto_usd || 0);
+            return sum + (isNaN(monto) ? 0 : monto);
+          }, 0) || 0;
+          const montoRestante = totalPrecioVenta - montoAbonado;
           
-          if (montoAbonado >= compra.total_precio_venta) {
+          let estado: "sin_pago" | "abonado" | "pagada" = "sin_pago";
+          if (montoAbonado >= totalPrecioVenta && totalPrecioVenta > 0) {
             estado = "pagada";
           } else if (montoAbonado > 0) {
             estado = "abonado";
           }
 
-          // Calcular días de crédito
-          const fechaCompra = new Date(compra.fecha);
-          const diasCredito = compra.proveedor?.dias_credito || 0;
-          const fechaVencimiento = new Date(fechaCompra);
-          fechaVencimiento.setDate(fechaVencimiento.getDate() + diasCredito);
+          // Calcular días de crédito con validación
+          let diasCredito = 0;
+          let diasRestantes = 0;
+          let enMora = false;
+          let fechaVencimiento: Date | null = null;
           
-          const hoy = new Date();
-          hoy.setHours(0, 0, 0, 0);
-          fechaVencimiento.setHours(0, 0, 0, 0);
-          
-          const diasTranscurridos = Math.floor((hoy.getTime() - fechaCompra.getTime()) / (1000 * 60 * 60 * 24));
-          const diasRestantes = diasCredito - diasTranscurridos;
-          const enMora = diasRestantes < 0 && estado !== "pagada";
+          try {
+            // Obtener días de crédito del proveedor
+            diasCredito = Number(compra.proveedor?.dias_credito || compra.dias_credito || 0);
+            
+            // Validar fecha de compra
+            if (compra.fecha) {
+              const fechaCompra = new Date(compra.fecha);
+              if (!isNaN(fechaCompra.getTime())) {
+                fechaVencimiento = new Date(fechaCompra);
+                fechaVencimiento.setDate(fechaVencimiento.getDate() + diasCredito);
+                
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+                fechaVencimiento.setHours(0, 0, 0, 0);
+                
+                const diasTranscurridos = Math.floor((hoy.getTime() - fechaCompra.getTime()) / (1000 * 60 * 60 * 24));
+                diasRestantes = diasCredito - diasTranscurridos;
+                enMora = diasRestantes < 0 && estado !== "pagada";
+              }
+            }
+          } catch (error) {
+            console.error("Error calculando días de crédito:", error);
+          }
+
+          // Normalizar proveedor
+          let proveedorNormalizado = compra.proveedor;
+          if (!proveedorNormalizado && compra.proveedor_id) {
+            // Si no viene el proveedor poblado, crear un objeto básico
+            proveedorNormalizado = {
+              _id: compra.proveedor_id,
+              nombre: "Proveedor no encontrado",
+              rif: "",
+              telefono: "",
+              dias_credito: diasCredito
+            };
+          }
 
           return {
             ...compra,
+            proveedor: proveedorNormalizado,
             estado,
             monto_abonado: montoAbonado,
-            monto_restante: montoRestante,
+            monto_restante: isNaN(montoRestante) ? totalPrecioVenta : montoRestante,
             dias_credito: diasCredito,
-            dias_restantes: diasRestantes,
+            dias_restantes: isNaN(diasRestantes) ? 0 : diasRestantes,
             en_mora: enMora,
             fecha_vencimiento: fechaVencimiento,
+            total_precio_venta: totalPrecioVenta,
           };
         });
 
+        console.log("Compras procesadas:", comprasConEstado);
         setCompras(comprasConEstado);
+      } else {
+        const errorData = await res.json().catch(() => null);
+        console.error("Error al cargar compras:", errorData);
       }
     } catch (err) {
       console.error("Error al cargar compras:", err);
