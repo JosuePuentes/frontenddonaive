@@ -574,7 +574,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                 onChange={(e) => setMontoPagar(e.target.value)}
                 placeholder={divisaPago === "USD" 
                   ? `Máximo: $${((compra.monto_restante !== undefined && compra.monto_restante !== null) ? compra.monto_restante : (compra.total_precio_venta || compra.total || 0)).toFixed(2)}`
-                  : `Máximo: ${(compra.monto_restante || compra.total_precio_venta) * tasaBcv} Bs`
+                  : `Máximo: ${((compra.monto_restante !== undefined && compra.monto_restante !== null) ? compra.monto_restante : (compra.total_precio_venta || compra.total || 0)) * (tasaBcv || 0)} Bs`
                 }
               />
               {divisaPago === "Bs" && tasaBcv > 0 && (
