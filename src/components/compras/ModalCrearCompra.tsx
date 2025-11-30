@@ -1254,22 +1254,23 @@ const imprimirCompra = (compraData: any) => {
       </tr>
     </thead>
     <tbody>
-      ${(itemsProcessed && itemsProcessed.length > 0) ? itemsProcessed.map((item: any) => {
+      ${(itemsProcessed && Array.isArray(itemsProcessed) && itemsProcessed.length > 0) ? itemsProcessed.filter((item: any) => item && typeof item === 'object').map((item: any) => {
         // Validar que item existe y tiene todas las propiedades necesarias
-        if (!item) return '';
-        const codigo = item.codigo || "-";
-        const descripcion = item.descripcion || "-";
-        const marca = item.marca || "-";
-        const cantidad = item.cantidad !== undefined ? item.cantidad : 0;
-        const costo = item.costo || "0.00";
-        const costoAjustado = item.costoAjustado || "0.00";
-        const utilidad = item.utilidad || "0.00";
-        const precioVenta = item.precioVenta || "0.00";
-        const lote = item.lote || "-";
-        const fechaVencimiento = item.fechaVencimiento || "-";
-        const subtotalItem = item.subtotalItem || "0.00";
-        
-        return `
+        try {
+          if (!item || typeof item !== 'object') return '';
+          const codigo = String(item.codigo || "-");
+          const descripcion = String(item.descripcion || "-");
+          const marca = String(item.marca || "-");
+          const cantidad = Number(item.cantidad) || 0;
+          const costo = String(item.costo || "0.00");
+          const costoAjustado = String(item.costoAjustado || "0.00");
+          const utilidad = String(item.utilidad || "0.00");
+          const precioVenta = String(item.precioVenta || "0.00");
+          const lote = String(item.lote || "-");
+          const fechaVencimiento = String(item.fechaVencimiento || "-");
+          const subtotalItem = String(item.subtotalItem || "0.00");
+          
+          return `
         <tr>
           <td>${codigo}</td>
           <td>${descripcion}</td>
@@ -1284,6 +1285,10 @@ const imprimirCompra = (compraData: any) => {
           <td>$${subtotalItem}</td>
         </tr>
       `;
+        } catch (e) {
+          console.error("Error en map de itemsProcessed:", e, item);
+          return '';
+        }
       }).filter(Boolean).join('') : '<tr><td colspan="10" style="text-align: center;">No hay items</td></tr>'}
     </tbody>
   </table>
