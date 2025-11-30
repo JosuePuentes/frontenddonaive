@@ -1018,6 +1018,39 @@ const imprimirCompra = (compraData: any) => {
   const items = Array.isArray(compraData.items) ? compraData.items : [];
   const proveedor = compraData.proveedor || { nombre: "-", rif: "-", telefono: "-" };
 
+  // Función helper para convertir a número seguro
+  const safeNumber = (value: any): number => {
+    if (value === null || value === undefined) return 0;
+    const num = Number(value);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Pre-calcular todos los valores de items para evitar problemas en el template string
+  const itemsProcessed = items.map((item: any) => {
+    const costo = safeNumber(item.costo || item.costo_unitario);
+    const costoAjustado = safeNumber(item.costoAjustado || item.costo_ajustado);
+    const utilidad = safeNumber(item.utilidad);
+    const precioVenta = safeNumber(item.precioVenta || item.precio_unitario);
+    const cantidad = safeNumber(item.cantidad);
+    const subtotalItem = precioVenta * cantidad;
+    
+    return {
+      codigo: item.codigo || "-",
+      descripcion: item.descripcion || item.nombre || "-",
+      marca: item.marca || "-",
+      cantidad: cantidad,
+      costo: costo.toFixed(2),
+      costoAjustado: costoAjustado.toFixed(2),
+      utilidad: utilidad.toFixed(2),
+      precioVenta: precioVenta.toFixed(2),
+      lote: item.lote || "-",
+      fechaVencimiento: item.fechaVencimiento || item.fecha_vencimiento 
+        ? new Date(item.fechaVencimiento || item.fecha_vencimiento).toLocaleDateString('es-VE') 
+        : "-",
+      subtotalItem: subtotalItem.toFixed(2)
+    };
+  });
+
   const fecha = new Date().toLocaleDateString('es-VE', {
     year: 'numeric',
     month: '2-digit',
@@ -1033,7 +1066,7 @@ const imprimirCompra = (compraData: any) => {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Compra - ${compraData.proveedor.nombre}</title>
+  <title>Compra - ${proveedor.nombre || "-"}</title>
   <style>
     @media print {
       @page {
@@ -1179,30 +1212,21 @@ const imprimirCompra = (compraData: any) => {
       </tr>
     </thead>
     <tbody>
-      ${items.length > 0 ? items.map((item: any) => {
-        const costo = Number(item.costo || item.costo_unitario || 0);
-        const costoAjustado = Number(item.costoAjustado || item.costo_ajustado || 0);
-        const utilidad = Number(item.utilidad || 0);
-        const precioVenta = Number(item.precioVenta || item.precio_unitario || 0);
-        const cantidad = Number(item.cantidad || 0);
-        const subtotalItem = precioVenta * cantidad;
-        
-        return `
+      ${itemsProcessed.length > 0 ? itemsProcessed.map((item: any) => `
         <tr>
-          <td>${item.codigo || "-"}</td>
-          <td>${item.descripcion || item.nombre || "-"}</td>
-          <td>${item.marca || "-"}</td>
-          <td>${cantidad}</td>
-          <td>$${costo.toFixed(2)}</td>
-          ${compraData.pagarEnDolarNegro ? `<td>$${costoAjustado.toFixed(2)}</td>` : ''}
-          <td>${utilidad.toFixed(2)}%</td>
-          <td>$${precioVenta.toFixed(2)}</td>
-          <td>${item.lote || "-"}</td>
-          <td>${item.fechaVencimiento || item.fecha_vencimiento ? new Date(item.fechaVencimiento || item.fecha_vencimiento).toLocaleDateString('es-VE') : "-"}</td>
-          <td>$${subtotalItem.toFixed(2)}</td>
+          <td>${item.codigo}</td>
+          <td>${item.descripcion}</td>
+          <td>${item.marca}</td>
+          <td>${item.cantidad}</td>
+          <td>$${item.costo}</td>
+          ${compraData.pagarEnDolarNegro ? `<td>$${item.costoAjustado}</td>` : ''}
+          <td>${item.utilidad}%</td>
+          <td>$${item.precioVenta}</td>
+          <td>${item.lote}</td>
+          <td>${item.fechaVencimiento}</td>
+          <td>$${item.subtotalItem}</td>
         </tr>
-      `;
-      }).join('') : '<tr><td colspan="10" style="text-align: center;">No hay items</td></tr>'}
+      `).join('') : '<tr><td colspan="10" style="text-align: center;">No hay items</td></tr>'}
     </tbody>
   </table>
 
