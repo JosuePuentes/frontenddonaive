@@ -1026,7 +1026,8 @@ const imprimirCompra = (compraData: any) => {
   };
 
   // Pre-calcular todos los valores de items para evitar problemas en el template string
-  const itemsProcessed = items.map((item: any) => {
+  // Asegurar que itemsProcessed siempre sea un array válido
+  const itemsProcessed = (items && Array.isArray(items) ? items : []).map((item: any) => {
     try {
       const costo = safeNumber(item.costo || item.costo_unitario || 0);
       const costoAjustado = safeNumber(item.costoAjustado || item.costo_ajustado || 0);
@@ -1246,21 +1247,37 @@ const imprimirCompra = (compraData: any) => {
       </tr>
     </thead>
     <tbody>
-      ${itemsProcessed.length > 0 ? itemsProcessed.map((item: any) => `
+      ${(itemsProcessed && itemsProcessed.length > 0) ? itemsProcessed.map((item: any) => {
+        // Validar que item existe y tiene todas las propiedades necesarias
+        if (!item) return '';
+        const codigo = item.codigo || "-";
+        const descripcion = item.descripcion || "-";
+        const marca = item.marca || "-";
+        const cantidad = item.cantidad !== undefined ? item.cantidad : 0;
+        const costo = item.costo || "0.00";
+        const costoAjustado = item.costoAjustado || "0.00";
+        const utilidad = item.utilidad || "0.00";
+        const precioVenta = item.precioVenta || "0.00";
+        const lote = item.lote || "-";
+        const fechaVencimiento = item.fechaVencimiento || "-";
+        const subtotalItem = item.subtotalItem || "0.00";
+        
+        return `
         <tr>
-          <td>${item.codigo}</td>
-          <td>${item.descripcion}</td>
-          <td>${item.marca}</td>
-          <td>${item.cantidad}</td>
-          <td>$${item.costo}</td>
-          ${compraData.pagarEnDolarNegro ? `<td>$${item.costoAjustado}</td>` : ''}
-          <td>${item.utilidad}%</td>
-          <td>$${item.precioVenta}</td>
-          <td>${item.lote}</td>
-          <td>${item.fechaVencimiento}</td>
-          <td>$${item.subtotalItem}</td>
+          <td>${codigo}</td>
+          <td>${descripcion}</td>
+          <td>${marca}</td>
+          <td>${cantidad}</td>
+          <td>$${costo}</td>
+          ${compraData.pagarEnDolarNegro ? `<td>$${costoAjustado}</td>` : ''}
+          <td>${utilidad}%</td>
+          <td>$${precioVenta}</td>
+          <td>${lote}</td>
+          <td>${fechaVencimiento}</td>
+          <td>$${subtotalItem}</td>
         </tr>
-      `).join('') : '<tr><td colspan="10" style="text-align: center;">No hay items</td></tr>'}
+      `;
+      }).filter(Boolean).join('') : '<tr><td colspan="10" style="text-align: center;">No hay items</td></tr>'}
     </tbody>
   </table>
 
