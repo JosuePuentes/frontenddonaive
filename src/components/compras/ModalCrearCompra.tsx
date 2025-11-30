@@ -1006,17 +1006,18 @@ const ModalCrearCompra: React.FC<ModalCrearCompraProps> = ({
 
 // Función para imprimir la compra
 const imprimirCompra = (compraData: any) => {
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
+  try {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
 
-  // Validar y normalizar datos
-  if (!compraData) {
-    console.error("compraData es undefined o null");
-    return;
-  }
+    // Validar y normalizar datos
+    if (!compraData) {
+      console.error("compraData es undefined o null");
+      return;
+    }
 
-  const items = Array.isArray(compraData.items) ? compraData.items : [];
-  const proveedor = compraData.proveedor || { nombre: "-", rif: "-", telefono: "-" };
+    const items = Array.isArray(compraData.items) ? compraData.items : [];
+    const proveedor = compraData.proveedor || { nombre: "-", rif: "-", telefono: "-" };
 
   // Función helper para convertir a número seguro
   const safeNumber = (value: any): number => {
@@ -1027,7 +1028,9 @@ const imprimirCompra = (compraData: any) => {
 
   // Pre-calcular todos los valores de items para evitar problemas en el template string
   // Asegurar que itemsProcessed siempre sea un array válido
-  const itemsProcessed = (items && Array.isArray(items) ? items : []).map((item: any) => {
+  let itemsProcessed: any[] = [];
+  try {
+    itemsProcessed = (items && Array.isArray(items) ? items : []).map((item: any) => {
     try {
       const costo = safeNumber(item.costo || item.costo_unitario || 0);
       const costoAjustado = safeNumber(item.costoAjustado || item.costo_ajustado || 0);
@@ -1084,7 +1087,11 @@ const imprimirCompra = (compraData: any) => {
         subtotalItem: "0.00"
       };
     }
-  });
+    }).filter((item: any) => item !== null && item !== undefined);
+  } catch (error) {
+    console.error("Error procesando items:", error);
+    itemsProcessed = [];
+  }
 
   const fecha = new Date().toLocaleDateString('es-VE', {
     year: 'numeric',
@@ -1319,12 +1326,16 @@ const imprimirCompra = (compraData: any) => {
 </html>
   `;
 
-  printWindow.document.write(html);
-  printWindow.document.close();
-  
-  setTimeout(() => {
-    printWindow.print();
-  }, 250);
+    printWindow.document.write(html);
+    printWindow.document.close();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  } catch (error) {
+    console.error("Error al imprimir compra:", error);
+    alert("Error al generar la impresión. Por favor, intente nuevamente.");
+  }
 };
 
 export default ModalCrearCompra;
