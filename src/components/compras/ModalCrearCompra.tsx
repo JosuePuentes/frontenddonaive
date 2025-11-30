@@ -1027,28 +1027,62 @@ const imprimirCompra = (compraData: any) => {
 
   // Pre-calcular todos los valores de items para evitar problemas en el template string
   const itemsProcessed = items.map((item: any) => {
-    const costo = safeNumber(item.costo || item.costo_unitario);
-    const costoAjustado = safeNumber(item.costoAjustado || item.costo_ajustado);
-    const utilidad = safeNumber(item.utilidad);
-    const precioVenta = safeNumber(item.precioVenta || item.precio_unitario);
-    const cantidad = safeNumber(item.cantidad);
-    const subtotalItem = precioVenta * cantidad;
-    
-    return {
-      codigo: item.codigo || "-",
-      descripcion: item.descripcion || item.nombre || "-",
-      marca: item.marca || "-",
-      cantidad: cantidad,
-      costo: costo.toFixed(2),
-      costoAjustado: costoAjustado.toFixed(2),
-      utilidad: utilidad.toFixed(2),
-      precioVenta: precioVenta.toFixed(2),
-      lote: item.lote || "-",
-      fechaVencimiento: item.fechaVencimiento || item.fecha_vencimiento 
-        ? new Date(item.fechaVencimiento || item.fecha_vencimiento).toLocaleDateString('es-VE') 
-        : "-",
-      subtotalItem: subtotalItem.toFixed(2)
-    };
+    try {
+      const costo = safeNumber(item.costo || item.costo_unitario || 0);
+      const costoAjustado = safeNumber(item.costoAjustado || item.costo_ajustado || 0);
+      const utilidad = safeNumber(item.utilidad || 0);
+      const precioVenta = safeNumber(item.precioVenta || item.precio_unitario || 0);
+      const cantidad = safeNumber(item.cantidad || 0);
+      const subtotalItem = safeNumber(precioVenta * cantidad);
+      
+      // Validar que todos los valores sean números válidos antes de usar toFixed
+      const costoStr = isNaN(costo) ? "0.00" : costo.toFixed(2);
+      const costoAjustadoStr = isNaN(costoAjustado) ? "0.00" : costoAjustado.toFixed(2);
+      const utilidadStr = isNaN(utilidad) ? "0.00" : utilidad.toFixed(2);
+      const precioVentaStr = isNaN(precioVenta) ? "0.00" : precioVenta.toFixed(2);
+      const subtotalItemStr = isNaN(subtotalItem) ? "0.00" : subtotalItem.toFixed(2);
+      
+      let fechaVencimientoStr = "-";
+      try {
+        if (item.fechaVencimiento || item.fecha_vencimiento) {
+          const fecha = new Date(item.fechaVencimiento || item.fecha_vencimiento);
+          if (!isNaN(fecha.getTime())) {
+            fechaVencimientoStr = fecha.toLocaleDateString('es-VE');
+          }
+        }
+      } catch (e) {
+        fechaVencimientoStr = "-";
+      }
+      
+      return {
+        codigo: String(item.codigo || "-"),
+        descripcion: String(item.descripcion || item.nombre || "-"),
+        marca: String(item.marca || "-"),
+        cantidad: cantidad,
+        costo: costoStr,
+        costoAjustado: costoAjustadoStr,
+        utilidad: utilidadStr,
+        precioVenta: precioVentaStr,
+        lote: String(item.lote || "-"),
+        fechaVencimiento: fechaVencimientoStr,
+        subtotalItem: subtotalItemStr
+      };
+    } catch (error) {
+      console.error("Error procesando item:", item, error);
+      return {
+        codigo: "-",
+        descripcion: "-",
+        marca: "-",
+        cantidad: 0,
+        costo: "0.00",
+        costoAjustado: "0.00",
+        utilidad: "0.00",
+        precioVenta: "0.00",
+        lote: "-",
+        fechaVencimiento: "-",
+        subtotalItem: "0.00"
+      };
+    }
   });
 
   const fecha = new Date().toLocaleDateString('es-VE', {
@@ -1181,11 +1215,11 @@ const imprimirCompra = (compraData: any) => {
     <h2>Información de Cambio</h2>
     <div class="info-row">
       <span class="info-label">Dólar BCV:</span>
-      <span>${(compraData.dolarBcv || 0).toFixed(2)} Bs</span>
+      <span>${safeNumber(compraData.dolarBcv).toFixed(2)} Bs</span>
     </div>
     <div class="info-row">
       <span class="info-label">Dólar Negro:</span>
-      <span>${(compraData.dolarNegro || 0).toFixed(2)} Bs</span>
+      <span>${safeNumber(compraData.dolarNegro).toFixed(2)} Bs</span>
     </div>
     <div class="info-row">
       <span class="info-label">Pago en Dólar Negro:</span>
@@ -1231,33 +1265,33 @@ const imprimirCompra = (compraData: any) => {
   </table>
 
   <div class="totals">
-    ${compraData.subtotal !== undefined ? `
+    ${compraData.subtotal !== undefined && compraData.subtotal !== null ? `
     <div class="total-row">
       <span>Subtotal (sin IVA):</span>
-      <span>$${(compraData.subtotal || 0).toFixed(2)}</span>
+      <span>$${safeNumber(compraData.subtotal).toFixed(2)}</span>
     </div>
     ` : ''}
-    ${compraData.totalIva !== undefined ? `
+    ${compraData.totalIva !== undefined && compraData.totalIva !== null ? `
     <div class="total-row">
       <span>Total IVA (16%):</span>
-      <span>$${(compraData.totalIva || 0).toFixed(2)}</span>
+      <span>$${safeNumber(compraData.totalIva).toFixed(2)}</span>
     </div>
     ` : ''}
-    ${compraData.totalCosto !== undefined ? `
+    ${compraData.totalCosto !== undefined && compraData.totalCosto !== null ? `
     <div class="total-row">
       <span>Total Costo:</span>
-      <span>$${(compraData.totalCosto || 0).toFixed(2)}</span>
+      <span>$${safeNumber(compraData.totalCosto).toFixed(2)}</span>
     </div>
     ` : ''}
-    ${compraData.totalUtilidad !== undefined ? `
+    ${compraData.totalUtilidad !== undefined && compraData.totalUtilidad !== null ? `
     <div class="total-row">
       <span>Total Utilidad:</span>
-      <span>$${(compraData.totalUtilidad || 0).toFixed(2)}</span>
+      <span>$${safeNumber(compraData.totalUtilidad).toFixed(2)}</span>
     </div>
     ` : ''}
     <div class="total-row total-final">
       <span>TOTAL:</span>
-      <span>$${(compraData.total || compraData.totalPrecioVenta || 0).toFixed(2)}</span>
+      <span>$${safeNumber(compraData.total || compraData.totalPrecioVenta || 0).toFixed(2)}</span>
     </div>
   </div>
 
