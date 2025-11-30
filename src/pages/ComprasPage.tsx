@@ -66,11 +66,7 @@ const ComprasPage: React.FC = () => {
         return;
       }
 
-      const res = await fetch(`${API_BASE_URL}/proveedores`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetchWithAuth(`${API_BASE_URL}/proveedores`);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -155,8 +151,9 @@ const ComprasPage: React.FC = () => {
     setProveedorEditando(null);
     // Recargar proveedores después de un pequeño delay para asegurar que el backend haya guardado
     setTimeout(() => {
+      console.log("Recargando proveedores después de crear/editar...");
       fetchProveedores();
-    }, 500);
+    }, 1000); // Aumentado a 1 segundo para dar más tiempo al backend
   };
 
   const handleSeleccionarProveedor = (proveedor: Proveedor) => {
