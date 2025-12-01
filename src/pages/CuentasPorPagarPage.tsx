@@ -61,9 +61,6 @@ const CuentasPorPagarPage: React.FC = () => {
   const fetchCompras = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("No se encontró el token de autenticación");
-
       const res = await fetchWithAuth(`${API_BASE_URL}/compras`);
 
       if (res.ok) {

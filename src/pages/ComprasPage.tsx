@@ -59,13 +59,6 @@ const ComprasPage: React.FC = () => {
   const fetchProveedores = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        console.error("No se encontró el token de autenticación");
-        setProveedores([]);
-        return;
-      }
-
       const res = await fetchWithAuth(`${API_BASE_URL}/proveedores`);
 
       if (!res.ok) {
