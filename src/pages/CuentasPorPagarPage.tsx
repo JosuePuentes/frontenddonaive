@@ -43,7 +43,7 @@ interface Compra {
   dias_credito?: number;
   dias_restantes?: number;
   en_mora?: boolean;
-  fecha_vencimiento?: Date;
+  fecha_vencimiento?: Date | null;
 }
 
 type FiltroEstado = "todos" | "sin_pago" | "abonado" | "pagada" | "en_mora";
@@ -56,6 +56,7 @@ const CuentasPorPagarPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [sucursalFiltro, setSucursalFiltro] = useState<string>("todas");
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
 
   // Cargar compras
   const fetchCompras = async () => {
@@ -97,7 +98,7 @@ const CuentasPorPagarPage: React.FC = () => {
           if (!proveedorNormalizado && compra.proveedor_id) {
             // Buscar el proveedor en la lista cargada
             const proveedorEncontrado = proveedores.find(
-              (p) => p._id === compra.proveedor_id || p._id?.toString() === compra.proveedor_id?.toString()
+              (p: Proveedor) => p._id === compra.proveedor_id || p._id?.toString() === compra.proveedor_id?.toString()
             );
             
             if (proveedorEncontrado) {
@@ -243,7 +244,7 @@ const CuentasPorPagarPage: React.FC = () => {
       const comprasActualizadas = compras.map((compra) => {
         if (!compra.proveedor || compra.proveedor.nombre === "Proveedor no encontrado") {
           const proveedorEncontrado = proveedores.find(
-            (p) => p._id === compra.proveedor_id || p._id?.toString() === compra.proveedor_id?.toString()
+            (p: Proveedor) => p._id === compra.proveedor_id || p._id?.toString() === compra.proveedor_id?.toString()
           );
           if (proveedorEncontrado) {
             // Recalcular días restantes con el proveedor correcto
@@ -274,7 +275,7 @@ const CuentasPorPagarPage: React.FC = () => {
               dias_credito: diasCredito,
               dias_restantes: diasRestantes,
               en_mora: enMora,
-              fecha_vencimiento: fechaVencimiento,
+              fecha_vencimiento: fechaVencimiento || undefined,
             };
           }
         }
