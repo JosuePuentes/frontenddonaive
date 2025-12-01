@@ -96,15 +96,23 @@ const CuentasPorPagarPage: React.FC = () => {
 
           // Normalizar proveedor primero (necesitamos sus días de crédito)
           let proveedorNormalizado = compra.proveedor;
-          if (!proveedorNormalizado && compra.proveedor_id) {
-            // Buscar el proveedor en la lista cargada
+          
+          // Si no viene el proveedor poblado, buscar en la lista cargada
+          if ((!proveedorNormalizado || proveedorNormalizado.nombre === "Proveedor no encontrado") && compra.proveedor_id) {
+            // Buscar el proveedor en la lista cargada con múltiples estrategias de match
             const proveedorEncontrado = proveedores.find(
-              (p: Proveedor) => p._id === compra.proveedor_id || p._id?.toString() === compra.proveedor_id?.toString()
+              (p: Proveedor) => {
+                const match1 = p._id === compra.proveedor_id;
+                const match2 = p._id?.toString() === compra.proveedor_id?.toString();
+                const match3 = compra.proveedor_id && p._id && String(p._id) === String(compra.proveedor_id);
+                const match4 = compra.proveedor_id && p._id && p._id.toString().toLowerCase() === compra.proveedor_id.toString().toLowerCase();
+                return match1 || match2 || match3 || match4;
+              }
             );
             
             if (proveedorEncontrado) {
               proveedorNormalizado = proveedorEncontrado;
-              console.log("✅ [COMPRAS] Proveedor encontrado en lista:", proveedorEncontrado.nombre);
+              console.log("✅ [COMPRAS] Proveedor encontrado en lista:", proveedorEncontrado.nombre, "ID:", proveedorEncontrado._id);
             } else {
               // Si no se encuentra, crear un objeto básico
               proveedorNormalizado = {
@@ -112,9 +120,12 @@ const CuentasPorPagarPage: React.FC = () => {
                 nombre: "Proveedor no encontrado",
                 rif: "",
                 telefono: "",
-                dias_credito: 0
+                dias_credito: 0,
+                descuento_comercial: 0,
+                descuento_pronto_pago: 0
               };
-              console.warn("⚠️ [COMPRAS] Proveedor no encontrado para compra:", compra.proveedor_id);
+              console.warn("⚠️ [COMPRAS] Proveedor no encontrado para compra:", compra._id, "proveedor_id:", compra.proveedor_id);
+              console.warn("📋 [COMPRAS] IDs de proveedores disponibles:", proveedores.map(p => ({ id: p._id, nombre: p.nombre })));
             }
           }
 
@@ -357,11 +368,38 @@ const CuentasPorPagarPage: React.FC = () => {
     
     let ahorroTotal = 0;
     
+    console.log("💰 [AHORRO] Calculando ahorro por pronto pago...");
+    console.log("💰 [AHORRO] Compras filtradas:", comprasFiltradas.length);
+    
     comprasFiltradas.forEach((compra) => {
       // Solo considerar compras sin pagar o parcialmente pagadas
-      if (compra.estado === "pagada") return;
+      if (compra.estado === "pagada") {
+        console.log(`💰 [AHORRO] Compra ${compra._id} ya está pagada, saltando`);
+        return;
+      }
       
-      const descuentoProntoPago = compra.proveedor?.descuento_pronto_pago || 0;
+      // Buscar proveedor si no está poblado
+      let proveedor = compra.proveedor;
+      if ((!proveedor || proveedor.nombre === "Proveedor no encontrado") && compra.proveedor_id) {
+        proveedor = proveedores.find(
+          (p: Proveedor) => {
+            const match1 = p._id === compra.proveedor_id;
+            const match2 = p._id?.toString() === compra.proveedor_id?.toString();
+            const match3 = compra.proveedor_id && p._id && String(p._id) === String(compra.proveedor_id);
+            return match1 || match2 || match3;
+          }
+        );
+      }
+      
+      const descuentoProntoPago = proveedor?.descuento_pronto_pago || 0;
+      const totalFactura = compra.total_precio_venta || compra.total || 0;
+      
+      console.log(`💰 [AHORRO] Compra ${compra._id}:`, {
+        proveedor: proveedor?.nombre || "No encontrado",
+        descuentoProntoPago,
+        totalFactura,
+        fecha: compra.fecha
+      });
       
       if (descuentoProntoPago > 0 && compra.fecha) {
         const fechaCompra = new Date(compra.fecha);
@@ -370,16 +408,32 @@ const CuentasPorPagarPage: React.FC = () => {
           fechaLimiteProntoPago.setDate(fechaLimiteProntoPago.getDate() + diasProntoPago);
           fechaLimiteProntoPago.setHours(0, 0, 0, 0);
           
+          const diasTranscurridos = Math.floor((hoy.getTime() - fechaCompra.getTime()) / (1000 * 60 * 60 * 24));
+          
+          console.log(`💰 [AHORRO] Compra ${compra._id}: Fecha compra: ${fechaCompra.toLocaleDateString()}, Fecha límite: ${fechaLimiteProntoPago.toLocaleDateString()}, Días transcurridos: ${diasTranscurridos}, Días límite: ${diasProntoPago}`);
+          
           // Si estamos antes o en la fecha límite, calcular ahorro
           if (hoy <= fechaLimiteProntoPago) {
-            const totalFactura = compra.total_precio_venta || compra.total || 0;
             const descuento = (totalFactura * descuentoProntoPago) / 100;
             ahorroTotal += descuento;
+            console.log(`✅ [AHORRO] Compra ${compra._id}: Ahorro calculado: $${descuento.toFixed(2)} (${descuentoProntoPago}% de $${totalFactura.toFixed(2)})`);
+          } else {
+            console.log(`⏰ [AHORRO] Compra ${compra._id}: Ya pasó la fecha límite de pronto pago`);
           }
+        } else {
+          console.warn(`⚠️ [AHORRO] Compra ${compra._id}: Fecha inválida: ${compra.fecha}`);
+        }
+      } else {
+        if (descuentoProntoPago === 0) {
+          console.log(`ℹ️ [AHORRO] Compra ${compra._id}: Sin descuento por pronto pago configurado`);
+        }
+        if (!compra.fecha) {
+          console.warn(`⚠️ [AHORRO] Compra ${compra._id}: Sin fecha de compra`);
         }
       }
     });
     
+    console.log(`💰 [AHORRO] Total ahorro calculado: $${ahorroTotal.toFixed(2)}`);
     return ahorroTotal;
   };
 
