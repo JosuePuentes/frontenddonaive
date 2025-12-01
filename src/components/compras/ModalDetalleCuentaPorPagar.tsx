@@ -51,6 +51,7 @@ interface Banco {
   divisa: "USD" | "BS";
   tipo_metodo?: string;
   activo?: boolean;
+  saldo?: number;
 }
 
 interface ModalDetalleCuentaPorPagarProps {
@@ -601,11 +602,16 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                 className="w-full border rounded px-3 py-2"
               >
                 <option value="">Seleccione un banco</option>
-                {bancos.map((banco) => (
-                  <option key={banco._id || banco.id} value={banco._id || banco.id}>
-                    {banco.nombre_banco} ({banco.divisa === "USD" ? "$" : "Bs"})
-                  </option>
-                ))}
+                {bancos.map((banco) => {
+                  const saldo = banco.saldo !== undefined ? banco.saldo : 0;
+                  const saldoFormateado = saldo.toFixed(2);
+                  const simboloDivisa = banco.divisa === "USD" ? "$" : "Bs";
+                  return (
+                    <option key={banco._id || banco.id} value={banco._id || banco.id}>
+                      {banco.nombre_banco} - Saldo: {simboloDivisa} {saldoFormateado} ({banco.divisa})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
