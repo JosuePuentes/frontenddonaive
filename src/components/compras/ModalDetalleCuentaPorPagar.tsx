@@ -460,6 +460,16 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
 
           {/* Información de la Compra */}
           <Card className="p-4 mb-4">
+            {descuentoProntoPago.aplica && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                <div className="text-sm font-semibold text-green-800 mb-1">
+                  💰 Ahorra ${descuentoProntoPago.montoDescuento.toFixed(2)} si aprovechas el pronto pago
+                </div>
+                <div className="text-xs text-green-700">
+                  Descuento del {descuentoProntoPago.porcentaje}% aplicado. Válido hasta {descuentoProntoPago.fechaLimite?.toLocaleDateString('es-VE')}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <div className="text-sm text-slate-600">N° Compra</div>
@@ -471,17 +481,33 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
               </div>
               <div>
                 <div className="text-sm text-slate-600">Proveedor</div>
-                <div className="font-semibold">{compra.proveedor?.nombre || "N/A"}</div>
+                <div className="font-semibold">
+                  {compra.proveedor?.nombre || compra.proveedor_id || "Proveedor no encontrado"}
+                </div>
+                {compra.proveedor_id && !compra.proveedor && (
+                  <div className="text-xs text-red-500 mt-1">
+                    ID: {compra.proveedor_id}
+                  </div>
+                )}
               </div>
               <div>
                 <div className="text-sm text-slate-600">Fecha</div>
                 <div>
                   {compra.fecha 
                     ? (() => {
-                        const fecha = new Date(compra.fecha);
-                        return !isNaN(fecha.getTime()) 
-                          ? fecha.toLocaleDateString('es-VE')
-                          : compra.fecha;
+                        try {
+                          const fecha = new Date(compra.fecha);
+                          if (!isNaN(fecha.getTime())) {
+                            return fecha.toLocaleDateString('es-VE', { 
+                              year: 'numeric', 
+                              month: '2-digit', 
+                              day: '2-digit' 
+                            });
+                          }
+                        } catch (e) {
+                          console.error("Error parseando fecha:", e);
+                        }
+                        return String(compra.fecha);
                       })()
                     : "N/A"}
                 </div>

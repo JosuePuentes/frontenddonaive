@@ -348,6 +348,42 @@ const CuentasPorPagarPage: React.FC = () => {
   const totalAbonado = comprasFiltradas.reduce((sum, c) => sum + (c.monto_abonado || 0), 0);
   const totalFactura = comprasFiltradas.reduce((sum, c) => sum + (c.total_precio_venta || 0), 0);
 
+  // Calcular ahorro total por pronto pago
+  const calcularAhorroProntoPago = () => {
+    const diasProntoPago = 15; // Días desde la compra para aplicar descuento
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    let ahorroTotal = 0;
+    
+    comprasFiltradas.forEach((compra) => {
+      // Solo considerar compras sin pagar o parcialmente pagadas
+      if (compra.estado === "pagada") return;
+      
+      const descuentoProntoPago = compra.proveedor?.descuento_pronto_pago || 0;
+      
+      if (descuentoProntoPago > 0 && compra.fecha) {
+        const fechaCompra = new Date(compra.fecha);
+        if (!isNaN(fechaCompra.getTime())) {
+          const fechaLimiteProntoPago = new Date(fechaCompra);
+          fechaLimiteProntoPago.setDate(fechaLimiteProntoPago.getDate() + diasProntoPago);
+          fechaLimiteProntoPago.setHours(0, 0, 0, 0);
+          
+          // Si estamos antes o en la fecha límite, calcular ahorro
+          if (hoy <= fechaLimiteProntoPago) {
+            const totalFactura = compra.total_precio_venta || compra.total || 0;
+            const descuento = (totalFactura * descuentoProntoPago) / 100;
+            ahorroTotal += descuento;
+          }
+        }
+      }
+    });
+    
+    return ahorroTotal;
+  };
+
+  const ahorroProntoPago = calcularAhorroProntoPago();
+
   const handleVerDetalle = (compra: Compra) => {
     setCompraSeleccionada(compra);
     setShowModalDetalle(true);
@@ -394,6 +430,16 @@ const CuentasPorPagarPage: React.FC = () => {
               <div className="text-sm text-slate-600 mb-1">Total Factura</div>
               <div className="text-2xl font-bold text-blue-600">${(totalFactura || 0).toFixed(2)}</div>
             </div>
+            {ahorroProntoPago > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="text-sm font-semibold text-green-800 mb-1">
+                  💰 Ahorra ${ahorroProntoPago.toFixed(2)} si aprovechas el pronto pago
+                </div>
+                <div className="text-xs text-green-700">
+                  Aplica a compras pagadas dentro de los primeros 15 días desde la fecha de compra
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 
