@@ -92,6 +92,30 @@ const CuentasPorPagarPage: React.FC = () => {
             estado = "abonado";
           }
 
+          // Normalizar proveedor primero (necesitamos sus días de crédito)
+          let proveedorNormalizado = compra.proveedor;
+          if (!proveedorNormalizado && compra.proveedor_id) {
+            // Buscar el proveedor en la lista cargada
+            const proveedorEncontrado = proveedores.find(
+              (p) => p._id === compra.proveedor_id || p._id?.toString() === compra.proveedor_id?.toString()
+            );
+            
+            if (proveedorEncontrado) {
+              proveedorNormalizado = proveedorEncontrado;
+              console.log("✅ [COMPRAS] Proveedor encontrado en lista:", proveedorEncontrado.nombre);
+            } else {
+              // Si no se encuentra, crear un objeto básico
+              proveedorNormalizado = {
+                _id: compra.proveedor_id,
+                nombre: "Proveedor no encontrado",
+                rif: "",
+                telefono: "",
+                dias_credito: 0
+              };
+              console.warn("⚠️ [COMPRAS] Proveedor no encontrado para compra:", compra.proveedor_id);
+            }
+          }
+
           // Calcular días de crédito con validación
           let diasCredito = 0;
           let diasRestantes = 0;
@@ -99,40 +123,38 @@ const CuentasPorPagarPage: React.FC = () => {
           let fechaVencimiento: Date | null = null;
           
           try {
-            // Obtener días de crédito del proveedor
-            diasCredito = Number(compra.proveedor?.dias_credito || compra.dias_credito || 0);
+            // Obtener días de crédito del proveedor (ya normalizado)
+            diasCredito = Number(proveedorNormalizado?.dias_credito || compra.dias_credito || 0);
             
             // Validar fecha de compra
-            if (compra.fecha) {
+            if (compra.fecha && diasCredito > 0) {
               const fechaCompra = new Date(compra.fecha);
               if (!isNaN(fechaCompra.getTime())) {
+                // Calcular fecha de vencimiento
                 fechaVencimiento = new Date(fechaCompra);
                 fechaVencimiento.setDate(fechaVencimiento.getDate() + diasCredito);
                 
+                // Calcular días restantes desde hoy hasta la fecha de vencimiento
                 const hoy = new Date();
                 hoy.setHours(0, 0, 0, 0);
                 fechaVencimiento.setHours(0, 0, 0, 0);
                 
-                const diasTranscurridos = Math.floor((hoy.getTime() - fechaCompra.getTime()) / (1000 * 60 * 60 * 24));
-                diasRestantes = diasCredito - diasTranscurridos;
+                // Días restantes = (fecha_vencimiento - hoy) / días
+                const diferenciaMs = fechaVencimiento.getTime() - hoy.getTime();
+                diasRestantes = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
+                
+                // Si los días restantes son negativos, está en mora
                 enMora = diasRestantes < 0 && estado !== "pagada";
+                
+                console.log(`📅 [COMPRAS] Compra ${compra._id}: Fecha compra: ${fechaCompra.toISOString()}, Días crédito: ${diasCredito}, Fecha vencimiento: ${fechaVencimiento.toISOString()}, Días restantes: ${diasRestantes}, En mora: ${enMora}`);
+              } else {
+                console.warn("⚠️ [COMPRAS] Fecha de compra inválida:", compra.fecha);
               }
+            } else {
+              console.log(`ℹ️ [COMPRAS] Compra ${compra._id}: Sin fecha o sin días de crédito`);
             }
           } catch (error) {
-            console.error("Error calculando días de crédito:", error);
-          }
-
-          // Normalizar proveedor
-          let proveedorNormalizado = compra.proveedor;
-          if (!proveedorNormalizado && compra.proveedor_id) {
-            // Si no viene el proveedor poblado, crear un objeto básico
-            proveedorNormalizado = {
-              _id: compra.proveedor_id,
-              nombre: "Proveedor no encontrado",
-              rif: "",
-              telefono: "",
-              dias_credito: diasCredito
-            };
+            console.error("❌ [COMPRAS] Error calculando días de crédito:", error);
           }
 
           return {
@@ -162,10 +184,106 @@ const CuentasPorPagarPage: React.FC = () => {
     }
   };
 
+  // Cargar proveedores
+  const fetchProveedores = async () => {
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/proveedores`);
+      if (res.ok) {
+        const data = await res.json();
+        console.log("🔍 [PROVEEDORES] Respuesta completa del backend:", JSON.stringify(data, null, 2));
+        
+        // Manejar diferentes formatos de respuesta
+        let proveedoresData: any[] = [];
+        if (Array.isArray(data)) {
+          proveedoresData = data;
+        } else if (data && Array.isArray(data.proveedores)) {
+          proveedoresData = data.proveedores;
+        } else if (data && data.proveedor) {
+          proveedoresData = Array.isArray(data.proveedor) ? data.proveedor : [data.proveedor];
+        } else if (data && typeof data === 'object') {
+          const valores = Object.values(data);
+          const arrays = valores.filter(Array.isArray);
+          if (arrays.length > 0) {
+            proveedoresData = arrays.flat() as any[];
+          } else {
+            proveedoresData = [data];
+          }
+        }
+        
+        // Normalizar proveedores
+        const proveedoresNormalizados = proveedoresData.map((p: any) => ({
+          ...p,
+          _id: p._id || p.id,
+          nombre: p.nombre || "Sin nombre",
+          rif: p.rif || "",
+          telefono: p.telefono || "",
+          dias_credito: p.dias_credito !== undefined && p.dias_credito !== null ? Number(p.dias_credito) : 0,
+          descuento_comercial: p.descuento_comercial !== undefined && p.descuento_comercial !== null ? Number(p.descuento_comercial) : 0,
+          descuento_pronto_pago: p.descuento_pronto_pago !== undefined && p.descuento_pronto_pago !== null ? Number(p.descuento_pronto_pago) : 0,
+        }));
+        
+        console.log("✅ [PROVEEDORES] Proveedores cargados:", proveedoresNormalizados.length);
+        setProveedores(proveedoresNormalizados);
+      }
+    } catch (err) {
+      console.error("Error al cargar proveedores:", err);
+    }
+  };
+
   useEffect(() => {
+    fetchProveedores();
     fetchCompras();
     fetchSucursales();
   }, []);
+
+  // Recargar compras cuando cambien los proveedores (para hacer el match)
+  useEffect(() => {
+    if (proveedores.length > 0 && compras.length > 0) {
+      // Actualizar compras con proveedores encontrados
+      const comprasActualizadas = compras.map((compra) => {
+        if (!compra.proveedor || compra.proveedor.nombre === "Proveedor no encontrado") {
+          const proveedorEncontrado = proveedores.find(
+            (p) => p._id === compra.proveedor_id || p._id?.toString() === compra.proveedor_id?.toString()
+          );
+          if (proveedorEncontrado) {
+            // Recalcular días restantes con el proveedor correcto
+            let diasRestantes = 0;
+            let enMora = false;
+            let fechaVencimiento: Date | null = null;
+            const diasCredito = Number(proveedorEncontrado.dias_credito || 0);
+            
+            if (compra.fecha && diasCredito > 0) {
+              const fechaCompra = new Date(compra.fecha);
+              if (!isNaN(fechaCompra.getTime())) {
+                fechaVencimiento = new Date(fechaCompra);
+                fechaVencimiento.setDate(fechaVencimiento.getDate() + diasCredito);
+                
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+                fechaVencimiento.setHours(0, 0, 0, 0);
+                
+                const diferenciaMs = fechaVencimiento.getTime() - hoy.getTime();
+                diasRestantes = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
+                enMora = diasRestantes < 0 && compra.estado !== "pagada";
+              }
+            }
+            
+            return {
+              ...compra,
+              proveedor: proveedorEncontrado,
+              dias_credito: diasCredito,
+              dias_restantes: diasRestantes,
+              en_mora: enMora,
+              fecha_vencimiento: fechaVencimiento,
+            };
+          }
+        }
+        return compra;
+      });
+      
+      setCompras(comprasActualizadas);
+    }
+  }, [proveedores]);
 
   // Cargar sucursales
   const fetchSucursales = async () => {
