@@ -41,7 +41,7 @@ interface Compra {
   dias_credito?: number;
   dias_restantes?: number;
   en_mora?: boolean;
-  fecha_vencimiento?: Date;
+  fecha_vencimiento?: Date | null;
 }
 
 interface Banco {
