@@ -79,8 +79,28 @@ const CuentasPorPagarPage: React.FC = () => {
         
         // Calcular estados y montos
         const comprasConEstado = comprasArray.map((compra: any) => {
+          // Normalizar campos del backend
+          // El backend puede enviar fecha_compra o fecha
+          const fechaCompra = compra.fecha_compra || compra.fecha || compra.fecha_creacion;
+          
+          // El backend puede enviar proveedor_nombre pero no el objeto completo
+          if (compra.proveedor_nombre && !compra.proveedor) {
+            compra.proveedor = {
+              _id: compra.proveedor_id,
+              nombre: compra.proveedor_nombre,
+              rif: "",
+              telefono: "",
+              dias_credito: compra.dias_credito || 0,
+              descuento_comercial: 0,
+              descuento_pronto_pago: 0
+            };
+          }
+          
           // Validar y normalizar valores
-          const totalPrecioVenta = Number(compra.total_precio_venta || compra.total || 0);
+          const totalPrecioVenta = Number(compra.total_precio_venta || compra.total || compra.total_con_iva || 0);
+          
+          // Asignar fecha normalizada
+          compra.fecha = fechaCompra;
           const montoAbonado = compra.pagos?.reduce((sum: number, pago: any) => {
             const monto = Number(pago.monto_bs || pago.monto_usd || 0);
             return sum + (isNaN(monto) ? 0 : monto);
@@ -139,9 +159,10 @@ const CuentasPorPagarPage: React.FC = () => {
             // Obtener días de crédito del proveedor (ya normalizado)
             diasCredito = Number(proveedorNormalizado?.dias_credito || compra.dias_credito || 0);
             
-            // Validar fecha de compra
-            if (compra.fecha && diasCredito > 0) {
-              const fechaCompra = new Date(compra.fecha);
+            // Validar fecha de compra (usar fecha normalizada)
+            const fechaCompraNormalizada = compra.fecha || compra.fecha_compra || compra.fecha_creacion;
+            if (fechaCompraNormalizada && diasCredito > 0) {
+              const fechaCompra = new Date(fechaCompraNormalizada);
               if (!isNaN(fechaCompra.getTime())) {
                 // Calcular fecha de vencimiento
                 fechaVencimiento = new Date(fechaCompra);
@@ -172,6 +193,7 @@ const CuentasPorPagarPage: React.FC = () => {
 
           return {
             ...compra,
+            fecha: fechaCompraNormalizada, // Asegurar que fecha esté normalizada
             proveedor: proveedorNormalizado,
             estado,
             monto_abonado: montoAbonado,
@@ -224,16 +246,19 @@ const CuentasPorPagarPage: React.FC = () => {
         }
         
         // Normalizar proveedores
-        const proveedoresNormalizados = proveedoresData.map((p: any) => ({
-          ...p,
-          _id: p._id || p.id,
-          nombre: p.nombre || "Sin nombre",
-          rif: p.rif || "",
-          telefono: p.telefono || "",
-          dias_credito: p.dias_credito !== undefined && p.dias_credito !== null ? Number(p.dias_credito) : 0,
-          descuento_comercial: p.descuento_comercial !== undefined && p.descuento_comercial !== null ? Number(p.descuento_comercial) : 0,
-          descuento_pronto_pago: p.descuento_pronto_pago !== undefined && p.descuento_pronto_pago !== null ? Number(p.descuento_pronto_pago) : 0,
-        }));
+        const proveedoresNormalizados = proveedoresData.map((p: any) => {
+          console.log("🔍 [PROVEEDORES] Procesando proveedor:", p);
+          return {
+            ...p,
+            _id: p._id || p.id,
+            nombre: p.nombre || "Sin nombre",
+            rif: p.rif || "",
+            telefono: p.telefono || "",
+            dias_credito: p.dias_credito !== undefined && p.dias_credito !== null ? Number(p.dias_credito) : 0,
+            descuento_comercial: p.descuento_comercial !== undefined && p.descuento_comercial !== null ? Number(p.descuento_comercial) : 0,
+            descuento_pronto_pago: p.descuento_pronto_pago !== undefined && p.descuento_pronto_pago !== null ? Number(p.descuento_pronto_pago) : 0,
+          };
+        });
         
         console.log("✅ [PROVEEDORES] Proveedores cargados:", proveedoresNormalizados.length);
         setProveedores(proveedoresNormalizados);
@@ -278,8 +303,10 @@ const CuentasPorPagarPage: React.FC = () => {
             let fechaVencimiento: Date | null = null;
             const diasCredito = Number(proveedorEncontrado.dias_credito || 0);
             
-            if (compra.fecha && diasCredito > 0) {
-              const fechaCompra = new Date(compra.fecha);
+            // Normalizar fecha
+            const fechaCompraNormalizada = compra.fecha || compra.fecha_compra || compra.fecha_creacion;
+            if (fechaCompraNormalizada && diasCredito > 0) {
+              const fechaCompra = new Date(fechaCompraNormalizada);
               if (!isNaN(fechaCompra.getTime())) {
                 fechaVencimiento = new Date(fechaCompra);
                 fechaVencimiento.setDate(fechaVencimiento.getDate() + diasCredito);
@@ -298,6 +325,7 @@ const CuentasPorPagarPage: React.FC = () => {
             
             return {
               ...compra,
+              fecha: fechaCompraNormalizada, // Asegurar que fecha esté normalizada
               proveedor: proveedorEncontrado,
               dias_credito: diasCredito,
               dias_restantes: diasRestantes,
@@ -394,15 +422,20 @@ const CuentasPorPagarPage: React.FC = () => {
       const descuentoProntoPago = proveedor?.descuento_pronto_pago || 0;
       const totalFactura = compra.total_precio_venta || compra.total || 0;
       
+      // Normalizar fecha (el backend puede enviar fecha_compra, fecha, o fecha_creacion)
+      const fechaCompraNormalizada = compra.fecha || compra.fecha_compra || compra.fecha_creacion;
+      
       console.log(`💰 [AHORRO] Compra ${compra._id}:`, {
         proveedor: proveedor?.nombre || "No encontrado",
         descuentoProntoPago,
         totalFactura,
-        fecha: compra.fecha
+        fecha: fechaCompraNormalizada,
+        fecha_compra: compra.fecha_compra,
+        fecha_creacion: compra.fecha_creacion
       });
       
-      if (descuentoProntoPago > 0 && compra.fecha) {
-        const fechaCompra = new Date(compra.fecha);
+      if (descuentoProntoPago > 0 && fechaCompraNormalizada) {
+        const fechaCompra = new Date(fechaCompraNormalizada);
         if (!isNaN(fechaCompra.getTime())) {
           const fechaLimiteProntoPago = new Date(fechaCompra);
           fechaLimiteProntoPago.setDate(fechaLimiteProntoPago.getDate() + diasProntoPago);
