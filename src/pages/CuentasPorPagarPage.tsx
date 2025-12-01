@@ -35,6 +35,7 @@ interface Compra {
   dolar_negro: number;
   total_costo: number;
   total_precio_venta: number;
+  total?: number;
   items: any[];
   estado?: "sin_pago" | "abonado" | "pagada";
   monto_abonado?: number;
