@@ -348,8 +348,6 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
         <th>Código</th>
         <th>Descripción</th>
         <th>Cantidad</th>
-        <th>Precio Unitario</th>
-        <th>Total Item</th>
       </tr>
     </thead>
     <tbody>
@@ -358,8 +356,6 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
           <td>${item.codigo}</td>
           <td>${item.descripcion || "-"}</td>
           <td>${item.cantidad || 0}</td>
-          <td>$${((item.precio_venta || item.precio_unitario || 0)).toFixed(2)}</td>
-          <td>$${(((item.precio_venta || item.precio_unitario || 0) * (item.cantidad || 0))).toFixed(2)}</td>
         </tr>
       `).join('')}
     </tbody>
@@ -473,8 +469,6 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                     <th className="text-left p-2">Código</th>
                     <th className="text-left p-2">Descripción</th>
                     <th className="text-right p-2">Cantidad</th>
-                    <th className="text-right p-2">Precio Unitario</th>
-                    <th className="text-right p-2">Total Item</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -483,10 +477,6 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                       <td className="p-2">{item.codigo}</td>
                       <td className="p-2">{item.descripcion}</td>
                       <td className="p-2 text-right">{item.cantidad}</td>
-                      <td className="p-2 text-right">${((item.precio_venta || item.precio_unitario || 0)).toFixed(2)}</td>
-                      <td className="p-2 text-right font-semibold">
-                        ${(((item.precio_venta || item.precio_unitario || 0) * (item.cantidad || 0))).toFixed(2)}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
