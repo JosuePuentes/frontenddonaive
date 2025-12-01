@@ -261,3 +261,7 @@ Cerrar Caja:
 
 Si se usara `$inc` aquí, el pendiente sería $90 USD (duplicado) ❌
 
+
+
+
+

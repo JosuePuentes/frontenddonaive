@@ -245,3 +245,4 @@ def validar_lotes(lotes: List[Lote]) -> List[Lote]:
 - La `cantidad` en el lote es opcional (puede ser útil para rastrear cuántas unidades hay por lote)
 - Si un item no tiene lotes, el array debe ser `[]` (vacío), no `null`
 
+

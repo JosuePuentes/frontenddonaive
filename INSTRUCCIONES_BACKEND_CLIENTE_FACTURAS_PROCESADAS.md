@@ -184,3 +184,5 @@ Para verificar que funciona correctamente:
 - El frontend mostrará "Sin cliente" cuando `cliente` sea `null`
 - El frontend mostrará el nombre del cliente cuando `cliente.nombre` esté disponible
 
+
+

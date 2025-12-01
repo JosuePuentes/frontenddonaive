@@ -260,3 +260,7 @@ async def obtener_facturas_usuario(
 - El endpoint debe ser eficiente ya que se llamará cada vez que el usuario haga click en "Facturas Procesadas"
 - Considerar implementar caché si el volumen de facturas es muy alto
 
+
+
+
+

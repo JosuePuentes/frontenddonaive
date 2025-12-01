@@ -214,3 +214,7 @@ if fondoCaja.get("metodoPagoBs"):
 3. **No Afectar Totales**: El frontend ya resta el fondo, el backend solo lo guarda
 4. **Reinicio**: Es responsabilidad del frontend, el backend no necesita hacer nada especial
 
+
+
+
+

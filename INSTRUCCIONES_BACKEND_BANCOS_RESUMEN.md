@@ -217,3 +217,7 @@ El frontend necesita este endpoint para:
 
 **Sin este endpoint, el módulo de bancos NO FUNCIONA.**
 
+
+
+
+

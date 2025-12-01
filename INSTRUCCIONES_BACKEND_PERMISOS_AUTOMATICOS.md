@@ -245,3 +245,4 @@ async def login(credentials: LoginCredentials):
 
 **Importante:** El campo `permisos` debe ser un array de strings que contenga todos los permisos válidos del sistema, incluyendo `gestionar_clientes`.
 
+

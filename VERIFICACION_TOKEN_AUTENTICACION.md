@@ -164,3 +164,7 @@ Si hay problemas de autenticación, verificar:
 2. Que el header se envíe en todas las peticiones
 3. Que el formato sea exactamente `Bearer ${token}`
 
+
+
+
+

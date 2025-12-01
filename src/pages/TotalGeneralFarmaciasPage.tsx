@@ -349,14 +349,17 @@ const TotalGeneralFarmaciasPage: React.FC = () => {
                 <motion.div variants={cardVariants} className="rounded-2xl border border-black bg-[#f5f5f5] p-8 flex flex-col items-center text-center shadow-lg transition-shadow duration-300">
                   <span className="text-5xl font-extrabold text-[#1a202c] flex items-center drop-shadow-sm"><span className="text-green-600 mr-2 text-5xl">$</span>{formatCurrency(totalGeneral)}</span>
                   <span className="text-xl text-gray-700 mt-4 font-semibold tracking-wide">Ventas Totales</span>
+                  <span className="text-sm text-gray-500 mt-1">de todas las sucursales</span>
                 </motion.div>
                 <motion.div variants={cardVariants} className="rounded-2xl border border-black bg-[#e0f7fa] p-8 flex flex-col items-center text-center shadow-lg transition-shadow duration-300">
                   <span className="text-5xl font-extrabold text-blue-950 flex items-center drop-shadow-sm"><span className="text-green-600 mr-2 text-5xl">$</span>{formatCurrency(totalSobrantes)}</span>
                   <span className="text-xl text-gray-700 mt-4 font-semibold tracking-wide">Sobrantes</span>
+                  <span className="text-sm text-gray-500 mt-1">de todas las sucursales</span>
                 </motion.div>
                 <motion.div variants={cardVariants} className="rounded-2xl border border-black bg-[#ffebee] p-8 flex flex-col items-center text-center shadow-lg transition-shadow duration-300">
                   <span className="text-5xl font-extrabold text-[#b71c1c] flex items-center drop-shadow-sm"><span className="text-green-600 mr-2 text-5xl">$</span>{formatCurrency(totalFaltantes)}</span>
                   <span className="text-xl text-gray-700 mt-4 font-semibold tracking-wide">Faltantes</span>
+                  <span className="text-sm text-gray-500 mt-1">de todas las sucursales</span>
                 </motion.div>
               </div>
             </div>
@@ -369,30 +372,48 @@ const TotalGeneralFarmaciasPage: React.FC = () => {
                   <span className="text-xl font-semibold text-gray-700 mb-4 tracking-wide">USD</span>
                   <div className="flex justify-between text-gray-900 text-lg font-medium">
                     <span>Efectivo</span>
-                    <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">$</span>{formatCurrency(totalEfectivoUsd)}</span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">$</span>{formatCurrency(totalEfectivoUsd)}</span>
+                      <span className="text-xs text-gray-500 mt-1">de todas las sucursales</span>
+                    </div>
                   </div>
                   <div className="flex justify-between text-gray-900 text-lg font-medium">
                     <span>Zelle</span>
-                    <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">$</span>{formatCurrency(totalZelleUsd)}</span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">$</span>{formatCurrency(totalZelleUsd)}</span>
+                      <span className="text-xs text-gray-500 mt-1">de todas las sucursales</span>
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-black bg-white p-8 flex flex-col gap-4 shadow-lg transition-shadow duration-300">
                   <span className="text-xl font-semibold text-gray-700 mb-4 tracking-wide">Bolívares</span>
                   <div className="flex justify-between text-gray-900 text-lg font-medium">
-                    <span>P. Venta (Débito)</span>
-                    <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">Bs</span>{formatBs(totalPuntosVentaDebitoBs)}</span>
+                    <span>P. Venta (Débito) tarjeta</span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">Bs</span>{formatBs(totalPuntosVentaDebitoBs)}</span>
+                      <span className="text-xs text-gray-500 mt-1">de todas las sucursales</span>
+                    </div>
                   </div>
                   <div className="flex justify-between text-gray-900 text-lg font-medium">
-                    <span>P. Venta (Crédito)</span>
-                    <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">Bs</span>{formatBs(totalPuntosVentaCreditoBs)}</span>
+                    <span>P. Venta (Crédito) tarjetas</span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">Bs</span>{formatBs(totalPuntosVentaCreditoBs)}</span>
+                      <span className="text-xs text-gray-500 mt-1">de todas las sucursales</span>
+                    </div>
                   </div>
                   <div className="flex justify-between text-gray-900 text-lg font-medium">
                     <span>Pago Móvil</span>
-                    <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">Bs</span>{formatBs(totalPagomovilBs)}</span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">Bs</span>{formatBs(totalPagomovilBs)}</span>
+                      <span className="text-xs text-gray-500 mt-1">de todas las sucursales</span>
+                    </div>
                   </div>
                   <div className="flex justify-between text-gray-900 text-lg font-medium">
                     <span>Efectivo</span>
-                    <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">Bs</span>{formatBs(totalEfectivoBs)}</span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-extrabold flex items-center text-2xl"><span className="text-green-600 mr-2 text-2xl">Bs</span>{formatBs(totalEfectivoBs)}</span>
+                      <span className="text-xs text-gray-500 mt-1">de todas las sucursales</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -408,6 +429,7 @@ const TotalGeneralFarmaciasPage: React.FC = () => {
                   subtitle="Gastos"
                   badge={<span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">Sistema</span>}
                   trendSvg={<svg viewBox="0 0 100 24" fill="none" className="w-full h-full"><polyline points="0,20 20,10 40,14 60,6 80,12 100,4" stroke="#22c55e" strokeWidth="2" fill="none"/></svg>}
+                  description="de todas las sucursales"
                 />
                 <DashboardCard
                   title="Mes a la fecha"
@@ -415,6 +437,7 @@ const TotalGeneralFarmaciasPage: React.FC = () => {
                   subtitle="Inventario (USD)"
                   badge={<span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">Inventario</span>}
                   trendSvg={<svg viewBox="0 0 100 24" fill="none" className="w-full h-full"><polyline points="0,18 20,12 40,16 60,8 80,10 100,6" stroke="#2563eb" strokeWidth="2" fill="none"/></svg>}
+                  description="la sumatoria de todos los inventarios de las sucursales"
                 />
                 <DashboardCard
                   title="Mes a la fecha"

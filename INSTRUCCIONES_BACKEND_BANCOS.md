@@ -580,3 +580,7 @@ async def obtener_movimientos(
 
 4. **Vuelto:** El vuelto se envía como un array separado en la request de venta, no como método de pago negativo.
 
+
+
+
+

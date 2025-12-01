@@ -144,3 +144,4 @@ Si el backend está usando campos diferentes (`costo`, `existencia`, `precio`), 
 
 La **Opción 1 es la correcta** porque el backend ya devuelve `costo_unitario`, `cantidad`, `precio_unitario` en el GET, así que debe aceptarlos también en el PATCH.
 
+

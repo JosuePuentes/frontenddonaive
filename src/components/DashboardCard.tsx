@@ -7,6 +7,7 @@ interface DashboardCardProps {
   badge?: React.ReactNode;
   trendSvg?: React.ReactNode;
   className?: string;
+  description?: string;
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -16,6 +17,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   badge,
   trendSvg,
   className = "",
+  description,
 }) => {
   return (
     <div className={`bg-white border border-gray-200 rounded-2xl shadow-md p-6 flex flex-col justify-between min-w-0 ${className}`}>
@@ -26,6 +28,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       <div className="flex-1 flex flex-col items-center justify-center">
         <span className="text-4xl font-extrabold text-gray-900 mb-1">{value}</span>
         <span className="text-base text-gray-700 font-semibold mb-2 text-center">{subtitle}</span>
+        {description && <span className="text-xs text-gray-500 mt-1 text-center">{description}</span>}
         {trendSvg && <div className="w-full h-8 mt-2">{trendSvg}</div>}
       </div>
     </div>

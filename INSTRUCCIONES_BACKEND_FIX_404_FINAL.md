@@ -251,3 +251,4 @@ El hecho de que a veces funcione (200 OK) y a veces no (404) sugiere que puede h
 
 Los logs detallados te ayudarán a identificar exactamente dónde está el problema.
 
+

@@ -85,36 +85,6 @@ const CuentasPorPagarPage: React.FC = () => {
           // El backend puede enviar fecha_compra o fecha
           const fechaCompra = compra.fecha_compra || compra.fecha || compra.fecha_creacion;
           
-          // El backend puede enviar proveedor_nombre pero no el objeto completo
-          // Primero intentar buscar en la lista de proveedores cargados para obtener datos completos
-          if (compra.proveedor_id && !compra.proveedor) {
-            const proveedorEncontrado = proveedores.find(
-              (p: Proveedor) => {
-                const match1 = p._id === compra.proveedor_id;
-                const match2 = p._id?.toString() === compra.proveedor_id?.toString();
-                const match3 = compra.proveedor_id && p._id && String(p._id) === String(compra.proveedor_id);
-                return match1 || match2 || match3;
-              }
-            );
-            
-            if (proveedorEncontrado) {
-              compra.proveedor = proveedorEncontrado;
-              console.log("✅ [COMPRAS] Proveedor encontrado al procesar compra:", proveedorEncontrado.nombre);
-            } else if (compra.proveedor_nombre) {
-              // Si no se encuentra, crear objeto temporal con los datos del backend
-              compra.proveedor = {
-                _id: compra.proveedor_id,
-                nombre: compra.proveedor_nombre,
-                rif: "",
-                telefono: "",
-                dias_credito: compra.dias_credito || 0,
-                descuento_comercial: 0,
-                descuento_pronto_pago: 0
-              };
-              console.warn("⚠️ [COMPRAS] Proveedor no encontrado en lista, usando datos básicos del backend");
-            }
-          }
-          
           // Validar y normalizar valores
           const totalPrecioVenta = Number(compra.total_precio_venta || compra.total || compra.total_con_iva || 0);
           
@@ -133,11 +103,13 @@ const CuentasPorPagarPage: React.FC = () => {
             estado = "abonado";
           }
 
-          // Normalizar proveedor primero (necesitamos sus días de crédito)
+          // ⭐ PRIORIZAR: El backend ahora siempre envía el objeto proveedor completo
+          // Usar directamente compra.proveedor si viene del backend
           let proveedorNormalizado = compra.proveedor;
           
-          // Si no viene el proveedor poblado, buscar en la lista cargada
-          if ((!proveedorNormalizado || proveedorNormalizado.nombre === "Proveedor no encontrado") && compra.proveedor_id) {
+          // Solo buscar en la lista local como fallback si realmente no viene del backend
+          if (!proveedorNormalizado && compra.proveedor_id) {
+            console.log(`🔍 [COMPRAS] Proveedor no viene poblado del backend, buscando en lista local para compra ${compra._id}`);
             // Buscar el proveedor en la lista cargada con múltiples estrategias de match
             const proveedorEncontrado = proveedores.find(
               (p: Proveedor) => {
@@ -151,21 +123,23 @@ const CuentasPorPagarPage: React.FC = () => {
             
             if (proveedorEncontrado) {
               proveedorNormalizado = proveedorEncontrado;
-              console.log("✅ [COMPRAS] Proveedor encontrado en lista:", proveedorEncontrado.nombre, "ID:", proveedorEncontrado._id);
+              console.log("✅ [COMPRAS] Proveedor encontrado en lista local:", proveedorEncontrado.nombre, "ID:", proveedorEncontrado._id);
             } else {
               // Si no se encuentra, crear un objeto básico
               proveedorNormalizado = {
                 _id: compra.proveedor_id,
-                nombre: "Proveedor no encontrado",
+                nombre: compra.proveedor_nombre || "Proveedor no encontrado",
                 rif: "",
                 telefono: "",
-                dias_credito: 0,
+                dias_credito: compra.dias_credito || 0,
                 descuento_comercial: 0,
                 descuento_pronto_pago: 0
               };
               console.warn("⚠️ [COMPRAS] Proveedor no encontrado para compra:", compra._id, "proveedor_id:", compra.proveedor_id);
-              console.warn("📋 [COMPRAS] IDs de proveedores disponibles:", proveedores.map(p => ({ id: p._id, nombre: p.nombre })));
             }
+          } else if (proveedorNormalizado) {
+            // El backend envió el proveedor poblado
+            console.log(`✅ [COMPRAS] Usando proveedor del backend: ${proveedorNormalizado.nombre}, días crédito: ${proveedorNormalizado.dias_credito}, desc pronto pago: ${proveedorNormalizado.descuento_pronto_pago}`);
           }
 
           // Normalizar fecha antes de usarla
@@ -448,9 +422,13 @@ const CuentasPorPagarPage: React.FC = () => {
         return;
       }
       
-      // Buscar proveedor si no está poblado
+      // ⭐ PRIORIZAR: El backend ahora siempre envía el objeto proveedor completo
+      // Usar directamente compra.proveedor si viene del backend
       let proveedor = compra.proveedor;
-      if ((!proveedor || proveedor.nombre === "Proveedor no encontrado") && compra.proveedor_id) {
+      
+      // Solo buscar en la lista local como fallback si realmente no viene del backend
+      if (!proveedor && compra.proveedor_id) {
+        console.log(`🔍 [AHORRO] Proveedor no viene poblado del backend, buscando en lista local para compra ${compra._id}`);
         proveedor = proveedores.find(
           (p: Proveedor) => {
             const match1 = p._id === compra.proveedor_id;
@@ -461,7 +439,8 @@ const CuentasPorPagarPage: React.FC = () => {
         );
       }
       
-      const descuentoProntoPago = proveedor?.descuento_pronto_pago || 0;
+      // Usar descuento_pronto_pago del proveedor (ahora siempre viene del backend)
+      const descuentoProntoPago = Number(proveedor?.descuento_pronto_pago || 0);
       const totalFactura = compra.total_precio_venta || compra.total || 0;
       
       // Normalizar fecha (el backend puede enviar fecha_compra, fecha, o fecha_creacion)

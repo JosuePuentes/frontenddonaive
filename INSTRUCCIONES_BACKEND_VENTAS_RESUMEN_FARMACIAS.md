@@ -274,3 +274,7 @@ El frontend llamará a este endpoint cada vez que:
 
 Por lo tanto, el endpoint debe ser eficiente y retornar datos actualizados en tiempo real desde la base de datos.
 
+
+
+
+

@@ -228,3 +228,4 @@ async def obtener_items_inventario(
 3. **Cálculo incorrecto**: Calcula costo total usando `precio_unitario` en lugar de `costo_unitario`
 4. **No persiste**: Los cambios se hacen en memoria pero no se guardan en la BD
 
+

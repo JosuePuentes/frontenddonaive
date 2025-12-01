@@ -205,3 +205,7 @@ async def obtener_bancos(
 
 El frontend ya está enviando este campo. Si el backend no lo acepta, las solicitudes fallarán. Es importante implementar este campo lo antes posible.
 
+
+
+
+

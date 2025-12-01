@@ -324,3 +324,7 @@ Cada movimiento debe guardarse en la colección `movimientos_bancos`:
 
 **Sin esta funcionalidad, los saldos de los bancos NO se actualizarán cuando se hagan ventas.**
 
+
+
+
+

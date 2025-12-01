@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Menu, X, ChevronDown, LogOut, Home, BarChart, DollarSign, Users, Phone, Search, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { fetchWithAuth } from '@/lib/api';
 
 // Permisos y enlaces agrupados para una mejor organización visual
 const allLinks = [
@@ -128,7 +129,7 @@ const Navbar = () => {
             // Intentar actualizar desde el backend si hay token
             const token = localStorage.getItem('access_token');
             if (token && storedUsuario._id) {
-                // Intentar primero con /auth/me, luego con /modificar-usuarios/{id}
+                // Intentar primero con /auth/me, luego con /usuarios/me, /modificar-usuarios/me
                 const endpoints = [
                     `${import.meta.env.VITE_API_BASE_URL}/auth/me`,
                     `${import.meta.env.VITE_API_BASE_URL}/usuarios/me`,
@@ -138,21 +139,20 @@ const Navbar = () => {
                 
                 for (const endpoint of endpoints) {
                     try {
-                        const response = await fetch(endpoint, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
+                        const response = await fetchWithAuth(endpoint);
                         if (response.ok) {
                             const usuarioActualizado = await response.json();
-                            if (usuarioActualizado.permisos && Array.isArray(usuarioActualizado.permisos)) {
-                                console.log('✅ Permisos actualizados desde backend:', usuarioActualizado.permisos);
-                                setPermisosUsuario(usuarioActualizado.permisos);
+                            // Normalizar respuesta (puede venir como objeto directo o dentro de 'usuario')
+                            const usuarioData = usuarioActualizado.usuario || usuarioActualizado;
+                            
+                            if (usuarioData.permisos && Array.isArray(usuarioData.permisos)) {
+                                console.log('✅ Permisos actualizados desde backend:', usuarioData.permisos);
+                                setPermisosUsuario(usuarioData.permisos);
                                 // Actualizar localStorage
                                 const usuarioCompleto = {
                                     ...storedUsuario,
-                                    permisos: usuarioActualizado.permisos,
-                                    farmacias: usuarioActualizado.farmacias || storedUsuario.farmacias
+                                    permisos: usuarioData.permisos,
+                                    farmacias: usuarioData.farmacias || storedUsuario.farmacias
                                 };
                                 localStorage.setItem('usuario', JSON.stringify(usuarioCompleto));
                                 setUsuario(usuarioCompleto);
@@ -161,6 +161,7 @@ const Navbar = () => {
                         }
                     } catch (err) {
                         // Continuar con el siguiente endpoint si este falla
+                        console.log(`⚠️ Endpoint ${endpoint} no disponible, intentando siguiente...`);
                         continue;
                     }
                 }

@@ -232,3 +232,5 @@ async def buscar_productos(
 - El nombre de la sucursal debe obtenerse desde la base de datos, no hardcodearse
 - Incluir todas las sucursales ayuda al usuario a ver dónde puede encontrar el producto
 
+
+

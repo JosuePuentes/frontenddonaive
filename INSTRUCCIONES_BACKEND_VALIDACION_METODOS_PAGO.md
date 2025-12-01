@@ -170,3 +170,7 @@ async def crear_venta(
 - El backend solo necesita validar que el cliente pagó suficiente (suma >= total)
 - El vuelto no se envía al backend como método de pago negativo, solo se calcula internamente en el frontend
 
+
+
+
+

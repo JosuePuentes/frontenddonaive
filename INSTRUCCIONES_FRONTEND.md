@@ -94,3 +94,4 @@ const res = await fetch(`${API_BASE_URL}/inventarios/${inventarioId}/items/${enc
 
 4. **Consistencia**: Todos los endpoints que modifiquen items deben usar el código, no el ID interno.
 
+

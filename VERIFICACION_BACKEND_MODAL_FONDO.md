@@ -120,3 +120,6 @@ Si el backend está funcionando correctamente pero las ventas persisten, el prob
 - Cada venta debe incluir `total_usd` y `items` con `costo_unitario` para calcular correctamente los totales
 - El endpoint debe ser rápido ya que se llama cada vez que se intenta cerrar la caja
 
+
+
+
