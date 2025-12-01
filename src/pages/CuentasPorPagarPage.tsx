@@ -68,10 +68,15 @@ const CuentasPorPagarPage: React.FC = () => {
 
       if (res.ok) {
         const data = await res.json();
+        console.log("🔍 [COMPRAS] Respuesta completa del backend:", JSON.stringify(data, null, 2));
+        console.log("🔍 [COMPRAS] Tipo de dato:", typeof data);
+        console.log("🔍 [COMPRAS] Es array?", Array.isArray(data));
+        
         const comprasData = Array.isArray(data) ? data : (data.compras || data.compra || []);
         const comprasArray = Array.isArray(comprasData) ? comprasData : [];
         
-        console.log("Compras recibidas del backend:", comprasArray);
+        console.log("✅ [COMPRAS] Compras extraídas:", comprasArray);
+        console.log("✅ [COMPRAS] Cantidad de compras:", comprasArray.length);
         
         // Calcular estados y montos
         const comprasConEstado = comprasArray.map((compra: any) => {

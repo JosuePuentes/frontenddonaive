@@ -291,11 +291,19 @@ const ComprasPage: React.FC = () => {
           {loading ? (
             <div className="text-center py-8 text-slate-500">Cargando proveedores...</div>
           ) : proveedores.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              <p>No hay proveedores registrados</p>
-              <Button onClick={handleCrearProveedor} variant="outline" className="mt-4">
-                Crear Primer Proveedor
-              </Button>
+            <div className="text-center py-8">
+              <p className="text-slate-500 mb-4">No hay proveedores registrados</p>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={handleCrearProveedor} variant="default" className="mt-4">
+                  Crear Primer Proveedor
+                </Button>
+                <Button onClick={fetchProveedores} variant="outline" className="mt-4">
+                  Recargar Proveedores
+                </Button>
+              </div>
+              <p className="text-xs text-slate-400 mt-2">
+                Si creaste un proveedor y no aparece, haz clic en "Recargar Proveedores"
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
