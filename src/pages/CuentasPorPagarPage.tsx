@@ -30,6 +30,8 @@ interface Compra {
   sucursal_id?: string;
   sucursal?: Sucursal;
   fecha: string;
+  fecha_compra?: string;
+  fecha_creacion?: string;
   pagar_en_dolar_negro: boolean;
   dolar_bcv: number;
   dolar_negro: number;
@@ -149,6 +151,9 @@ const CuentasPorPagarPage: React.FC = () => {
             }
           }
 
+          // Normalizar fecha antes de usarla
+          const fechaCompraNormalizada = compra.fecha || compra.fecha_compra || compra.fecha_creacion;
+
           // Calcular días de crédito con validación
           let diasCredito = 0;
           let diasRestantes = 0;
@@ -160,7 +165,6 @@ const CuentasPorPagarPage: React.FC = () => {
             diasCredito = Number(proveedorNormalizado?.dias_credito || compra.dias_credito || 0);
             
             // Validar fecha de compra (usar fecha normalizada)
-            const fechaCompraNormalizada = compra.fecha || compra.fecha_compra || compra.fecha_creacion;
             if (fechaCompraNormalizada && diasCredito > 0) {
               const fechaCompra = new Date(fechaCompraNormalizada);
               if (!isNaN(fechaCompra.getTime())) {
@@ -182,7 +186,7 @@ const CuentasPorPagarPage: React.FC = () => {
                 
                 console.log(`📅 [COMPRAS] Compra ${compra._id}: Fecha compra: ${fechaCompra.toISOString()}, Días crédito: ${diasCredito}, Fecha vencimiento: ${fechaVencimiento.toISOString()}, Días restantes: ${diasRestantes}, En mora: ${enMora}`);
               } else {
-                console.warn("⚠️ [COMPRAS] Fecha de compra inválida:", compra.fecha);
+                console.warn("⚠️ [COMPRAS] Fecha de compra inválida:", fechaCompraNormalizada);
               }
             } else {
               console.log(`ℹ️ [COMPRAS] Compra ${compra._id}: Sin fecha o sin días de crédito`);
@@ -194,6 +198,8 @@ const CuentasPorPagarPage: React.FC = () => {
           return {
             ...compra,
             fecha: fechaCompraNormalizada, // Asegurar que fecha esté normalizada
+            fecha_compra: compra.fecha_compra,
+            fecha_creacion: compra.fecha_creacion,
             proveedor: proveedorNormalizado,
             estado,
             monto_abonado: montoAbonado,
