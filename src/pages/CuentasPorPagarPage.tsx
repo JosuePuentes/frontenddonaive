@@ -324,8 +324,16 @@ const CuentasPorPagarPage: React.FC = () => {
           {loading ? (
             <div className="text-center py-8 text-slate-500">Cargando compras...</div>
           ) : comprasFiltradas.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              No hay compras {filtroEstado !== "todos" ? `con estado ${filtroEstado}` : ""}
+            <div className="text-center py-8">
+              <p className="text-slate-500 mb-4">
+                No hay compras {filtroEstado !== "todos" ? `con estado ${filtroEstado}` : ""}
+              </p>
+              <Button onClick={fetchCompras} variant="outline">
+                Recargar Compras
+              </Button>
+              <p className="text-xs text-slate-400 mt-2">
+                Total de compras en sistema: {compras.length}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">

@@ -76,30 +76,55 @@ const ComprasPage: React.FC = () => {
       }
 
       const data = await res.json();
-      console.log("Respuesta del backend /proveedores:", data);
+      console.log("🔍 [PROVEEDORES] Respuesta completa del backend:", JSON.stringify(data, null, 2));
+      console.log("🔍 [PROVEEDORES] Tipo de dato:", typeof data);
+      console.log("🔍 [PROVEEDORES] Es array?", Array.isArray(data));
       
       // Manejar diferentes formatos de respuesta
       let proveedoresData: any[] = [];
       if (Array.isArray(data)) {
         proveedoresData = data;
+        console.log("✅ [PROVEEDORES] Formato: Array directo, cantidad:", data.length);
       } else if (data && Array.isArray(data.proveedores)) {
         proveedoresData = data.proveedores;
+        console.log("✅ [PROVEEDORES] Formato: data.proveedores, cantidad:", data.proveedores.length);
       } else if (data && data.proveedor) {
-        proveedoresData = [data.proveedor];
+        proveedoresData = Array.isArray(data.proveedor) ? data.proveedor : [data.proveedor];
+        console.log("✅ [PROVEEDORES] Formato: data.proveedor, cantidad:", proveedoresData.length);
       } else if (data && typeof data === 'object') {
-        // Si es un objeto con un array dentro
-        proveedoresData = Object.values(data).filter(Array.isArray).flat() as any[];
+        // Si es un objeto, intentar encontrar arrays dentro
+        const valores = Object.values(data);
+        const arrays = valores.filter(Array.isArray);
+        if (arrays.length > 0) {
+          proveedoresData = arrays.flat() as any[];
+          console.log("✅ [PROVEEDORES] Formato: Objeto con arrays, cantidad:", proveedoresData.length);
+        } else {
+          // Si es un objeto único, convertirlo a array
+          proveedoresData = [data];
+          console.log("✅ [PROVEEDORES] Formato: Objeto único, convertido a array");
+        }
       }
       
-      // Asegurar que todos los campos numéricos existan
-      const proveedoresNormalizados = proveedoresData.map((p: any) => ({
-        ...p,
-        dias_credito: p.dias_credito !== undefined && p.dias_credito !== null ? p.dias_credito : 0,
-        descuento_comercial: p.descuento_comercial !== undefined && p.descuento_comercial !== null ? p.descuento_comercial : 0,
-        descuento_pronto_pago: p.descuento_pronto_pago !== undefined && p.descuento_pronto_pago !== null ? p.descuento_pronto_pago : 0,
-      }));
+      console.log("🔍 [PROVEEDORES] Datos extraídos:", proveedoresData);
+      console.log("🔍 [PROVEEDORES] Cantidad de proveedores:", proveedoresData.length);
       
-      console.log("Proveedores normalizados:", proveedoresNormalizados);
+      // Asegurar que todos los campos numéricos existan
+      const proveedoresNormalizados = proveedoresData.map((p: any, index: number) => {
+        console.log(`🔍 [PROVEEDORES] Procesando proveedor ${index + 1}:`, p);
+        return {
+          ...p,
+          _id: p._id || p.id || `temp_${index}`,
+          nombre: p.nombre || "Sin nombre",
+          rif: p.rif || "",
+          telefono: p.telefono || "",
+          dias_credito: p.dias_credito !== undefined && p.dias_credito !== null ? Number(p.dias_credito) : 0,
+          descuento_comercial: p.descuento_comercial !== undefined && p.descuento_comercial !== null ? Number(p.descuento_comercial) : 0,
+          descuento_pronto_pago: p.descuento_pronto_pago !== undefined && p.descuento_pronto_pago !== null ? Number(p.descuento_pronto_pago) : 0,
+        };
+      });
+      
+      console.log("✅ [PROVEEDORES] Proveedores normalizados finales:", proveedoresNormalizados);
+      console.log("✅ [PROVEEDORES] Total a mostrar:", proveedoresNormalizados.length);
       setProveedores(proveedoresNormalizados);
     } catch (err) {
       console.error("Error al cargar proveedores:", err);
