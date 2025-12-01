@@ -548,14 +548,22 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
             {compra.proveedor && (
               <div className="mt-4 pt-4 border-t">
                 <div className="text-sm font-semibold mb-2">Condiciones del Proveedor</div>
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-slate-600">Días de Crédito:</span>{" "}
+                    <span className="font-semibold">{compra.proveedor.dias_credito || 0} días</span>
+                  </div>
                   <div>
                     <span className="text-slate-600">Desc. Comercial:</span>{" "}
-                    <span>{compra.proveedor.descuento_comercial || 0}%</span>
+                    <span className="font-semibold">{compra.proveedor.descuento_comercial || 0}%</span>
                   </div>
                   <div>
                     <span className="text-slate-600">Desc. Pronto Pago:</span>{" "}
-                    <span>{compra.proveedor.descuento_pronto_pago || 0}%</span>
+                    <span className="font-semibold">{compra.proveedor.descuento_pronto_pago || 0}%</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-600">Días Pronto Pago:</span>{" "}
+                    <span className="font-semibold">15 días</span>
                   </div>
                 </div>
               </div>

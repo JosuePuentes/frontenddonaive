@@ -86,16 +86,33 @@ const CuentasPorPagarPage: React.FC = () => {
           const fechaCompra = compra.fecha_compra || compra.fecha || compra.fecha_creacion;
           
           // El backend puede enviar proveedor_nombre pero no el objeto completo
-          if (compra.proveedor_nombre && !compra.proveedor) {
-            compra.proveedor = {
-              _id: compra.proveedor_id,
-              nombre: compra.proveedor_nombre,
-              rif: "",
-              telefono: "",
-              dias_credito: compra.dias_credito || 0,
-              descuento_comercial: 0,
-              descuento_pronto_pago: 0
-            };
+          // Primero intentar buscar en la lista de proveedores cargados para obtener datos completos
+          if (compra.proveedor_id && !compra.proveedor) {
+            const proveedorEncontrado = proveedores.find(
+              (p: Proveedor) => {
+                const match1 = p._id === compra.proveedor_id;
+                const match2 = p._id?.toString() === compra.proveedor_id?.toString();
+                const match3 = compra.proveedor_id && p._id && String(p._id) === String(compra.proveedor_id);
+                return match1 || match2 || match3;
+              }
+            );
+            
+            if (proveedorEncontrado) {
+              compra.proveedor = proveedorEncontrado;
+              console.log("✅ [COMPRAS] Proveedor encontrado al procesar compra:", proveedorEncontrado.nombre);
+            } else if (compra.proveedor_nombre) {
+              // Si no se encuentra, crear objeto temporal con los datos del backend
+              compra.proveedor = {
+                _id: compra.proveedor_id,
+                nombre: compra.proveedor_nombre,
+                rif: "",
+                telefono: "",
+                dias_credito: compra.dias_credito || 0,
+                descuento_comercial: 0,
+                descuento_pronto_pago: 0
+              };
+              console.warn("⚠️ [COMPRAS] Proveedor no encontrado en lista, usando datos básicos del backend");
+            }
           }
           
           // Validar y normalizar valores
@@ -253,7 +270,13 @@ const CuentasPorPagarPage: React.FC = () => {
         
         // Normalizar proveedores
         const proveedoresNormalizados = proveedoresData.map((p: any) => {
-          console.log("🔍 [PROVEEDORES] Procesando proveedor:", p);
+          console.log("🔍 [PROVEEDORES] Procesando proveedor:", {
+            _id: p._id,
+            nombre: p.nombre,
+            dias_credito: p.dias_credito,
+            descuento_comercial: p.descuento_comercial,
+            descuento_pronto_pago: p.descuento_pronto_pago
+          });
           return {
             ...p,
             _id: p._id || p.id,
@@ -267,16 +290,27 @@ const CuentasPorPagarPage: React.FC = () => {
         });
         
         console.log("✅ [PROVEEDORES] Proveedores cargados:", proveedoresNormalizados.length);
+        console.log("✅ [PROVEEDORES] Detalles:", proveedoresNormalizados.map(p => ({
+          id: p._id,
+          nombre: p.nombre,
+          dias_credito: p.dias_credito,
+          descuento_pronto_pago: p.descuento_pronto_pago
+        })));
         setProveedores(proveedoresNormalizados);
+        return proveedoresNormalizados;
       }
+      return [];
     } catch (err) {
       console.error("Error al cargar proveedores:", err);
+      return [];
     }
   };
 
   useEffect(() => {
-    fetchProveedores();
-    fetchCompras();
+    // Cargar proveedores primero para que estén disponibles cuando se procesen las compras
+    fetchProveedores().then(() => {
+      fetchCompras();
+    });
     fetchSucursales();
   }, []);
 
