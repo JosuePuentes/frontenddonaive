@@ -67,6 +67,15 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
   compra,
   onPagoCompletado,
 }) => {
+  // Log para diagnosticar
+  useEffect(() => {
+    if (open) {
+      console.log("🔍 [MODAL] Compra recibida:", compra);
+      console.log("🔍 [MODAL] Proveedor:", compra.proveedor);
+      console.log("🔍 [MODAL] Fecha:", compra.fecha);
+      console.log("🔍 [MODAL] Proveedor ID:", compra.proveedor_id);
+    }
+  }, [open, compra]);
   const [mostrarPago, setMostrarPago] = useState(false);
   const [mostrarPreliminar, setMostrarPreliminar] = useState(false);
   const [tasaBcv, setTasaBcv] = useState<number>(compra.dolar_bcv || 0);
@@ -82,15 +91,62 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Calcular descuento por pronto pago
+  const calcularDescuentoProntoPago = () => {
+    const descuentoProntoPago = compra.proveedor?.descuento_pronto_pago || 0;
+    // Los días de pronto pago son días desde la compra (ej: 15 días)
+    // Por ahora usamos un valor fijo de 15 días, pero podría venir del proveedor
+    const diasProntoPago = 15; // Días desde la compra para aplicar descuento
+    
+    if (descuentoProntoPago > 0 && compra.fecha) {
+      const fechaCompra = new Date(compra.fecha);
+      if (!isNaN(fechaCompra.getTime())) {
+        // Fecha límite para pronto pago: fecha compra + días de pronto pago
+        const fechaLimiteProntoPago = new Date(fechaCompra);
+        fechaLimiteProntoPago.setDate(fechaLimiteProntoPago.getDate() + diasProntoPago);
+        
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        fechaLimiteProntoPago.setHours(0, 0, 0, 0);
+        
+        // Si estamos antes o en la fecha límite, aplicar descuento
+        if (hoy <= fechaLimiteProntoPago) {
+          const totalFactura = compra.total_precio_venta || compra.total || 0;
+          const descuento = (totalFactura * descuentoProntoPago) / 100;
+          return {
+            aplica: true,
+            porcentaje: descuentoProntoPago,
+            montoDescuento: descuento,
+            totalConDescuento: totalFactura - descuento,
+            fechaLimite: fechaLimiteProntoPago
+          };
+        }
+      }
+    }
+    return {
+      aplica: false,
+      porcentaje: 0,
+      montoDescuento: 0,
+      totalConDescuento: compra.total_precio_venta || compra.total || 0,
+      fechaLimite: null
+    };
+  };
+
+  const descuentoProntoPago = calcularDescuentoProntoPago();
+  const totalFacturaConDescuento = descuentoProntoPago.totalConDescuento;
+  const montoRestanteConDescuento = (compra.monto_restante !== undefined && compra.monto_restante !== null) 
+    ? compra.monto_restante 
+    : totalFacturaConDescuento;
+
   // Calcular monto en Bs según tasa BCV
   useEffect(() => {
     if (!compra.pagar_en_dolar_negro && tasaBcv > 0) {
-      const montoCalculado = compra.total_precio_venta * tasaBcv;
+      const montoCalculado = totalFacturaConDescuento * tasaBcv;
       setMontoBs(montoCalculado);
     } else {
       setMontoBs(0);
     }
-  }, [tasaBcv, compra.total_precio_venta, compra.pagar_en_dolar_negro]);
+  }, [tasaBcv, totalFacturaConDescuento, compra.pagar_en_dolar_negro]);
 
   // Cargar bancos
   useEffect(() => {
@@ -419,7 +475,16 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
               </div>
               <div>
                 <div className="text-sm text-slate-600">Fecha</div>
-                <div>{new Date(compra.fecha).toLocaleDateString('es-VE')}</div>
+                <div>
+                  {compra.fecha 
+                    ? (() => {
+                        const fecha = new Date(compra.fecha);
+                        return !isNaN(fecha.getTime()) 
+                          ? fecha.toLocaleDateString('es-VE')
+                          : compra.fecha;
+                      })()
+                    : "N/A"}
+                </div>
               </div>
               <div>
                 <div className="text-sm text-slate-600">Días de Crédito</div>
@@ -433,11 +498,23 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
               </div>
               <div>
                 <div className="text-sm text-slate-600">Total Factura</div>
-                <div className="text-lg font-bold text-green-600">${(compra.total_precio_venta || compra.total || 0).toFixed(2)}</div>
+                {descuentoProntoPago.aplica ? (
+                  <div>
+                    <div className="text-sm text-slate-500 line-through">${(compra.total_precio_venta || compra.total || 0).toFixed(2)}</div>
+                    <div className="text-lg font-bold text-green-600">
+                      ${totalFacturaConDescuento.toFixed(2)}
+                      <span className="text-xs text-green-500 ml-2">
+                        (Descuento {descuentoProntoPago.porcentaje}% pronto pago aplicado)
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-lg font-bold text-green-600">${(compra.total_precio_venta || compra.total || 0).toFixed(2)}</div>
+                )}
               </div>
               <div>
                 <div className="text-sm text-slate-600">Monto Restante</div>
-                <div className="text-lg font-bold text-red-600">${((compra.monto_restante !== undefined && compra.monto_restante !== null) ? compra.monto_restante : (compra.total_precio_venta || compra.total || 0)).toFixed(2)}</div>
+                <div className="text-lg font-bold text-red-600">${montoRestanteConDescuento.toFixed(2)}</div>
               </div>
             </div>
 
@@ -552,6 +629,21 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
               </select>
             </div>
 
+            {descuentoProntoPago.aplica && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                <div className="text-sm font-semibold text-green-800 mb-1">
+                  Descuento por Pronto Pago Aplicado
+                </div>
+                <div className="text-xs text-green-700">
+                  Descuento: {descuentoProntoPago.porcentaje}% ({descuentoProntoPago.montoDescuento.toFixed(2)} USD)
+                </div>
+                <div className="text-xs text-green-700">
+                  Total original: ${(compra.total_precio_venta || compra.total || 0).toFixed(2)} → 
+                  Total con descuento: ${totalFacturaConDescuento.toFixed(2)}
+                </div>
+              </div>
+            )}
+
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">
                 Monto a Pagar ({divisaPago}) *
@@ -562,8 +654,8 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                 value={montoPagar}
                 onChange={(e) => setMontoPagar(e.target.value)}
                 placeholder={divisaPago === "USD" 
-                  ? `Máximo: $${((compra.monto_restante !== undefined && compra.monto_restante !== null) ? compra.monto_restante : (compra.total_precio_venta || compra.total || 0)).toFixed(2)}`
-                  : `Máximo: ${((compra.monto_restante !== undefined && compra.monto_restante !== null) ? compra.monto_restante : (compra.total_precio_venta || compra.total || 0)) * (tasaBcv || 0)} Bs`
+                  ? `Máximo: $${montoRestanteConDescuento.toFixed(2)}`
+                  : `Máximo: ${(montoRestanteConDescuento * (tasaBcv || 0)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs`
                 }
               />
               {divisaPago === "Bs" && tasaBcv > 0 && (

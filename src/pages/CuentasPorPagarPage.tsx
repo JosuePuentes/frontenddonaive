@@ -240,13 +240,26 @@ const CuentasPorPagarPage: React.FC = () => {
   // Recargar compras cuando cambien los proveedores (para hacer el match)
   useEffect(() => {
     if (proveedores.length > 0 && compras.length > 0) {
+      console.log("🔄 [COMPRAS] Actualizando compras con proveedores cargados");
+      console.log("📦 [COMPRAS] Proveedores disponibles:", proveedores.map(p => ({ id: p._id, nombre: p.nombre })));
+      
       // Actualizar compras con proveedores encontrados
       const comprasActualizadas = compras.map((compra) => {
         if (!compra.proveedor || compra.proveedor.nombre === "Proveedor no encontrado") {
+          console.log(`🔍 [COMPRAS] Buscando proveedor para compra ${compra._id}, proveedor_id: ${compra.proveedor_id}`);
+          
           const proveedorEncontrado = proveedores.find(
-            (p: Proveedor) => p._id === compra.proveedor_id || p._id?.toString() === compra.proveedor_id?.toString()
+            (p: Proveedor) => {
+              const match1 = p._id === compra.proveedor_id;
+              const match2 = p._id?.toString() === compra.proveedor_id?.toString();
+              const match3 = compra.proveedor_id && p._id && String(p._id) === String(compra.proveedor_id);
+              return match1 || match2 || match3;
+            }
           );
+          
           if (proveedorEncontrado) {
+            console.log(`✅ [COMPRAS] Proveedor encontrado: ${proveedorEncontrado.nombre}`);
+            
             // Recalcular días restantes con el proveedor correcto
             let diasRestantes = 0;
             let enMora = false;
@@ -266,6 +279,8 @@ const CuentasPorPagarPage: React.FC = () => {
                 const diferenciaMs = fechaVencimiento.getTime() - hoy.getTime();
                 diasRestantes = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
                 enMora = diasRestantes < 0 && compra.estado !== "pagada";
+              } else {
+                console.warn(`⚠️ [COMPRAS] Fecha inválida para compra ${compra._id}: ${compra.fecha}`);
               }
             }
             
@@ -277,6 +292,9 @@ const CuentasPorPagarPage: React.FC = () => {
               en_mora: enMora,
               fecha_vencimiento: fechaVencimiento || undefined,
             };
+          } else {
+            console.warn(`⚠️ [COMPRAS] Proveedor NO encontrado para compra ${compra._id}, proveedor_id: ${compra.proveedor_id}`);
+            console.warn(`📋 [COMPRAS] IDs de proveedores disponibles:`, proveedores.map(p => p._id));
           }
         }
         return compra;
