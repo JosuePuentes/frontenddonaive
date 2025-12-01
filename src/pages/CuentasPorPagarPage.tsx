@@ -307,11 +307,13 @@ const CuentasPorPagarPage: React.FC = () => {
   };
 
   useEffect(() => {
-    // Cargar proveedores primero para que estén disponibles cuando se procesen las compras
-    fetchProveedores().then(() => {
-      fetchCompras();
-    });
-    fetchSucursales();
+    // Cargar proveedores primero, luego compras y sucursales
+    const cargarDatos = async () => {
+      await fetchProveedores();
+      await fetchCompras();
+      fetchSucursales();
+    };
+    cargarDatos();
   }, []);
 
   // Recargar compras cuando cambien los proveedores (para hacer el match)
