@@ -75,6 +75,8 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
   const [divisaPago, setDivisaPago] = useState<"USD" | "Bs">("USD");
   const [bancoSeleccionado, setBancoSeleccionado] = useState<string>("");
   const [metodoPago, setMetodoPago] = useState<string>("");
+  const [referencia, setReferencia] = useState<string>("");
+  const [notas, setNotas] = useState<string>("");
   const [comprobanteArchivo, setComprobanteArchivo] = useState<string | null>(null);
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [loading, setLoading] = useState(false);
@@ -161,30 +163,23 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
       if (!token) throw new Error("No se encontró el token de autenticación");
 
       const montoPagarNum = parseFloat(montoPagar);
-      const montoBsFinal = divisaPago === "Bs" 
-        ? montoPagarNum 
-        : montoPagarNum * tasaBcv;
-      const montoUsdFinal = divisaPago === "USD"
-        ? montoPagarNum
-        : montoPagarNum / tasaBcv;
+      
+      // Formatear fecha como YYYY-MM-DD
+      const fechaPago = new Date().toISOString().split('T')[0];
 
       const pagoData = {
-        compra_id: compra._id,
-        monto_bs: montoBsFinal,
-        monto_usd: montoUsdFinal,
-        divisa: divisaPago === "Bs" ? "BS" : "USD",
-        banco_id: bancoSeleccionado,
+        monto: montoPagarNum,
+        fecha_pago: fechaPago,
         metodo_pago: metodoPago,
-        tasa_bcv: compra.pagar_en_dolar_negro ? compra.dolar_bcv : tasaBcv,
-        comprobante: comprobanteArchivo,
-        fecha_pago: new Date().toISOString(),
+        banco_id: bancoSeleccionado,
+        referencia: referencia || "",
+        notas: notas || "",
       };
 
-      const res = await fetch(`${API_BASE_URL}/compras/${compra._id}/pagos`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/compras/${compra._id}/pagos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(pagoData),
       });
@@ -197,6 +192,8 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
       setMostrarPreliminar(false);
       setMostrarPago(false);
       setMontoPagar("");
+      setReferencia("");
+      setNotas("");
       setComprobanteArchivo(null);
       setBancoSeleccionado("");
       setMetodoPago("");
@@ -623,6 +620,30 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                 value={metodoPago}
                 onChange={(e) => setMetodoPago(e.target.value)}
                 placeholder="Ej: Transferencia, Pago Móvil, etc."
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Referencia
+              </label>
+              <Input
+                value={referencia}
+                onChange={(e) => setReferencia(e.target.value)}
+                placeholder="Ej: TRF-123456, REF-789012"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Notas
+              </label>
+              <textarea
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                placeholder="Ej: Pago parcial, Pago completo, etc."
+                className="w-full border rounded px-3 py-2 min-h-[80px]"
+                rows={3}
               />
             </div>
 
