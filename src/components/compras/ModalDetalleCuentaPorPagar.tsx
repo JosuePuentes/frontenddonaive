@@ -236,7 +236,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
       ["Días de Crédito:", compra.proveedor?.dias_credito || 0],
       [""],
       ["ITEMS"],
-      ["Código", "Descripción", "Marca", "Cantidad", "Costo", "Utilidad %", "Precio Venta", "Subtotal"],
+      ["Código", "Descripción", "Marca", "Cantidad", "Costo", "Utilidad %", "Precio Unitario", "Total Item"],
       ...compra.items.map((item: any) => [
         item.codigo,
         item.descripcion,
@@ -249,7 +249,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
       ]),
       [""],
       ["Total Costo:", compra.total_costo],
-      ["Total Precio Venta:", compra.total_precio_venta],
+      ["Total Factura:", compra.total_precio_venta || compra.total || 0],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(datos);
@@ -348,8 +348,8 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
         <th>Código</th>
         <th>Descripción</th>
         <th>Cantidad</th>
-        <th>Precio Venta</th>
-        <th>Subtotal</th>
+        <th>Precio Unitario</th>
+        <th>Total Item</th>
       </tr>
     </thead>
     <tbody>
@@ -473,8 +473,8 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                     <th className="text-left p-2">Código</th>
                     <th className="text-left p-2">Descripción</th>
                     <th className="text-right p-2">Cantidad</th>
-                    <th className="text-right p-2">Precio Venta</th>
-                    <th className="text-right p-2">Subtotal</th>
+                    <th className="text-right p-2">Precio Unitario</th>
+                    <th className="text-right p-2">Total Item</th>
                   </tr>
                 </thead>
                 <tbody>
