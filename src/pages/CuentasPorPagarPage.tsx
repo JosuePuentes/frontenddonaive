@@ -197,7 +197,7 @@ const CuentasPorPagarPage: React.FC = () => {
 
           return {
             ...compra,
-            fecha: fechaCompraNormalizada, // Asegurar que fecha esté normalizada
+            fecha: fechaCompraNormalizada || compra.fecha || new Date().toISOString().split('T')[0], // Asegurar que fecha siempre tenga un valor
             fecha_compra: compra.fecha_compra,
             fecha_creacion: compra.fecha_creacion,
             proveedor: proveedorNormalizado,
@@ -331,7 +331,7 @@ const CuentasPorPagarPage: React.FC = () => {
             
             return {
               ...compra,
-              fecha: fechaCompraNormalizada, // Asegurar que fecha esté normalizada
+              fecha: fechaCompraNormalizada || compra.fecha || new Date().toISOString().split('T')[0], // Asegurar que fecha siempre tenga un valor
               proveedor: proveedorEncontrado,
               dias_credito: diasCredito,
               dias_restantes: diasRestantes,
