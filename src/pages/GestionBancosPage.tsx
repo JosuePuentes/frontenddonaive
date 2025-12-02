@@ -318,15 +318,34 @@ const GestionBancosPage: React.FC = () => {
     setShowModalHistorial(true);
     try {
       const bancoId = banco._id || banco.id;
+      console.log(`🔍 [BANCOS] Obteniendo movimientos para banco ${bancoId}...`);
       const res = await fetchWithAuth(`${API_BASE_URL}/bancos/${bancoId}/movimientos`);
       if (res.ok) {
         const data = await res.json();
-        setMovimientos(data.movimientos || data || []);
+        console.log(`📋 [BANCOS] Respuesta del backend:`, JSON.stringify(data, null, 2));
+        const movimientosArray = data.movimientos || data || [];
+        console.log(`✅ [BANCOS] Movimientos encontrados: ${movimientosArray.length}`);
+        
+        // Log detallado de cada movimiento
+        movimientosArray.forEach((mov: any, idx: number) => {
+          console.log(`  📊 Movimiento ${idx + 1}: tipo=${mov.tipo}, monto=${mov.monto}, descripcion=${mov.descripcion}`);
+        });
+        
+        // Contar movimientos por tipo
+        const movimientosPorTipo = movimientosArray.reduce((acc: any, mov: any) => {
+          acc[mov.tipo] = (acc[mov.tipo] || 0) + 1;
+          return acc;
+        }, {});
+        console.log(`📊 [BANCOS] Movimientos por tipo:`, movimientosPorTipo);
+        
+        setMovimientos(movimientosArray);
       } else {
+        const errorData = await res.json().catch(() => null);
+        console.error(`❌ [BANCOS] Error al obtener movimientos:`, res.status, errorData);
         setMovimientos([]);
       }
     } catch (error) {
-      console.error("Error al obtener movimientos:", error);
+      console.error("❌ [BANCOS] Error al obtener movimientos:", error);
       setMovimientos([]);
     } finally {
       setLoadingMovimientos(false);

@@ -135,6 +135,8 @@ async def crear_pago_compra(
 
 ## 🔍 ENDPOINT DE CONSULTA: `GET /bancos/{banco_id}/movimientos`
 
+### ⚠️ CRÍTICO: Este endpoint DEBE devolver TODOS los movimientos
+
 El endpoint debe devolver **TODOS** los movimientos del banco, incluyendo:
 
 - Depósitos
@@ -142,7 +144,9 @@ El endpoint debe devolver **TODOS** los movimientos del banco, incluyendo:
 - Transferencias
 - Ventas
 - Vueltos
-- **Pagos de compras** (NUEVO)
+- **Pagos de compras** (NUEVO - DEBE estar incluido)
+
+### Código de Implementación
 
 ```python
 @router.get("/bancos/{banco_id}/movimientos")
@@ -156,27 +160,50 @@ async def obtener_movimientos_banco(
     if not banco:
         raise HTTPException(status_code=404, detail="Banco no encontrado")
     
-    # Obtener todos los movimientos del banco
+    # ⚠️ CRÍTICO: Obtener TODOS los movimientos del banco
+    # NO filtrar por tipo, debe incluir "pago_compra"
     movimientos = await db.movimientos_bancos.find(
-        {"banco_id": ObjectId(banco_id)}
+        {"banco_id": ObjectId(banco_id)}  # Solo filtrar por banco_id, NO por tipo
     ).sort("fecha", -1).to_list(length=10000)
     
-    # Convertir ObjectId a string
+    # Convertir ObjectId a string y normalizar
     movimientos_dict = []
     for mov in movimientos:
         mov_dict = dict(mov)
         mov_dict["_id"] = str(mov_dict["_id"])
         mov_dict["banco_id"] = str(mov_dict["banco_id"])
-        if "compra_id" in mov_dict:
+        
+        # Convertir campos opcionales
+        if "compra_id" in mov_dict and mov_dict["compra_id"]:
             mov_dict["compra_id"] = str(mov_dict["compra_id"])
-        if "pago_compra_id" in mov_dict:
+        if "pago_compra_id" in mov_dict and mov_dict["pago_compra_id"]:
             mov_dict["pago_compra_id"] = str(mov_dict["pago_compra_id"])
-        if "venta_id" in mov_dict:
+        if "pago_id" in mov_dict and mov_dict["pago_id"]:
+            mov_dict["pago_id"] = str(mov_dict["pago_id"])
+        if "venta_id" in mov_dict and mov_dict["venta_id"]:
             mov_dict["venta_id"] = str(mov_dict["venta_id"])
+        if "proveedor_id" in mov_dict and mov_dict["proveedor_id"]:
+            mov_dict["proveedor_id"] = str(mov_dict["proveedor_id"])
+        
+        # Asegurar que el tipo esté presente
+        if "tipo" not in mov_dict:
+            mov_dict["tipo"] = "deposito"  # Valor por defecto
+        
         movimientos_dict.append(mov_dict)
+    
+    # Log para debugging (opcional)
+    tipos_encontrados = set(mov.get("tipo", "desconocido") for mov in movimientos_dict)
+    print(f"📊 [BANCOS] Movimientos encontrados: {len(movimientos_dict)}, Tipos: {tipos_encontrados}")
     
     return {"movimientos": movimientos_dict}
 ```
+
+### ⚠️ VERIFICACIÓN IMPORTANTE
+
+1. **NO filtrar por tipo**: El query debe ser solo `{"banco_id": ObjectId(banco_id)}`, sin filtrar por `tipo`
+2. **Incluir todos los tipos**: Debe devolver movimientos de tipo "pago_compra", "deposito", "retiro", "transferencia", "venta", "vuelto"
+3. **Ordenar por fecha**: Debe ordenar por `fecha` descendente (más recientes primero)
+4. **Convertir ObjectId**: Todos los `_id` deben ser strings en la respuesta
 
 ## ⚠️ IMPORTANTE
 
