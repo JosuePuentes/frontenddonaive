@@ -123,6 +123,21 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Función para cargar bancos
+  const fetchBancos = async () => {
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/bancos`);
+      if (res.ok) {
+        const data = await res.json();
+        const bancosActivos = (data.bancos || data || []).filter((b: Banco) => b.activo !== false);
+        setBancos(bancosActivos);
+        console.log("🏦 [BANCOS] Bancos cargados:", bancosActivos.length);
+      }
+    } catch (err) {
+      console.error("Error al cargar bancos:", err);
+    }
+  };
+  
   // Cargar bancos al abrir el modal (si no están cargados)
   useEffect(() => {
     if (open && bancos.length === 0) {
@@ -187,21 +202,9 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
     }
   }, [tasaBcv, totalFacturaConDescuento, compra.pagar_en_dolar_negro]);
 
-  // Cargar bancos
+  // Cargar bancos al abrir el modal (ya está definido arriba, solo llamarlo)
   useEffect(() => {
     if (open) {
-      const fetchBancos = async () => {
-        try {
-          const res = await fetchWithAuth(`${API_BASE_URL}/bancos`);
-          if (res.ok) {
-            const data = await res.json();
-            const bancosActivos = (data.bancos || data || []).filter((b: Banco) => b.activo !== false);
-            setBancos(bancosActivos);
-          }
-        } catch (err) {
-          console.error("Error al cargar bancos:", err);
-        }
-      };
       fetchBancos();
     }
   }, [open]);
