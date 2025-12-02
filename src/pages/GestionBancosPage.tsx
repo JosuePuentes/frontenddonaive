@@ -32,13 +32,20 @@ interface Movimiento {
   _id?: string;
   banco_id: string;
   tipo: "deposito" | "retiro" | "transferencia" | "venta" | "vuelto" | "pago_compra" | "compra";
-  monto: number;
+  monto: number; // Puede ser negativo para egresos
   descripcion?: string;
   fecha: string;
   referencia?: string;
   venta_id?: string;
   compra_id?: string;
   pago_compra_id?: string;
+  pago_id?: string; // Alias para pago_compra_id
+  proveedor_id?: string;
+  proveedor_nombre?: string;
+  numero_factura?: string;
+  saldo_anterior?: number;
+  saldo_nuevo?: number;
+  divisa?: "USD" | "BS";
 }
 
 const GestionBancosPage: React.FC = () => {
@@ -847,13 +854,23 @@ const GestionBancosPage: React.FC = () => {
                           ? "text-green-600"
                           : "text-red-600"
                       }`}>
-                        {movimiento.tipo === "deposito" || movimiento.tipo === "venta" ? "+" : "-"}
-                        {bancoSeleccionado?.divisa === "USD" ? "$" : ""}
-                        {movimiento.monto.toLocaleString("es-VE", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                        {bancoSeleccionado?.divisa === "BS" ? " Bs" : ""}
+                        {/* Mostrar signo según tipo o si el monto es negativo */}
+                        {(() => {
+                          const esIngreso = movimiento.tipo === "deposito" || movimiento.tipo === "venta";
+                          const montoAbsoluto = Math.abs(movimiento.monto);
+                          const signo = esIngreso ? "+" : "-";
+                          return (
+                            <>
+                              {signo}
+                              {bancoSeleccionado?.divisa === "USD" ? "$" : ""}
+                              {montoAbsoluto.toLocaleString("es-VE", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                              {bancoSeleccionado?.divisa === "BS" ? " Bs" : ""}
+                            </>
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                   ))}
