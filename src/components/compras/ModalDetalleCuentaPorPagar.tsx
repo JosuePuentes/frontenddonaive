@@ -276,8 +276,12 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
       setMetodoPago("");
       
       // Recargar compras para actualizar montos y estado
-      console.log("✅ [PAGO] Pago guardado exitosamente, recargando compras...");
-      onPagoCompletado();
+      // Agregar un pequeño delay para asegurar que el backend haya procesado el pago
+      console.log("✅ [PAGO] Pago guardado exitosamente, esperando 500ms antes de recargar compras...");
+      setTimeout(() => {
+        console.log("🔄 [PAGO] Recargando compras...");
+        onPagoCompletado();
+      }, 500);
     } catch (err: any) {
       setError(err.message || "Error al guardar pago");
       console.error("Error al guardar pago:", err);

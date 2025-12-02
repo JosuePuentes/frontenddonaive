@@ -76,8 +76,19 @@ const CuentasPorPagarPage: React.FC = () => {
         const comprasData = Array.isArray(data) ? data : (data.compras || data.compra || []);
         const comprasArray = Array.isArray(comprasData) ? comprasData : [];
         
-        console.log("✅ [COMPRAS] Compras extraídas:", comprasArray);
-        console.log("✅ [COMPRAS] Cantidad de compras:", comprasArray.length);
+        console.log("✅ [COMPRAS] Compras extraídas:", comprasArray.length, "compras");
+        
+        // Log detallado de pagos para cada compra
+        comprasArray.forEach((compra: any) => {
+          if (compra.pagos && compra.pagos.length > 0) {
+            console.log(`📋 [PAGOS] Compra ${compra._id}: ${compra.pagos.length} pagos encontrados`);
+            compra.pagos.forEach((pago: any, idx: number) => {
+              console.log(`  💵 Pago ${idx + 1}: monto=${pago.monto}, monto_bs=${pago.monto_bs}, monto_usd=${pago.monto_usd}`);
+            });
+          } else {
+            console.log(`📋 [PAGOS] Compra ${compra._id}: Sin pagos`);
+          }
+        });
         
         // Calcular estados y montos
         const comprasConEstado = comprasArray.map((compra: any) => {
@@ -91,20 +102,33 @@ const CuentasPorPagarPage: React.FC = () => {
           // Asignar fecha normalizada
           compra.fecha = fechaCompra;
           
-          // Calcular monto abonado desde los pagos
-          // El backend puede enviar monto_abonado directamente, o calcularlo desde pagos
-          let montoAbonado = 0;
-          if (compra.monto_abonado !== undefined && compra.monto_abonado !== null) {
-            // Usar el monto_abonado del backend si está disponible
-            montoAbonado = Number(compra.monto_abonado) || 0;
-          } else if (compra.pagos && Array.isArray(compra.pagos) && compra.pagos.length > 0) {
-            // Calcular desde los pagos si no viene del backend
-            montoAbonado = compra.pagos.reduce((sum: number, pago: any) => {
-              // El backend puede enviar monto, monto_bs, o monto_usd
-              const monto = Number(pago.monto || pago.monto_bs || pago.monto_usd || 0);
-              return sum + (isNaN(monto) ? 0 : monto);
-            }, 0);
-          }
+        // Calcular monto abonado desde los pagos
+        // El backend puede enviar monto_abonado directamente, o calcularlo desde pagos
+        let montoAbonado = 0;
+        
+        // Log para diagnosticar
+        console.log(`💰 [PAGOS] Compra ${compra._id}:`, {
+          monto_abonado_backend: compra.monto_abonado,
+          pagos: compra.pagos,
+          cantidad_pagos: compra.pagos?.length || 0
+        });
+        
+        if (compra.monto_abonado !== undefined && compra.monto_abonado !== null) {
+          // Usar el monto_abonado del backend si está disponible
+          montoAbonado = Number(compra.monto_abonado) || 0;
+          console.log(`✅ [PAGOS] Usando monto_abonado del backend: $${montoAbonado.toFixed(2)}`);
+        } else if (compra.pagos && Array.isArray(compra.pagos) && compra.pagos.length > 0) {
+          // Calcular desde los pagos si no viene del backend
+          montoAbonado = compra.pagos.reduce((sum: number, pago: any) => {
+            // El backend puede enviar monto, monto_bs, o monto_usd
+            const monto = Number(pago.monto || pago.monto_bs || pago.monto_usd || 0);
+            console.log(`  💵 [PAGO] Pago ${pago._id || 'sin_id'}: monto=${pago.monto}, monto_bs=${pago.monto_bs}, monto_usd=${pago.monto_usd}, calculado=${monto}`);
+            return sum + (isNaN(monto) ? 0 : monto);
+          }, 0);
+          console.log(`✅ [PAGOS] Calculado desde pagos: $${montoAbonado.toFixed(2)}`);
+        } else {
+          console.log(`⚠️ [PAGOS] Sin pagos ni monto_abonado, usando 0`);
+        }
           
           // Calcular monto restante
           const montoRestante = Math.max(0, totalPrecioVenta - montoAbonado);
@@ -516,10 +540,12 @@ const CuentasPorPagarPage: React.FC = () => {
     setShowModalDetalle(true);
   };
 
-  const handlePagoCompletado = () => {
-    fetchCompras();
+  const handlePagoCompletado = async () => {
+    console.log("🔄 [PAGO] handlePagoCompletado llamado, recargando compras...");
+    await fetchCompras();
     setShowModalDetalle(false);
     setCompraSeleccionada(null);
+    console.log("✅ [PAGO] Compras recargadas");
   };
 
   const getEstadoBadge = (compra: Compra) => {

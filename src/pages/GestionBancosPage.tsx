@@ -31,12 +31,14 @@ interface Banco {
 interface Movimiento {
   _id?: string;
   banco_id: string;
-  tipo: "deposito" | "retiro" | "transferencia" | "venta" | "vuelto";
+  tipo: "deposito" | "retiro" | "transferencia" | "venta" | "vuelto" | "pago_compra" | "compra";
   monto: number;
   descripcion?: string;
   fecha: string;
   referencia?: string;
   venta_id?: string;
+  compra_id?: string;
+  pago_compra_id?: string;
 }
 
 const GestionBancosPage: React.FC = () => {
@@ -834,6 +836,8 @@ const GestionBancosPage: React.FC = () => {
                           {movimiento.tipo === "transferencia" && "Transferencia"}
                           {movimiento.tipo === "venta" && "Venta"}
                           {movimiento.tipo === "vuelto" && "Vuelto"}
+                          {movimiento.tipo === "pago_compra" && "Pago Compra"}
+                          {movimiento.tipo === "compra" && "Pago Compra"}
                         </span>
                       </TableCell>
                       <TableCell>{movimiento.descripcion || "-"}</TableCell>
