@@ -88,21 +88,30 @@ async def crear_pago_compra(
         {"$set": {"saldo": nuevo_saldo}}
     )
     
-    # 7. ⭐ CREAR MOVIMIENTO EN EL BANCO (NUEVO)
+    # 7. ⭐ CREAR MOVIMIENTO EN EL BANCO (NUEVO - CRÍTICO)
+    # ⚠️ ESTE PASO ES OBLIGATORIO - Sin esto, el movimiento NO aparecerá en el historial
     movimiento_dict = {
-        "banco_id": ObjectId(pago_data.banco_id),
-        "tipo": "pago_compra",  # Tipo específico para pagos de compras
-        "monto": pago_data.monto,
+        "banco_id": ObjectId(pago_data.banco_id),  # ⚠️ Debe ser ObjectId, no string
+        "tipo": "pago_compra",  # ⚠️ Tipo específico para pagos de compras
+        "monto": -abs(pago_data.monto),  # ⚠️ NEGATIVO porque es un egreso (salida de dinero)
         "descripcion": f"Pago de compra {compra_id[:8]}... - Proveedor: {proveedor_nombre}",
-        "fecha": pago_data.fecha_pago,
+        "fecha": pago_data.fecha_pago or datetime.utcnow(),  # Usar fecha del pago o ahora
         "referencia": pago_data.referencia or "",
         "compra_id": ObjectId(compra_id),
         "pago_compra_id": pago_id,
-        "divisa": banco["divisa"],
+        "pago_id": pago_id,  # Alias para compatibilidad
+        "proveedor_id": ObjectId(compra["proveedor_id"]) if compra.get("proveedor_id") else None,
+        "proveedor_nombre": proveedor_nombre,
+        "divisa": banco["divisa"],  # USD o BS
         "fecha_creacion": datetime.utcnow()
     }
     
-    await db.movimientos_bancos.insert_one(movimiento_dict)
+    # Insertar en la colección de movimientos bancarios
+    resultado_movimiento = await db.movimientos_bancos.insert_one(movimiento_dict)
+    movimiento_id = resultado_movimiento.inserted_id
+    
+    # ⚠️ LOG PARA VERIFICAR QUE SE CREÓ
+    print(f"✅ [PAGO-COMPRA] Movimiento creado: {movimiento_id}, tipo: pago_compra, monto: {movimiento_dict['monto']}, banco_id: {pago_data.banco_id}")
     
     # 8. Actualizar estado de la compra
     # ... (lógica existente para actualizar monto_abonado, monto_restante, estado)
@@ -162,9 +171,29 @@ async def obtener_movimientos_banco(
     
     # ⚠️ CRÍTICO: Obtener TODOS los movimientos del banco
     # NO filtrar por tipo, debe incluir "pago_compra"
-    movimientos = await db.movimientos_bancos.find(
-        {"banco_id": ObjectId(banco_id)}  # Solo filtrar por banco_id, NO por tipo
-    ).sort("fecha", -1).to_list(length=10000)
+    # Buscar tanto por ObjectId como por string para compatibilidad
+    banco_oid = ObjectId(banco_id) if ObjectId.is_valid(banco_id) else None
+    
+    query = {
+        "$or": [
+            {"banco_id": banco_id},  # String
+            {"banco_id": banco_oid}   # ObjectId
+        ]
+    } if banco_oid else {"banco_id": banco_id}
+    
+    movimientos = await db.movimientos_bancos.find(query).sort("fecha", -1).to_list(length=10000)
+    
+    # ⚠️ LOG PARA VERIFICAR
+    print(f"📊 [OBTENER-MOVIMIENTOS-BANCO] Banco ID: {banco_id}, Movimientos encontrados: {len(movimientos)}")
+    tipos_encontrados = {}
+    for mov in movimientos:
+        tipo = mov.get("tipo", "desconocido")
+        tipos_encontrados[tipo] = tipos_encontrados.get(tipo, 0) + 1
+    print(f"📊 [OBTENER-MOVIMIENTOS-BANCO] Tipos encontrados: {tipos_encontrados}")
+    if "pago_compra" in tipos_encontrados:
+        print(f"✅ [OBTENER-MOVIMIENTOS-BANCO] Encontrados {tipos_encontrados['pago_compra']} movimientos de tipo 'pago_compra'")
+    else:
+        print(f"⚠️ [OBTENER-MOVIMIENTOS-BANCO] No se encontraron movimientos de tipo 'pago_compra'")
     
     # Convertir ObjectId a string y normalizar
     movimientos_dict = []

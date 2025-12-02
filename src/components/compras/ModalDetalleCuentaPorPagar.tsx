@@ -122,6 +122,13 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Cargar bancos al abrir el modal (si no están cargados)
+  useEffect(() => {
+    if (open && bancos.length === 0) {
+      fetchBancos();
+    }
+  }, [open]);
 
   // Calcular descuento por pronto pago
   const calcularDescuentoProntoPago = () => {
@@ -658,11 +665,23 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                       const fechaPago = pago.fecha_pago || pago.fecha_creacion || "";
                       const comprobante = pago.comprobante || "";
                       
+                      // Buscar banco si no viene poblado
+                      let bancoNombre = pago.banco?.nombre_banco;
+                      if (!bancoNombre && pago.banco_id) {
+                        const bancoEncontrado = bancos.find(
+                          (b) => (b._id || b.id) === pago.banco_id
+                        );
+                        bancoNombre = bancoEncontrado?.nombre_banco;
+                      }
+                      
                       // Log para diagnosticar
-                      console.log(`📋 [PAGO ${idx + 1}] Comprobante:`, {
+                      console.log(`📋 [PAGO ${idx + 1}]`, {
+                        banco_id: pago.banco_id,
+                        banco_poblado: pago.banco?.nombre_banco,
+                        banco_encontrado: bancoNombre,
                         comprobante,
                         tiene_comprobante: !!comprobante,
-                        longitud: comprobante?.length || 0
+                        longitud_comprobante: comprobante?.length || 0
                       });
                       
                       return (
@@ -684,7 +703,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                           </td>
                           <td className="p-2 font-semibold">${montoPago.toFixed(2)}</td>
                           <td className="p-2">{pago.metodo_pago || "-"}</td>
-                          <td className="p-2">{pago.banco?.nombre_banco || "-"}</td>
+                          <td className="p-2">{bancoNombre || "-"}</td>
                           <td className="p-2">{pago.referencia || "-"}</td>
                           <td className="p-2">
                             {comprobante ? (
