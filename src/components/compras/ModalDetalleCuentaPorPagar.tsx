@@ -667,51 +667,16 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                                   imageName={pago.comprobante}
                                   alt="Comprobante de pago"
                                   style={{ maxWidth: 50, maxHeight: 50, borderRadius: 4, cursor: "pointer" }}
-                                  onClick={() => {
-                                    const modal = window.open("", "_blank");
-                                    if (modal) {
-                                      const imageUrl = `${API_BASE_URL}/uploads/${pago.comprobante}`;
-                                      modal.document.write(`
-                                        <!DOCTYPE html>
-                                        <html>
-                                          <head>
-                                            <title>Comprobante de Pago</title>
-                                            <style>
-                                              body { 
-                                                margin: 0; 
-                                                padding: 20px; 
-                                                display: flex; 
-                                                justify-content: center; 
-                                                align-items: center; 
-                                                min-height: 100vh;
-                                                background: #f5f5f5;
-                                              }
-                                              img { 
-                                                max-width: 90vw; 
-                                                max-height: 90vh; 
-                                                height: auto;
-                                                border: 1px solid #ddd;
-                                                border-radius: 8px;
-                                                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                                              }
-                                            </style>
-                                          </head>
-                                          <body>
-                                            <img src="${imageUrl}" alt="Comprobante de pago" />
-                                          </body>
-                                        </html>
-                                      `);
-                                      modal.document.close();
-                                    }
-                                  }}
                                 />
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => {
+                                    // El componente ImageDisplay ya tiene un modal integrado,
+                                    // pero si queremos abrir en nueva ventana, usamos onClickImage
+                                    const imageUrl = `${API_BASE_URL}/uploads/${pago.comprobante}`;
                                     const modal = window.open("", "_blank");
                                     if (modal) {
-                                      const imageUrl = `${API_BASE_URL}/uploads/${pago.comprobante}`;
                                       modal.document.write(`
                                         <!DOCTYPE html>
                                         <html>
