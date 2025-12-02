@@ -541,7 +541,10 @@ const CuentasPorPagarPage: React.FC = () => {
   };
 
   const handlePagoCompletado = async () => {
-    console.log("🔄 [PAGO] handlePagoCompletado llamado, recargando compras...");
+    console.log("🔄 [PAGO] handlePagoCompletado llamado, esperando 1 segundo antes de recargar...");
+    // Esperar un poco más para asegurar que el backend haya procesado el pago
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log("🔄 [PAGO] Recargando compras...");
     await fetchCompras();
     setShowModalDetalle(false);
     setCompraSeleccionada(null);
