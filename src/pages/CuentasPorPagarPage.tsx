@@ -90,18 +90,36 @@ const CuentasPorPagarPage: React.FC = () => {
           
           // Asignar fecha normalizada
           compra.fecha = fechaCompra;
-          const montoAbonado = compra.pagos?.reduce((sum: number, pago: any) => {
-            const monto = Number(pago.monto_bs || pago.monto_usd || 0);
-            return sum + (isNaN(monto) ? 0 : monto);
-          }, 0) || 0;
-          const montoRestante = totalPrecioVenta - montoAbonado;
           
-          let estado: "sin_pago" | "abonado" | "pagada" = "sin_pago";
-          if (montoAbonado >= totalPrecioVenta && totalPrecioVenta > 0) {
-            estado = "pagada";
-          } else if (montoAbonado > 0) {
-            estado = "abonado";
+          // Calcular monto abonado desde los pagos
+          // El backend puede enviar monto_abonado directamente, o calcularlo desde pagos
+          let montoAbonado = 0;
+          if (compra.monto_abonado !== undefined && compra.monto_abonado !== null) {
+            // Usar el monto_abonado del backend si está disponible
+            montoAbonado = Number(compra.monto_abonado) || 0;
+          } else if (compra.pagos && Array.isArray(compra.pagos) && compra.pagos.length > 0) {
+            // Calcular desde los pagos si no viene del backend
+            montoAbonado = compra.pagos.reduce((sum: number, pago: any) => {
+              // El backend puede enviar monto, monto_bs, o monto_usd
+              const monto = Number(pago.monto || pago.monto_bs || pago.monto_usd || 0);
+              return sum + (isNaN(monto) ? 0 : monto);
+            }, 0);
           }
+          
+          // Calcular monto restante
+          const montoRestante = Math.max(0, totalPrecioVenta - montoAbonado);
+          
+          // Calcular estado: si monto abonado >= total factura → pagada, si > 0 → abonado, si = 0 → sin_pago
+          let estado: "sin_pago" | "abonado" | "pagada" = "sin_pago";
+          if (totalPrecioVenta > 0) {
+            if (montoAbonado >= totalPrecioVenta) {
+              estado = "pagada";
+            } else if (montoAbonado > 0) {
+              estado = "abonado";
+            }
+          }
+          
+          console.log(`💰 [COMPRAS] Compra ${compra._id}: Total: $${totalPrecioVenta.toFixed(2)}, Abonado: $${montoAbonado.toFixed(2)}, Restante: $${montoRestante.toFixed(2)}, Estado: ${estado}`);
 
           // ⭐ PRIORIZAR: El backend ahora siempre envía el objeto proveedor completo
           // Usar directamente compra.proveedor si viene del backend
@@ -687,7 +705,13 @@ const CuentasPorPagarPage: React.FC = () => {
                         {compra.estado === "pagada" ? (
                           <span className="text-green-600 font-semibold">Pagada</span>
                         ) : compra.dias_restantes !== undefined && !isNaN(compra.dias_restantes) ? (
-                          <span className={compra.dias_restantes < 0 ? "text-red-600 font-semibold" : compra.dias_restantes <= 5 ? "text-yellow-600 font-semibold" : "text-slate-600"}>
+                          <span className={
+                            compra.dias_restantes < 0 
+                              ? "text-red-600 font-semibold" 
+                              : compra.dias_restantes <= 5 
+                              ? "text-yellow-600 font-semibold" 
+                              : "text-green-600"
+                          }>
                             {compra.dias_restantes} días
                           </span>
                         ) : (

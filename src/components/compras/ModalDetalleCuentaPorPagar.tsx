@@ -22,6 +22,25 @@ interface Proveedor {
   descuento_pronto_pago?: number;
 }
 
+interface Pago {
+  _id?: string;
+  monto?: number;
+  monto_bs?: number;
+  monto_usd?: number;
+  fecha_pago?: string;
+  metodo_pago?: string;
+  banco_id?: string;
+  banco?: {
+    nombre_banco?: string;
+    divisa?: string;
+  };
+  referencia?: string;
+  notas?: string;
+  comprobante?: string;
+  usuario_id?: string;
+  fecha_creacion?: string;
+}
+
 interface Compra {
   _id: string;
   proveedor_id: string;
@@ -37,7 +56,7 @@ interface Compra {
   estado?: "sin_pago" | "abonado" | "pagada";
   monto_abonado?: number;
   monto_restante?: number;
-  pagos?: any[];
+  pagos?: Pago[];
   dias_credito?: number;
   dias_restantes?: number;
   en_mora?: boolean;
@@ -230,6 +249,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
         banco_id: bancoSeleccionado,
         referencia: referencia || "",
         notas: notas || "",
+        comprobante: comprobanteArchivo || undefined, // Agregar comprobante si existe
       };
 
       const res = await fetchWithAuth(`${API_BASE_URL}/compras/${compra._id}/pagos`, {
@@ -245,6 +265,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
         throw new Error(errorData?.detail || errorData?.message || "Error al guardar pago");
       }
 
+      // Limpiar formulario
       setMostrarPreliminar(false);
       setMostrarPago(false);
       setMontoPagar("");
@@ -253,6 +274,9 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
       setComprobanteArchivo(null);
       setBancoSeleccionado("");
       setMetodoPago("");
+      
+      // Recargar compras para actualizar montos y estado
+      console.log("✅ [PAGO] Pago guardado exitosamente, recargando compras...");
       onPagoCompletado();
     } catch (err: any) {
       setError(err.message || "Error al guardar pago");
@@ -594,6 +618,149 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
               </table>
             </div>
           </Card>
+
+          {/* Historial de Pagos */}
+          {compra.pagos && compra.pagos.length > 0 && (
+            <Card className="p-4 mb-4">
+              <h3 className="font-semibold mb-3">Historial de Pagos</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Fecha</th>
+                      <th className="text-left p-2">Monto</th>
+                      <th className="text-left p-2">Método</th>
+                      <th className="text-left p-2">Banco</th>
+                      <th className="text-left p-2">Referencia</th>
+                      <th className="text-left p-2">Comprobante</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compra.pagos.map((pago: Pago, idx: number) => {
+                      const montoPago = Number(pago.monto || pago.monto_usd || pago.monto_bs || 0);
+                      const fechaPago = pago.fecha_pago || pago.fecha_creacion || "";
+                      return (
+                        <tr key={idx} className="border-b">
+                          <td className="p-2">
+                            {fechaPago ? (() => {
+                              try {
+                                const fecha = new Date(fechaPago);
+                                if (!isNaN(fecha.getTime())) {
+                                  return fecha.toLocaleDateString('es-VE', { 
+                                    year: 'numeric', 
+                                    month: '2-digit', 
+                                    day: '2-digit' 
+                                  });
+                                }
+                              } catch (e) {}
+                              return fechaPago;
+                            })() : "-"}
+                          </td>
+                          <td className="p-2 font-semibold">${montoPago.toFixed(2)}</td>
+                          <td className="p-2">{pago.metodo_pago || "-"}</td>
+                          <td className="p-2">{pago.banco?.nombre_banco || "-"}</td>
+                          <td className="p-2">{pago.referencia || "-"}</td>
+                          <td className="p-2">
+                            {pago.comprobante ? (
+                              <div className="flex items-center gap-2">
+                                <ImageDisplay
+                                  imageName={pago.comprobante}
+                                  alt="Comprobante de pago"
+                                  style={{ maxWidth: 50, maxHeight: 50, borderRadius: 4, cursor: "pointer" }}
+                                  onClick={() => {
+                                    const modal = window.open("", "_blank");
+                                    if (modal) {
+                                      const imageUrl = `${API_BASE_URL}/uploads/${pago.comprobante}`;
+                                      modal.document.write(`
+                                        <!DOCTYPE html>
+                                        <html>
+                                          <head>
+                                            <title>Comprobante de Pago</title>
+                                            <style>
+                                              body { 
+                                                margin: 0; 
+                                                padding: 20px; 
+                                                display: flex; 
+                                                justify-content: center; 
+                                                align-items: center; 
+                                                min-height: 100vh;
+                                                background: #f5f5f5;
+                                              }
+                                              img { 
+                                                max-width: 90vw; 
+                                                max-height: 90vh; 
+                                                height: auto;
+                                                border: 1px solid #ddd;
+                                                border-radius: 8px;
+                                                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                                              }
+                                            </style>
+                                          </head>
+                                          <body>
+                                            <img src="${imageUrl}" alt="Comprobante de pago" />
+                                          </body>
+                                        </html>
+                                      `);
+                                      modal.document.close();
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    const modal = window.open("", "_blank");
+                                    if (modal) {
+                                      const imageUrl = `${API_BASE_URL}/uploads/${pago.comprobante}`;
+                                      modal.document.write(`
+                                        <!DOCTYPE html>
+                                        <html>
+                                          <head>
+                                            <title>Comprobante de Pago</title>
+                                            <style>
+                                              body { 
+                                                margin: 0; 
+                                                padding: 20px; 
+                                                display: flex; 
+                                                justify-content: center; 
+                                                align-items: center; 
+                                                min-height: 100vh;
+                                                background: #f5f5f5;
+                                              }
+                                              img { 
+                                                max-width: 90vw; 
+                                                max-height: 90vh; 
+                                                height: auto;
+                                                border: 1px solid #ddd;
+                                                border-radius: 8px;
+                                                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                                              }
+                                            </style>
+                                          </head>
+                                          <body>
+                                            <img src="${imageUrl}" alt="Comprobante de pago" />
+                                          </body>
+                                        </html>
+                                      `);
+                                      modal.document.close();
+                                    }
+                                  }}
+                                >
+                                  Ver Detalle
+                                </Button>
+                              </div>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
 
           {/* Botones de Acción */}
           <div className="flex justify-end gap-2">
