@@ -37,7 +37,8 @@ El backend debe **poblar** (populate) el array `pagos` y calcular `monto_abonado
         "metodo_pago": "transferencia",
         "banco_id": "banco_id",
         "referencia": "TRF-123",
-        "comprobante": "comprobante.jpg"
+        "comprobante": "comprobante.jpg",  // ⚠️ CRÍTICO: Debe estar presente, puede ser null o string vacío
+        "notas": "Pago parcial"
       }
     ],
     "monto_abonado": 20.00,  // ⭐ CRÍTICO: Suma de todos los pagos
@@ -92,6 +93,11 @@ async def obtener_compras(
             pago_dict["compra_id"] = str(pago_dict["compra_id"])
             pago_dict["banco_id"] = str(pago_dict.get("banco_id", ""))
             
+            # ⚠️ CRÍTICO: Incluir TODOS los campos del pago, especialmente comprobante
+            # Asegurar que comprobante esté presente (puede ser None o string vacío)
+            if "comprobante" not in pago_dict:
+                pago_dict["comprobante"] = None
+            
             # Sumar al monto abonado
             monto_pago = pago_dict.get("monto", 0)
             monto_abonado += float(monto_pago)
@@ -144,7 +150,8 @@ Después de implementar, verificar que la respuesta incluya:
 2. ✅ `monto_abonado` con la suma de todos los pagos
 3. ✅ `monto_restante` con el cálculo correcto (total - abonado)
 4. ✅ `estado` con el valor correcto ("sin_pago", "abonado", o "pagada")
-5. ✅ Cada pago debe tener `_id`, `monto`, `fecha_pago`, `metodo_pago`, `banco_id`, `referencia`, `comprobante`
+5. ✅ Cada pago debe tener `_id`, `monto`, `fecha_pago`, `metodo_pago`, `banco_id`, `referencia`, `comprobante` (puede ser `null` o string vacío si no hay comprobante)
+6. ✅ **CRÍTICO**: El campo `comprobante` DEBE estar presente en cada pago, incluso si es `null` o string vacío
 
 ## 📝 NOTAS IMPORTANTES
 

@@ -93,6 +93,19 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
       console.log("🔍 [MODAL] Proveedor:", compra.proveedor);
       console.log("🔍 [MODAL] Fecha:", compra.fecha);
       console.log("🔍 [MODAL] Proveedor ID:", compra.proveedor_id);
+      console.log("🔍 [MODAL] Pagos:", compra.pagos);
+      if (compra.pagos && compra.pagos.length > 0) {
+        compra.pagos.forEach((pago: Pago, idx: number) => {
+          console.log(`  💵 [PAGO ${idx + 1}]`, {
+            _id: pago._id,
+            monto: pago.monto,
+            comprobante: pago.comprobante,
+            tiene_comprobante: !!pago.comprobante
+          });
+        });
+      } else {
+        console.log("⚠️ [MODAL] No hay pagos en la compra");
+      }
     }
   }, [open, compra]);
   const [mostrarPago, setMostrarPago] = useState(false);
@@ -643,6 +656,15 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                     {compra.pagos.map((pago: Pago, idx: number) => {
                       const montoPago = Number(pago.monto || pago.monto_usd || pago.monto_bs || 0);
                       const fechaPago = pago.fecha_pago || pago.fecha_creacion || "";
+                      const comprobante = pago.comprobante || "";
+                      
+                      // Log para diagnosticar
+                      console.log(`📋 [PAGO ${idx + 1}] Comprobante:`, {
+                        comprobante,
+                        tiene_comprobante: !!comprobante,
+                        longitud: comprobante?.length || 0
+                      });
+                      
                       return (
                         <tr key={idx} className="border-b">
                           <td className="p-2">
@@ -665,10 +687,10 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                           <td className="p-2">{pago.banco?.nombre_banco || "-"}</td>
                           <td className="p-2">{pago.referencia || "-"}</td>
                           <td className="p-2">
-                            {pago.comprobante ? (
+                            {comprobante ? (
                               <div className="flex items-center gap-2">
                                 <ImageDisplay
-                                  imageName={pago.comprobante}
+                                  imageName={comprobante}
                                   alt="Comprobante de pago"
                                   style={{ maxWidth: 50, maxHeight: 50, borderRadius: 4, cursor: "pointer" }}
                                 />
@@ -676,9 +698,8 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                                   size="sm"
                                   variant="outline"
                                   onClick={() => {
-                                    // El componente ImageDisplay ya tiene un modal integrado,
-                                    // pero si queremos abrir en nueva ventana, usamos onClickImage
-                                    const imageUrl = `${API_BASE_URL}/uploads/${pago.comprobante}`;
+                                    const imageUrl = `${API_BASE_URL}/uploads/${comprobante}`;
+                                    console.log("🖼️ [COMPROBANTE] Abriendo comprobante:", imageUrl);
                                     const modal = window.open("", "_blank");
                                     if (modal) {
                                       modal.document.write(`
@@ -707,7 +728,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                                             </style>
                                           </head>
                                           <body>
-                                            <img src="${imageUrl}" alt="Comprobante de pago" />
+                                            <img src="${imageUrl}" alt="Comprobante de pago" onerror="this.alt='Error al cargar imagen'; this.style.border='2px solid red';" />
                                           </body>
                                         </html>
                                       `);
@@ -719,7 +740,7 @@ const ModalDetalleCuentaPorPagar: React.FC<ModalDetalleCuentaPorPagarProps> = ({
                                 </Button>
                               </div>
                             ) : (
-                              "-"
+                              <span className="text-gray-400 text-xs">Sin comprobante</span>
                             )}
                           </td>
                         </tr>
