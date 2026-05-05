@@ -1,4 +1,33 @@
+import { useEffect } from "react";
+
+const AVIASALES_WIDGET_SRC =
+  "https://tpemb.com/content?currency=usd&trs=525471&shmarker=725078&show_hotels=true&powered_by=true&locale=en&searchUrl=www.aviasales.com%2Fsearch&primary_override=%2332a8dd&color_button=%2332a8dd&color_icons=%2332a8dd&dark=%23262626&light=%23FFFFFF&secondary=%23FFFFFF&special=%23C4C4C4&color_focused=%2332a8dd&border_radius=0&plain=false&promo_id=7879&campaign_id=100";
+
 export default function SpiritRescuePage() {
+  useEffect(() => {
+    const container = document.getElementById("widget-container");
+    if (!container) return;
+
+    const existingScript = container.querySelector("script[data-aviasales-widget='true']");
+    if (existingScript) return;
+
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = AVIASALES_WIDGET_SRC;
+    script.charset = "utf-8";
+    script.setAttribute("data-aviasales-widget", "true");
+
+    container.innerHTML = "";
+    container.appendChild(script);
+
+    return () => {
+      if (container.contains(script)) {
+        container.removeChild(script);
+      }
+      container.innerHTML = "";
+    };
+  }, []);
+
   return (
     <div className="min-h-dvh bg-white text-neutral-900 antialiased">
       <header className="border-b border-neutral-200/80 bg-white/90 backdrop-blur-sm">
@@ -32,11 +61,16 @@ export default function SpiritRescuePage() {
               </p>
               <div
                 id="travelpayouts-search-widget"
-                className="flex min-h-[280px] w-full items-center justify-center rounded-lg border border-dashed border-neutral-200 bg-neutral-50/50 text-center sm:min-h-[320px]"
+                className="mx-auto w-full max-w-xl rounded-lg border border-dashed border-neutral-200 bg-neutral-50/50 p-3 text-center sm:p-4"
               >
+                <div
+                  id="widget-container"
+                  className="mx-auto flex min-h-[280px] w-full max-w-lg items-center justify-center rounded-md bg-white sm:min-h-[320px]"
+                >
                 <p className="max-w-xs px-4 text-sm text-neutral-500">
                   Your Travelpayouts widget will load here once the script initializes.
                 </p>
+                </div>
               </div>
             </div>
           </div>
