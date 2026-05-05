@@ -4,7 +4,6 @@ const AVIASALES_WIDGET_BASE = "https://tpemb.com/content";
 const AVIASALES_CALENDAR_BASE = "https://tpemb.com/content";
 
 function buildWidgetSrc() {
-  const internalSearchUrl = `${window.location.origin}/spirit-rescue/results`;
   const params = new URLSearchParams({
     currency: "usd",
     trs: "525471",
@@ -12,7 +11,7 @@ function buildWidgetSrc() {
     show_hotels: "false",
     powered_by: "true",
     locale: "en",
-    searchUrl: internalSearchUrl.replace(/^https?:\/\//, ""),
+    searchUrl: "www.aviasales.com/search",
     primary_override: "#32a8dd",
     color_button: "#32a8dd",
     color_icons: "#32a8dd",
@@ -26,18 +25,18 @@ function buildWidgetSrc() {
     promo_id: "7879",
     campaign_id: "100",
     one_way: "true",
+    target: "_blank",
   });
 
   return `${AVIASALES_WIDGET_BASE}?${params.toString()}`;
 }
 
 function buildCalendarWidgetSrc() {
-  const internalSearchUrl = `${window.location.origin}/spirit-rescue/results`;
   const params = new URLSearchParams({
     currency: "usd",
     trs: "525471",
     shmarker: "725078",
-    searchUrl: internalSearchUrl.replace(/^https?:\/\//, ""),
+    searchUrl: "www.aviasales.com/search",
     locale: "en",
     powered_by: "true",
     one_way: "true",
@@ -52,6 +51,7 @@ function buildCalendarWidgetSrc() {
     promo_id: "4041",
     campaign_id: "100",
     show_hotels: "false",
+    target: "_blank",
   });
 
   return `${AVIASALES_CALENDAR_BASE}?${params.toString()}`;
@@ -215,7 +215,9 @@ export default function SpiritRescuePage() {
           {["FLL", "MCO", "MIA", "IAH", "DFW", "AUS"].map((code) => (
             <a
               key={code}
-              href={`/spirit-rescue/results?origin=${code}&trip_class=Y&one_way=true`}
+              href={`https://www.aviasales.com/search?origin=${code}&trip_class=Y&one_way=true`}
+              target="_blank"
+              rel="noreferrer"
               className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
             >
               From {code}
