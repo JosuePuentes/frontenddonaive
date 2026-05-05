@@ -43,6 +43,7 @@ import GestionBancosPage from "@/pages/GestionBancosPage";
 import ComprasPage from "@/pages/ComprasPage";
 import CuentasPorPagarComprasPage from "@/pages/CuentasPorPagarPage";
 import SpiritRescuePage from "@/pages/SpiritRescuePage";
+import SpiritRescueResultsPage from "@/pages/SpiritRescueResultsPage";
 
 const AppRouter = () => (
   <Routes>
@@ -50,6 +51,7 @@ const AppRouter = () => (
     <Route path="/register" element={<RegisterPage />} />
     <Route path="/" element={<HomePage />} />
     <Route path="/spirit-rescue" element={<SpiritRescuePage />} />
+    <Route path="/spirit-rescue/results" element={<SpiritRescueResultsPage />} />
     <Route path="/servicios" element={<ServicesPage />} />
     <Route path="/admin" element={
       <PrivateRoute>

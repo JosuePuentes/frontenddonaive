@@ -12,6 +12,45 @@ const HomePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-white">
+            {/* Quick Access - Spirit Rescue */}
+            <section className="bg-white px-6 py-8 md:py-10">
+                <div className="max-w-7xl mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.3 }}
+                        transition={{ duration: 0.6 }}
+                        className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-r from-slate-900 via-blue-900 to-sky-700 p-6 shadow-xl md:p-10"
+                    >
+                        <div className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full bg-cyan-300/20 blur-3xl" />
+                        <div className="pointer-events-none absolute -bottom-16 -left-12 h-52 w-52 rounded-full bg-purple-300/20 blur-3xl" />
+
+                        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                            <div className="max-w-3xl">
+                                <p className="mb-3 inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
+                                    Acceso Rapido
+                                </p>
+                                <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+                                    Spirit Rescue Center
+                                </h2>
+                                <p className="mt-3 text-base leading-relaxed text-blue-100 md:text-lg">
+                                    ¿Afectado por los cambios de Spirit? Encuentra tarifas de rescate
+                                    garantizadas aquí.
+                                </p>
+                            </div>
+
+                            <Link
+                                to="/spirit-rescue"
+                                className="inline-flex w-full items-center justify-center rounded-full bg-white px-6 py-3 text-base font-semibold text-slate-900 transition hover:bg-slate-100 md:w-auto"
+                            >
+                                Buscar Vuelos de Rescate
+                                <ArrowRight className="ml-2" size={18} />
+                            </Link>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
             {/* Hero Section */}
             <section className="relative min-h-screen flex items-start justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 overflow-hidden pt-12 md:pt-20">
                 {/* Background Pattern */}
@@ -58,10 +97,10 @@ const HomePage: React.FC = () => {
                             </div>
                         </h1>
                         <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl leading-relaxed mt-8 md:mt-12">
-                            Transformamos y potenciamos los resultados de tu empresa con una combinación única de <span className="text-green-600">asesoría financiera</span> y <span className="text-green-600">desarrollo web</span>
+                            Transformamos y potenciamos los resultados de tu empresa con una combinación única de <span className="text-green-600">asesoría financiera</span> y <span className="text-green-600">software a medida</span>
                         </p>
                         <p className="text-lg text-gray-300 mb-12 max-w-3xl">
-                            Mejoramos tus procesos, estandarizamos operaciones y disminuimos riesgos al 100%, asegurando que tu negocio sea financieramente sólido y tenga una presencia digital robusta.
+                            Mejoramos tus procesos, estandarizamos operaciones y disminuimos riesgos operativos hasta en un 80%, asegurando que tu negocio sea financieramente sólido y tenga una presencia digital robusta.
                         </p>
                         
                                <motion.div
@@ -89,45 +128,6 @@ const HomePage: React.FC = () => {
                 {/* Floating Elements */}
                 <div className="absolute top-20 left-10 w-20 h-20 bg-blue-500/20 rounded-full blur-xl"></div>
                 <div className="absolute bottom-20 right-10 w-32 h-32 bg-purple-500/20 rounded-full blur-xl"></div>
-            </section>
-
-            {/* Quick Access - Spirit Rescue */}
-            <section className="bg-white px-6 py-10 md:py-12">
-                <div className="max-w-7xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.3 }}
-                        transition={{ duration: 0.6 }}
-                        className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-r from-slate-900 via-blue-900 to-sky-700 p-6 shadow-xl md:p-10"
-                    >
-                        <div className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full bg-cyan-300/20 blur-3xl" />
-                        <div className="pointer-events-none absolute -bottom-16 -left-12 h-52 w-52 rounded-full bg-purple-300/20 blur-3xl" />
-
-                        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                            <div className="max-w-3xl">
-                                <p className="mb-3 inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
-                                    Acceso Rapido
-                                </p>
-                                <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-                                    Spirit Rescue Center
-                                </h2>
-                                <p className="mt-3 text-base leading-relaxed text-blue-100 md:text-lg">
-                                    ¿Afectado por los cambios de Spirit? Encuentra tarifas de rescate
-                                    garantizadas aquí.
-                                </p>
-                            </div>
-
-                            <Link
-                                to="/spirit-rescue"
-                                className="inline-flex w-full items-center justify-center rounded-full bg-white px-6 py-3 text-base font-semibold text-slate-900 transition hover:bg-slate-100 md:w-auto"
-                            >
-                                Buscar Vuelos de Rescate
-                                <ArrowRight className="ml-2" size={18} />
-                            </Link>
-                        </div>
-                    </motion.div>
-                </div>
             </section>
 
             {/* Services Section */}
@@ -177,7 +177,7 @@ const HomePage: React.FC = () => {
                                 </li>
                                 <li className="flex items-center">
                                     <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                                    Reducción de riesgos al 100%
+                                    Reducción de riesgos operativos hasta en 80%
                                 </li>
                                 <li className="flex items-center">
                                     <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
@@ -186,7 +186,7 @@ const HomePage: React.FC = () => {
                             </ul>
                         </motion.div>
 
-                        {/* Web Development */}
+                        {/* Software Development */}
                         <motion.div
                             initial={{ opacity: 0, x: 30 }}
                             whileInView={{ opacity: 1, x: 0 }}
@@ -197,29 +197,29 @@ const HomePage: React.FC = () => {
                                 <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-3 rounded-xl mr-4">
                                     <Globe className="text-white" size={32} />
                                 </div>
-                                <h3 className="text-2xl font-bold text-slate-900">Desarrollo de Páginas Web</h3>
+                                <h3 className="text-2xl font-bold text-slate-900">Desarrollamos Software a Tu Medida</h3>
                             </div>
                             <p className="text-gray-600 mb-6 leading-relaxed">
-                                Creamos sitios web modernos y funcionales, diseñados para complementar y fortalecer tu estrategia 
-                                de negocios. Una página web profesional es la herramienta perfecta para alcanzar a nuevos clientes 
-                                y consolidar la imagen de tu marca en el mercado.
+                                Diseñamos e implementamos soluciones de software a medida para optimizar tus procesos,
+                                integrar tus operaciones y escalar tu modelo de negocio con herramientas realmente
+                                alineadas a tu empresa.
                             </p>
                             <ul className="space-y-3 text-gray-700">
                                 <li className="flex items-center">
                                     <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                                    Diseño moderno y funcional
+                                    Automatización de procesos clave
                                 </li>
                                 <li className="flex items-center">
                                     <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                                    Estrategia de negocios integrada
+                                    Integraciones con tus sistemas actuales
                                 </li>
                                 <li className="flex items-center">
                                     <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                                    Presencia digital robusta
+                                    Escalabilidad y seguridad empresarial
                                 </li>
                                 <li className="flex items-center">
                                     <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                                    Consolidación de marca
+                                    Soporte evolutivo continuo
                                 </li>
             </ul>
                         </motion.div>
@@ -272,8 +272,8 @@ const HomePage: React.FC = () => {
                             </div>
                             <h3 className="text-2xl font-bold text-slate-900 mb-4">Presencia Digital Impactante</h3>
                             <p className="text-gray-600 leading-relaxed">
-                                Sitios web profesionales que fortalecen tu estrategia de negocios y consolidan 
-                                tu imagen de marca en el mercado digital.
+                                Software profesional que fortalece tu estrategia de negocios y consolida
+                                tu operación digital en el mercado.
                             </p>
                         </motion.div>
 
@@ -328,8 +328,8 @@ const HomePage: React.FC = () => {
                         
                         <div className="grid md:grid-cols-3 gap-8 mt-16">
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-green-600 mb-2">100%</div>
-                                <div className="text-blue-200">Reducción de Riesgos</div>
+                                <div className="text-3xl font-bold text-green-600 mb-2">80%</div>
+                                <div className="text-blue-200">Reducción de Riesgos Operativos</div>
                             </div>
                             <div className="text-center">
                                 <div className="text-3xl font-bold text-green-600 mb-2">∞</div>
