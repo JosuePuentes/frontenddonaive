@@ -91,6 +91,45 @@ const HomePage: React.FC = () => {
                 <div className="absolute bottom-20 right-10 w-32 h-32 bg-purple-500/20 rounded-full blur-xl"></div>
             </section>
 
+            {/* Quick Access - Spirit Rescue */}
+            <section className="bg-white px-6 py-10 md:py-12">
+                <div className="max-w-7xl mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.3 }}
+                        transition={{ duration: 0.6 }}
+                        className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-r from-slate-900 via-blue-900 to-sky-700 p-6 shadow-xl md:p-10"
+                    >
+                        <div className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full bg-cyan-300/20 blur-3xl" />
+                        <div className="pointer-events-none absolute -bottom-16 -left-12 h-52 w-52 rounded-full bg-purple-300/20 blur-3xl" />
+
+                        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                            <div className="max-w-3xl">
+                                <p className="mb-3 inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
+                                    Acceso Rapido
+                                </p>
+                                <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+                                    Spirit Rescue Center
+                                </h2>
+                                <p className="mt-3 text-base leading-relaxed text-blue-100 md:text-lg">
+                                    ¿Afectado por los cambios de Spirit? Encuentra tarifas de rescate
+                                    garantizadas aquí.
+                                </p>
+                            </div>
+
+                            <Link
+                                to="/spirit-rescue"
+                                className="inline-flex w-full items-center justify-center rounded-full bg-white px-6 py-3 text-base font-semibold text-slate-900 transition hover:bg-slate-100 md:w-auto"
+                            >
+                                Buscar Vuelos de Rescate
+                                <ArrowRight className="ml-2" size={18} />
+                            </Link>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
             {/* Services Section */}
             <section className="py-20 bg-gray-50">
                 <div className="max-w-7xl mx-auto px-6">
