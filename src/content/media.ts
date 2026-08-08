@@ -4,17 +4,48 @@ export const mediaContent: PageContent = {
   eyebrow: "Media",
   title: "Ideas, análisis y tecnología aplicada",
   description:
-    "Un espacio preparado para contenidos futuros sobre pensamiento estratégico y tecnología aplicada a organizaciones.",
-  blocks: [
+    "Donaive Media será el espacio para contenido sobre problemas reales, pensamiento estratégico y tecnología aplicada a organizaciones.",
+  categories: [
     {
       id: "temas",
-      title: "Temas previstos",
-      description:
-        "Análisis empresarial, procesos, automatización, IA, liderazgo y casos de estudio cuando existan.",
+      title: "Categorías editoriales",
+      description: "Temas previstos para piezas futuras de Media.",
+      items: [
+        "Análisis",
+        "Tecnología",
+        "Inteligencia artificial",
+        "Negocios",
+        "Procesos",
+        "Liderazgo",
+        "Estrategia",
+        "Casos y problemas reales",
+      ],
+    },
+  ],
+  blocks: [
+    {
+      id: "analisis",
+      title: "Análisis",
+      description: "Lecturas sobre fricción operativa y diagnóstico organizacional.",
+    },
+    {
+      id: "tecnologia",
+      title: "Tecnología",
+      description: "Tecnología aplicada a procesos, sistemas y control.",
+    },
+    {
+      id: "ia",
+      title: "Inteligencia artificial",
+      description: "Usos concretos de IA cuando aportan valor real.",
+    },
+    {
+      id: "estrategia",
+      title: "Estrategia",
+      description: "Decisiones, estructura y mejora continua.",
     },
   ],
   notes: [
-    "El contenido editorial se publicará progresivamente.",
-    "No se presentan casos ni resultados inventados.",
+    "Las tarjetas actuales son placeholders de categorías.",
+    "No se presentan artículos publicados inventados.",
   ],
 };

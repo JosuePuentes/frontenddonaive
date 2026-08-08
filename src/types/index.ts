@@ -1,7 +1,12 @@
 export type { NavLinkItem, RouteKey, RoutePath } from "@/types/routes";
 export type { PageSeo, SeoMap } from "@/types/seo";
 export type {
+  ContactContent,
+  ContactFormField,
   ContentBlock,
+  ContentCategory,
+  ContentPillar,
+  ContentStep,
   LegalContent,
   PageContent,
 } from "@/types/content";

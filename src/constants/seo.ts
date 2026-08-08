@@ -9,36 +9,37 @@ export const seoByRoute = {
       "Donaive analiza problemas, diseña procesos y desarrolla sistemas, automatización e inteligencia artificial para ayudar a las organizaciones a funcionar mejor.",
   },
   [ROUTES.empresa]: {
-    title: "Donaive — Una metodología para resolver problemas",
+    title: "Donaive — Diseñamos sistemas para resolver problemas",
     description:
-      "Conoce cómo Donaive observa, detecta y diseña soluciones para que las organizaciones funcionen mejor.",
+      "Conoce la filosofía y metodología de Donaive: observar, detectar, analizar, diseñar, implementar y mejorar organizaciones.",
   },
   [ROUTES.soluciones]: {
-    title: "Donaive — Soluciones empresariales, tecnología y automatización",
+    title:
+      "Donaive — Diagnóstico, procesos, automatización, sistemas e IA",
     description:
-      "Explora las capacidades de Donaive en procesos, automatización, inteligencia artificial, sistemas y formación.",
+      "Soluciones de Donaive para diagnóstico, estructuración empresarial, automatización, sistemas, inteligencia de negocios y formación.",
   },
   [ROUTES.academy]: {
     title:
       "Donaive Academy — Formación para resolver problemas con tecnología e IA",
     description:
-      "Formación orientada a analizar problemas, diseñar soluciones y utilizar tecnología e inteligencia artificial con criterio.",
+      "Visión de Donaive Academy: formar personas capaces de analizar problemas, diseñar soluciones y utilizar tecnología e IA con criterio.",
   },
   [ROUTES.media]: {
-    title: "Donaive Media — Ideas, análisis y tecnología aplicada",
+    title: "Donaive Media — Análisis, estrategia y tecnología aplicada",
     description:
-      "Espacio para ideas, análisis y contenidos sobre tecnología aplicada a organizaciones.",
+      "Espacio de Donaive Media para futuros contenidos sobre análisis, procesos, IA, negocios y liderazgo.",
   },
   [ROUTES.blog]: {
     title:
       "Donaive Blog — Estrategia, procesos, tecnología e inteligencia artificial",
     description:
-      "Artículos y reflexiones sobre estrategia, procesos, automatización e inteligencia artificial aplicada.",
+      "Estructura editorial del blog de Donaive sobre estrategia, procesos, automatización e inteligencia artificial aplicada.",
   },
   [ROUTES.contacto]: {
-    title: "Donaive — Cuéntanos qué problema tienes",
+    title: "Donaive — Cuéntanos qué problema estás intentando resolver",
     description:
-      "Cuéntanos qué problema tienes. Analizamos el contexto y determinamos cómo puede resolverse.",
+      "Contacta a Donaive para contar el problema que necesitas resolver. No hace falta saber qué software necesitas.",
   },
   [ROUTES.privacidad]: {
     title: "Donaive — Política de Privacidad",

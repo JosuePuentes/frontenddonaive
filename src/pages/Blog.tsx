@@ -1,11 +1,13 @@
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState, PublicPage, SectionTitle } from "@/components/page";
-import { Card } from "@/components/ui/Card";
+import { MotionReveal } from "@/components/landing/MotionReveal";
 import { blogContent } from "@/content/blog";
 import { ROUTES } from "@/constants/routes";
 import { getSeo } from "@/constants/seo";
 
 const Blog = () => {
   const seo = getSeo(ROUTES.blog);
+  const categories = blogContent.categories?.[0];
 
   return (
     <PublicPage
@@ -14,22 +16,24 @@ const Blog = () => {
       title={blogContent.title}
       description={blogContent.description}
     >
-      <SectionTitle
-        title="Estructura editorial"
-        description="Lista de publicaciones preparada para conectarse a CMS o API."
-      />
-      <div className="mt-8 grid gap-4">
-        {blogContent.blocks?.map((block) => (
-          <Card key={block.id} variant="outline">
-            <h2 className="text-h3">{block.title}</h2>
-            <p className="mt-3 text-body-small text-muted-foreground">
-              {block.description}
-            </p>
-          </Card>
-        ))}
-      </div>
+      {categories ? (
+        <MotionReveal>
+          <SectionTitle
+            title={categories.title}
+            description={categories.description}
+          />
+          <div className="mt-6 flex flex-wrap gap-2">
+            {categories.items.map((item) => (
+              <Badge key={item} variant="outline">
+                {item}
+              </Badge>
+            ))}
+          </div>
+        </MotionReveal>
+      ) : null}
+
       <EmptyState
-        className="mt-10"
+        className="mt-12"
         title="Blog en preparación"
         description={
           blogContent.notes?.join(" ") ??

@@ -4,17 +4,25 @@ export const blogContent: PageContent = {
   eyebrow: "Blog",
   title: "Estrategia, procesos, tecnología e inteligencia artificial",
   description:
-    "El blog quedará preparado para artículos y reflexiones sobre mejora organizacional y tecnología aplicada.",
-  blocks: [
+    "El blog de Donaive quedará preparado para artículos y reflexiones sobre mejora organizacional y tecnología aplicada. Todavía no hay publicaciones activas.",
+  categories: [
     {
-      id: "lineas",
-      title: "Líneas editoriales",
-      description:
-        "Procesos, automatización, IA, pensamiento estratégico y aprendizaje organizacional.",
+      id: "editorial",
+      title: "Categorías editoriales",
+      description: "Estructura prevista para organizar futuros artículos.",
+      items: [
+        "Estrategia",
+        "Procesos",
+        "Tecnología",
+        "IA",
+        "Automatización",
+        "Negocios",
+        "Liderazgo",
+      ],
     },
   ],
   notes: [
-    "Todavía no hay publicaciones activas.",
-    "La estructura queda lista para conectarse a un CMS o API más adelante.",
+    "Estado vacío intencional: no se crean artículos falsos.",
+    "La estructura queda lista para conectarse a CMS o API más adelante.",
   ],
 };
