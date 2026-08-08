@@ -1,0 +1,98 @@
+/* Donaive brand palette */
+:root {
+  --donaive-black: #09090b;
+  --donaive-white: #ffffff;
+  --donaive-electric: #2563ff;
+  --donaive-royal: #1e3a8a;
+
+  /* Gray scale */
+  --gray-50: #fafafa;
+  --gray-100: #f4f4f5;
+  --gray-200: #e4e4e7;
+  --gray-300: #d4d4d8;
+  --gray-400: #a1a1aa;
+  --gray-500: #71717a;
+  --gray-600: #52525b;
+  --gray-700: #3f3f46;
+  --gray-800: #27272a;
+  --gray-900: #18181b;
+  --gray-950: #09090b;
+
+  /* Semantic — light */
+  --background: var(--donaive-white);
+  --foreground: var(--donaive-black);
+  --surface: var(--donaive-white);
+  --surface-muted: var(--gray-100);
+  --border: var(--gray-200);
+  --primary: var(--donaive-electric);
+  --primary-hover: #1d4ed8;
+  --primary-foreground: var(--donaive-white);
+  --secondary: var(--donaive-royal);
+  --secondary-foreground: var(--donaive-white);
+  --muted: var(--gray-500);
+  --muted-foreground: var(--gray-500);
+  --success: #16a34a;
+  --success-foreground: var(--donaive-white);
+  --warning: #d97706;
+  --warning-foreground: var(--donaive-white);
+  --danger: #dc2626;
+  --danger-foreground: var(--donaive-white);
+
+  /* Compatibility aliases for existing ui primitives */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --accent: var(--surface-muted);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--danger);
+  --input: var(--gray-200);
+  --ring: var(--donaive-electric);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--surface-muted);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+.dark {
+  --background: var(--donaive-black);
+  --foreground: var(--donaive-white);
+  --surface: var(--gray-900);
+  --surface-muted: var(--gray-800);
+  --border: var(--gray-800);
+  --primary: var(--donaive-electric);
+  --primary-hover: #3b82f6;
+  --primary-foreground: var(--donaive-white);
+  --secondary: #3b82f6;
+  --secondary-foreground: var(--donaive-white);
+  --muted: var(--gray-400);
+  --muted-foreground: var(--gray-400);
+  --success: #22c55e;
+  --success-foreground: var(--donaive-black);
+  --warning: #f59e0b;
+  --warning-foreground: var(--donaive-black);
+  --danger: #ef4444;
+  --danger-foreground: var(--donaive-white);
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --accent: var(--surface-muted);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--danger);
+  --input: var(--gray-800);
+  --ring: var(--donaive-electric);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--surface-muted);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
