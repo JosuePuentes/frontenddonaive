@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/common/Logo";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { ctaNavItem, primaryNavItems } from "@/constants/navigation";
+import { ROUTES } from "@/constants/routes";
 import { useScrollElevation } from "@/hooks/useScrollElevation";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +66,7 @@ function Navbar({ className }: NavbarProps) {
               key={item.to}
               to={item.to}
               className={linkClassName}
-              end={item.to === "/"}
+              end={item.to === ROUTES.home}
             >
               {item.label}
             </NavLink>
@@ -111,7 +112,7 @@ function Navbar({ className }: NavbarProps) {
                 key={item.to}
                 to={item.to}
                 className={linkClassName}
-                end={item.to === "/"}
+                end={item.to === ROUTES.home}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {item.label}

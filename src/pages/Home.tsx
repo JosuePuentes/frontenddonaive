@@ -1,4 +1,4 @@
-import { PageMeta } from "@/components/common/PageMeta";
+import { PageMeta } from "@/components/page/PageMeta";
 import {
   CompaniesSection,
   CtaSection,
@@ -6,12 +6,15 @@ import {
   MethodologySection,
   ServicesSection,
 } from "@/components/landing";
-import { homeSeo } from "@/constants/landing";
+import { ROUTES } from "@/constants/routes";
+import { getSeo } from "@/constants/seo";
 
 const Home = () => {
+  const seo = getSeo(ROUTES.home);
+
   return (
     <>
-      <PageMeta title={homeSeo.title} description={homeSeo.description} />
+      <PageMeta title={seo.title} description={seo.description} />
       <HeroSection />
       <CompaniesSection />
       <ServicesSection />
