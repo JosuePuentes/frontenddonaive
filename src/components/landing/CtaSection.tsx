@@ -7,22 +7,30 @@ import { ctaContent } from "@/constants/landing";
 
 function CtaSection() {
   return (
-    <Section spacing="default" contained={false} className="px-[var(--page-padding-x)]">
+    <Section
+      spacing="lg"
+      contained={false}
+      className="overflow-x-clip px-[var(--page-padding-x)]"
+    >
       <MotionReveal className="mx-auto max-w-[var(--container-max)]">
-        <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-primary/20 bg-[linear-gradient(135deg,#09090B_0%,#1E3A8A_55%,#2563FF_100%)] px-6 py-14 text-center shadow-xl sm:px-10 sm:py-16">
-          <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,rgb(255_255_255/0.18),transparent_35%),radial-gradient(circle_at_80%_70%,rgb(37_99_255/0.35),transparent_40%)]" />
+        <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-primary/25 bg-[var(--donaive-black)] px-6 py-16 text-center shadow-xl sm:px-12 sm:py-20">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgb(37_99_255/0.28),transparent_40%),radial-gradient(circle_at_80%_75%,rgb(30_58_138/0.45),transparent_45%),linear-gradient(160deg,var(--donaive-black),#0b1224_55%,#102a6b)]" />
+          <div className="pointer-events-none absolute -left-10 top-10 size-40 rounded-full bg-primary/30 blur-3xl" />
+          <div className="pointer-events-none absolute -right-8 bottom-6 size-48 rounded-full bg-secondary/40 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(to_right,rgb(255_255_255/0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgb(255_255_255/0.08)_1px,transparent_1px)] [background-size:40px_40px] [mask-image:radial-gradient(circle_at_center,black,transparent_75%)]" />
+
           <div className="relative mx-auto max-w-2xl">
-            <Heading variant="h2" className="text-white">
+            <Heading variant="h2" className="text-balance text-[var(--donaive-white)]">
               {ctaContent.title}
             </Heading>
-            <p className="mt-4 text-body text-blue-100">
+            <p className="mt-5 text-pretty text-body text-[var(--donaive-white)]/75">
               {ctaContent.description}
             </p>
-            <div className="mt-8 flex justify-center">
+            <div className="mt-9 flex justify-center">
               <Button
                 asChild
                 size="lg"
-                className="bg-white text-[#09090B] hover:bg-white/90 hover:shadow-[var(--shadow-primary-glow)]"
+                className="bg-[var(--donaive-white)] text-[var(--donaive-black)] shadow-[var(--shadow-primary-glow)] hover:bg-[var(--donaive-white)]/95"
               >
                 <Link to={ctaContent.button.to}>{ctaContent.button.label}</Link>
               </Button>

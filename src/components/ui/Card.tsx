@@ -3,13 +3,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-  "rounded-[var(--radius-lg)] text-foreground transition-[background-color,box-shadow,border-color] duration-[var(--duration-normal)] ease-[var(--ease-standard)]",
+  "rounded-[var(--radius-lg)] text-foreground transition-[background-color,box-shadow,border-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-standard)] will-change-transform",
   {
     variants: {
       variant: {
-        default: "border border-border bg-surface p-[var(--card-padding)]",
+        default:
+          "border border-border bg-surface p-[var(--card-padding)] shadow-sm",
         elevated:
-          "border border-border/60 bg-surface p-[var(--card-padding)] shadow-md",
+          "border border-border/70 bg-surface p-[var(--card-padding)] shadow-md",
         outline: "border border-border bg-transparent p-[var(--card-padding)]",
         ghost: "bg-transparent p-[var(--card-padding)]",
       },

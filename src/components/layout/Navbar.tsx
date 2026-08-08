@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/common/Logo";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { ctaNavItem, primaryNavItems } from "@/constants/navigation";
+import { useScrollElevation } from "@/hooks/useScrollElevation";
 import { cn } from "@/lib/utils";
 
 type NavbarProps = {
@@ -14,6 +15,7 @@ type NavbarProps = {
 
 function Navbar({ className }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isElevated = useScrollElevation({ threshold: 8 });
   const location = useLocation();
   const mobileMenuId = useId();
 
@@ -44,8 +46,10 @@ function Navbar({ className }: NavbarProps) {
     <header
       data-slot="navbar"
       className={cn(
-        // Base prepared for future scroll elevation (background / blur / border)
-        "sticky top-0 z-40 border-b border-transparent bg-background/70 backdrop-blur-sm transition-[background-color,border-color,box-shadow] duration-[var(--duration-normal)] ease-[var(--ease-standard)]",
+        "sticky top-0 z-40 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-[var(--duration-normal)] ease-[var(--ease-standard)]",
+        isElevated || isMobileMenuOpen
+          ? "border-border/80 bg-background/80 shadow-sm backdrop-blur-md"
+          : "border-transparent bg-transparent backdrop-blur-0",
         className,
       )}
     >
@@ -57,7 +61,12 @@ function Navbar({ className }: NavbarProps) {
           className="hidden items-center gap-1 lg:flex"
         >
           {primaryNavItems.map((item) => (
-            <NavLink key={item.to} to={item.to} className={linkClassName} end={item.to === "/"}>
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={linkClassName}
+              end={item.to === "/"}
+            >
               {item.label}
             </NavLink>
           ))}
@@ -93,7 +102,7 @@ function Navbar({ className }: NavbarProps) {
       <div
         id={mobileMenuId}
         hidden={!isMobileMenuOpen}
-        className="border-t border-border bg-background lg:hidden"
+        className="border-t border-border bg-background/95 backdrop-blur-md lg:hidden"
       >
         <Container className="flex flex-col gap-2 py-4">
           <nav aria-label="Navegación móvil" className="flex flex-col gap-1">

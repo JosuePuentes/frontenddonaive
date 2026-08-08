@@ -23,8 +23,8 @@ export const heroContent = {
 export const heroFlowSteps = [
   { id: "problema", label: "Problema", detail: "Señal operativa" },
   { id: "analisis", label: "Análisis", detail: "Causa y contexto" },
-  { id: "solucion", label: "Solución", detail: "Diseño adaptado" },
-  { id: "automatizacion", label: "Automatización", detail: "Sistema activo" },
+  { id: "sistema", label: "Sistema", detail: "Diseño adaptado" },
+  { id: "automatizacion", label: "Automatización", detail: "Ejecución activa" },
   { id: "resultado", label: "Resultado", detail: "Mejora medible" },
 ] as const;
 
