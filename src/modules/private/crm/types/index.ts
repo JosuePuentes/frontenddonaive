@@ -1,0 +1,31 @@
+export type {
+  Contact,
+  CrmPipelineColumn,
+  Diagnosis,
+  DiagnosisPriority,
+  Interaction,
+  InteractionType,
+  Lead,
+  LeadSource,
+  LeadStatus,
+  Opportunity,
+  Organization,
+  OrganizationType,
+  Project,
+  ProjectStatus,
+  Proposal,
+  ProposalStatus,
+} from "@/types/crm";
+
+export {
+  CRM_PIPELINE_COLUMNS,
+  DIAGNOSIS_PRIORITIES,
+  INTERACTION_TYPES,
+  LEAD_SOURCE_LABELS,
+  LEAD_SOURCES,
+  LEAD_STATUS_LABELS,
+  LEAD_STATUSES,
+  ORGANIZATION_TYPES,
+  PROJECT_STATUSES,
+  PROPOSAL_STATUSES,
+} from "@/types/crm";

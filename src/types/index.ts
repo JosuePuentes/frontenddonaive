@@ -26,3 +26,22 @@ export type {
   DashboardModule,
   DashboardModuleId,
 } from "@/types/dashboard";
+export type {
+  Contact,
+  Diagnosis,
+  Interaction,
+  Lead,
+  LeadSource,
+  LeadStatus,
+  Opportunity,
+  Organization,
+  Project,
+  Proposal,
+} from "@/types/crm";
+export {
+  CRM_PIPELINE_COLUMNS,
+  LEAD_SOURCES,
+  LEAD_STATUSES,
+  PROJECT_STATUSES,
+  PROPOSAL_STATUSES,
+} from "@/types/crm";

@@ -11,32 +11,55 @@ export const DASHBOARD_ROUTES = {
   archivos: "/dashboard/archivos",
   configuracion: "/dashboard/configuracion",
   perfil: "/dashboard/perfil",
+  crm: "/dashboard/crm",
+  crmLeads: "/dashboard/crm/leads",
+  crmLeadDetail: "/dashboard/crm/leads/:id",
+  crmOportunidades: "/dashboard/crm/oportunidades",
+  crmDiagnosticos: "/dashboard/crm/diagnosticos",
+  crmPropuestas: "/dashboard/crm/propuestas",
+  crmProyectos: "/dashboard/crm/proyectos",
 } as const;
 
 export type DashboardRouteKey = keyof typeof DASHBOARD_ROUTES;
 export type DashboardRoutePath =
   (typeof DASHBOARD_ROUTES)[DashboardRouteKey];
 
+export type DashboardNavIcon =
+  | "layout"
+  | "users"
+  | "shield"
+  | "blog"
+  | "academy"
+  | "media"
+  | "products"
+  | "services"
+  | "cases"
+  | "files"
+  | "settings"
+  | "crm"
+  | "leads"
+  | "pipeline"
+  | "diagnosis"
+  | "proposals"
+  | "projects";
+
 export type DashboardNavItem = {
-  key: DashboardRouteKey;
+  key: string;
   label: string;
-  to: DashboardRoutePath;
-  icon:
-    | "layout"
-    | "users"
-    | "shield"
-    | "blog"
-    | "academy"
-    | "media"
-    | "products"
-    | "services"
-    | "cases"
-    | "files"
-    | "settings";
+  to: string;
+  icon: DashboardNavIcon;
+  end?: boolean;
+};
+
+export type DashboardNavGroup = {
+  key: string;
+  label: string;
+  icon: DashboardNavIcon;
+  items: DashboardNavItem[];
 };
 
 export const dashboardNavItems: DashboardNavItem[] = [
-  { key: "root", label: "Dashboard", to: DASHBOARD_ROUTES.root, icon: "layout" },
+  { key: "root", label: "Dashboard", to: DASHBOARD_ROUTES.root, icon: "layout", end: true },
   { key: "usuarios", label: "Usuarios", to: DASHBOARD_ROUTES.usuarios, icon: "users" },
   { key: "roles", label: "Roles", to: DASHBOARD_ROUTES.roles, icon: "shield" },
   { key: "blog", label: "Blog", to: DASHBOARD_ROUTES.blog, icon: "blog" },
@@ -73,3 +96,52 @@ export const dashboardNavItems: DashboardNavItem[] = [
     icon: "settings",
   },
 ];
+
+export const crmNavGroup: DashboardNavGroup = {
+  key: "crm",
+  label: "CRM",
+  icon: "crm",
+  items: [
+    {
+      key: "crm-dashboard",
+      label: "Dashboard",
+      to: DASHBOARD_ROUTES.crm,
+      icon: "crm",
+      end: true,
+    },
+    {
+      key: "crm-leads",
+      label: "Leads",
+      to: DASHBOARD_ROUTES.crmLeads,
+      icon: "leads",
+    },
+    {
+      key: "crm-oportunidades",
+      label: "Oportunidades",
+      to: DASHBOARD_ROUTES.crmOportunidades,
+      icon: "pipeline",
+    },
+    {
+      key: "crm-diagnosticos",
+      label: "Diagnósticos",
+      to: DASHBOARD_ROUTES.crmDiagnosticos,
+      icon: "diagnosis",
+    },
+    {
+      key: "crm-propuestas",
+      label: "Propuestas",
+      to: DASHBOARD_ROUTES.crmPropuestas,
+      icon: "proposals",
+    },
+    {
+      key: "crm-proyectos",
+      label: "Proyectos",
+      to: DASHBOARD_ROUTES.crmProyectos,
+      icon: "projects",
+    },
+  ],
+};
+
+export function crmLeadDetailPath(id: string) {
+  return `/dashboard/crm/leads/${id}`;
+}

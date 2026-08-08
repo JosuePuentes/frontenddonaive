@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { Breadcrumbs } from "@/components/dashboard/navigation/Breadcrumbs";
 import {
   DASHBOARD_ROUTES,
+  crmNavGroup,
   dashboardNavItems,
 } from "@/constants/dashboard-routes";
 import type { BreadcrumbItem } from "@/types/dashboard";
@@ -19,9 +20,7 @@ function resolvePageMeta(pathname: string): {
   title: string;
   breadcrumbs: BreadcrumbItem[];
 } {
-  const current = dashboardNavItems.find((item) => item.to === pathname);
   const profileActive = pathname === DASHBOARD_ROUTES.perfil;
-
   if (profileActive) {
     return {
       title: "Perfil",
@@ -31,6 +30,34 @@ function resolvePageMeta(pathname: string): {
       ],
     };
   }
+
+  if (pathname.startsWith("/dashboard/crm/leads/") && pathname !== DASHBOARD_ROUTES.crmLeads) {
+    return {
+      title: "Detalle de lead",
+      breadcrumbs: [
+        { label: "Dashboard", to: DASHBOARD_ROUTES.root },
+        { label: "CRM", to: DASHBOARD_ROUTES.crm },
+        { label: "Leads", to: DASHBOARD_ROUTES.crmLeads },
+        { label: "Detalle" },
+      ],
+    };
+  }
+
+  const crmItem = crmNavGroup.items.find((item) => item.to === pathname);
+  if (crmItem) {
+    return {
+      title: crmItem.label === "Dashboard" ? "CRM" : crmItem.label,
+      breadcrumbs: [
+        { label: "Dashboard", to: DASHBOARD_ROUTES.root },
+        { label: "CRM", to: DASHBOARD_ROUTES.crm },
+        ...(crmItem.to === DASHBOARD_ROUTES.crm
+          ? []
+          : [{ label: crmItem.label }]),
+      ],
+    };
+  }
+
+  const current = dashboardNavItems.find((item) => item.to === pathname);
 
   if (!current || current.to === DASHBOARD_ROUTES.root) {
     return {

@@ -1,14 +1,19 @@
 import { NavLink } from "react-router";
 import {
   BriefcaseBusiness,
+  ClipboardList,
   FileText,
+  FolderKanban,
   FolderOpen,
   GraduationCap,
+  Handshake,
   Image,
+  KanbanSquare,
   LayoutDashboard,
   Package,
   Settings,
   Shield,
+  Target,
   Trophy,
   Users,
   type LucideIcon,
@@ -18,12 +23,13 @@ import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/common/Logo";
 import {
   DASHBOARD_ROUTES,
+  crmNavGroup,
   dashboardNavItems,
-  type DashboardNavItem,
+  type DashboardNavIcon,
 } from "@/constants/dashboard-routes";
 import { cn } from "@/lib/utils";
 
-const iconMap: Record<DashboardNavItem["icon"], LucideIcon> = {
+const iconMap: Record<DashboardNavIcon, LucideIcon> = {
   layout: LayoutDashboard,
   users: Users,
   shield: Shield,
@@ -35,6 +41,12 @@ const iconMap: Record<DashboardNavItem["icon"], LucideIcon> = {
   cases: Trophy,
   files: FolderOpen,
   settings: Settings,
+  crm: Handshake,
+  leads: Target,
+  pipeline: KanbanSquare,
+  diagnosis: ClipboardList,
+  proposals: FileText,
+  projects: FolderKanban,
 };
 
 type SidebarProps = {
@@ -76,29 +88,60 @@ function Sidebar({ open, onClose }: SidebarProps) {
 
         <nav
           aria-label="Navegación del dashboard"
-          className="flex-1 space-y-1 overflow-y-auto p-3"
+          className="flex-1 space-y-4 overflow-y-auto p-3"
         >
-          {dashboardNavItems.map((item) => {
-            const Icon = iconMap[item.icon];
+          <div className="space-y-1">
+            {dashboardNavItems.map((item) => {
+              const Icon = iconMap[item.icon];
 
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === DASHBOARD_ROUTES.root}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                    isActive && "bg-primary/10 text-foreground",
-                  )
-                }
-              >
-                <Icon className="size-4 shrink-0" aria-hidden="true" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                      isActive && "bg-primary/10 text-foreground",
+                    )
+                  }
+                >
+                  <Icon className="size-4 shrink-0" aria-hidden="true" />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </div>
+
+          <div>
+            <p className="mb-2 px-3 text-caption font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              {crmNavGroup.label}
+            </p>
+            <div className="space-y-1">
+              {crmNavGroup.items.map((item) => {
+                const Icon = iconMap[item.icon];
+
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                        isActive && "bg-primary/10 text-foreground",
+                      )
+                    }
+                  >
+                    <Icon className="size-4 shrink-0" aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
         </nav>
 
         <div className="border-t border-border p-4">

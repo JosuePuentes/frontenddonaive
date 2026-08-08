@@ -39,4 +39,41 @@ export const queryKeys = {
     root: ["analytics"] as const,
     overview: ["analytics", "overview"] as const,
   },
+  crm: {
+    root: ["crm"] as const,
+    overview: ["crm", "overview"] as const,
+  },
+  leads: {
+    root: ["leads"] as const,
+    list: ["leads", "list"] as const,
+    detail: (id: string) => ["leads", "detail", id] as const,
+  },
+  contacts: {
+    root: ["contacts"] as const,
+    list: ["contacts", "list"] as const,
+  },
+  organizations: {
+    root: ["organizations"] as const,
+    list: ["organizations", "list"] as const,
+  },
+  opportunities: {
+    root: ["opportunities"] as const,
+    list: ["opportunities", "list"] as const,
+  },
+  diagnostics: {
+    root: ["diagnostics"] as const,
+    list: ["diagnostics", "list"] as const,
+  },
+  proposals: {
+    root: ["proposals"] as const,
+    list: ["proposals", "list"] as const,
+  },
+  projects: {
+    root: ["projects"] as const,
+    list: ["projects", "list"] as const,
+  },
+  interactions: {
+    root: ["interactions"] as const,
+    list: ["interactions", "list"] as const,
+  },
 } as const;

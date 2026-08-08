@@ -29,6 +29,26 @@ const Files = lazy(() => import("@/pages/dashboard/Files"));
 const Settings = lazy(() => import("@/pages/dashboard/Settings"));
 const Profile = lazy(() => import("@/pages/dashboard/Profile"));
 
+const CrmDashboard = lazy(
+  () => import("@/modules/private/crm/pages/CrmDashboard"),
+);
+const CrmLeads = lazy(() => import("@/modules/private/crm/pages/CrmLeads"));
+const CrmLeadDetail = lazy(
+  () => import("@/modules/private/crm/pages/CrmLeadDetail"),
+);
+const CrmOpportunities = lazy(
+  () => import("@/modules/private/crm/pages/CrmOpportunities"),
+);
+const CrmDiagnostics = lazy(
+  () => import("@/modules/private/crm/pages/CrmDiagnostics"),
+);
+const CrmProposals = lazy(
+  () => import("@/modules/private/crm/pages/CrmProposals"),
+);
+const CrmProjects = lazy(
+  () => import("@/modules/private/crm/pages/CrmProjects"),
+);
+
 const AppRouter = () => (
   <Suspense fallback={<PageLoader />}>
     <Routes>
@@ -59,6 +79,27 @@ const AppRouter = () => (
         <Route path={DASHBOARD_ROUTES.archivos} element={<Files />} />
         <Route path={DASHBOARD_ROUTES.configuracion} element={<Settings />} />
         <Route path={DASHBOARD_ROUTES.perfil} element={<Profile />} />
+
+        {/* CRM */}
+        <Route path={DASHBOARD_ROUTES.crm} element={<CrmDashboard />} />
+        <Route path={DASHBOARD_ROUTES.crmLeads} element={<CrmLeads />} />
+        <Route
+          path={DASHBOARD_ROUTES.crmLeadDetail}
+          element={<CrmLeadDetail />}
+        />
+        <Route
+          path={DASHBOARD_ROUTES.crmOportunidades}
+          element={<CrmOpportunities />}
+        />
+        <Route
+          path={DASHBOARD_ROUTES.crmDiagnosticos}
+          element={<CrmDiagnostics />}
+        />
+        <Route
+          path={DASHBOARD_ROUTES.crmPropuestas}
+          element={<CrmProposals />}
+        />
+        <Route path={DASHBOARD_ROUTES.crmProyectos} element={<CrmProjects />} />
       </Route>
     </Routes>
   </Suspense>
