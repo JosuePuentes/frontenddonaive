@@ -1,0 +1,115 @@
+import { NavLink } from "react-router";
+import {
+  BriefcaseBusiness,
+  FileText,
+  FolderOpen,
+  GraduationCap,
+  Image,
+  LayoutDashboard,
+  Package,
+  Settings,
+  Shield,
+  Trophy,
+  Users,
+  type LucideIcon,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Logo } from "@/components/common/Logo";
+import {
+  DASHBOARD_ROUTES,
+  dashboardNavItems,
+  type DashboardNavItem,
+} from "@/constants/dashboard-routes";
+import { cn } from "@/lib/utils";
+
+const iconMap: Record<DashboardNavItem["icon"], LucideIcon> = {
+  layout: LayoutDashboard,
+  users: Users,
+  shield: Shield,
+  blog: FileText,
+  academy: GraduationCap,
+  media: Image,
+  products: Package,
+  services: BriefcaseBusiness,
+  cases: Trophy,
+  files: FolderOpen,
+  settings: Settings,
+};
+
+type SidebarProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+function Sidebar({ open, onClose }: SidebarProps) {
+  return (
+    <>
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-[var(--donaive-black)]/40 transition-opacity lg:hidden",
+          open ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-surface transition-transform duration-[var(--duration-normal)] ease-[var(--ease-standard)] lg:static lg:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <div className="flex h-16 items-center justify-between border-b border-border px-4">
+          <Logo to={DASHBOARD_ROUTES.root} />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            aria-label="Cerrar menú"
+            onClick={onClose}
+          >
+            <X aria-hidden="true" />
+          </Button>
+        </div>
+
+        <nav
+          aria-label="Navegación del dashboard"
+          className="flex-1 space-y-1 overflow-y-auto p-3"
+        >
+          {dashboardNavItems.map((item) => {
+            const Icon = iconMap[item.icon];
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === DASHBOARD_ROUTES.root}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                    isActive && "bg-primary/10 text-foreground",
+                  )
+                }
+              >
+                <Icon className="size-4 shrink-0" aria-hidden="true" />
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        <div className="border-t border-border p-4">
+          <p className="text-caption text-muted-foreground">
+            Área administrativa · scaffolding
+          </p>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+export { Sidebar };
+export type { SidebarProps };
