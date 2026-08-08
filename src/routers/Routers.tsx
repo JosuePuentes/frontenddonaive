@@ -42,6 +42,12 @@ const CrmOpportunities = lazy(
 const CrmDiagnostics = lazy(
   () => import("@/modules/private/crm/pages/CrmDiagnostics"),
 );
+const CrmDiagnosisNew = lazy(
+  () => import("@/modules/private/crm/pages/CrmDiagnosisNew"),
+);
+const CrmDiagnosisDetail = lazy(
+  () => import("@/modules/private/crm/pages/CrmDiagnosisDetail"),
+);
 const CrmProposals = lazy(
   () => import("@/modules/private/crm/pages/CrmProposals"),
 );
@@ -90,6 +96,14 @@ const AppRouter = () => (
         <Route
           path={DASHBOARD_ROUTES.crmOportunidades}
           element={<CrmOpportunities />}
+        />
+        <Route
+          path={DASHBOARD_ROUTES.crmDiagnosticoNuevo}
+          element={<CrmDiagnosisNew />}
+        />
+        <Route
+          path={DASHBOARD_ROUTES.crmDiagnosticoDetail}
+          element={<CrmDiagnosisDetail />}
         />
         <Route
           path={DASHBOARD_ROUTES.crmDiagnosticos}

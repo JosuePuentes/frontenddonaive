@@ -43,6 +43,34 @@ function resolvePageMeta(pathname: string): {
     };
   }
 
+  if (pathname === DASHBOARD_ROUTES.crmDiagnosticoNuevo) {
+    return {
+      title: "Nuevo diagnóstico",
+      breadcrumbs: [
+        { label: "Dashboard", to: DASHBOARD_ROUTES.root },
+        { label: "CRM", to: DASHBOARD_ROUTES.crm },
+        { label: "Diagnósticos", to: DASHBOARD_ROUTES.crmDiagnosticos },
+        { label: "Nuevo" },
+      ],
+    };
+  }
+
+  if (
+    pathname.startsWith("/dashboard/crm/diagnosticos/") &&
+    pathname !== DASHBOARD_ROUTES.crmDiagnosticos &&
+    pathname !== DASHBOARD_ROUTES.crmDiagnosticoNuevo
+  ) {
+    return {
+      title: "Detalle de diagnóstico",
+      breadcrumbs: [
+        { label: "Dashboard", to: DASHBOARD_ROUTES.root },
+        { label: "CRM", to: DASHBOARD_ROUTES.crm },
+        { label: "Diagnósticos", to: DASHBOARD_ROUTES.crmDiagnosticos },
+        { label: "Detalle" },
+      ],
+    };
+  }
+
   const crmItem = crmNavGroup.items.find((item) => item.to === pathname);
   if (crmItem) {
     return {

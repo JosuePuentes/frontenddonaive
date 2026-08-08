@@ -16,6 +16,8 @@ export const DASHBOARD_ROUTES = {
   crmLeadDetail: "/dashboard/crm/leads/:id",
   crmOportunidades: "/dashboard/crm/oportunidades",
   crmDiagnosticos: "/dashboard/crm/diagnosticos",
+  crmDiagnosticoNuevo: "/dashboard/crm/diagnosticos/nuevo",
+  crmDiagnosticoDetail: "/dashboard/crm/diagnosticos/:id",
   crmPropuestas: "/dashboard/crm/propuestas",
   crmProyectos: "/dashboard/crm/proyectos",
 } as const;
@@ -144,4 +146,13 @@ export const crmNavGroup: DashboardNavGroup = {
 
 export function crmLeadDetailPath(id: string) {
   return `/dashboard/crm/leads/${id}`;
+}
+
+export function crmDiagnosticoDetailPath(id: string) {
+  return `/dashboard/crm/diagnosticos/${id}`;
+}
+
+export function crmDiagnosticoNuevoPath(leadId?: string) {
+  if (!leadId) return DASHBOARD_ROUTES.crmDiagnosticoNuevo;
+  return `${DASHBOARD_ROUTES.crmDiagnosticoNuevo}?leadId=${encodeURIComponent(leadId)}`;
 }

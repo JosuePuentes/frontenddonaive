@@ -1,8 +1,6 @@
 export type {
   Contact,
   CrmPipelineColumn,
-  Diagnosis,
-  DiagnosisPriority,
   Interaction,
   InteractionType,
   Lead,
@@ -19,7 +17,6 @@ export type {
 
 export {
   CRM_PIPELINE_COLUMNS,
-  DIAGNOSIS_PRIORITIES,
   INTERACTION_TYPES,
   LEAD_SOURCE_LABELS,
   LEAD_SOURCES,
@@ -29,3 +26,36 @@ export {
   PROJECT_STATUSES,
   PROPOSAL_STATUSES,
 } from "@/types/crm";
+
+export type {
+  AutomationOpportunity,
+  CurrentProcess,
+  CurrentProcessStep,
+  Diagnosis,
+  DiagnosisPriority,
+  DiagnosisScoreDimensions,
+  DiagnosisStatus,
+  Impact,
+  Observation,
+  Problem,
+  ProposedProcess,
+  ProposedProcessStep,
+  Recommendation,
+  RootCause,
+  Solution,
+} from "@/types/diagnosis";
+
+export {
+  AUTOMATION_TYPES,
+  DIAGNOSIS_FORM_STAGES,
+  DIAGNOSIS_METHODOLOGY_STAGES,
+  DIAGNOSIS_PRIORITIES,
+  DIAGNOSIS_STATUSES,
+  DIAGNOSIS_VIEW_TABS,
+  EVIDENCE_LEVELS,
+  IMPACT_CATEGORIES,
+  OBSERVATION_AREAS,
+  RECOMMENDATION_HORIZONS,
+  ROOT_CAUSE_CATEGORIES,
+  SOLUTION_TYPES,
+} from "@/types/diagnosis";

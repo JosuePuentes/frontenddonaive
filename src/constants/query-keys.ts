@@ -64,6 +64,47 @@ export const queryKeys = {
     root: ["diagnostics"] as const,
     list: ["diagnostics", "list"] as const,
   },
+  diagnoses: {
+    root: ["diagnoses"] as const,
+    list: ["diagnoses", "list"] as const,
+  },
+  diagnosis: {
+    root: ["diagnosis"] as const,
+    detail: (id: string) => ["diagnosis", "detail", id] as const,
+  },
+  observations: {
+    root: ["observations"] as const,
+    byDiagnosis: (id: string) => ["observations", "diagnosis", id] as const,
+  },
+  problems: {
+    root: ["problems"] as const,
+    byDiagnosis: (id: string) => ["problems", "diagnosis", id] as const,
+  },
+  causes: {
+    root: ["causes"] as const,
+    byDiagnosis: (id: string) => ["causes", "diagnosis", id] as const,
+  },
+  impacts: {
+    root: ["impacts"] as const,
+    byDiagnosis: (id: string) => ["impacts", "diagnosis", id] as const,
+  },
+  processes: {
+    root: ["processes"] as const,
+    current: (id: string) => ["processes", "current", id] as const,
+    proposed: (id: string) => ["processes", "proposed", id] as const,
+  },
+  automation: {
+    root: ["automation"] as const,
+    byDiagnosis: (id: string) => ["automation", "diagnosis", id] as const,
+  },
+  solutions: {
+    root: ["solutions"] as const,
+    byDiagnosis: (id: string) => ["solutions", "diagnosis", id] as const,
+  },
+  recommendations: {
+    root: ["recommendations"] as const,
+    byDiagnosis: (id: string) => ["recommendations", "diagnosis", id] as const,
+  },
   proposals: {
     root: ["proposals"] as const,
     list: ["proposals", "list"] as const,

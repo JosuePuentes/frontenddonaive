@@ -68,8 +68,15 @@ export const PROPOSAL_STATUSES = [
 
 export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
 
-export const DIAGNOSIS_PRIORITIES = ["low", "medium", "high", "critical"] as const;
-export type DiagnosisPriority = (typeof DIAGNOSIS_PRIORITIES)[number];
+export type {
+  Diagnosis,
+  DiagnosisPriority,
+} from "@/types/diagnosis";
+
+export {
+  DIAGNOSIS_PRIORITIES,
+  DIAGNOSIS_STATUSES,
+} from "@/types/diagnosis";
 
 export type Organization = {
   id: string;
@@ -111,21 +118,6 @@ export type Opportunity = {
   estimatedValue?: number | null;
   leadId?: string;
   isDemo?: boolean;
-  createdAt: string;
-};
-
-export type Diagnosis = {
-  id: string;
-  opportunityId?: string;
-  observedProblem: string;
-  probableCause?: string;
-  impact?: string;
-  priority?: DiagnosisPriority;
-  affectedProcess?: string;
-  improvementOpportunity?: string;
-  proposedSolution?: string;
-  possibleAutomation?: string;
-  requiredTechnology?: string;
   createdAt: string;
 };
 

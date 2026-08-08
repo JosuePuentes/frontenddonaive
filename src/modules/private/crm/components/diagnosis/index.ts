@@ -1,0 +1,13 @@
+export { DiagnosisHeader } from "@/modules/private/crm/components/diagnosis/DiagnosisHeader";
+export { DiagnosisProgress } from "@/modules/private/crm/components/diagnosis/DiagnosisProgress";
+export { ObservationList } from "@/modules/private/crm/components/diagnosis/ObservationList";
+export { ProblemCard } from "@/modules/private/crm/components/diagnosis/ProblemCard";
+export { RootCauseCard } from "@/modules/private/crm/components/diagnosis/RootCauseCard";
+export { ImpactCard } from "@/modules/private/crm/components/diagnosis/ImpactCard";
+export { ProcessFlow } from "@/modules/private/crm/components/diagnosis/ProcessFlow";
+export { AutomationOpportunityCard } from "@/modules/private/crm/components/diagnosis/AutomationOpportunityCard";
+export { SolutionCard } from "@/modules/private/crm/components/diagnosis/SolutionCard";
+export { RecommendationList } from "@/modules/private/crm/components/diagnosis/RecommendationList";
+export { DiagnosisSummary } from "@/modules/private/crm/components/diagnosis/DiagnosisSummary";
+export { DiagnosisView } from "@/modules/private/crm/components/diagnosis/DiagnosisView";
+export { DiagnosisWizardShell } from "@/modules/private/crm/components/diagnosis/DiagnosisWizardShell";

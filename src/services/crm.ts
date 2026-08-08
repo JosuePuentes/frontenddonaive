@@ -1,5 +1,4 @@
 import type {
-  Diagnosis,
   Interaction,
   Lead,
   Opportunity,
@@ -7,6 +6,12 @@ import type {
   Project,
   Proposal,
 } from "@/types/crm";
+import type {
+  Diagnosis,
+  Observation,
+  Problem,
+  Solution,
+} from "@/types/diagnosis";
 import type { PaginatedResponse } from "@/types/api";
 
 /**
@@ -32,6 +37,35 @@ export const crmService = {
 
   async listDiagnoses(): Promise<PaginatedResponse<Diagnosis>> {
     return { items: [], total: 0, page: 1, pageSize: 20 };
+  },
+
+  async getDiagnosis(_id: string): Promise<Diagnosis | null> {
+    return null;
+  },
+
+  async createDiagnosis(
+    _input: Partial<Diagnosis>,
+  ): Promise<Diagnosis | null> {
+    return null;
+  },
+
+  async updateDiagnosis(
+    _id: string,
+    _input: Partial<Diagnosis>,
+  ): Promise<Diagnosis | null> {
+    return null;
+  },
+
+  async getDiagnosisObservations(_diagnosisId: string): Promise<Observation[]> {
+    return [];
+  },
+
+  async getDiagnosisProblems(_diagnosisId: string): Promise<Problem[]> {
+    return [];
+  },
+
+  async getDiagnosisSolutions(_diagnosisId: string): Promise<Solution[]> {
+    return [];
   },
 
   async listProposals(): Promise<PaginatedResponse<Proposal>> {
