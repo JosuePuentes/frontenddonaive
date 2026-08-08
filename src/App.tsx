@@ -1,23 +1,7 @@
-import "./App.css";
-import AppRouter from "./routers/Routers";
-import { UserProvider } from "@/context/UserContext";
-import Navbar from "@/components/Navbar";
-import { useLocation } from "react-router";
-import { TravelpayoutsDriveScript } from "@/components/TravelpayoutsDriveScript";
+import AppRouter from "@/routers/Routers";
 
 function App() {
-  const { pathname } = useLocation();
-  const isSpiritRescueLanding = pathname === "/spirit-rescue";
-
-  return (
-    <UserProvider>
-      <TravelpayoutsDriveScript />
-      <div>
-        {!isSpiritRescueLanding && <Navbar />}
-        <AppRouter />
-      </div>
-    </UserProvider>
-  );
+  return <AppRouter />;
 }
 
 export default App;
