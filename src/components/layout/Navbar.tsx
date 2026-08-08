@@ -93,10 +93,7 @@ function Navbar({ className }: NavbarProps) {
       <div
         id={mobileMenuId}
         hidden={!isMobileMenuOpen}
-        className={cn(
-          "border-t border-border bg-background lg:hidden",
-          isMobileMenuOpen ? "block" : "hidden",
-        )}
+        className="border-t border-border bg-background lg:hidden"
       >
         <Container className="flex flex-col gap-2 py-4">
           <nav aria-label="Navegación móvil" className="flex flex-col gap-1">
