@@ -7,6 +7,8 @@ export const DASHBOARD_ROUTES = {
   media: "/dashboard/media",
   productos: "/dashboard/productos",
   servicios: "/dashboard/servicios",
+  servicioNuevo: "/dashboard/servicios/nuevo",
+  servicioDetail: "/dashboard/servicios/:id",
   casos: "/dashboard/casos",
   archivos: "/dashboard/archivos",
   configuracion: "/dashboard/configuracion",
@@ -19,6 +21,8 @@ export const DASHBOARD_ROUTES = {
   crmDiagnosticoNuevo: "/dashboard/crm/diagnosticos/nuevo",
   crmDiagnosticoDetail: "/dashboard/crm/diagnosticos/:id",
   crmPropuestas: "/dashboard/crm/propuestas",
+  crmPropuestaNueva: "/dashboard/crm/propuestas/nueva",
+  crmPropuestaDetail: "/dashboard/crm/propuestas/:id",
   crmProyectos: "/dashboard/crm/proyectos",
 } as const;
 
@@ -155,4 +159,27 @@ export function crmDiagnosticoDetailPath(id: string) {
 export function crmDiagnosticoNuevoPath(leadId?: string) {
   if (!leadId) return DASHBOARD_ROUTES.crmDiagnosticoNuevo;
   return `${DASHBOARD_ROUTES.crmDiagnosticoNuevo}?leadId=${encodeURIComponent(leadId)}`;
+}
+
+export function servicioDetailPath(id: string) {
+  return `/dashboard/servicios/${id}`;
+}
+
+export function crmPropuestaDetailPath(id: string) {
+  return `/dashboard/crm/propuestas/${id}`;
+}
+
+export function crmPropuestaNuevaPath(options?: {
+  diagnosisId?: string;
+  opportunityId?: string;
+}) {
+  const params = new URLSearchParams();
+  if (options?.diagnosisId) params.set("diagnosisId", options.diagnosisId);
+  if (options?.opportunityId) {
+    params.set("opportunityId", options.opportunityId);
+  }
+  const query = params.toString();
+  return query
+    ? `${DASHBOARD_ROUTES.crmPropuestaNueva}?${query}`
+    : DASHBOARD_ROUTES.crmPropuestaNueva;
 }

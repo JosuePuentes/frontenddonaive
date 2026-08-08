@@ -24,6 +24,8 @@ const DashboardAcademy = lazy(() => import("@/pages/dashboard/Academy"));
 const DashboardMedia = lazy(() => import("@/pages/dashboard/Media"));
 const Products = lazy(() => import("@/pages/dashboard/Products"));
 const Services = lazy(() => import("@/pages/dashboard/Services"));
+const ServiceNew = lazy(() => import("@/pages/dashboard/ServiceNew"));
+const ServiceDetail = lazy(() => import("@/pages/dashboard/ServiceDetail"));
 const Cases = lazy(() => import("@/pages/dashboard/Cases"));
 const Files = lazy(() => import("@/pages/dashboard/Files"));
 const Settings = lazy(() => import("@/pages/dashboard/Settings"));
@@ -50,6 +52,12 @@ const CrmDiagnosisDetail = lazy(
 );
 const CrmProposals = lazy(
   () => import("@/modules/private/crm/pages/CrmProposals"),
+);
+const CrmProposalNew = lazy(
+  () => import("@/modules/private/crm/pages/CrmProposalNew"),
+);
+const CrmProposalDetail = lazy(
+  () => import("@/modules/private/crm/pages/CrmProposalDetail"),
 );
 const CrmProjects = lazy(
   () => import("@/modules/private/crm/pages/CrmProjects"),
@@ -80,6 +88,14 @@ const AppRouter = () => (
         <Route path={DASHBOARD_ROUTES.academy} element={<DashboardAcademy />} />
         <Route path={DASHBOARD_ROUTES.media} element={<DashboardMedia />} />
         <Route path={DASHBOARD_ROUTES.productos} element={<Products />} />
+        <Route
+          path={DASHBOARD_ROUTES.servicioNuevo}
+          element={<ServiceNew />}
+        />
+        <Route
+          path={DASHBOARD_ROUTES.servicioDetail}
+          element={<ServiceDetail />}
+        />
         <Route path={DASHBOARD_ROUTES.servicios} element={<Services />} />
         <Route path={DASHBOARD_ROUTES.casos} element={<Cases />} />
         <Route path={DASHBOARD_ROUTES.archivos} element={<Files />} />
@@ -108,6 +124,14 @@ const AppRouter = () => (
         <Route
           path={DASHBOARD_ROUTES.crmDiagnosticos}
           element={<CrmDiagnostics />}
+        />
+        <Route
+          path={DASHBOARD_ROUTES.crmPropuestaNueva}
+          element={<CrmProposalNew />}
+        />
+        <Route
+          path={DASHBOARD_ROUTES.crmPropuestaDetail}
+          element={<CrmProposalDetail />}
         />
         <Route
           path={DASHBOARD_ROUTES.crmPropuestas}

@@ -31,6 +31,14 @@ export const queryKeys = {
     root: ["services"] as const,
     list: ["services", "list"] as const,
   },
+  service: {
+    root: ["service"] as const,
+    detail: (id: string) => ["service", "detail", id] as const,
+  },
+  serviceCategories: {
+    root: ["serviceCategories"] as const,
+    list: ["serviceCategories", "list"] as const,
+  },
   cases: {
     root: ["cases"] as const,
     list: ["cases", "list"] as const,
@@ -108,6 +116,14 @@ export const queryKeys = {
   proposals: {
     root: ["proposals"] as const,
     list: ["proposals", "list"] as const,
+  },
+  proposal: {
+    root: ["proposal"] as const,
+    detail: (id: string) => ["proposal", "detail", id] as const,
+  },
+  proposalItems: {
+    root: ["proposalItems"] as const,
+    byProposal: (id: string) => ["proposalItems", "proposal", id] as const,
   },
   projects: {
     root: ["projects"] as const,

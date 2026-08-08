@@ -71,6 +71,60 @@ function resolvePageMeta(pathname: string): {
     };
   }
 
+  if (pathname === DASHBOARD_ROUTES.crmPropuestaNueva) {
+    return {
+      title: "Nueva propuesta",
+      breadcrumbs: [
+        { label: "Dashboard", to: DASHBOARD_ROUTES.root },
+        { label: "CRM", to: DASHBOARD_ROUTES.crm },
+        { label: "Propuestas", to: DASHBOARD_ROUTES.crmPropuestas },
+        { label: "Nueva" },
+      ],
+    };
+  }
+
+  if (
+    pathname.startsWith("/dashboard/crm/propuestas/") &&
+    pathname !== DASHBOARD_ROUTES.crmPropuestas &&
+    pathname !== DASHBOARD_ROUTES.crmPropuestaNueva
+  ) {
+    return {
+      title: "Detalle de propuesta",
+      breadcrumbs: [
+        { label: "Dashboard", to: DASHBOARD_ROUTES.root },
+        { label: "CRM", to: DASHBOARD_ROUTES.crm },
+        { label: "Propuestas", to: DASHBOARD_ROUTES.crmPropuestas },
+        { label: "Detalle" },
+      ],
+    };
+  }
+
+  if (pathname === DASHBOARD_ROUTES.servicioNuevo) {
+    return {
+      title: "Nuevo servicio",
+      breadcrumbs: [
+        { label: "Dashboard", to: DASHBOARD_ROUTES.root },
+        { label: "Servicios", to: DASHBOARD_ROUTES.servicios },
+        { label: "Nuevo" },
+      ],
+    };
+  }
+
+  if (
+    pathname.startsWith("/dashboard/servicios/") &&
+    pathname !== DASHBOARD_ROUTES.servicios &&
+    pathname !== DASHBOARD_ROUTES.servicioNuevo
+  ) {
+    return {
+      title: "Detalle de servicio",
+      breadcrumbs: [
+        { label: "Dashboard", to: DASHBOARD_ROUTES.root },
+        { label: "Servicios", to: DASHBOARD_ROUTES.servicios },
+        { label: "Detalle" },
+      ],
+    };
+  }
+
   const crmItem = crmNavGroup.items.find((item) => item.to === pathname);
   if (crmItem) {
     return {

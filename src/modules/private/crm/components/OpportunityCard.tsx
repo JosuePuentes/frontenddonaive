@@ -19,8 +19,13 @@ function OpportunityCard({ opportunity, className }: OpportunityCardProps) {
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <LeadStatusBadge status={opportunity.status} />
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          <LeadStatusBadge status={opportunity.status} />
+          {opportunity.hasProposal || opportunity.proposalId ? (
+            <Badge variant="royal">Con propuesta</Badge>
+          ) : null}
+        </div>
         {opportunity.isDemo ? <Badge variant="muted">DEMO</Badge> : null}
       </div>
       <div>
@@ -31,12 +36,20 @@ function OpportunityCard({ opportunity, className }: OpportunityCardProps) {
           {opportunity.problem}
         </p>
       </div>
-      <p className="text-caption text-muted-foreground">
-        Valor estimado:{" "}
-        {opportunity.estimatedValue != null
-          ? `USD ${opportunity.estimatedValue.toLocaleString("es-VE")}`
-          : "—"}
-      </p>
+      <div className="space-y-1 text-caption text-muted-foreground">
+        <p>
+          Valor estimado:{" "}
+          {opportunity.estimatedValue != null
+            ? `USD ${opportunity.estimatedValue.toLocaleString("es-VE")}`
+            : "—"}
+        </p>
+        {opportunity.diagnosisId ? (
+          <p>Diagnóstico: {opportunity.diagnosisId}</p>
+        ) : null}
+        {opportunity.proposalId ? (
+          <p>Propuesta: {opportunity.proposalId}</p>
+        ) : null}
+      </div>
     </Card>
   );
 }

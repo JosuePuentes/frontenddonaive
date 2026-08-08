@@ -35,15 +35,39 @@ export type {
   Opportunity,
   Organization,
   Project,
-  Proposal,
 } from "@/types/crm";
 export {
   CRM_PIPELINE_COLUMNS,
   LEAD_SOURCES,
   LEAD_STATUSES,
   PROJECT_STATUSES,
-  PROPOSAL_STATUSES,
 } from "@/types/crm";
+export type {
+  Proposal,
+  ProposalItem,
+  ProposalStatus,
+} from "@/types/proposal";
+export {
+  PROPOSAL_FLOW_STAGES,
+  PROPOSAL_STATUS_LABELS,
+  PROPOSAL_STATUSES,
+} from "@/types/proposal";
+export type {
+  PricingModel,
+  Service,
+  ServiceCategory,
+  ServiceCategoryKey,
+  ServiceCurrency,
+  ServicePackage,
+} from "@/types/services";
+export {
+  DEFAULT_SERVICE_CATEGORIES,
+  PRICING_MODEL_LABELS,
+  PRICING_MODELS,
+  SERVICE_CATEGORY_KEYS,
+  SERVICE_CATEGORY_LABELS,
+  SERVICE_CURRENCIES,
+} from "@/types/services";
 export type {
   AutomationOpportunity,
   AutomationType,

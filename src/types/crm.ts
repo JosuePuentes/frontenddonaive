@@ -57,16 +57,17 @@ export const PROJECT_STATUSES = [
 
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
-export const PROPOSAL_STATUSES = [
-  "draft",
-  "sent",
-  "negotiation",
-  "accepted",
-  "rejected",
-  "expired",
-] as const;
+export type {
+  Proposal,
+  ProposalItem,
+  ProposalStatus,
+} from "@/types/proposal";
 
-export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
+export {
+  PROPOSAL_STATUSES,
+  PROPOSAL_STATUS_LABELS,
+  PROPOSAL_FLOW_STAGES,
+} from "@/types/proposal";
 
 export type {
   Diagnosis,
@@ -117,6 +118,10 @@ export type Opportunity = {
   status: LeadStatus;
   estimatedValue?: number | null;
   leadId?: string;
+  diagnosisId?: string;
+  /** Cuando existe una propuesta vinculada. */
+  proposalId?: string;
+  hasProposal?: boolean;
   isDemo?: boolean;
   createdAt: string;
 };
@@ -127,19 +132,6 @@ export type Interaction = {
   opportunityId?: string;
   type: InteractionType;
   summary: string;
-  createdAt: string;
-};
-
-export type Proposal = {
-  id: string;
-  title: string;
-  organization: string;
-  services: string;
-  description: string;
-  price?: number | null;
-  conditions?: string;
-  status: ProposalStatus;
-  opportunityId?: string;
   createdAt: string;
 };
 

@@ -11,8 +11,6 @@ export type {
   OrganizationType,
   Project,
   ProjectStatus,
-  Proposal,
-  ProposalStatus,
 } from "@/types/crm";
 
 export {
@@ -24,8 +22,19 @@ export {
   LEAD_STATUSES,
   ORGANIZATION_TYPES,
   PROJECT_STATUSES,
-  PROPOSAL_STATUSES,
 } from "@/types/crm";
+
+export type {
+  Proposal,
+  ProposalItem,
+  ProposalStatus,
+} from "@/types/proposal";
+
+export {
+  PROPOSAL_FLOW_STAGES,
+  PROPOSAL_STATUS_LABELS,
+  PROPOSAL_STATUSES,
+} from "@/types/proposal";
 
 export type {
   AutomationOpportunity,

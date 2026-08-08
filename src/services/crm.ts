@@ -68,8 +68,28 @@ export const crmService = {
     return [];
   },
 
-  async listProposals(): Promise<PaginatedResponse<Proposal>> {
+  async getProposals(): Promise<PaginatedResponse<Proposal>> {
     return { items: [], total: 0, page: 1, pageSize: 20 };
+  },
+
+  /** Alias tipado — mantiene compatibilidad con listProposals. */
+  async listProposals(): Promise<PaginatedResponse<Proposal>> {
+    return crmService.getProposals();
+  },
+
+  async getProposal(_id: string): Promise<Proposal | null> {
+    return null;
+  },
+
+  async createProposal(_input: Partial<Proposal>): Promise<Proposal | null> {
+    return null;
+  },
+
+  async updateProposal(
+    _id: string,
+    _input: Partial<Proposal>,
+  ): Promise<Proposal | null> {
+    return null;
   },
 
   async listProjects(): Promise<PaginatedResponse<Project>> {

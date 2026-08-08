@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
+import { crmPropuestaNuevaPath } from "@/constants/dashboard-routes";
 import type { Diagnosis } from "@/types/diagnosis";
 import {
   DIAGNOSIS_PRIORITY_LABELS,
@@ -41,8 +41,12 @@ function DiagnosisHeader({
 
         {onCreateProposal ? (
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to={DASHBOARD_ROUTES.crmPropuestas}>Crear propuesta</Link>
+            <Button asChild size="sm">
+              <Link
+                to={crmPropuestaNuevaPath({ diagnosisId: diagnosis.id })}
+              >
+                Crear propuesta
+              </Link>
             </Button>
           </div>
         ) : null}

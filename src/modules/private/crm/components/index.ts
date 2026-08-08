@@ -3,3 +3,4 @@ export { LeadStatusBadge } from "@/modules/private/crm/components/LeadStatusBadg
 export { OpportunityCard } from "@/modules/private/crm/components/OpportunityCard";
 export { PipelineBoard } from "@/modules/private/crm/components/PipelineBoard";
 export * from "@/modules/private/crm/components/diagnosis";
+export * from "@/modules/private/crm/components/proposals";
