@@ -1,9 +1,23 @@
+import { PageMeta } from "@/components/common/PageMeta";
+import {
+  CompaniesSection,
+  CtaSection,
+  HeroSection,
+  MethodologySection,
+  ServicesSection,
+} from "@/components/landing";
+import { homeSeo } from "@/constants/landing";
+
 const Home = () => {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      <h1 className="text-h1">Donaive V2</h1>
-      <p className="text-body text-muted-foreground">Construyendo el futuro.</p>
-    </div>
+    <>
+      <PageMeta title={homeSeo.title} description={homeSeo.description} />
+      <HeroSection />
+      <CompaniesSection />
+      <ServicesSection />
+      <MethodologySection />
+      <CtaSection />
+    </>
   );
 };
 
