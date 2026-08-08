@@ -1,9 +1,12 @@
 import { Route, Routes } from "react-router";
+import { Layout } from "@/components/layout/Layout";
 import Home from "@/pages/Home";
 
 const AppRouter = () => (
   <Routes>
-    <Route path="/" element={<Home />} />
+    <Route element={<Layout />}>
+      <Route path="/" element={<Home />} />
+    </Route>
   </Routes>
 );
 

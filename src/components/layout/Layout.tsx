@@ -1,26 +1,20 @@
-import type { ReactNode } from "react";
+import { Outlet } from "react-router";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { cn } from "@/lib/utils";
 
 type LayoutProps = {
-  children: ReactNode;
   className?: string;
-  showNavbar?: boolean;
-  showFooter?: boolean;
 };
 
-function Layout({
-  children,
-  className,
-  showNavbar = true,
-  showFooter = true,
-}: LayoutProps) {
+function Layout({ className }: LayoutProps) {
   return (
     <div className={cn("flex min-h-screen flex-col bg-background", className)}>
-      {showNavbar ? <Navbar /> : null}
-      <main className="flex-1">{children}</main>
-      {showFooter ? <Footer /> : null}
+      <Navbar />
+      <main className="flex flex-1 flex-col">
+        <Outlet />
+      </main>
+      <Footer />
     </div>
   );
 }
