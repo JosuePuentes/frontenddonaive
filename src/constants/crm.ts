@@ -11,6 +11,7 @@ export const contactSourceToLeadSource: Record<string, LeadSource> = {
   WhatsApp: "whatsapp",
   Academy: "academy",
   Evento: "event",
+  "Contacto directo": "direct",
   Otro: "other",
 };
 

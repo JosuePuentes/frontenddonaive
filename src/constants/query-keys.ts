@@ -67,6 +67,13 @@ export const queryKeys = {
   opportunities: {
     root: ["opportunities"] as const,
     list: ["opportunities", "list"] as const,
+    detail: (id: string) => ["opportunities", "detail", id] as const,
+  },
+  opportunity: {
+    root: ["opportunity"] as const,
+    detail: (id: string) => ["opportunity", "detail", id] as const,
+    diagnoses: (id: string) => ["opportunity", "diagnoses", id] as const,
+    proposals: (id: string) => ["opportunity", "proposals", id] as const,
   },
   diagnostics: {
     root: ["diagnostics"] as const,
@@ -75,6 +82,8 @@ export const queryKeys = {
   diagnoses: {
     root: ["diagnoses"] as const,
     list: ["diagnoses", "list"] as const,
+    byOpportunity: (id: string) =>
+      ["diagnoses", "opportunity", id] as const,
   },
   diagnosis: {
     root: ["diagnosis"] as const,
@@ -108,6 +117,11 @@ export const queryKeys = {
   solutions: {
     root: ["solutions"] as const,
     byDiagnosis: (id: string) => ["solutions", "diagnosis", id] as const,
+    links: (solutionId: string) => ["solutions", "links", solutionId] as const,
+  },
+  solutionLinks: {
+    root: ["solutionLinks"] as const,
+    bySolution: (id: string) => ["solutionLinks", "solution", id] as const,
   },
   recommendations: {
     root: ["recommendations"] as const,
@@ -116,6 +130,8 @@ export const queryKeys = {
   proposals: {
     root: ["proposals"] as const,
     list: ["proposals", "list"] as const,
+    byOpportunity: (id: string) =>
+      ["proposals", "opportunity", id] as const,
   },
   proposal: {
     root: ["proposal"] as const,
@@ -128,9 +144,28 @@ export const queryKeys = {
   projects: {
     root: ["projects"] as const,
     list: ["projects", "list"] as const,
+    detail: (id: string) => ["projects", "detail", id] as const,
   },
   interactions: {
     root: ["interactions"] as const,
     list: ["interactions", "list"] as const,
+    byLead: (id: string) => ["interactions", "lead", id] as const,
+    byOpportunity: (id: string) =>
+      ["interactions", "opportunity", id] as const,
+  },
+  activities: {
+    root: ["activities"] as const,
+    list: ["activities", "list"] as const,
+    detail: (id: string) => ["activities", "detail", id] as const,
+    byOpportunity: (id: string) =>
+      ["activities", "opportunity", id] as const,
+  },
+  lossReasons: {
+    root: ["lossReasons"] as const,
+    list: ["lossReasons", "list"] as const,
+  },
+  qualification: {
+    root: ["qualification"] as const,
+    byLead: (id: string) => ["qualification", "lead", id] as const,
   },
 } as const;

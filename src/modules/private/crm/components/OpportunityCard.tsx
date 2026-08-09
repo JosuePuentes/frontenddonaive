@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { LeadStatusBadge } from "@/modules/private/crm/components/LeadStatusBadge";
+import { OpportunityStatusBadge } from "@/modules/private/crm/components/OpportunityStatusBadge";
 import type { Opportunity } from "@/types/crm";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,14 @@ type OpportunityCardProps = {
 };
 
 function OpportunityCard({ opportunity, className }: OpportunityCardProps) {
+  const diagnosisRef =
+    opportunity.diagnosisId ??
+    (opportunity.diagnosisIds && opportunity.diagnosisIds[0]);
+  const proposalRef =
+    opportunity.primaryProposalId ??
+    opportunity.proposalId ??
+    (opportunity.proposalIds && opportunity.proposalIds[0]);
+
   return (
     <Card
       variant="default"
@@ -21,8 +29,8 @@ function OpportunityCard({ opportunity, className }: OpportunityCardProps) {
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
-          <LeadStatusBadge status={opportunity.status} />
-          {opportunity.hasProposal || opportunity.proposalId ? (
+          <OpportunityStatusBadge status={opportunity.status} />
+          {opportunity.hasProposal || proposalRef ? (
             <Badge variant="royal">Con propuesta</Badge>
           ) : null}
         </div>
@@ -30,7 +38,7 @@ function OpportunityCard({ opportunity, className }: OpportunityCardProps) {
       </div>
       <div>
         <p className="text-sm font-semibold text-foreground">
-          {opportunity.organization}
+          {opportunity.organization ?? opportunity.organizationId ?? "—"}
         </p>
         <p className="mt-1 text-body-small text-muted-foreground">
           {opportunity.problem}
@@ -43,12 +51,8 @@ function OpportunityCard({ opportunity, className }: OpportunityCardProps) {
             ? `USD ${opportunity.estimatedValue.toLocaleString("es-VE")}`
             : "—"}
         </p>
-        {opportunity.diagnosisId ? (
-          <p>Diagnóstico: {opportunity.diagnosisId}</p>
-        ) : null}
-        {opportunity.proposalId ? (
-          <p>Propuesta: {opportunity.proposalId}</p>
-        ) : null}
+        {diagnosisRef ? <p>Diagnóstico: {diagnosisRef}</p> : null}
+        {proposalRef ? <p>Propuesta: {proposalRef}</p> : null}
       </div>
     </Card>
   );

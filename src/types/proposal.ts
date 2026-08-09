@@ -18,6 +18,9 @@ export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
 export type ProposalItem = {
   id: string;
   serviceId?: string;
+  packageId?: string;
+  /** Ítem fuera del catálogo, documentado en name/description. */
+  isCustom?: boolean;
   name: string;
   description?: string;
   quantity: number;
@@ -33,6 +36,10 @@ export type Proposal = {
   organizationId?: string;
   organizationName?: string;
   diagnosisId?: string;
+  /** Diagnósticos adicionales cuando la propuesta combina varios. */
+  diagnosisIds?: string[];
+  /** Marca la propuesta principal/activa de una Opportunity. */
+  isPrimary?: boolean;
   title: string;
   summary?: string;
   problemSummary?: string;

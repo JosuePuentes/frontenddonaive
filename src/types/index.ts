@@ -33,13 +33,23 @@ export type {
   LeadSource,
   LeadStatus,
   Opportunity,
+  OpportunityPriority,
+  OpportunityStatus,
+  OpportunityUrgency,
   Organization,
+  OrganizationType,
   Project,
+  ProjectStatus,
 } from "@/types/crm";
 export {
   CRM_PIPELINE_COLUMNS,
   LEAD_SOURCES,
+  LEAD_SOURCE_LABELS,
   LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
+  OPPORTUNITY_STATUSES,
+  OPPORTUNITY_STATUS_LABELS,
+  ORGANIZATION_TYPES,
   PROJECT_STATUSES,
 } from "@/types/crm";
 export type {
@@ -68,6 +78,31 @@ export {
   SERVICE_CATEGORY_LABELS,
   SERVICE_CURRENCIES,
 } from "@/types/services";
+export type {
+  Activity,
+  ActivityStatus,
+  ActivityType,
+  ActorSource,
+  EstimatedValueRange,
+  LossReason,
+  LossReasonKey,
+  QualificationCriteria,
+  QualificationLevel,
+  SolutionLinkKind,
+  SolutionServiceLink,
+} from "@/types/commercial";
+export {
+  ACTIVITY_STATUSES,
+  ACTIVITY_STATUS_LABELS,
+  ACTIVITY_TYPES,
+  ACTIVITY_TYPE_LABELS,
+  ACTOR_SOURCES,
+  DEFAULT_LOSS_REASONS,
+  LOSS_REASON_KEYS,
+  QUALIFICATION_LEVELS,
+  QUALIFICATION_LEVEL_LABELS,
+  SOLUTION_LINK_KINDS,
+} from "@/types/commercial";
 export type {
   AutomationOpportunity,
   AutomationType,

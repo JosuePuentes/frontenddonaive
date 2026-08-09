@@ -7,6 +7,9 @@ export type {
   LeadSource,
   LeadStatus,
   Opportunity,
+  OpportunityPriority,
+  OpportunityStatus,
+  OpportunityUrgency,
   Organization,
   OrganizationType,
   Project,
@@ -20,6 +23,8 @@ export {
   LEAD_SOURCES,
   LEAD_STATUS_LABELS,
   LEAD_STATUSES,
+  OPPORTUNITY_STATUS_LABELS,
+  OPPORTUNITY_STATUSES,
   ORGANIZATION_TYPES,
   PROJECT_STATUSES,
 } from "@/types/crm";
@@ -35,6 +40,20 @@ export {
   PROPOSAL_STATUS_LABELS,
   PROPOSAL_STATUSES,
 } from "@/types/proposal";
+
+export type {
+  Activity,
+  LossReason,
+  QualificationCriteria,
+  SolutionServiceLink,
+} from "@/types/commercial";
+
+export {
+  ACTIVITY_STATUSES,
+  ACTIVITY_TYPES,
+  DEFAULT_LOSS_REASONS,
+  QUALIFICATION_LEVELS,
+} from "@/types/commercial";
 
 export type {
   AutomationOpportunity,

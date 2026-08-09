@@ -21,6 +21,7 @@ export const demoDiagnosis: Diagnosis = {
   id: DEMO_DIAGNOSIS_ID,
   leadId: "demo-lead",
   organizationId: "demo-org",
+  opportunityId: "demo-1",
   title: "Diagnóstico DEMO — control operativo",
   summary:
     "Ejemplo de demostración: se observa un proceso manual con fricción entre áreas. Sin datos reales.",
@@ -216,6 +217,7 @@ export const demoSolutions: Solution[] = [
     dependencies: ["Definición de roles", "Datos maestros básicos"],
     priority: "high",
     estimatedComplexity: "medium",
+    serviceLinkIds: ["demo-sol-link-1", "demo-sol-link-2"],
   },
 ];
 

@@ -13,6 +13,8 @@ export const demoProposal: Proposal = {
   organizationId: "demo-org",
   organizationName: "Organización DEMO B",
   diagnosisId: DEMO_DIAGNOSIS_ID,
+  diagnosisIds: [DEMO_DIAGNOSIS_ID],
+  isPrimary: true,
   title: "Propuesta DEMO — control operativo",
   summary:
     "Propuesta de demostración: del problema comprendido a un alcance de servicios combinables.",

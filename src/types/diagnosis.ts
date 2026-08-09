@@ -130,6 +130,8 @@ export type Diagnosis = {
   id: string;
   leadId?: string;
   organizationId?: string;
+  /** Relación comercial: Opportunity 1 → N Diagnosis. */
+  opportunityId?: string;
   title: string;
   summary?: string;
   status: DiagnosisStatus;
@@ -234,6 +236,11 @@ export type Solution = {
   dependencies?: string[];
   priority?: DiagnosisPriority;
   estimatedComplexity?: ComplexityLevel;
+  /**
+   * IDs de vínculos SolutionServiceLink (service / package / custom).
+   * Una Solution puede no mapear a ningún Service del catálogo.
+   */
+  serviceLinkIds?: string[];
 };
 
 export type Recommendation = {
@@ -347,6 +354,7 @@ export const DIAGNOSIS_METHODOLOGY_STAGES = [
   "ANALIZAR",
   "DISEÑAR",
   "IMPLEMENTAR",
+  "MEDIR",
   "MEJORAR",
 ] as const;
 

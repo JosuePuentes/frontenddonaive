@@ -7,11 +7,11 @@ type LeadStatusBadgeProps = {
 
 function LeadStatusBadge({ status }: LeadStatusBadgeProps) {
   const variant =
-    status === "won"
+    status === "qualified"
       ? "electric"
-      : status === "lost"
+      : status === "disqualified"
         ? "muted"
-        : status === "negotiation" || status === "proposal"
+        : status === "qualifying" || status === "recycled"
           ? "royal"
           : "outline";
 
@@ -19,3 +19,4 @@ function LeadStatusBadge({ status }: LeadStatusBadgeProps) {
 }
 
 export { LeadStatusBadge };
+export type { LeadStatusBadgeProps };

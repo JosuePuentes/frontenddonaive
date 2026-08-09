@@ -14,7 +14,7 @@ function PipelineBoard({
   return (
     <div
       className={cn(
-        "flex gap-4 overflow-x-auto pb-2 xl:grid xl:grid-cols-4 2xl:grid-cols-8 xl:overflow-visible",
+        "flex gap-4 overflow-x-auto pb-2 xl:grid xl:grid-cols-4 2xl:grid-cols-7 xl:overflow-visible",
         className,
       )}
     >
