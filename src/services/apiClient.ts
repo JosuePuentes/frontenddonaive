@@ -18,6 +18,11 @@ export type ApiErrorResult = {
 
 export type ApiResult<T> = ApiOkResult<T> | ApiErrorResult;
 
+export type ApiRequestOptions = {
+  /** Headers adicionales (p.ej. prueba temporal de auth). */
+  headers?: Record<string, string>;
+};
+
 function joinUrl(baseUrl: string, path: string): string {
   const trimmedBase = baseUrl.replace(/\/+$/, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -29,7 +34,10 @@ function joinUrl(baseUrl: string, path: string): string {
  * - Usa fetch nativo.
  * - Descansa en `API_BASE_URL` configurado vía `VITE_API_BASE_URL`.
  */
-export async function apiGetJson<T>(path: string): Promise<ApiResult<T>> {
+export async function apiGetJson<T>(
+  path: string,
+  options?: ApiRequestOptions,
+): Promise<ApiResult<T>> {
   if (!API_BASE_URL) {
     return {
       ok: false,
@@ -47,6 +55,7 @@ export async function apiGetJson<T>(path: string): Promise<ApiResult<T>> {
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...options?.headers,
       },
     });
 
@@ -85,4 +94,3 @@ export async function apiGetJson<T>(path: string): Promise<ApiResult<T>> {
     };
   }
 }
-
