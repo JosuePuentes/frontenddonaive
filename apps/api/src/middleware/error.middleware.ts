@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../errors/app-error.js";
-import { isDatabaseConfigured } from "../config/env.js";
+import { isDatabaseConfigured, isProduction } from "../config/env.js";
 
 export function errorHandler(
   err: unknown,
@@ -19,7 +19,11 @@ export function errorHandler(
     return;
   }
 
-  console.error("[api] unhandled error", err);
+  if (isProduction()) {
+    console.error("[api] unhandled error", err instanceof Error ? err.message : err);
+  } else {
+    console.error("[api] unhandled error", err);
+  }
 
   res.status(500).json({
     error: {
@@ -39,7 +43,7 @@ export function databaseGuard(
       error: {
         code: "DATABASE_NOT_CONFIGURED",
         message:
-          "DATABASE_URL no configurada. Configure apps/api/.env para habilitar persistencia.",
+          "DATABASE_URL no configurada. Configure la variable de entorno para habilitar persistencia.",
       },
     });
     return;
