@@ -1,0 +1,799 @@
+// Donaive Core — PostgreSQL schema aislado (donaive_core)
+// No modifica tablas del backend legacy en schema public.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["donaive_core"]
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum OrganizationStatus {
+  active
+  inactive
+  suspended
+  archived
+
+  @@schema("donaive_core")
+}
+
+enum ProjectCategory {
+  pharmacy
+  drugstore
+  hardware
+  liquor_store
+  liquor_and_grocery
+  grocery
+  restaurant
+  retail
+  services
+  custom
+
+  @@schema("donaive_core")
+}
+
+enum ProjectStatus {
+  draft
+  provisioning
+  active
+  paused
+  suspended
+  archived
+
+  @@schema("donaive_core")
+}
+
+enum TemplateStatus {
+  draft
+  active
+  deprecated
+  archived
+
+  @@schema("donaive_core")
+}
+
+enum TemplateVersionStatus {
+  draft
+  published
+  deprecated
+  yanked
+
+  @@schema("donaive_core")
+}
+
+enum ProjectInstanceStatus {
+  provisioning
+  active
+  paused
+  suspended
+  decommissioned
+
+  @@schema("donaive_core")
+}
+
+enum InstanceVersionStatus {
+  active
+  superseded
+  rolled_back
+
+  @@schema("donaive_core")
+}
+
+enum CustomizationType {
+  branding
+  logo
+  colors
+  display_name
+  module_toggle
+  configuration
+  behavior
+  custom_field
+  other
+
+  @@schema("donaive_core")
+}
+
+enum CustomizationSource {
+  client_request
+  donaive_dev
+  import
+  migration
+  system_default
+
+  @@schema("donaive_core")
+}
+
+enum ModuleKey {
+  pos
+  inventory
+  purchases
+  expenses
+  customers
+  suppliers
+  reports
+  finance
+  accounts_receivable
+  accounts_payable
+  offline
+  ai
+
+  @@schema("donaive_core")
+}
+
+enum ModuleStatus {
+  draft
+  active
+  deprecated
+  archived
+
+  @@schema("donaive_core")
+}
+
+enum UpdateStatus {
+  draft
+  published
+  deprecated
+  yanked
+
+  @@schema("donaive_core")
+}
+
+enum UpdateTargetMode {
+  project
+  projects
+  category
+  compatible
+  none
+
+  @@schema("donaive_core")
+}
+
+enum ProjectUpdateStatus {
+  assigned
+  approved
+  installing
+  installed
+  failed
+  rolled_back
+  skipped
+
+  @@schema("donaive_core")
+}
+
+enum PlanTier {
+  basic
+  professional
+  enterprise
+  custom
+
+  @@schema("donaive_core")
+}
+
+enum PlanStatus {
+  draft
+  active
+  deprecated
+  archived
+
+  @@schema("donaive_core")
+}
+
+enum LicenseStatus {
+  active
+  trial
+  grace
+  past_due
+  expired
+  suspended
+  revoked
+
+  @@schema("donaive_core")
+}
+
+enum EntitlementSource {
+  plan
+  addon
+  trial
+  custom
+  promotion
+
+  @@schema("donaive_core")
+}
+
+enum SubscriptionStatus {
+  active
+  trial
+  past_due
+  expired
+  suspended
+  cancelled
+
+  @@schema("donaive_core")
+}
+
+enum CommercialLifecycleStatus {
+  active
+  trial
+  past_due
+  expired
+  suspended
+  cancelled
+
+  @@schema("donaive_core")
+}
+
+enum ProjectDomainType {
+  subdomain
+  custom_domain
+
+  @@schema("donaive_core")
+}
+
+enum ProjectDomainStatus {
+  pending
+  active
+  error
+  disabled
+
+  @@schema("donaive_core")
+}
+
+enum ProjectUserRole {
+  project_admin
+  manager
+  user
+  viewer
+
+  @@schema("donaive_core")
+}
+
+enum ProjectUserStatus {
+  active
+  invited
+  suspended
+  removed
+
+  @@schema("donaive_core")
+}
+
+enum PlatformRole {
+  donaive_admin
+  donaive_operator
+  project_admin
+  project_manager
+  project_user
+  project_viewer
+  donaive_intelligence
+  ai_agent
+
+  @@schema("donaive_core")
+}
+
+enum UserStatus {
+  active
+  invited
+  suspended
+  deactivated
+
+  @@schema("donaive_core")
+}
+
+enum AuditActorType {
+  user
+  system
+  agent
+  service
+  scheduler
+
+  @@schema("donaive_core")
+}
+
+enum AnalyticsSensitivity {
+  aggregate
+  detailed
+
+  @@schema("donaive_core")
+}
+
+enum AgentAccessMode {
+  read
+  analyze
+  suggest
+  generate
+  prepare
+
+  @@schema("donaive_core")
+}
+
+// ─── Identity & Access ───────────────────────────────────────────────────────
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  name         String?
+  passwordHash String?
+  status       UserStatus @default(active)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  projectUsers    ProjectUser[]
+  roleAssignments UserRoleAssignment[]
+
+  @@schema("donaive_core")
+}
+
+model Capability {
+  id          String  @id @default(uuid())
+  key         String  @unique
+  description String?
+  sensitive   Boolean @default(false)
+
+  roleCapabilities RoleCapability[]
+
+  @@schema("donaive_core")
+}
+
+model RoleCapability {
+  id           String       @id @default(uuid())
+  role         PlatformRole
+  capabilityId String
+  capability   Capability   @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([role, capabilityId])
+  @@schema("donaive_core")
+}
+
+model UserRoleAssignment {
+  id             String       @id @default(uuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           PlatformRole
+  organizationId String?
+  projectId      String?
+  createdAt      DateTime     @default(now())
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([projectId])
+  @@schema("donaive_core")
+}
+
+// ─── Platform entities ───────────────────────────────────────────────────────
+
+model Organization {
+  id        String             @id @default(uuid())
+  name      String
+  legalName String?
+  status    OrganizationStatus @default(active)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  projects      Project[]
+  licenses      License[]
+  subscriptions Subscription[]
+
+  @@schema("donaive_core")
+}
+
+model Project {
+  id               String          @id @default(uuid())
+  organizationId   String
+  organization     Organization    @relation(fields: [organizationId], references: [id])
+  commercialName   String
+  technicalSlug    String          @unique
+  category         ProjectCategory
+  status           ProjectStatus   @default(draft)
+  templateId       String?
+  template         Template?       @relation(fields: [templateId], references: [id])
+  currentVersionId String?
+  primaryDomain    String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  instances       ProjectInstance[]
+  customizations  ProjectCustomization[]
+  projectModules  ProjectModule[]
+  projectUpdates  ProjectUpdate[]
+  licenses        License[]
+  subscriptions   Subscription[]
+  domains         ProjectDomain[]
+  projectUsers    ProjectUser[]
+  entitlements    Entitlement[]
+  analyticsSnapshots AnalyticsSnapshot[]
+  agentContexts   AgentContext[]
+
+  @@index([organizationId])
+  @@index([category])
+  @@schema("donaive_core")
+}
+
+model Template {
+  id               String         @id @default(uuid())
+  name             String
+  slug             String         @unique
+  category         ProjectCategory
+  description      String?
+  status           TemplateStatus @default(draft)
+  currentVersionId String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  versions  TemplateVersion[]
+  projects  Project[]
+  instances ProjectInstance[]
+
+  @@schema("donaive_core")
+}
+
+model TemplateVersion {
+  id           String                @id @default(uuid())
+  templateId   String
+  template     Template              @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  version      String
+  status       TemplateVersionStatus @default(draft)
+  releaseNotes String?
+  createdAt    DateTime              @default(now())
+
+  instances       ProjectInstance[]
+  instanceVersions InstanceVersion[]
+
+  @@unique([templateId, version])
+  @@schema("donaive_core")
+}
+
+model ProjectInstance {
+  id                String                @id @default(uuid())
+  projectId         String
+  project           Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  templateId        String
+  template          Template              @relation(fields: [templateId], references: [id])
+  templateVersionId String
+  templateVersion   TemplateVersion       @relation(fields: [templateVersionId], references: [id])
+  status            ProjectInstanceStatus @default(provisioning)
+  currentInstanceVersionId String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  instanceVersions InstanceVersion[]
+
+  @@index([projectId])
+  @@schema("donaive_core")
+}
+
+model InstanceVersion {
+  id                String                @id @default(uuid())
+  projectInstanceId String
+  projectInstance   ProjectInstance       @relation(fields: [projectInstanceId], references: [id], onDelete: Cascade)
+  projectId         String
+  version           String
+  status            InstanceVersionStatus @default(active)
+  templateVersionId String?
+  templateVersion   TemplateVersion?      @relation(fields: [templateVersionId], references: [id])
+  adoptedAt         DateTime              @default(now())
+  createdAt         DateTime              @default(now())
+
+  @@index([projectId])
+  @@schema("donaive_core")
+}
+
+model ProjectCustomization {
+  id        String              @id @default(uuid())
+  projectId String
+  project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      CustomizationType
+  key       String
+  value     Json
+  source    CustomizationSource
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([projectId, key])
+  @@index([projectId])
+  @@schema("donaive_core")
+}
+
+model Module {
+  id       String       @id @default(uuid())
+  key      ModuleKey    @unique
+  name     String
+  category ProjectCategory?
+  version  String?
+  status   ModuleStatus @default(active)
+
+  projectModules ProjectModule[]
+  entitlements   Entitlement[]
+
+  @@schema("donaive_core")
+}
+
+model ProjectModule {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  moduleId  String
+  module    Module  @relation(fields: [moduleId], references: [id])
+  enabled   Boolean @default(true)
+  version   String?
+
+  @@unique([projectId, moduleId])
+  @@schema("donaive_core")
+}
+
+model Update {
+  id                   String        @id @default(uuid())
+  name                 String
+  moduleKey            ModuleKey
+  fromVersion          String?
+  toVersion            String
+  compatibleCategories ProjectCategory[]
+  compatibleModules    ModuleKey[]
+  status               UpdateStatus  @default(draft)
+  releaseNotes         String?
+  createdAt            DateTime      @default(now())
+  publishedAt          DateTime?
+
+  release        UpdateRelease?
+  targets        UpdateTarget[]
+  projectUpdates ProjectUpdate[]
+
+  @@schema("donaive_core")
+}
+
+model UpdateRelease {
+  id         String   @id @default(uuid())
+  updateId   String   @unique
+  update     Update   @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  releasedAt DateTime @default(now())
+  releasedBy String?
+
+  @@schema("donaive_core")
+}
+
+model UpdateTarget {
+  id         String           @id @default(uuid())
+  updateId   String
+  update     Update           @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  mode       UpdateTargetMode
+  projectIds String[]
+  category   ProjectCategory?
+
+  @@schema("donaive_core")
+}
+
+model ProjectUpdate {
+  id            String              @id @default(uuid())
+  updateId      String
+  update        Update              @relation(fields: [updateId], references: [id])
+  projectId     String
+  project       Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status        ProjectUpdateStatus @default(assigned)
+  assignedBy    String?
+  assignedAt    DateTime            @default(now())
+  approvedAt    DateTime?
+  installedAt   DateTime?
+  fromVersion   String?
+  toVersion     String?
+  failureReason String?
+  rollbackOfId  String?
+
+  @@index([projectId])
+  @@index([updateId])
+  @@schema("donaive_core")
+}
+
+model Plan {
+  id              String     @id @default(uuid())
+  name            String
+  tier            PlanTier
+  description     String?
+  status          PlanStatus @default(draft)
+  includedModules ModuleKey[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  licenses      License[]
+  subscriptions Subscription[]
+
+  @@schema("donaive_core")
+}
+
+model License {
+  id                 String        @id @default(uuid())
+  projectId          String
+  project            Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organizationId     String
+  organization       Organization  @relation(fields: [organizationId], references: [id])
+  planId             String?
+  plan               Plan?         @relation(fields: [planId], references: [id])
+  status             LicenseStatus @default(active)
+  startDate          DateTime      @db.Date
+  endDate            DateTime?     @db.Date
+  lifecycleStatus    CommercialLifecycleStatus @default(active)
+  gracePeriodEndsAt  DateTime?
+  deviceLimit        Int?
+  activationRef      String?
+  renewalRef         String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  entitlements Entitlement[]
+
+  @@index([projectId])
+  @@index([organizationId])
+  @@schema("donaive_core")
+}
+
+model Entitlement {
+  id        String            @id @default(uuid())
+  projectId String
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  licenseId String?
+  license   License?          @relation(fields: [licenseId], references: [id])
+  moduleId  String?
+  module    Module?           @relation(fields: [moduleId], references: [id])
+  moduleKey ModuleKey?
+  enabled   Boolean           @default(true)
+  source    EntitlementSource
+  limits    Json?
+
+  @@index([projectId])
+  @@schema("donaive_core")
+}
+
+model Subscription {
+  id              String             @id @default(uuid())
+  organizationId  String
+  organization    Organization       @relation(fields: [organizationId], references: [id])
+  projectId       String?
+  project         Project?           @relation(fields: [projectId], references: [id])
+  planId          String
+  plan            Plan               @relation(fields: [planId], references: [id])
+  status          SubscriptionStatus @default(active)
+  startDate       DateTime           @db.Date
+  endDate         DateTime?          @db.Date
+  lifecycleStatus CommercialLifecycleStatus @default(active)
+  gracePeriodEndsAt DateTime?
+  billingCycleRef String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@schema("donaive_core")
+}
+
+model ProjectDomain {
+  id         String              @id @default(uuid())
+  projectId  String
+  project    Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hostname   String              @unique
+  type       ProjectDomainType
+  status     ProjectDomainStatus @default(pending)
+  isPrimary  Boolean             @default(false)
+  sslStatus  String?
+  verifiedAt DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@index([projectId])
+  @@schema("donaive_core")
+}
+
+model ProjectUser {
+  id        String            @id @default(uuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role      ProjectUserRole
+  status    ProjectUserStatus @default(active)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@unique([userId, projectId])
+  @@index([projectId])
+  @@schema("donaive_core")
+}
+
+// ─── Audit ───────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id             String         @id @default(uuid())
+  actorType      AuditActorType
+  actorId        String?
+  action         String
+  entityType     String
+  entityId       String
+  projectId      String?
+  organizationId String?
+  before         Json?
+  after          Json?
+  metadata       Json?
+  reason         String?
+  approvalId     String?
+  agentRunId     String?
+  capability     String?
+  createdAt      DateTime       @default(now())
+
+  @@index([projectId])
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@schema("donaive_core")
+}
+
+// ─── Analytics & AI (preparación, sin autonomía) ─────────────────────────────
+
+model AnalyticsSnapshot {
+  id             String               @id @default(uuid())
+  projectId      String
+  project        Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organizationId String
+  category       ProjectCategory
+  periodStart    DateTime
+  periodEnd      DateTime
+  metrics        Json
+  sensitivity    AnalyticsSensitivity @default(aggregate)
+  exportedAt     DateTime             @default(now())
+
+  @@index([projectId])
+  @@index([category])
+  @@schema("donaive_core")
+}
+
+model AgentContext {
+  id          String   @id @default(uuid())
+  agentRunId  String   @unique
+  actorId     String?
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  approvalId  String?
+  capabilities String[]
+  readOnly    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  projectAccess AgentProjectAccess?
+
+  @@schema("donaive_core")
+}
+
+model AgentProjectAccess {
+  id             String          @id @default(uuid())
+  agentContextId String          @unique
+  agentContext   AgentContext    @relation(fields: [agentContextId], references: [id], onDelete: Cascade)
+  projectId      String
+  organizationId String
+  readOnly       Boolean         @default(true)
+  modes          AgentAccessMode[]
+
+  permissions AgentPermission[]
+
+  @@schema("donaive_core")
+}
+
+model AgentPermission {
+  id                   String             @id @default(uuid())
+  agentProjectAccessId String
+  agentProjectAccess   AgentProjectAccess @relation(fields: [agentProjectAccessId], references: [id], onDelete: Cascade)
+  capability           String
+  requiresApproval     Boolean            @default(false)
+
+  @@schema("donaive_core")
+}
+
+model OfflineSyncRequirement {
+  id                   String  @id @default(uuid())
+  projectId            String  @unique
+  localDatabase        Boolean @default(true)
+  syncEngine           Boolean @default(true)
+  offlineQueue         Boolean @default(true)
+  conflictResolution   Boolean @default(true)
+  documentedOnly       Boolean @default(true)
+
+  @@schema("donaive_core")
+}

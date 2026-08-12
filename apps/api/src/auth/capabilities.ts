@@ -1,0 +1,94 @@
+/** Capabilities del backend Core — extensible vía tabla Capability. */
+export const API_CAPABILITIES = {
+  CORE_READ: "core.read",
+  CORE_WRITE: "core.write",
+  PROJECT_READ: "project.read",
+  PROJECT_WRITE: "project.write",
+  PROJECT_MANAGE: "project.manage",
+  PROJECT_USERS_READ: "project.users.read",
+  PROJECT_USERS_MANAGE: "project.users.manage",
+  PROJECT_ANALYTICS_READ: "project.analytics.read",
+  PROJECT_UPDATES_READ: "project.updates.read",
+  PROJECT_UPDATES_APPLY: "project.updates.apply",
+  LICENSE_READ: "license.read",
+  LICENSE_MANAGE: "license.manage",
+  SUBSCRIPTION_READ: "subscription.read",
+  SUBSCRIPTION_MANAGE: "subscription.manage",
+  AUDIT_READ: "audit.read",
+  INTELLIGENCE_READ: "intelligence.read",
+  AGENT_ANALYZE: "agent.analyze",
+  AGENT_SUGGEST: "agent.suggest",
+  AGENT_GENERATE: "agent.generate",
+  AGENT_PREPARE: "agent.prepare",
+  AGENT_PUBLISH: "agent.publish",
+  AGENT_EXECUTE: "agent.execute",
+} as const;
+
+export type ApiCapability =
+  (typeof API_CAPABILITIES)[keyof typeof API_CAPABILITIES];
+
+export const SENSITIVE_CAPABILITIES: ReadonlySet<ApiCapability> = new Set([
+  API_CAPABILITIES.AGENT_PUBLISH,
+  API_CAPABILITIES.AGENT_EXECUTE,
+  API_CAPABILITIES.PROJECT_UPDATES_APPLY,
+  API_CAPABILITIES.PROJECT_USERS_MANAGE,
+  API_CAPABILITIES.LICENSE_MANAGE,
+  API_CAPABILITIES.SUBSCRIPTION_MANAGE,
+]);
+
+/** Mapeo rol → capabilities por defecto (extensible vía DB). */
+export const ROLE_DEFAULT_CAPABILITIES: Record<
+  string,
+  readonly ApiCapability[]
+> = {
+  donaive_admin: Object.values(API_CAPABILITIES),
+  donaive_operator: [
+    API_CAPABILITIES.CORE_READ,
+    API_CAPABILITIES.CORE_WRITE,
+    API_CAPABILITIES.PROJECT_READ,
+    API_CAPABILITIES.PROJECT_WRITE,
+    API_CAPABILITIES.PROJECT_MANAGE,
+    API_CAPABILITIES.LICENSE_READ,
+    API_CAPABILITIES.SUBSCRIPTION_READ,
+    API_CAPABILITIES.AUDIT_READ,
+  ],
+  project_admin: [
+    API_CAPABILITIES.PROJECT_READ,
+    API_CAPABILITIES.PROJECT_WRITE,
+    API_CAPABILITIES.PROJECT_MANAGE,
+    API_CAPABILITIES.PROJECT_USERS_READ,
+    API_CAPABILITIES.PROJECT_USERS_MANAGE,
+    API_CAPABILITIES.PROJECT_ANALYTICS_READ,
+    API_CAPABILITIES.PROJECT_UPDATES_READ,
+    API_CAPABILITIES.PROJECT_UPDATES_APPLY,
+    API_CAPABILITIES.LICENSE_READ,
+    API_CAPABILITIES.SUBSCRIPTION_READ,
+  ],
+  project_manager: [
+    API_CAPABILITIES.PROJECT_READ,
+    API_CAPABILITIES.PROJECT_WRITE,
+    API_CAPABILITIES.PROJECT_ANALYTICS_READ,
+    API_CAPABILITIES.PROJECT_UPDATES_READ,
+  ],
+  project_user: [API_CAPABILITIES.PROJECT_READ],
+  project_viewer: [API_CAPABILITIES.PROJECT_READ],
+  donaive_intelligence: [
+    API_CAPABILITIES.INTELLIGENCE_READ,
+    API_CAPABILITIES.PROJECT_ANALYTICS_READ,
+    API_CAPABILITIES.AGENT_ANALYZE,
+    API_CAPABILITIES.AGENT_SUGGEST,
+  ],
+  ai_agent: [
+    API_CAPABILITIES.AGENT_ANALYZE,
+    API_CAPABILITIES.AGENT_SUGGEST,
+    API_CAPABILITIES.AGENT_GENERATE,
+    API_CAPABILITIES.AGENT_PREPARE,
+  ],
+};
+
+export const GLOBAL_ROLES = new Set(["donaive_admin", "donaive_operator"]);
+
+export const READ_ONLY_INTELLIGENCE_ROLES = new Set([
+  "donaive_intelligence",
+  "ai_agent",
+]);
