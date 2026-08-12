@@ -14,6 +14,18 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@donaive/core": [
+        "./packages/core/src/index.ts"
+      ],
+      "@donaive/core/*": [
+        "./packages/core/src/*"
+      ],
+      "@donaive/domain": [
+        "./packages/domain/src/index.ts"
+      ],
+      "@donaive/domain/*": [
+        "./packages/domain/src/*"
       ]
     },
     /* Bundler mode */
@@ -32,6 +44,8 @@
     "noUncheckedSideEffectImports": true
   },
   "include": [
-    "src"
+    "src",
+    "packages/core/src",
+    "packages/domain/src"
   ]
 }

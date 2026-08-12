@@ -10,6 +10,28 @@ export type {
   LegalContent,
   PageContent,
 } from "@/types/content";
+export type {
+  AgentContext,
+  AnalyticsSnapshot,
+  AuditLog,
+  Capability,
+  PlatformRole,
+  PlatformOrganization,
+  PlatformProject,
+  ProjectCategory,
+  ProjectCustomization,
+  ProjectDomain,
+  ProjectUser,
+  Template,
+  TemplateVersion,
+} from "@/types/platform";
+export {
+  CORE_CAPABILITIES,
+  MODULE_KEYS,
+  PLATFORM_ROLES,
+  PROJECT_CAPABILITIES,
+  PROJECT_CATEGORIES,
+} from "@/types/platform";
 export type { AuthSession, AuthState, AuthUser } from "@/types/auth";
 export type {
   AccessSubject,

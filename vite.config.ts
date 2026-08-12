@@ -9,6 +9,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@donaive/core": path.resolve(__dirname, "./packages/core/src/index.ts"),
+      "@donaive/domain": path.resolve(__dirname, "./packages/domain/src/index.ts"),
     },
   },
   build: {

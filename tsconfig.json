@@ -13,6 +13,18 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@donaive/core": [
+        "./packages/core/src/index.ts"
+      ],
+      "@donaive/core/*": [
+        "./packages/core/src/*"
+      ],
+      "@donaive/domain": [
+        "./packages/domain/src/index.ts"
+      ],
+      "@donaive/domain/*": [
+        "./packages/domain/src/*"
       ]
     }
   }
