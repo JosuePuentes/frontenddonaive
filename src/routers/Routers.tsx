@@ -15,6 +15,7 @@ const Blog = lazy(() => import("@/pages/Blog"));
 const Contacto = lazy(() => import("@/pages/Contacto"));
 const Privacidad = lazy(() => import("@/pages/Privacidad"));
 const Terminos = lazy(() => import("@/pages/Terminos"));
+const Diagnostico = lazy(() => import("@/pages/Diagnostico"));
 
 const Dashboard = lazy(() => import("@/pages/dashboard/Dashboard"));
 const Users = lazy(() => import("@/pages/dashboard/Users"));
@@ -77,6 +78,7 @@ const AppRouter = () => (
         <Route path={ROUTES.contacto} element={<Contacto />} />
         <Route path={ROUTES.privacidad} element={<Privacidad />} />
         <Route path={ROUTES.terminos} element={<Terminos />} />
+        <Route path="/diagnostico" element={<Diagnostico />} />
       </Route>
 
       {/* Privado — scaffolding sin PrivateRoute funcional */}
