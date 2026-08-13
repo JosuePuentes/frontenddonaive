@@ -57,7 +57,7 @@ function PolisurMedia({
       {overlay === "readable" ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,rgba(6,13,22,0.78)_0%,rgba(6,13,22,0.42)_42%,rgba(6,13,22,0.18)_68%,rgba(6,13,22,0.35)_100%)]"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,rgba(5,10,18,0.62)_0%,rgba(5,10,18,0.28)_38%,rgba(5,10,18,0.08)_70%,rgba(5,10,18,0.22)_100%)]"
         />
       ) : null}
 
