@@ -1,0 +1,39 @@
+/* Scope visual exclusivo de POLISUR — no altera tokens globales de Donaive */
+.polisur-shell {
+  --polisur-navy: #0a1628;
+  --polisur-navy-mid: #132842;
+  --polisur-ink: #071018;
+  --polisur-slate: #1c2d42;
+  --polisur-steel: #8fa3b8;
+  --polisur-mist: #e8eef5;
+  --polisur-white: #f7f9fc;
+  --polisur-gold: #c9a227;
+  --polisur-gold-soft: #e0c35a;
+  --polisur-line: rgba(232, 238, 245, 0.12);
+
+  --polisur-font-display: "Libre Baskerville", "Times New Roman", serif;
+  --polisur-font-body: "Manrope", ui-sans-serif, sans-serif;
+
+  color: var(--polisur-mist);
+  background: var(--polisur-ink);
+  font-family: var(--polisur-font-body);
+  min-height: 100vh;
+}
+
+.polisur-shell h1,
+.polisur-shell h2,
+.polisur-shell h3,
+.polisur-shell .polisur-display {
+  font-family: var(--polisur-font-display);
+  letter-spacing: -0.02em;
+}
+
+.polisur-shell a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.polisur-shell ::selection {
+  background: rgba(201, 162, 39, 0.35);
+  color: var(--polisur-white);
+}

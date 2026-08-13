@@ -2,9 +2,11 @@ import { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router";
 import { Layout } from "@/components/layout/Layout";
 import { DashboardLayout } from "@/components/dashboard/layout/DashboardLayout";
+import { PolisurLayout } from "@/components/polisur/PolisurLayout";
 import { PageLoader } from "@/components/page/PageLoader";
 import { ROUTES } from "@/constants/routes";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
+import { POLISUR_ROUTES } from "@/constants/polisur-routes";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Empresa = lazy(() => import("@/pages/Empresa"));
@@ -19,6 +21,18 @@ const Diagnostico = lazy(() => import("@/pages/Diagnostico"));
 const ProyectosDiagnostico = lazy(
   () => import("@/pages/ProyectosDiagnostico"),
 );
+
+const PolisurHome = lazy(() => import("@/pages/polisur/PolisurHome"));
+const PolisurUnidadCanina = lazy(
+  () => import("@/pages/polisur/PolisurUnidadCanina"),
+);
+const PolisurDivisionesPage = lazy(
+  () => import("@/pages/polisur/PolisurDivisionesPage"),
+);
+const PolisurPreinscripcion = lazy(
+  () => import("@/pages/polisur/PolisurPreinscripcion"),
+);
+const PolisurContacto = lazy(() => import("@/pages/polisur/PolisurContacto"));
 
 const Dashboard = lazy(() => import("@/pages/dashboard/Dashboard"));
 const Users = lazy(() => import("@/pages/dashboard/Users"));
@@ -86,6 +100,24 @@ const AppRouter = () => (
           path="/diagnostico/proyectos"
           element={<ProyectosDiagnostico />}
         />
+      </Route>
+
+      {/* POLISUR — experiencia institucional independiente (no reemplaza Donaive) */}
+      <Route element={<PolisurLayout />}>
+        <Route path={POLISUR_ROUTES.home} element={<PolisurHome />} />
+        <Route
+          path={POLISUR_ROUTES.unidadCanina}
+          element={<PolisurUnidadCanina />}
+        />
+        <Route
+          path={POLISUR_ROUTES.divisiones}
+          element={<PolisurDivisionesPage />}
+        />
+        <Route
+          path={POLISUR_ROUTES.preinscripcion}
+          element={<PolisurPreinscripcion />}
+        />
+        <Route path={POLISUR_ROUTES.contacto} element={<PolisurContacto />} />
       </Route>
 
       {/* Privado — scaffolding sin PrivateRoute funcional */}
