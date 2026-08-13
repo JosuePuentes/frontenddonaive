@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { PolisurCrest } from "@/components/polisur/PolisurCrest";
 import { POLISUR_ROUTES } from "@/constants/polisur-routes";
 import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
 
