@@ -5,7 +5,12 @@
  */
 
 export const POLISUR_MEDIA = {
+  /** Escudo oficial Policía Municipio San Francisco */
   logo: "/polisur/logo/escudo.png",
+  /** Parche circular institucional (Venezuela renace) */
+  parche: "/polisur/logo/parche.png",
+  /** Emblema Unidad de Patrullaje Canino (K-9) */
+  k9: "/polisur/logo/k9-emblema.png",
   home: {
     hero: "/polisur/home/hero.jpg",
     about: "/polisur/home/about.jpg",

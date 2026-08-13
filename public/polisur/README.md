@@ -5,20 +5,20 @@ Las rutas están referenciadas desde `src/content/polisur.ts`.
 Si un archivo no existe, la UI muestra un marco fotográfico neutro
 (sin texto tipo PLACEHOLDER visible al usuario).
 
-## Logo / escudo
+## Logos institucionales (obligatorios para branding)
 
 ```
-public/polisur/logo/escudo.png
+public/polisur/logo/escudo.png       ← escudo oficial (header / footer / hero)
+public/polisur/logo/parche.png       ← parche circular Venezuela renace
+public/polisur/logo/k9-emblema.png   ← emblema Unidad de Patrullaje Canino
 ```
 
 Opcional (institucionales auxiliares):
 
 ```
-public/polisur/logo/parche.png
 public/polisur/logo/visipol.png
 public/polisur/logo/cuadrantes-paz.png
 public/polisur/logo/justicia-paz.png
-public/polisur/logo/k9-emblema.png
 ```
 
 ## Home

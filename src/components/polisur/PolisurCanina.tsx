@@ -45,7 +45,14 @@ function PolisurCanina() {
 
         <div className="relative">
           <div className="ps-canina-stage__crest" aria-hidden>
-            <PolisurCrest size="lg" />
+            <img
+              src={POLISUR_MEDIA.k9}
+              alt=""
+              className="h-16 w-16 object-contain opacity-90 sm:h-20 sm:w-20"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
           </div>
 
           <div className="ps-canina-stage__frame">
