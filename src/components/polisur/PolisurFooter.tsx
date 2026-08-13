@@ -1,29 +1,27 @@
 import { Link } from "react-router";
 import { POLISUR_ROUTES, polisurNavItems } from "@/constants/polisur-routes";
+import { polisurCopy } from "@/content/polisur";
 
 function PolisurFooter() {
   return (
-    <footer className="border-t border-[var(--polisur-line)] bg-[var(--polisur-ink)]">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:px-8">
+    <footer className="bg-[var(--ps-navy-950)]">
+      <div className="ps-container grid gap-10 border-t border-[var(--ps-line)] py-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
         <div>
-          <div className="polisur-display text-xl font-bold text-[var(--polisur-white)]">
-            POLISUR
+          <div className="ps-display text-xl text-[var(--ps-white)]">
+            {polisurCopy.brand.name}
           </div>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--polisur-steel)]">
-            {/* PLACEHOLDER — datos de contacto oficiales pendientes */}
-            Portal institucional. Redes, contacto y ubicación oficial se
-            publicarán cuando sean validados.
+          <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--ps-steel-400)]">
+            {polisurCopy.brand.line}. La información de contacto, redes y
+            ubicación oficial se publicará cuando esté validada.
           </p>
         </div>
 
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--polisur-gold)]">
-            Enlaces
-          </h3>
-          <ul className="mt-4 space-y-2 text-sm text-[var(--polisur-mist)]/85">
+          <h3 className="ps-eyebrow">Navegación</h3>
+          <ul className="mt-4 space-y-2.5 text-sm text-[var(--ps-steel-300)]">
             {polisurNavItems.map((item) => (
               <li key={item.key}>
-                <Link to={item.to} className="hover:text-[var(--polisur-white)]">
+                <Link to={item.to} className="hover:text-[var(--ps-white)]">
                   {item.label}
                 </Link>
               </li>
@@ -32,36 +30,28 @@ function PolisurFooter() {
         </div>
 
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--polisur-gold)]">
-            Legal
-          </h3>
-          <ul className="mt-4 space-y-2 text-sm text-[var(--polisur-mist)]/85">
-            <li>
-              <span className="text-[var(--polisur-steel)]">
-                PLACEHOLDER: Política de privacidad
-              </span>
-            </li>
-            <li>
-              <span className="text-[var(--polisur-steel)]">
-                PLACEHOLDER: Términos
-              </span>
-            </li>
+          <h3 className="ps-eyebrow">Institucional</h3>
+          <ul className="mt-4 space-y-2.5 text-sm text-[var(--ps-steel-300)]">
             <li>
               <Link
                 to={POLISUR_ROUTES.contacto}
-                className="hover:text-[var(--polisur-white)]"
+                className="hover:text-[var(--ps-white)]"
               >
-                Contacto institucional
+                Contacto
               </Link>
             </li>
+            <li className="text-[var(--ps-steel-400)]">
+              Política de privacidad
+            </li>
+            <li className="text-[var(--ps-steel-400)]">Términos</li>
           </ul>
         </div>
       </div>
 
-      <div className="border-t border-[var(--polisur-line)]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-[var(--polisur-steel)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <span>© POLISUR — Contenido institucional en preparación</span>
-          <span>PLACEHOLDER: redes sociales oficiales</span>
+      <div className="border-t border-[var(--ps-line)]">
+        <div className="ps-container flex flex-col gap-2 py-5 text-xs text-[var(--ps-steel-400)] sm:flex-row sm:items-center sm:justify-between">
+          <span>© {polisurCopy.brand.name}</span>
+          <span>Portal institucional</span>
         </div>
       </div>
     </footer>

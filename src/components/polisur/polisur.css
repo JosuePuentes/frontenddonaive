@@ -1,31 +1,34 @@
-/* Scope visual exclusivo de POLISUR — no altera tokens globales de Donaive */
+/* Tokens y tipografía exclusivos de POLISUR */
 .polisur-shell {
-  --polisur-navy: #0a1628;
-  --polisur-navy-mid: #132842;
-  --polisur-ink: #071018;
-  --polisur-slate: #1c2d42;
-  --polisur-steel: #8fa3b8;
-  --polisur-mist: #e8eef5;
-  --polisur-white: #f7f9fc;
-  --polisur-gold: #c9a227;
-  --polisur-gold-soft: #e0c35a;
-  --polisur-line: rgba(232, 238, 245, 0.12);
+  --ps-navy-950: #060d16;
+  --ps-navy-900: #0b1522;
+  --ps-navy-800: #122033;
+  --ps-navy-700: #1a2d45;
+  --ps-steel-400: #8b9cb0;
+  --ps-steel-300: #b7c3d1;
+  --ps-white: #f5f7fa;
+  --ps-paper: #eef2f6;
+  --ps-gold: #b89a3a;
+  --ps-line: rgba(245, 247, 250, 0.1);
+  --ps-line-strong: rgba(245, 247, 250, 0.18);
 
-  --polisur-font-display: "Libre Baskerville", "Times New Roman", serif;
-  --polisur-font-body: "Manrope", ui-sans-serif, sans-serif;
+  --ps-font-display: "Libre Baskerville", "Times New Roman", Georgia, serif;
+  --ps-font-body: "Manrope", ui-sans-serif, sans-serif;
 
-  color: var(--polisur-mist);
-  background: var(--polisur-ink);
-  font-family: var(--polisur-font-body);
+  color: var(--ps-paper);
+  background: var(--ps-navy-950);
+  font-family: var(--ps-font-body);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 .polisur-shell h1,
 .polisur-shell h2,
 .polisur-shell h3,
-.polisur-shell .polisur-display {
-  font-family: var(--polisur-font-display);
+.polisur-shell .ps-display {
+  font-family: var(--ps-font-display);
   letter-spacing: -0.02em;
+  font-weight: 700;
 }
 
 .polisur-shell a {
@@ -34,6 +37,83 @@
 }
 
 .polisur-shell ::selection {
-  background: rgba(201, 162, 39, 0.35);
-  color: var(--polisur-white);
+  background: rgba(184, 154, 58, 0.28);
+  color: var(--ps-white);
+}
+
+.ps-container {
+  width: min(1120px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+  .ps-container {
+    width: min(1120px, calc(100% - 3rem));
+  }
+}
+
+.ps-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ps-steel-400);
+}
+
+.ps-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1.25rem;
+  border-radius: 2px;
+  font-size: 0.875rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.ps-btn-primary {
+  background: var(--ps-white);
+  color: var(--ps-navy-950);
+}
+
+.ps-btn-primary:hover {
+  background: var(--ps-paper);
+}
+
+.ps-btn-ghost {
+  border: 1px solid var(--ps-line-strong);
+  color: var(--ps-white);
+  background: transparent;
+}
+
+.ps-btn-ghost:hover {
+  border-color: rgba(184, 154, 58, 0.55);
+  color: var(--ps-white);
+}
+
+.ps-media-frame {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(18, 32, 51, 0.95), rgba(11, 21, 34, 0.98)),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.025) 0 1px,
+      transparent 1px 10px
+    );
+}
+
+.ps-media-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ps-rule {
+  height: 1px;
+  background: var(--ps-line);
+  border: 0;
 }

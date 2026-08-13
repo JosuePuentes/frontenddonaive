@@ -13,25 +13,20 @@ export default function PolisurPlaceholderPage({
 }: PolisurPlaceholderPageProps) {
   return (
     <>
-      <PageMeta
-        title={`${title} — POLISUR`}
-        description={description}
-      />
-      <section className="mx-auto max-w-3xl px-4 py-20 sm:px-6 lg:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--polisur-gold)]">
-          En preparación
-        </p>
-        <h1 className="mt-3 text-4xl text-[var(--polisur-white)]">{title}</h1>
-        <p className="mt-4 text-base leading-relaxed text-[var(--polisur-mist)]/85">
+      <PageMeta title={`${title} — POLISUR`} description={description} />
+      <section className="ps-container max-w-3xl py-16 sm:py-20">
+        <p className="ps-eyebrow">En preparación</p>
+        <h1 className="mt-3 text-4xl text-[var(--ps-white)]">{title}</h1>
+        <p className="mt-4 text-base leading-relaxed text-[var(--ps-steel-300)]">
           {description}
         </p>
-        <p className="mt-3 text-sm text-[var(--polisur-steel)]">
-          PLACEHOLDER: esta sección se completará con contenido oficial. No
-          incluye formularios ni datos inventados en esta fase.
+        <p className="mt-3 text-sm text-[var(--ps-steel-400)]">
+          El contenido oficial de esta sección se publicará cuando esté
+          validado por la institución.
         </p>
         <Link
           to={POLISUR_ROUTES.home}
-          className="mt-8 inline-flex h-11 items-center justify-center rounded-sm border border-[var(--polisur-line)] px-5 text-sm font-semibold text-[var(--polisur-white)] hover:border-[var(--polisur-gold)]"
+          className="ps-btn ps-btn-ghost mt-8"
         >
           Volver al inicio
         </Link>

@@ -1,24 +1,27 @@
-# POLISUR — experiencia pública
+# POLISUR — experiencia pública institucional
 
-Experiencia institucional independiente dentro del monorepo Donaive.
+Aislada de Donaive bajo el namespace `/polisur`.
 
-## Rutas (namespace)
+## Rutas
 
 | Ruta | Estado |
 |---|---|
-| `/polisur` | Home institucional (Fase 1) |
-| `/polisur/unidad-canina` | Placeholder |
-| `/polisur/divisiones` | Placeholder |
-| `/polisur/preinscripcion` | Placeholder |
-| `/polisur/contacto` | Placeholder |
+| `/polisur` | Home institucional rediseñada |
+| `/polisur/unidad-canina` | Arquitectura visual preparada |
+| `/polisur/divisiones` | Página en preparación |
+| `/polisur/preinscripcion` | Página en preparación |
+| `/polisur/contacto` | Página en preparación |
 
-## Separación de Donaive
+## Assets
 
-- La raíz `/` sigue siendo Donaive.
-- POLISUR usa layout, navbar y footer propios.
-- No se modifica `apps/api` en esta fase.
+Colocar fotografías y logo en:
 
-## Dominio futuro
+`public/polisur/`
 
-Cuando exista dominio oficial de POLISUR, mapear el host a este namespace
-(rewrite en Vercel u hosting) sin eliminar las rutas de Donaive.
+Ver `public/polisur/README.md`.
+
+## Contenido editable
+
+Textos centrales en:
+
+`src/content/polisur.ts`

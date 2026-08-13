@@ -1,23 +1,29 @@
+import { PolisurMedia } from "@/components/polisur/PolisurMedia";
+import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
+
 function PolisurAbout() {
   return (
     <section
       id="institucion"
-      className="scroll-mt-20 border-t border-[var(--polisur-line)] bg-[var(--polisur-navy)]"
+      className="scroll-mt-16 border-b border-[var(--ps-line)] bg-[var(--ps-navy-950)]"
     >
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--polisur-gold)]">
-            Institución
-          </p>
-          <h2 className="mt-3 text-3xl text-[var(--polisur-white)] sm:text-4xl">
-            Al servicio de nuestra comunidad
+      <div className="ps-container grid gap-8 py-14 sm:gap-10 sm:py-20 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+        <PolisurMedia
+          src={POLISUR_MEDIA.home.about}
+          alt="Imagen institucional"
+          className="min-h-[16rem] sm:min-h-[20rem] lg:min-h-[24rem]"
+          objectPosition="center"
+          overlay="soft"
+        />
+
+        <div className="lg:pl-4">
+          <p className="ps-eyebrow">{polisurCopy.about.eyebrow}</p>
+          <h2 className="mt-3 text-3xl text-[var(--ps-white)] sm:text-4xl">
+            {polisurCopy.about.title}
           </h2>
-          <p className="mt-5 text-base leading-relaxed text-[var(--polisur-mist)]/88 sm:text-lg">
-            {/* PLACEHOLDER — texto institucional oficial pendiente de validación */}
-            PLACEHOLDER: POLISUR trabaja con vocación de servicio público,
-            priorizando la prevención, el respeto al ciudadano y la presencia
-            institucional responsable. El contenido histórico y normativo
-            oficial se incorporará cuando sea proporcionado por la institución.
+          <hr className="ps-rule mt-6 max-w-[4rem]" />
+          <p className="mt-6 max-w-xl text-[0.95rem] leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+            {polisurCopy.about.body}
           </p>
         </div>
       </div>

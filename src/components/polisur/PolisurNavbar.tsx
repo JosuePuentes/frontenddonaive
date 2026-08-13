@@ -5,49 +5,67 @@ import {
   POLISUR_ROUTES,
   polisurNavItems,
 } from "@/constants/polisur-routes";
+import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
+
+function BrandMark() {
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  return (
+    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[2px] border border-[var(--ps-line-strong)] bg-[var(--ps-navy-800)]">
+      {!logoFailed ? (
+        <img
+          src={POLISUR_MEDIA.logo}
+          alt=""
+          className="h-full w-full object-contain p-1"
+          onError={() => setLogoFailed(true)}
+        />
+      ) : (
+        // Reserva visual hasta disponer del escudo oficial
+        <span
+          aria-hidden
+          className="h-5 w-5 rounded-full border border-[var(--ps-steel-400)]/50"
+        />
+      )}
+    </span>
+  );
+}
 
 function PolisurNavbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--polisur-line)] bg-[rgba(7,16,24,0.92)] backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:h-[4.25rem] sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-[var(--ps-line)] bg-[rgba(6,13,22,0.94)] backdrop-blur-md">
+      <div className="ps-container flex h-14 items-center justify-between sm:h-16">
         <Link
           to={POLISUR_ROUTES.home}
-          className="flex items-center gap-3"
+          className="flex min-w-0 items-center gap-3"
           onClick={() => setOpen(false)}
         >
-          <span
-            aria-hidden
-            className="flex h-9 w-9 items-center justify-center rounded-sm border border-[var(--polisur-gold)]/50 bg-[var(--polisur-navy-mid)] text-[0.65rem] font-semibold tracking-[0.12em] text-[var(--polisur-gold-soft)]"
-          >
-            PS
+          <BrandMark />
+          <span className="min-w-0 leading-tight">
+            <span className="ps-display block truncate text-[1.05rem] text-[var(--ps-white)] sm:text-lg">
+              {polisurCopy.brand.name}
+            </span>
+            <span className="hidden truncate text-[0.65rem] uppercase tracking-[0.16em] text-[var(--ps-steel-400)] sm:block">
+              {polisurCopy.brand.line}
+            </span>
           </span>
-          <div className="leading-tight">
-            <div className="polisur-display text-base font-bold text-[var(--polisur-white)] sm:text-lg">
-              POLISUR
-            </div>
-            <div className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--polisur-steel)]">
-              {/* PLACEHOLDER — eslogan oficial pendiente */}
-              Identidad institucional
-            </div>
-          </div>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Principal">
+        <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Principal">
           {polisurNavItems.map((item) => (
             <NavLink
               key={item.key}
               to={item.to}
+              end={item.to === POLISUR_ROUTES.home}
               className={({ isActive }) =>
                 [
-                  "rounded-sm px-3 py-2 text-sm font-medium transition-colors",
+                  "px-3 py-2 text-[0.8125rem] font-medium tracking-wide transition-colors",
                   isActive && !item.to.includes("#")
-                    ? "text-[var(--polisur-gold-soft)]"
-                    : "text-[var(--polisur-mist)]/85 hover:text-[var(--polisur-white)]",
+                    ? "text-[var(--ps-white)]"
+                    : "text-[var(--ps-steel-300)] hover:text-[var(--ps-white)]",
                 ].join(" ")
               }
-              end={item.to === POLISUR_ROUTES.home}
             >
               {item.label}
             </NavLink>
@@ -56,26 +74,26 @@ function PolisurNavbar() {
 
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[var(--polisur-line)] text-[var(--polisur-mist)] md:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-[2px] border border-[var(--ps-line)] text-[var(--ps-paper)] lg:hidden"
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
         >
-          {open ? <X size={20} /> : <Menu size={20} />}
+          {open ? <X size={18} /> : <Menu size={18} />}
         </button>
       </div>
 
       {open ? (
         <nav
-          className="border-t border-[var(--polisur-line)] bg-[var(--polisur-ink)] px-4 py-3 md:hidden"
+          className="border-t border-[var(--ps-line)] bg-[var(--ps-navy-950)] lg:hidden"
           aria-label="Móvil"
         >
-          <ul className="flex flex-col gap-1">
+          <ul className="ps-container flex flex-col py-2">
             {polisurNavItems.map((item) => (
               <li key={item.key}>
                 <Link
                   to={item.to}
-                  className="block rounded-sm px-3 py-3 text-sm font-medium text-[var(--polisur-mist)] hover:bg-[var(--polisur-slate)]"
+                  className="block border-b border-[var(--ps-line)] px-1 py-3.5 text-sm font-medium text-[var(--ps-paper)] last:border-b-0"
                   onClick={() => setOpen(false)}
                 >
                   {item.label}

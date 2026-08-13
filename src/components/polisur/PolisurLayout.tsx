@@ -11,7 +11,6 @@ function PolisurLayout() {
   useEffect(() => {
     const id = "polisur-fonts";
     if (document.getElementById(id)) return;
-
     const link = document.createElement("link");
     link.id = id;
     link.rel = "stylesheet";
