@@ -1,16 +1,18 @@
 /* Tokens y tipografía exclusivos de POLISUR */
 .polisur-shell {
-  --ps-navy-950: #060d16;
-  --ps-navy-900: #0b1522;
-  --ps-navy-800: #122033;
-  --ps-navy-700: #1a2d45;
+  --ps-navy-950: #050a12;
+  --ps-navy-900: #0a1420;
+  --ps-navy-850: #0e1a2b;
+  --ps-navy-800: #132338;
+  --ps-navy-700: #1b3048;
   --ps-steel-400: #8b9cb0;
   --ps-steel-300: #b7c3d1;
   --ps-white: #f5f7fa;
   --ps-paper: #eef2f6;
-  --ps-gold: #b89a3a;
-  --ps-line: rgba(245, 247, 250, 0.1);
-  --ps-line-strong: rgba(245, 247, 250, 0.18);
+  --ps-gold: #c4a646;
+  --ps-gold-dim: rgba(196, 166, 70, 0.55);
+  --ps-line: rgba(245, 247, 250, 0.09);
+  --ps-line-strong: rgba(245, 247, 250, 0.16);
 
   --ps-font-display: "Libre Baskerville", "Times New Roman", Georgia, serif;
   --ps-font-body: "Manrope", ui-sans-serif, sans-serif;
@@ -37,18 +39,18 @@
 }
 
 .polisur-shell ::selection {
-  background: rgba(184, 154, 58, 0.28);
+  background: rgba(196, 166, 70, 0.28);
   color: var(--ps-white);
 }
 
 .ps-container {
-  width: min(1120px, calc(100% - 2rem));
+  width: min(1180px, calc(100% - 2rem));
   margin-inline: auto;
 }
 
 @media (min-width: 640px) {
   .ps-container {
-    width: min(1120px, calc(100% - 3rem));
+    width: min(1180px, calc(100% - 3rem));
   }
 }
 
@@ -64,13 +66,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.75rem;
-  padding: 0.7rem 1.25rem;
-  border-radius: 2px;
-  font-size: 0.875rem;
+  min-height: 2.85rem;
+  padding: 0.72rem 1.35rem;
+  border-radius: 1px;
+  font-size: 0.8125rem;
   font-weight: 650;
-  letter-spacing: 0.02em;
-  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
 }
 
 .ps-btn-primary {
@@ -89,26 +95,36 @@
 }
 
 .ps-btn-ghost:hover {
-  border-color: rgba(184, 154, 58, 0.55);
+  border-color: var(--ps-gold-dim);
   color: var(--ps-white);
+}
+
+.ps-btn-gold {
+  border: 1px solid var(--ps-gold-dim);
+  color: var(--ps-white);
+  background: transparent;
+}
+
+.ps-btn-gold:hover {
+  border-color: var(--ps-gold);
+  background: rgba(196, 166, 70, 0.08);
 }
 
 .ps-media-frame {
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(145deg, rgba(18, 32, 51, 0.95), rgba(11, 21, 34, 0.98)),
+    linear-gradient(160deg, rgba(19, 35, 56, 0.98), rgba(10, 20, 32, 0.99)),
     repeating-linear-gradient(
       -45deg,
-      rgba(255, 255, 255, 0.025) 0 1px,
-      transparent 1px 10px
+      rgba(255, 255, 255, 0.02) 0 1px,
+      transparent 1px 12px
     );
 }
 
 .ps-media-frame img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
   display: block;
 }
 
@@ -116,4 +132,247 @@
   height: 1px;
   background: var(--ps-line);
   border: 0;
+}
+
+.ps-gold-rule {
+  width: 2.75rem;
+  height: 2px;
+  background: var(--ps-gold);
+  border: 0;
+}
+
+/* Composición hero institucional */
+.ps-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 88svh;
+  overflow: hidden;
+  background: var(--ps-navy-950);
+}
+
+@media (min-width: 768px) {
+  .ps-hero {
+    min-height: min(92svh, 920px);
+  }
+}
+
+.ps-hero__media {
+  position: absolute;
+  inset: 0;
+}
+
+.ps-hero__crest {
+  position: absolute;
+  right: 6%;
+  top: 18%;
+  opacity: 0.14;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (max-width: 767px) {
+  .ps-hero__crest {
+    right: 4%;
+    top: 12%;
+    opacity: 0.1;
+  }
+}
+
+.ps-hero__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 88svh;
+  align-items: flex-end;
+}
+
+@media (min-width: 768px) {
+  .ps-hero__content {
+    min-height: min(92svh, 920px);
+    align-items: center;
+  }
+}
+
+.ps-hero__panel {
+  max-width: 34rem;
+  padding-block: 5.5rem 3rem;
+}
+
+@media (min-width: 768px) {
+  .ps-hero__panel {
+    padding-block: 6rem;
+    border-left: 2px solid var(--ps-gold);
+    padding-left: 1.5rem;
+  }
+}
+
+/* Unidad Canina — composición con PNG transparente */
+.ps-canina-stage {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 72% 55%,
+      rgba(27, 48, 72, 0.85) 0%,
+      transparent 70%
+    ),
+    linear-gradient(160deg, var(--ps-navy-900) 0%, var(--ps-navy-950) 55%, #04080f 100%);
+}
+
+.ps-canina-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 58%,
+      rgba(196, 166, 70, 0.06) 72%,
+      transparent 88%
+    );
+  opacity: 0.9;
+}
+
+.ps-canina-stage__frame {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 22rem;
+  padding: 1.5rem 1rem 0;
+}
+
+@media (min-width: 768px) {
+  .ps-canina-stage__frame {
+    min-height: 28rem;
+    padding: 2rem 1.5rem 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ps-canina-stage__frame {
+    min-height: 34rem;
+  }
+}
+
+.ps-canina-stage__frame::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--ps-gold-dim),
+    transparent
+  );
+}
+
+.ps-canina-binomio {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 520px);
+  height: auto;
+  max-height: 34rem;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.45));
+}
+
+.ps-canina-stage__crest {
+  position: absolute;
+  right: 8%;
+  top: 10%;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+@media (max-width: 639px) {
+  .ps-canina-stage__crest {
+    right: 4%;
+    top: 6%;
+    opacity: 0.16;
+  }
+}
+
+/* Bloques editoriales de divisiones */
+.ps-division-mosaic {
+  display: grid;
+  gap: 1px;
+  background: var(--ps-line);
+}
+
+@media (min-width: 900px) {
+  .ps-division-mosaic {
+    grid-template-columns: 1.35fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    min-height: 36rem;
+  }
+
+  .ps-division-mosaic > :first-child {
+    grid-row: 1 / span 2;
+  }
+}
+
+.ps-division-block {
+  position: relative;
+  isolation: isolate;
+  min-height: 16rem;
+  overflow: hidden;
+  background: var(--ps-navy-900);
+}
+
+@media (min-width: 900px) {
+  .ps-division-block {
+    min-height: 0;
+  }
+}
+
+.ps-division-block__media {
+  position: absolute;
+  inset: 0;
+}
+
+.ps-division-block__body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100%;
+  min-height: inherit;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .ps-division-block__body {
+    padding: 1.75rem 2rem;
+  }
+}
+
+.ps-fade-in {
+  animation: ps-fade-up 700ms ease both;
+}
+
+@keyframes ps-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ps-hero__panel {
+  animation: ps-fade-up 800ms ease both;
+}
+
+.ps-canina-binomio {
+  animation: ps-fade-up 900ms ease both;
 }

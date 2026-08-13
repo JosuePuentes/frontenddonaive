@@ -1,23 +1,31 @@
 import { Link } from "react-router";
+import { PolisurCrest } from "@/components/polisur/PolisurCrest";
 import { POLISUR_ROUTES, polisurNavItems } from "@/constants/polisur-routes";
 import { polisurCopy } from "@/content/polisur";
 
 function PolisurFooter() {
   return (
     <footer className="bg-[var(--ps-navy-950)]">
-      <div className="ps-container grid gap-10 border-t border-[var(--ps-line)] py-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
+      <div className="ps-container grid gap-10 border-t border-[var(--ps-line)] py-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
-          <div className="ps-display text-xl text-[var(--ps-white)]">
-            {polisurCopy.brand.name}
+          <div className="flex items-center gap-3">
+            <PolisurCrest size="md" />
+            <div>
+              <div className="ps-display text-xl text-[var(--ps-white)]">
+                {polisurCopy.brand.name}
+              </div>
+              <p className="mt-0.5 text-[0.65rem] uppercase tracking-[0.14em] text-[var(--ps-steel-400)]">
+                {polisurCopy.brand.line}
+              </p>
+            </div>
           </div>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--ps-steel-400)]">
-            {polisurCopy.brand.line}. La información de contacto, redes y
-            ubicación oficial se publicará cuando esté validada.
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-[var(--ps-steel-400)]">
+            {polisurCopy.brand.identification}
           </p>
         </div>
 
         <div>
-          <h3 className="ps-eyebrow">Navegación</h3>
+          <h3 className="ps-eyebrow">Enlaces</h3>
           <ul className="mt-4 space-y-2.5 text-sm text-[var(--ps-steel-300)]">
             {polisurNavItems.map((item) => (
               <li key={item.key}>
@@ -30,21 +38,28 @@ function PolisurFooter() {
         </div>
 
         <div>
-          <h3 className="ps-eyebrow">Institucional</h3>
-          <ul className="mt-4 space-y-2.5 text-sm text-[var(--ps-steel-300)]">
+          <h3 className="ps-eyebrow">Contacto</h3>
+          <ul className="mt-4 space-y-2.5 text-sm text-[var(--ps-steel-400)]">
             <li>
               <Link
                 to={POLISUR_ROUTES.contacto}
-                className="hover:text-[var(--ps-white)]"
+                className="text-[var(--ps-steel-300)] hover:text-[var(--ps-white)]"
               >
-                Contacto
+                Ir a contacto
               </Link>
             </li>
-            <li className="text-[var(--ps-steel-400)]">
-              Política de privacidad
-            </li>
-            <li className="text-[var(--ps-steel-400)]">Términos</li>
+            <li>{polisurCopy.footer.contactNote}</li>
           </ul>
+        </div>
+
+        <div>
+          <h3 className="ps-eyebrow">{polisurCopy.footer.attention}</h3>
+          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-400)]">
+            {polisurCopy.footer.attentionNote}
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-400)]">
+            {polisurCopy.footer.socialNote}
+          </p>
         </div>
       </div>
 

@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { PageMeta } from "@/components/page/PageMeta";
+import { PolisurCrest } from "@/components/polisur/PolisurCrest";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import { POLISUR_ROUTES } from "@/constants/polisur-routes";
 import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
@@ -16,6 +18,8 @@ const futureSections = [
 ] as const;
 
 export default function PolisurUnidadCanina() {
+  const [binomioFailed, setBinomioFailed] = useState(false);
+
   return (
     <>
       <PageMeta
@@ -23,29 +27,54 @@ export default function PolisurUnidadCanina() {
         description="Unidad Canina de POLISUR: especialidad institucional, entrenamiento y servicio."
       />
 
-      <section className="relative isolate min-h-[58svh] overflow-hidden sm:min-h-[68svh]">
-        <PolisurMedia
-          src={POLISUR_MEDIA.unidadCanina.hero}
-          alt="Unidad Canina POLISUR"
-          className="absolute inset-0"
-          objectPosition="center"
-          overlay="strong"
-        />
-        <div className="relative flex min-h-[58svh] items-end sm:min-h-[68svh]">
-          <div className="ps-container w-full pb-10 pt-20 sm:pb-14">
-            <p className="ps-eyebrow">POLISUR</p>
-            <h1 className="ps-display mt-3 text-4xl text-[var(--ps-white)] sm:text-6xl">
+      <section className="ps-canina-stage border-b border-[var(--ps-line)]">
+        <div className="ps-container relative grid gap-8 py-12 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-end lg:gap-6 lg:py-10">
+          <div className="relative z-[1] max-w-md pb-4 lg:pb-16">
+            <p className="ps-eyebrow text-[var(--ps-gold)]">POLISUR</p>
+            <h1 className="ps-display mt-3 text-4xl uppercase tracking-wide text-[var(--ps-white)] sm:text-6xl">
               Unidad Canina
             </h1>
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-[var(--ps-paper)]/90 sm:text-base">
+            <hr className="ps-gold-rule mt-6" />
+            <p className="mt-6 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
               {polisurCopy.canina.body}
             </p>
+            <Link
+              to={POLISUR_ROUTES.preinscripcion}
+              className="ps-btn ps-btn-ghost mt-8"
+            >
+              Preinscripción
+            </Link>
+          </div>
+
+          <div className="relative">
+            <div className="ps-canina-stage__crest" aria-hidden>
+              <PolisurCrest size="lg" />
+            </div>
+            <div className="ps-canina-stage__frame">
+              {!binomioFailed ? (
+                <img
+                  src={POLISUR_MEDIA.unidadCanina.binomio}
+                  alt="Binomio Unidad Canina POLISUR"
+                  className="ps-canina-binomio"
+                  onError={() => setBinomioFailed(true)}
+                  loading="eager"
+                  decoding="async"
+                />
+              ) : (
+                <PolisurMedia
+                  src={POLISUR_MEDIA.unidadCanina.hero}
+                  alt="Unidad Canina POLISUR"
+                  className="min-h-[18rem] w-full sm:min-h-[24rem]"
+                  overlay="soft"
+                />
+              )}
+            </div>
           </div>
         </div>
       </section>
 
       <section className="border-b border-[var(--ps-line)] bg-[var(--ps-navy-900)]">
-        <div className="ps-container grid gap-8 py-12 sm:py-16 lg:grid-cols-2 lg:items-start">
+        <div className="ps-container grid gap-8 py-12 sm:py-16 lg:grid-cols-2 lg:items-center">
           <div>
             <h2 className="text-2xl text-[var(--ps-white)] sm:text-3xl">
               Presentación
@@ -56,12 +85,6 @@ export default function PolisurUnidadCanina() {
               funciones, entrenamiento, especialidades, caninos, guías y
               galería fotográfica.
             </p>
-            <Link
-              to={POLISUR_ROUTES.preinscripcion}
-              className="ps-btn ps-btn-ghost mt-8"
-            >
-              Preinscripción
-            </Link>
           </div>
 
           <PolisurMedia

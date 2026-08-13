@@ -1,8 +1,9 @@
 # Assets oficiales de POLISUR
 
-Coloca aquí las fotografías y logos oficiales. Las rutas están referenciadas
-desde el código. Si un archivo no existe, la UI muestra un marco fotográfico
-neutro (sin texto técnico visible).
+Coloca aquí las fotografías y logos **reales** de la institución.
+Las rutas están referenciadas desde `src/content/polisur.ts`.
+Si un archivo no existe, la UI muestra un marco fotográfico neutro
+(sin texto tipo PLACEHOLDER visible al usuario).
 
 ## Logo / escudo
 
@@ -10,10 +11,14 @@ neutro (sin texto técnico visible).
 public/polisur/logo/escudo.png
 ```
 
-Opcional (alta resolución / SVG):
+Opcional (institucionales auxiliares):
 
 ```
-public/polisur/logo/escudo.svg
+public/polisur/logo/parche.png
+public/polisur/logo/visipol.png
+public/polisur/logo/cuadrantes-paz.png
+public/polisur/logo/justicia-paz.png
+public/polisur/logo/k9-emblema.png
 ```
 
 ## Home
@@ -30,11 +35,16 @@ public/polisur/home/ciudadania.jpg
 ```
 public/polisur/unidad-canina/hero.jpg
 public/polisur/unidad-canina/entrenamiento.jpg
-public/polisur/unidad-canina/galeria-01.jpg
+public/polisur/unidad-canina/binomio.png
 ```
 
-## Recomendaciones
+`binomio.png` debe ser la fotografía de los **dos funcionarios con el perro**,
+preferiblemente con fondo transparente. **No alterar** rostros, uniformes,
+insignias, proporciones ni la orientación del canino.
 
-- Formato: JPG/WebP para fotos, PNG/SVG para escudo.
-- Hero home: horizontal, idealmente ≥ 1920px de ancho.
-- Mobile: priorizar sujeto centrado; el componente usa `object-position`.
+## Reglas
+
+- Solo fotografías y logos oficiales reales.
+- No sustituir fondos reales por fondos artificiales.
+- Respetar transparencia cuando el archivo la tenga.
+- Formato: JPG/WebP para fotos de escena; PNG para escudo y binomio.

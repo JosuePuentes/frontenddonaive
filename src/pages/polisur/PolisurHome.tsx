@@ -1,6 +1,5 @@
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurHero } from "@/components/polisur/PolisurHero";
-import { PolisurAccess } from "@/components/polisur/PolisurAccess";
 import { PolisurAbout } from "@/components/polisur/PolisurAbout";
 import { PolisurDivisions } from "@/components/polisur/PolisurDivisions";
 import { PolisurCanina } from "@/components/polisur/PolisurCanina";
@@ -15,7 +14,6 @@ export default function PolisurHome() {
         description="Portal institucional de POLISUR: seguridad ciudadana, prevención y servicio público."
       />
       <PolisurHero />
-      <PolisurAccess />
       <PolisurAbout />
       <PolisurDivisions />
       <PolisurCanina />

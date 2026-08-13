@@ -25,6 +25,11 @@ export const polisurNavItems = [
   { key: "institucion", label: "Institución", to: POLISUR_ROUTES.institucion },
   { key: "divisiones", label: "Divisiones", to: POLISUR_ROUTES.divisiones },
   {
+    key: "unidad-canina",
+    label: "Unidad Canina",
+    to: POLISUR_ROUTES.unidadCanina,
+  },
+  {
     key: "preinscripcion",
     label: "Preinscripción",
     to: POLISUR_ROUTES.preinscripcion,
