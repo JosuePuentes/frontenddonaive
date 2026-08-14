@@ -444,6 +444,7 @@ export const adLicoreriaRepository = {
       ? toBaseUnits(presentation, input.qtyPresentation)
       : input.qtyPresentation;
 
+    const stockBefore = getStock(input.productId, input.warehouseId);
     const outbound =
       input.type === "VENTA" ||
       input.type === "TRASLADO_SALIDA" ||
@@ -453,7 +454,7 @@ export const adLicoreriaRepository = {
       input.type === "ROTURA";
 
     if (outbound) {
-      if (qtyBase > getStock(input.productId, input.warehouseId)) {
+      if (qtyBase > stockBefore) {
         return { ok: false, error: "Stock insuficiente" };
       }
       adjustStock(input.productId, input.warehouseId, -qtyBase);
@@ -483,7 +484,11 @@ export const adLicoreriaRepository = {
       createdAt: new Date().toISOString(),
     };
     pushMovement(mov);
-    audit(input.type, "inventario", input.userName, input.reason ?? input.type, mov.id);
+    audit(input.type, "inventario", input.userName, input.reason ?? input.type, mov.id, {
+      beforeValue: String(stockBefore),
+      afterValue: String(getStock(input.productId, input.warehouseId)),
+      reason: input.reason,
+    });
     emit();
     return { ok: true, data: mov };
   },
@@ -849,14 +854,11 @@ export const adLicoreriaRepository = {
             updatedAt: new Date().toISOString(),
           },
     );
-    audit(
-      "payment",
-      "account",
-      input.userName,
-      `${input.method} ${input.amount}`,
-      account.id,
-      { afterValue: JSON.stringify(payment) },
-    );
+    audit("payment", "account", input.userName, `${input.method} ${input.amount}`, account.id, {
+      beforeValue: JSON.stringify(account.payments.map((p) => p.id)),
+      afterValue: JSON.stringify(payment),
+      reason: input.reference ? `ref:${input.reference}` : undefined,
+    });
     emit();
     return { ok: true, data: undefined };
   },
@@ -918,9 +920,29 @@ export const adLicoreriaRepository = {
     if (!input.reason.trim()) {
       return { ok: false, error: "Motivo obligatorio" };
     }
+    // Anula ventas ligadas sin devolver stock: lo servido sigue fuera hasta voidAccount.
+    for (const sale of state.sales.filter(
+      (s) => s.accountId === account.id && s.status === "completed",
+    )) {
+      state.sales = state.sales.map((s) =>
+        s.id === sale.id
+          ? {
+              ...s,
+              status: "voided" as const,
+              voidReason: `Reapertura cuenta #${account.number}: ${input.reason}`,
+            }
+          : s,
+      );
+      audit("void", "sale", input.userName, `Reapertura → anula ${sale.receiptNumber}`, sale.id, {
+        beforeValue: "completed",
+        afterValue: "voided_no_stock_restore",
+        reason: input.reason,
+      });
+    }
     const reopened: AdAccount = {
       ...account,
       status: "ABIERTA",
+      receiptNumber: undefined,
       closedAt: undefined,
       closedBy: undefined,
       notes: `${account.notes ?? ""}\nReabierta: ${input.reason}`.trim(),
@@ -948,12 +970,61 @@ export const adLicoreriaRepository = {
     userName: string;
     reason: string;
     authorizedBy: string;
+    warehouseId?: string;
   }): AdResult<AdAccount> {
     const account = state.accounts.find((a) => a.id === input.accountId);
     if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    if (account.status === "CANCELADA") {
+      return { ok: false, error: "Cuenta ya anulada" };
+    }
     if (!input.reason.trim() || !input.authorizedBy.trim()) {
       return { ok: false, error: "Motivo y autorización obligatorios" };
     }
+    const warehouseId = input.warehouseId ?? "wh-2";
+    const servedSummary = account.items
+      .filter((i) => i.qtyServed > 0)
+      .map(
+        (i) =>
+          `${i.presentationId}:${i.qtyServed}/${i.qty}`,
+      )
+      .join(", ");
+
+    // Solo lo SERVIDO salió del inventario → solo eso se devuelve vía kardex.
+    for (const item of account.items) {
+      if (item.qtyServed <= 0) continue;
+      const mov = this.registerMovement({
+        type: "DEVOLUCION",
+        productId: item.productId,
+        presentationId: item.presentationId,
+        qtyPresentation: item.qtyServed,
+        warehouseId,
+        userName: input.userName,
+        reason: `Anulación cuenta #${account.number}: ${input.reason}`,
+        reference: account.id,
+      });
+      if (!mov.ok) return mov;
+    }
+
+    // Si hubo venta por cierre, anularla sin segunda devolución de stock.
+    for (const sale of state.sales.filter(
+      (s) => s.accountId === account.id && s.status === "completed",
+    )) {
+      state.sales = state.sales.map((s) =>
+        s.id === sale.id
+          ? {
+              ...s,
+              status: "voided" as const,
+              voidReason: `Anulación cuenta #${account.number}: ${input.reason}`,
+            }
+          : s,
+      );
+      audit("void", "sale", input.userName, sale.receiptNumber, sale.id, {
+        beforeValue: "completed",
+        afterValue: "voided_via_account",
+        reason: input.reason,
+      });
+    }
+
     const voided: AdAccount = {
       ...account,
       status: "CANCELADA",
@@ -971,7 +1042,7 @@ export const adLicoreriaRepository = {
       );
     }
     audit("void", "account", input.userName, input.reason, account.id, {
-      beforeValue: account.status,
+      beforeValue: `${account.status}|served:${servedSummary || "none"}`,
       afterValue: "CANCELADA",
       reason: input.reason,
     });
@@ -1057,7 +1128,18 @@ export const adLicoreriaRepository = {
       );
     }
 
-    audit("close", "account", input.userName, `Cerró #${account.number} → ${receiptNumber}`, account.id);
+    audit("close", "account", input.userName, `Cerró #${account.number} → ${receiptNumber}`, account.id, {
+      beforeValue: account.status,
+      afterValue: `CERRADA|${receiptNumber}|totalUsd=${total.usd}`,
+    });
+    audit("venta", "pos", input.userName, `${receiptNumber} $${sale.total.usd}`, sale.id, {
+      beforeValue: undefined,
+      afterValue: JSON.stringify({
+        receiptNumber,
+        total: sale.total,
+        payments: sale.payments.length,
+      }),
+    });
     emit();
     return { ok: true, data: closed };
   },
@@ -1426,7 +1508,14 @@ export const adLicoreriaRepository = {
       );
     }
 
-    audit("venta", "pos", input.userName, `${receiptNumber} $${sale.total.usd}`, sale.id);
+    audit("venta", "pos", input.userName, `${receiptNumber} $${sale.total.usd}`, sale.id, {
+      afterValue: JSON.stringify({
+        receiptNumber,
+        total: sale.total,
+        payments: sale.payments.length,
+        customerId: sale.customerId,
+      }),
+    });
     emit();
     return { ok: true, data: sale };
   },
@@ -1443,20 +1532,58 @@ export const adLicoreriaRepository = {
     if (!input.reason.trim() || !input.authorizedBy.trim()) {
       return { ok: false, error: "Motivo y autorización obligatorios" };
     }
-    // Devolver stock al depósito de la venta (no silenciar historial: queda movimiento DEVOLUCION).
-    for (const line of sale.items) {
-      const mov = this.registerMovement({
-        type: "DEVOLUCION",
-        productId: line.productId,
-        presentationId: line.presentationId,
-        qtyPresentation: line.qty,
-        warehouseId: sale.warehouseId,
-        userName: input.userName,
-        reason: `Anulación ${sale.receiptNumber}: ${input.reason}`,
-        reference: sale.id,
-      });
-      if (!mov.ok) return mov;
+
+    const account = sale.accountId
+      ? state.accounts.find((a) => a.id === sale.accountId)
+      : undefined;
+
+    // POS directo: devolver ítems de la venta.
+    // Venta desde cuenta: solo lo SERVIDO (pendiente nunca salió del inventario).
+    if (account) {
+      for (const item of account.items) {
+        if (item.qtyServed <= 0) continue;
+        const mov = this.registerMovement({
+          type: "DEVOLUCION",
+          productId: item.productId,
+          presentationId: item.presentationId,
+          qtyPresentation: item.qtyServed,
+          warehouseId: sale.warehouseId,
+          userName: input.userName,
+          reason: `Anulación ${sale.receiptNumber}: ${input.reason}`,
+          reference: sale.id,
+        });
+        if (!mov.ok) return mov;
+      }
+      if (account.status !== "CANCELADA") {
+        state.accounts = state.accounts.map((a) =>
+          a.id === account.id
+            ? {
+                ...a,
+                status: "CANCELADA" as const,
+                voidedAt: new Date().toISOString(),
+                voidedBy: input.userName,
+                voidReason: `${input.reason} (auth: ${input.authorizedBy})`,
+                updatedAt: new Date().toISOString(),
+              }
+            : a,
+        );
+      }
+    } else {
+      for (const line of sale.items) {
+        const mov = this.registerMovement({
+          type: "DEVOLUCION",
+          productId: line.productId,
+          presentationId: line.presentationId,
+          qtyPresentation: line.qty,
+          warehouseId: sale.warehouseId,
+          userName: input.userName,
+          reason: `Anulación ${sale.receiptNumber}: ${input.reason}`,
+          reference: sale.id,
+        });
+        if (!mov.ok) return mov;
+      }
     }
+
     const voided: AdSale = {
       ...sale,
       status: "voided",
@@ -1464,7 +1591,11 @@ export const adLicoreriaRepository = {
     };
     state.sales = state.sales.map((s) => (s.id === sale.id ? voided : s));
     audit("void", "sale", input.userName, input.reason, sale.id, {
-      beforeValue: "completed",
+      beforeValue: JSON.stringify({
+        status: "completed",
+        total: sale.total,
+        items: sale.items.length,
+      }),
       afterValue: "voided",
       reason: input.reason,
     });
@@ -1708,8 +1839,76 @@ export const adLicoreriaRepository = {
       notes: input.notes,
     };
     state.inventoryClosures = [closure, ...state.inventoryClosures];
-    audit("inv_close", "closure", input.createdBy, "Conteo físico", closure.id);
+    audit("inv_close", "closure", input.createdBy, "Conteo físico", closure.id, {
+      afterValue: JSON.stringify({
+        lines: input.lines.length,
+        diffs: input.lines.filter((l) => l.differenceBase !== 0).length,
+        applyAdjustments: Boolean(input.applyAdjustments),
+      }),
+    });
     emit();
     return { ok: true, data: closure };
   },
+
+  /** Snapshot de cliente para detalle UI / futura WhatsApp API. */
+  getCustomerSummary(customerId: string) {
+    const customer = state.customers.find((c) => c.id === customerId);
+    if (!customer) return undefined;
+    const sales = state.sales.filter(
+      (s) => s.customerId === customerId && s.status === "completed",
+    );
+    const accounts = state.accounts.filter((a) => a.customerId === customerId);
+    const openAccounts = accounts.filter(
+      (a) =>
+        a.status === "ABIERTA" ||
+        a.status === "PREPAGADA" ||
+        a.status === "PARCIALMENTE_PAGADA",
+    );
+    const receipts = state.receipts.filter((r) => r.customerId === customerId);
+    const prepaids = state.prepaids.filter((p) => p.customerId === customerId);
+    const payments = [
+      ...sales.flatMap((s) => s.payments),
+      ...accounts.flatMap((a) => a.payments),
+    ];
+    const pendingMerchandise = openAccounts.flatMap((a) =>
+      a.items
+        .filter((i) => i.qty > i.qtyServed)
+        .map((i) => ({
+          accountNumber: a.number,
+          productId: i.productId,
+          presentationId: i.presentationId,
+          requested: i.qty,
+          served: i.qtyServed,
+          pending: i.qty - i.qtyServed,
+        })),
+    );
+    const pendingBalanceUsd = openAccounts.reduce((acc, a) => {
+      const { total } = accountTotals(a);
+      const paid = paidByCurrency(a.payments).usd;
+      return acc + Math.max(0, total.usd - paid);
+    }, 0);
+    const totalPurchasedUsd = sales.reduce((a, s) => a + s.total.usd, 0);
+    const lastSale = [...sales].sort((a, b) =>
+      a.createdAt < b.createdAt ? 1 : -1,
+    )[0];
+    return {
+      customer,
+      sales,
+      accounts,
+      receipts,
+      payments,
+      prepaids,
+      pendingMerchandise,
+      whatsappLogs: state.whatsappLogs.filter((w) => w.customerId === customerId),
+      totals: {
+        totalPurchasedUsd: Number(totalPurchasedUsd.toFixed(2)),
+        pendingBalanceUsd: Number(pendingBalanceUsd.toFixed(2)),
+        lastPurchaseAt: lastSale?.createdAt,
+        lastPurchaseReceipt: lastSale?.receiptNumber,
+        openAccounts: openAccounts.length,
+        activePrepaids: prepaids.filter((p) => p.status === "ACTIVO").length,
+      },
+    };
+  },
 };
+

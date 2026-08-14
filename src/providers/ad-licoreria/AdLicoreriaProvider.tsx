@@ -128,12 +128,16 @@ type AdStore = AdRepositoryState & {
     userName: string;
     reason: string;
     authorizedBy: string;
+    warehouseId?: string;
   }) => AdResult<AdAccount>;
   closeAccount: (input: {
     accountId: string;
     userName: string;
     notes?: string;
   }) => AdResult<AdAccount>;
+  getCustomerSummary: (customerId: string) =>
+    | ReturnType<typeof adLicoreriaRepository.getCustomerSummary>
+    | undefined;
   createPrepaid: (input: {
     customerId?: string;
     customerName?: string;
@@ -251,6 +255,7 @@ export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
       reopenAccount: (input) => adLicoreriaRepository.reopenAccount(input),
       voidAccount: (input) => adLicoreriaRepository.voidAccount(input),
       closeAccount: (input) => adLicoreriaRepository.closeAccount(input),
+      getCustomerSummary: (id) => adLicoreriaRepository.getCustomerSummary(id),
       createPrepaid: (input) => adLicoreriaRepository.createPrepaid(input),
       consumePrepaid: (input) => adLicoreriaRepository.consumePrepaid(input),
       findPrepaidByQr: (q) => adLicoreriaRepository.findPrepaidByQr(q),

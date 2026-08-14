@@ -1,43 +1,14 @@
 import { useMemo, useState } from "react";
+import {
+  AD_REPORT_PRESET_LABELS,
+  inDateRange,
+  rangeForPreset,
+  type AdReportPreset,
+} from "@/lib/ad-licoreria/report-presets";
+import { prepaidAvailable } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
-type Preset =
-  | "hoy"
-  | "ayer"
-  | "semana"
-  | "mes"
-  | "anio"
-  | "personalizado";
-
-function isoDate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
-function rangeForPreset(preset: Preset): { from: string; to: string } {
-  const now = new Date();
-  const today = isoDate(now);
-  if (preset === "hoy") return { from: today, to: today };
-  if (preset === "ayer") {
-    const y = new Date(now);
-    y.setDate(y.getDate() - 1);
-    const s = isoDate(y);
-    return { from: s, to: s };
-  }
-  if (preset === "semana") {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 6);
-    return { from: isoDate(d), to: today };
-  }
-  if (preset === "mes") {
-    const d = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { from: isoDate(d), to: today };
-  }
-  if (preset === "anio") {
-    const d = new Date(now.getFullYear(), 0, 1);
-    return { from: isoDate(d), to: today };
-  }
-  return { from: "", to: "" };
-}
+const PRESETS = Object.keys(AD_REPORT_PRESET_LABELS) as AdReportPreset[];
 
 export default function AdLicoreriaReportes() {
   const {
@@ -52,16 +23,22 @@ export default function AdLicoreriaReportes() {
     inventory,
     customers,
     warehouses,
+    tables,
+    purchases,
+    audit,
+    dailyClosures,
+    inventoryClosures,
+    settings,
   } = useAdLicoreria();
 
-  const [preset, setPreset] = useState<Preset>("hoy");
+  const [preset, setPreset] = useState<AdReportPreset>("hoy");
   const initial = rangeForPreset("hoy");
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [categoryId, setCategoryId] = useState("");
   const [mesonera, setMesonera] = useState("");
 
-  function applyPreset(p: Preset) {
+  function applyPreset(p: AdReportPreset) {
     setPreset(p);
     if (p === "personalizado") return;
     const r = rangeForPreset(p);
@@ -71,9 +48,7 @@ export default function AdLicoreriaReportes() {
 
   const filteredSales = useMemo(() => {
     return sales.filter((s) => {
-      const d = s.createdAt.slice(0, 10);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
+      if (!inDateRange(s.createdAt, from, to)) return false;
       if (mesonera && (s.mesoneraName ?? s.userName) !== mesonera) return false;
       if (categoryId) {
         const ok = s.items.some((it) => {
@@ -103,28 +78,31 @@ export default function AdLicoreriaReportes() {
   }, [completed]);
 
   const byProduct = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { qty: number; usd: number; cost: number }>();
     for (const s of completed) {
       for (const it of s.items) {
-        map.set(it.productId, (map.get(it.productId) ?? 0) + it.qtyBase);
+        const prod = products.find((p) => p.id === it.productId);
+        const cur = map.get(it.productId) ?? { qty: 0, usd: 0, cost: 0 };
+        cur.qty += it.qtyBase;
+        cur.usd += it.unitPrice.usd * it.qty;
+        cur.cost += (prod?.cost.usd ?? 0) * it.qtyBase;
+        map.set(it.productId, cur);
       }
     }
     return [...map.entries()]
-      .map(([id, qty]) => ({
+      .map(([id, v]) => ({
         name: products.find((p) => p.id === id)?.name ?? id,
-        qty,
+        ...v,
+        margin: v.usd - v.cost,
       }))
-      .sort((a, b) => b.qty - a.qty);
+      .sort((a, b) => b.usd - a.usd);
   }, [completed, products]);
 
   const byPresentation = useMemo(() => {
     const map = new Map<string, number>();
     for (const s of completed) {
       for (const it of s.items) {
-        map.set(
-          it.presentationId,
-          (map.get(it.presentationId) ?? 0) + it.qty,
-        );
+        map.set(it.presentationId, (map.get(it.presentationId) ?? 0) + it.qty);
       }
     }
     return [...map.entries()]
@@ -134,6 +112,23 @@ export default function AdLicoreriaReportes() {
       }))
       .sort((a, b) => b.qty - a.qty);
   }, [completed, presentations]);
+
+  const byCategory = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of completed) {
+      for (const it of s.items) {
+        const cat = products.find((p) => p.id === it.productId)?.categoryId;
+        if (!cat) continue;
+        map.set(cat, (map.get(cat) ?? 0) + it.unitPrice.usd * it.qty);
+      }
+    }
+    return [...map.entries()]
+      .map(([id, usd]) => ({
+        name: categories.find((c) => c.id === id)?.name ?? id,
+        usd,
+      }))
+      .sort((a, b) => b.usd - a.usd);
+  }, [completed, products, categories]);
 
   const byMesonera = useMemo(() => {
     const map = new Map<string, { count: number; usd: number }>();
@@ -150,34 +145,76 @@ export default function AdLicoreriaReportes() {
   const byTable = useMemo(() => {
     const map = new Map<string, number>();
     for (const s of completed) {
-      const key = s.tableId ?? "sin-mesa";
+      const key = s.tableId
+        ? (tables.find((t) => t.id === s.tableId)?.number ?? s.tableId)
+        : "sin-mesa";
+      map.set(key, (map.get(key) ?? 0) + s.total.usd);
+    }
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [completed, tables]);
+
+  const byCustomer = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of completed) {
+      const key = s.customerName ?? "Mostrador";
       map.set(key, (map.get(key) ?? 0) + s.total.usd);
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [completed]);
 
-  const lowStock = products.filter((p) => {
-    const qty = inventory
-      .filter((i) => i.productId === p.id)
-      .reduce((a, i) => a + i.qtyBase, 0);
-    return qty < p.minStockBase;
-  });
-
-  const mesoneras = operators.filter((o) => o.role === "mesonera");
+  const movFiltered = movements.filter((m) =>
+    inDateRange(m.createdAt, from, to),
+  );
+  const transfers = movFiltered.filter((m) =>
+    m.type.startsWith("TRASLADO"),
+  );
+  const adjustments = movFiltered.filter((m) =>
+    m.type.startsWith("AJUSTE") || m.type === "DEVOLUCION",
+  );
+  const purchasesFiltered = purchases.filter((p) =>
+    inDateRange(p.createdAt, from, to),
+  );
+  const auditFiltered = audit.filter((a) => inDateRange(a.createdAt, from, to));
+  const discounts = completed.reduce((a, s) => a + s.discountUsd, 0);
   const openAccounts = accounts.filter(
     (a) =>
       a.status === "ABIERTA" ||
       a.status === "PREPAGADA" ||
       a.status === "PARCIALMENTE_PAGADA",
   );
-  const closedInRange = accounts.filter((a) => {
-    if (a.status !== "CERRADA" || !a.closedAt) return false;
-    const d = a.closedAt.slice(0, 10);
-    if (from && d < from) return false;
-    if (to && d > to) return false;
-    return true;
+  const closedAccounts = accounts.filter(
+    (a) =>
+      a.status === "CERRADA" &&
+      a.closedAt &&
+      inDateRange(a.closedAt, from, to),
+  );
+  const pendingMerch = openAccounts.reduce(
+    (acc, a) =>
+      acc + a.items.reduce((x, i) => x + Math.max(0, i.qty - i.qtyServed), 0),
+    0,
+  );
+  const prepaidActiveUnits = prepaids
+    .filter((p) => p.status === "ACTIVO")
+    .reduce(
+      (a, p) =>
+        a +
+        p.items.reduce(
+          (x, i) => x + prepaidAvailable(i.qtyPurchased, i.qtyConsumed),
+          0,
+        ),
+      0,
+    );
+  const lastDaily = dailyClosures[0];
+  const lastInv = inventoryClosures[0];
+  const lowStock = products.filter((p) => {
+    const qty = inventory
+      .filter((i) => i.productId === p.id)
+      .reduce((a, i) => a + i.qtyBase, 0);
+    return qty < p.minStockBase;
   });
-
+  const marginTotal = byProduct.reduce((a, p) => a + p.margin, 0);
+  const mesoneras = operators.filter((o) => o.role === "mesonera");
+  const totalUsd = completed.reduce((a, s) => a + s.total.usd, 0);
   const collectedUsd = completed.reduce(
     (a, s) =>
       a +
@@ -186,35 +223,33 @@ export default function AdLicoreriaReportes() {
         .reduce((x, p) => x + p.amount, 0),
     0,
   );
-  const discountUsd = completed.reduce((a, s) => a + s.discountUsd, 0);
-  const totalUsd = completed.reduce((a, s) => a + s.total.usd, 0);
+  const collectedBs = completed.reduce(
+    (a, s) =>
+      a +
+      s.payments
+        .filter((p) => p.currency === "BS")
+        .reduce((x, p) => x + p.amount, 0),
+    0,
+  );
 
   return (
     <div className="space-y-5">
       <p className="text-sm text-[var(--ad-muted)]">
-        Ventas del día y reportes operativos. Listo para conectar API/export.
+        Reportes derivados del repositorio mock. Tasa referencia:{" "}
+        {settings.exchangeRateUsdToBs} (no fuerza precios).
       </p>
 
       <section className="ad-panel space-y-3">
         <h2 className="ad-panel-title">Filtro de período</h2>
         <div className="flex flex-wrap gap-2">
-          {(
-            [
-              ["hoy", "Hoy"],
-              ["ayer", "Ayer"],
-              ["semana", "Esta semana"],
-              ["mes", "Este mes"],
-              ["anio", "Este año"],
-              ["personalizado", "Personalizado"],
-            ] as const
-          ).map(([id, label]) => (
+          {PRESETS.map((id) => (
             <button
               key={id}
               type="button"
               className={`ad-btn ${preset === id ? "ad-btn--gold" : ""}`}
               onClick={() => applyPreset(id)}
             >
-              {label}
+              {AD_REPORT_PRESET_LABELS[id]}
             </button>
           ))}
         </div>
@@ -265,111 +300,124 @@ export default function AdLicoreriaReportes() {
       </section>
 
       <section className="ad-panel space-y-3">
-        <h2 className="ad-panel-title">Ventas del período</h2>
+        <h2 className="ad-panel-title">Resumen operativo</h2>
         <div className="ad-grid-stats">
           <div className="ad-stat">
             <div className="ad-stat__value">{completed.length}</div>
-            <div className="ad-stat__label">Ventas cerradas</div>
+            <div className="ad-stat__label">Ventas</div>
+          </div>
+          <div className="ad-stat">
+            <div className="ad-stat__value">${totalUsd.toFixed(0)}</div>
+            <div className="ad-stat__label">Vendido USD</div>
+          </div>
+          <div className="ad-stat">
+            <div className="ad-stat__value">${collectedUsd.toFixed(0)}</div>
+            <div className="ad-stat__label">Cobrado USD</div>
+          </div>
+          <div className="ad-stat">
+            <div className="ad-stat__value">
+              {collectedBs.toLocaleString("es-VE")}
+            </div>
+            <div className="ad-stat__label">Cobrado Bs</div>
           </div>
           <div className="ad-stat">
             <div className="ad-stat__value">{openAccounts.length}</div>
             <div className="ad-stat__label">Cuentas abiertas</div>
           </div>
           <div className="ad-stat">
-            <div className="ad-stat__value">{closedInRange.length}</div>
+            <div className="ad-stat__value">{closedAccounts.length}</div>
             <div className="ad-stat__label">Cuentas cerradas</div>
-          </div>
-          <div className="ad-stat">
-            <div className="ad-stat__value">${totalUsd.toFixed(0)}</div>
-            <div className="ad-stat__label">Total vendido</div>
-          </div>
-          <div className="ad-stat">
-            <div className="ad-stat__value">${collectedUsd.toFixed(0)}</div>
-            <div className="ad-stat__label">Total cobrado USD</div>
-          </div>
-          <div className="ad-stat">
-            <div className="ad-stat__value">${discountUsd.toFixed(0)}</div>
-            <div className="ad-stat__label">Descuentos</div>
           </div>
           <div className="ad-stat">
             <div className="ad-stat__value">{voided.length}</div>
             <div className="ad-stat__label">Anulaciones</div>
           </div>
           <div className="ad-stat">
-            <div className="ad-stat__value">
-              {prepaids.filter((p) => p.status === "ACTIVO").length}
-            </div>
-            <div className="ad-stat__label">Prepagos activos</div>
+            <div className="ad-stat__value">${discounts.toFixed(0)}</div>
+            <div className="ad-stat__label">Descuentos</div>
+          </div>
+          <div className="ad-stat">
+            <div className="ad-stat__value">{pendingMerch}</div>
+            <div className="ad-stat__label">Mercancía pendiente</div>
+          </div>
+          <div className="ad-stat">
+            <div className="ad-stat__value">{prepaidActiveUnits}</div>
+            <div className="ad-stat__label">Prepago disponible</div>
+          </div>
+          <div className="ad-stat">
+            <div className="ad-stat__value">${marginTotal.toFixed(0)}</div>
+            <div className="ad-stat__label">Margen estimado</div>
+          </div>
+          <div className="ad-stat">
+            <div className="ad-stat__value">{lowStock.length}</div>
+            <div className="ad-stat__label">Stock crítico</div>
           </div>
         </div>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="ad-panel">
-          <h2 className="ad-panel-title">Por método de pago</h2>
+          <h2 className="ad-panel-title">Métodos de pago</h2>
           <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-            {byMethod.map(([method, v]) => (
-              <li key={method}>
-                {method}: ${v.usd.toFixed(2)} · Bs {v.bs.toLocaleString("es-VE")}
+            {byMethod.map(([m, v]) => (
+              <li key={m}>
+                {m}: ${v.usd.toFixed(2)} · Bs {v.bs.toLocaleString("es-VE")}
               </li>
             ))}
             {!byMethod.length ? <li>Sin datos</li> : null}
           </ul>
+          {lastDaily ? (
+            <p className="mt-3 text-xs text-[var(--ad-muted)]">
+              Último cierre caja {lastDaily.date}: esperado USD{" "}
+              {lastDaily.expectedCashUsd} / contado {lastDaily.countedCashUsd} ·
+              dif {lastDaily.cashDifferenceUsd}
+            </p>
+          ) : null}
         </section>
         <section className="ad-panel">
-          <h2 className="ad-panel-title">Por mesonera</h2>
+          <h2 className="ad-panel-title">Mesoneras / mesas / clientes</h2>
           <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-            {byMesonera.map(([name, v]) => (
-              <li key={name}>
-                {name}: {v.count} ventas · ${v.usd.toFixed(2)}
+            {byMesonera.slice(0, 5).map(([n, v]) => (
+              <li key={n}>
+                {n}: {v.count} · ${v.usd.toFixed(2)}
               </li>
             ))}
-            {!byMesonera.length ? <li>Sin datos</li> : null}
+            {byTable.slice(0, 4).map(([n, usd]) => (
+              <li key={`t-${n}`}>
+                Mesa {n}: ${usd.toFixed(2)}
+              </li>
+            ))}
+            {byCustomer.slice(0, 4).map(([n, usd]) => (
+              <li key={`c-${n}`}>
+                {n}: ${usd.toFixed(2)}
+              </li>
+            ))}
           </ul>
         </section>
         <section className="ad-panel">
-          <h2 className="ad-panel-title">Por producto (u. base)</h2>
+          <h2 className="ad-panel-title">Productos / presentaciones / categorías</h2>
           <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-            {byProduct.slice(0, 8).map((r) => (
+            {byProduct.slice(0, 5).map((r) => (
               <li key={r.name}>
-                {r.name}: {r.qty}
+                {r.name}: {r.qty} u. · ${r.usd.toFixed(2)} · margen $
+                {r.margin.toFixed(2)}
               </li>
             ))}
-            {!byProduct.length ? <li>Sin datos</li> : null}
-          </ul>
-        </section>
-        <section className="ad-panel">
-          <h2 className="ad-panel-title">Por presentación</h2>
-          <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-            {byPresentation.slice(0, 8).map((r) => (
+            {byPresentation.slice(0, 4).map((r) => (
               <li key={r.name}>
-                {r.name}: {r.qty}
+                Pres. {r.name}: {r.qty}
               </li>
             ))}
-            {!byPresentation.length ? <li>Sin datos</li> : null}
+            {byCategory.slice(0, 4).map((r) => (
+              <li key={r.name}>
+                Cat. {r.name}: ${r.usd.toFixed(2)}
+              </li>
+            ))}
           </ul>
         </section>
         <section className="ad-panel">
-          <h2 className="ad-panel-title">Por mesa (USD)</h2>
+          <h2 className="ad-panel-title">Inventario / compras / auditoría</h2>
           <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-            {byTable.slice(0, 8).map(([id, usd]) => (
-              <li key={id}>
-                {id}: ${usd.toFixed(2)}
-              </li>
-            ))}
-            {!byTable.length ? <li>Sin datos</li> : null}
-          </ul>
-        </section>
-        <section className="ad-panel">
-          <h2 className="ad-panel-title">Inventario / clientes</h2>
-          <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-            <li>Movimientos kardex: {movements.length}</li>
-            <li>Stock bajo: {lowStock.length}</li>
-            <li>Clientes: {customers.length}</li>
-            <li>
-              Existencia total:{" "}
-              {inventory.reduce((a, i) => a + i.qtyBase, 0)} u. base
-            </li>
             {warehouses.map((w) => (
               <li key={w.id}>
                 {w.name}:{" "}
@@ -379,6 +427,17 @@ export default function AdLicoreriaReportes() {
                 u.
               </li>
             ))}
+            <li>Traslados (período): {transfers.length}</li>
+            <li>Ajustes/devoluciones: {adjustments.length}</li>
+            <li>Compras: {purchasesFiltered.length}</li>
+            <li>
+              Diff inventario (último):{" "}
+              {lastInv
+                ? lastInv.lines.filter((l) => l.differenceBase !== 0).length
+                : 0}
+            </li>
+            <li>Eventos auditoría: {auditFiltered.length}</li>
+            <li>Clientes totales: {customers.length}</li>
           </ul>
         </section>
       </div>

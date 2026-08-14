@@ -50,6 +50,8 @@ export default function AdLicoreriaVentas() {
   const [payRef, setPayRef] = useState("");
   const [payOrigin, setPayOrigin] = useState("");
   const [payments, setPayments] = useState<DraftPayment[]>([]);
+  const [discountUsd, setDiscountUsd] = useState(0);
+  const [discountAuth, setDiscountAuth] = useState("");
   const [msg, setMsg] = useState("");
 
   const filteredProducts = useMemo(() => {
@@ -73,6 +75,13 @@ export default function AdLicoreriaVentas() {
   const methodCfg = activeMethods.find((m) => m.code === payMethod);
   const totalUsd = cart.reduce((a, l) => a + l.unitPrice.usd * l.qty, 0);
   const totalBs = cart.reduce((a, l) => a + l.unitPrice.bs * l.qty, 0);
+  const netUsd = Math.max(0, totalUsd - discountUsd);
+  const paidUsd = payments
+    .filter((p) => p.currency === "USD")
+    .reduce((a, p) => a + p.amount, 0);
+  const paidBs = payments
+    .filter((p) => p.currency === "BS")
+    .reduce((a, p) => a + p.amount, 0);
 
   function addLine() {
     const pres = activePres;
@@ -121,6 +130,26 @@ export default function AdLicoreriaVentas() {
     );
   }
 
+  function setLinePrice(
+    index: number,
+    field: "usd" | "bs",
+    value: number,
+  ) {
+    setCart((prev) =>
+      prev.map((l, i) =>
+        i !== index
+          ? l
+          : {
+              ...l,
+              unitPrice: {
+                ...l.unitPrice,
+                [field]: Number.isFinite(value) ? value : 0,
+              },
+            },
+      ),
+    );
+  }
+
   function addPayment() {
     const amount = Number(payAmount);
     if (!amount || amount <= 0) return;
@@ -152,6 +181,10 @@ export default function AdLicoreriaVentas() {
   }
 
   function checkout() {
+    if (discountUsd > 0 && !discountAuth.trim()) {
+      setMsg("Descuento requiere autorización");
+      return;
+    }
     const result = completeSale({
       items: cart,
       payments,
@@ -162,6 +195,7 @@ export default function AdLicoreriaVentas() {
       customerId: customer?.id,
       customerName: customer?.name,
       customerPhone: customer?.phone,
+      discountUsd,
       notes: notes.trim() || undefined,
     });
     if (!result.ok) {
@@ -171,6 +205,8 @@ export default function AdLicoreriaVentas() {
     setCart([]);
     setPayments([]);
     setNotes("");
+    setDiscountUsd(0);
+    setDiscountAuth("");
     setMsg(
       `Venta OK · Recibo ${result.data.receiptNumber} · $${result.data.total.usd.toFixed(2)}`,
     );
@@ -361,6 +397,8 @@ export default function AdLicoreriaVentas() {
                 <th>Producto</th>
                 <th>Presentación</th>
                 <th>Cant.</th>
+                <th>USD</th>
+                <th>Bs</th>
                 <th>Base</th>
                 <th>Total</th>
                 <th />
@@ -383,6 +421,30 @@ export default function AdLicoreriaVentas() {
                         min={1}
                         value={l.qty}
                         onChange={(e) => setLineQty(i, Number(e.target.value))}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="ad-input w-20"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={l.unitPrice.usd}
+                        onChange={(e) =>
+                          setLinePrice(i, "usd", Number(e.target.value))
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="ad-input w-24"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={l.unitPrice.bs}
+                        onChange={(e) =>
+                          setLinePrice(i, "bs", Number(e.target.value))
+                        }
                       />
                     </td>
                     <td>{l.qtyBase}</td>
@@ -408,8 +470,8 @@ export default function AdLicoreriaVentas() {
               })}
               {!cart.length ? (
                 <tr>
-                  <td colSpan={6} className="text-[var(--ad-muted)]">
-                    Carrito vacío
+                  <td colSpan={8} className="text-[var(--ad-muted)]">
+                    Carrito vacío · inventario se descuenta al servir/cobrar
                   </td>
                 </tr>
               ) : null}
@@ -428,11 +490,30 @@ export default function AdLicoreriaVentas() {
       <section className="ad-panel space-y-3">
         <h2 className="ad-panel-title">Cobro / cuenta</h2>
         <p className="ad-display text-4xl text-[var(--ad-gold-soft)]">
-          ${totalUsd.toFixed(2)}
+          ${netUsd.toFixed(2)}
         </p>
         <p className="text-sm text-[var(--ad-muted)]">
-          Bs {totalBs.toLocaleString("es-VE")} · pagos mixtos permitidos
+          Bruto ${totalUsd.toFixed(2)} · Bs {totalBs.toLocaleString("es-VE")} ·
+          pagado ${paidUsd.toFixed(2)} / Bs {paidBs.toLocaleString("es-VE")} ·
+          saldo USD ${(netUsd - paidUsd).toFixed(2)}
         </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <input
+            className="ad-input"
+            type="number"
+            min={0}
+            step="0.01"
+            placeholder="Descuento USD"
+            value={discountUsd || ""}
+            onChange={(e) => setDiscountUsd(Number(e.target.value) || 0)}
+          />
+          <input
+            className="ad-input"
+            placeholder="Autorización descuento"
+            value={discountAuth}
+            onChange={(e) => setDiscountAuth(e.target.value)}
+          />
+        </div>
         <div className="grid gap-2">
           <select
             className="ad-select"
@@ -478,7 +559,7 @@ export default function AdLicoreriaVentas() {
             />
           ) : null}
           <button type="button" className="ad-btn" onClick={addPayment}>
-            Añadir pago
+            Añadir pago (parcial/mixto)
           </button>
         </div>
         <ul className="space-y-1 text-sm text-[var(--ad-muted)]">

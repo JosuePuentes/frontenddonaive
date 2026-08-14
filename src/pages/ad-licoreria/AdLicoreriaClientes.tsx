@@ -10,13 +10,10 @@ import type { AdCustomer } from "@/types/ad-licoreria";
 export default function AdLicoreriaClientes() {
   const {
     customers,
-    accounts,
-    prepaids,
-    sales,
-    receipts,
-    whatsappLogs,
-    prepaidConsumptions,
+    products,
+    presentations,
     upsertCustomer,
+    getCustomerSummary,
   } = useAdLicoreria();
 
   const [query, setQuery] = useState("");
@@ -44,68 +41,9 @@ export default function AdLicoreriaClientes() {
   }, [customers, query]);
 
   const selected = customers.find((c) => c.id === selectedId);
-
-  const history = useMemo(() => {
-    if (!selected) return null;
-    return {
-      accounts: accounts.filter((a) => a.customerId === selected.id),
-      sales: sales.filter((s) => s.customerId === selected.id),
-      prepaids: prepaids.filter((p) => p.customerId === selected.id),
-      receipts: receipts.filter((r) => r.customerId === selected.id),
-      whatsapp: whatsappLogs.filter((w) => w.customerId === selected.id),
-      pendingItems: accounts
-        .filter((a) => a.customerId === selected.id)
-        .flatMap((a) =>
-          a.items
-            .filter((i) => i.qty > i.qtyServed)
-            .map((i) => ({
-              account: a.number,
-              productId: i.productId,
-              pending: i.qty - i.qtyServed,
-            })),
-        ),
-      prepaidBalance: prepaids
-        .filter((p) => p.customerId === selected.id && p.status === "ACTIVO")
-        .flatMap((p) =>
-          p.items.map((i) => ({
-            code: p.code,
-            productId: i.productId,
-            available: prepaidAvailable(i.qtyPurchased, i.qtyConsumed),
-          })),
-        ),
-      payments: [
-        ...sales
-          .filter((s) => s.customerId === selected.id)
-          .flatMap((s) =>
-            s.payments.map((p) => ({
-              ...p,
-              source: `Venta ${s.receiptNumber}`,
-            })),
-          ),
-        ...accounts
-          .filter((a) => a.customerId === selected.id)
-          .flatMap((a) =>
-            a.payments.map((p) => ({
-              ...p,
-              source: `Cuenta #${a.number}`,
-            })),
-          ),
-      ],
-      consumptions: prepaidConsumptions.filter((c) =>
-        prepaids.some(
-          (p) => p.id === c.prepaidId && p.customerId === selected.id,
-        ),
-      ),
-    };
-  }, [
-    selected,
-    accounts,
-    sales,
-    prepaids,
-    receipts,
-    whatsappLogs,
-    prepaidConsumptions,
-  ]);
+  const summary = selectedId
+    ? getCustomerSummary(selectedId)
+    : undefined;
 
   function resetForm() {
     setFirstName("");
@@ -279,18 +217,18 @@ export default function AdLicoreriaClientes() {
         </section>
 
         <section className="ad-panel space-y-4">
-          {!selected ? (
+          {!selected || !summary ? (
             <p className="text-sm text-[var(--ad-muted)]">
               Seleccione un cliente
             </p>
           ) : (
             <>
               <div>
-                <h2 className="ad-panel-title">{selected.name}</h2>
+                <h2 className="ad-panel-title">Detalle · {selected.name}</h2>
                 <p className="text-sm text-[var(--ad-muted)]">
-                  {selected.phone}
+                  Tel: {selected.phone}
                   {selected.email ? ` · ${selected.email}` : ""}
-                  {selected.documentId ? ` · ${selected.documentId}` : ""}
+                  {selected.documentId ? ` · ID ${selected.documentId}` : ""}
                 </p>
                 <p className="text-xs text-[var(--ad-muted)]">
                   Alta: {new Date(selected.createdAt).toLocaleString("es-VE")} ·{" "}
@@ -298,19 +236,46 @@ export default function AdLicoreriaClientes() {
                 </p>
               </div>
 
+              <div className="ad-grid-stats">
+                <div className="ad-stat">
+                  <div className="ad-stat__value">
+                    ${summary.totals.totalPurchasedUsd.toFixed(0)}
+                  </div>
+                  <div className="ad-stat__label">Total comprado</div>
+                </div>
+                <div className="ad-stat">
+                  <div className="ad-stat__value">
+                    ${summary.totals.pendingBalanceUsd.toFixed(0)}
+                  </div>
+                  <div className="ad-stat__label">Saldo pendiente</div>
+                </div>
+                <div className="ad-stat">
+                  <div className="ad-stat__value">
+                    {summary.totals.lastPurchaseReceipt ?? "—"}
+                  </div>
+                  <div className="ad-stat__label">Última compra</div>
+                </div>
+                <div className="ad-stat">
+                  <div className="ad-stat__value">
+                    {summary.totals.activePrepaids}
+                  </div>
+                  <div className="ad-stat__label">Prepagos activos</div>
+                </div>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <h3 className="mb-1 text-sm font-medium text-[var(--ad-gold-soft)]">
-                    Compras / ventas
+                    Historial de compras
                   </h3>
                   <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-                    {history?.sales.map((s) => (
+                    {summary.sales.map((s) => (
                       <li key={s.id}>
                         {s.receiptNumber} · ${s.total.usd.toFixed(2)} ·{" "}
-                        {s.status}
+                        {new Date(s.createdAt).toLocaleDateString("es-VE")}
                       </li>
                     ))}
-                    {!history?.sales.length ? <li>Sin ventas</li> : null}
+                    {!summary.sales.length ? <li>Sin ventas</li> : null}
                   </ul>
                 </div>
                 <div>
@@ -318,40 +283,51 @@ export default function AdLicoreriaClientes() {
                     Pagos
                   </h3>
                   <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-                    {history?.payments.slice(0, 8).map((p, i) => (
+                    {summary.payments.slice(0, 10).map((p, i) => (
                       <li key={`${p.id}-${i}`}>
-                        {p.source}: {p.method} {p.currency} {p.amount}
+                        {p.method} {p.currency} {p.amount}
+                        {p.reference ? ` · ${p.reference}` : ""}
                       </li>
                     ))}
-                    {!history?.payments.length ? <li>Sin pagos</li> : null}
+                    {!summary.payments.length ? <li>Sin pagos</li> : null}
                   </ul>
                 </div>
                 <div>
                   <h3 className="mb-1 text-sm font-medium text-[var(--ad-gold-soft)]">
-                    Prepagos / saldo
+                    Prepagos / mercancía QR
                   </h3>
                   <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-                    {history?.prepaidBalance.map((b, i) => (
-                      <li key={`${b.code}-${i}`}>
-                        {b.code}: {b.available} pend. ({b.productId})
+                    {summary.prepaids.map((p) => (
+                      <li key={p.id}>
+                        {p.code} · {p.status} ·{" "}
+                        {p.items.reduce(
+                          (a, i) =>
+                            a + prepaidAvailable(i.qtyPurchased, i.qtyConsumed),
+                          0,
+                        )}{" "}
+                        disp.
                       </li>
                     ))}
-                    {!history?.prepaidBalance.length ? (
-                      <li>Sin saldo prepago</li>
-                    ) : null}
+                    {!summary.prepaids.length ? <li>Sin prepagos</li> : null}
                   </ul>
                 </div>
                 <div>
                   <h3 className="mb-1 text-sm font-medium text-[var(--ad-gold-soft)]">
-                    Productos pendientes
+                    Mercancía pendiente
                   </h3>
                   <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-                    {history?.pendingItems.map((p, i) => (
-                      <li key={`${p.account}-${i}`}>
-                        Cuenta #{p.account}: {p.pending} ({p.productId})
+                    {summary.pendingMerchandise.map((p, i) => (
+                      <li key={`${p.accountNumber}-${i}`}>
+                        #{p.accountNumber}:{" "}
+                        {products.find((x) => x.id === p.productId)?.name ??
+                          p.productId}{" "}
+                        (
+                        {presentations.find((x) => x.id === p.presentationId)
+                          ?.name ?? "—"}
+                        ) sol.{p.requested}/serv.{p.served}/pend.{p.pending}
                       </li>
                     ))}
-                    {!history?.pendingItems.length ? (
+                    {!summary.pendingMerchandise.length ? (
                       <li>Sin pendientes</li>
                     ) : null}
                   </ul>
@@ -361,26 +337,27 @@ export default function AdLicoreriaClientes() {
                     Recibos
                   </h3>
                   <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-                    {history?.receipts.map((r) => (
+                    {summary.receipts.map((r) => (
                       <li key={r.id}>
                         {r.number} · {r.kind} · ${r.total.usd.toFixed(2)}
                       </li>
                     ))}
-                    {!history?.receipts.length ? <li>Sin recibos</li> : null}
+                    {!summary.receipts.length ? <li>Sin recibos</li> : null}
                   </ul>
                 </div>
                 <div>
                   <h3 className="mb-1 text-sm font-medium text-[var(--ad-gold-soft)]">
-                    WhatsApp (mock)
+                    WhatsApp mock (listo para API)
                   </h3>
                   <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-                    {history?.whatsapp.slice(0, 5).map((w) => (
+                    {summary.whatsappLogs.slice(0, 6).map((w) => (
                       <li key={w.id}>
-                        {w.template} · {w.status} ·{" "}
-                        {new Date(w.createdAt).toLocaleString("es-VE")}
+                        {w.template} · {w.status} · {w.toPhone}
                       </li>
                     ))}
-                    {!history?.whatsapp.length ? <li>Sin mensajes</li> : null}
+                    {!summary.whatsappLogs.length ? (
+                      <li>Sin mensajes</li>
+                    ) : null}
                   </ul>
                 </div>
               </div>
