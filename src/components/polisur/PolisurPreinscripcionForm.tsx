@@ -65,7 +65,7 @@ function PolisurPreinscripcionForm({
 
   if (done) {
     return (
-      <div className="border-l-2 border-[var(--ps-gold)] pl-4">
+      <div className="border-l-2 border-[var(--ps-mint)] pl-4">
         <p className="ps-eyebrow">Registro recibido</p>
         <h2 className="mt-3 text-2xl text-[var(--ps-white)]">
           Preinscripción enviada
@@ -106,12 +106,13 @@ function PolisurPreinscripcionForm({
       </div>
 
       <label className="block">
-        <span className="ps-field-label">Cédula (opcional)</span>
+        <span className="ps-field-label">Cédula</span>
         <input
           type="text"
           name="cedula"
           inputMode="numeric"
           autoComplete="off"
+          required
           value={cedula}
           onChange={(e) => setCedula(e.target.value)}
           className="ps-input"

@@ -1,48 +1,45 @@
-/* Tokens y tipografía exclusivos de POLISUR — paleta del escudo institucional */
+/* Tokens y tipografía exclusivos de POLISUR — azul, blanco y verde del escudo */
 .polisur-shell {
-  /* Azul marino del borde del escudo */
-  --ps-navy-950: #000814;
-  --ps-navy-900: #00102e;
-  --ps-navy-850: #001428;
+  /* Azul institucional del borde del escudo */
+  --ps-navy-950: #001c55;
+  --ps-navy-900: #002366;
+  --ps-navy-850: #002d73;
   --ps-navy-800: #001c55;
-  --ps-navy-700: #002366;
+  --ps-navy-700: #003580;
 
-  /* Verde menta del interior del escudo */
+  /* Verde del interior del escudo */
   --ps-mint: #c9e4c5;
-  --ps-mint-dim: rgba(201, 228, 197, 0.55);
-  --ps-mint-muted: rgba(201, 228, 197, 0.1);
-  --ps-mint-wash: rgba(201, 228, 197, 0.06);
+  --ps-mint-dim: rgba(201, 228, 197, 0.65);
+  --ps-mint-muted: rgba(201, 228, 197, 0.14);
+  --ps-mint-wash: rgba(201, 228, 197, 0.22);
+  --ps-green: #2d5a27;
 
-  /* Amarillo solar de las cintas y cuadrante superior */
+  /* Amarillo solar — acento secundario del emblema */
   --ps-yellow: #fcdd09;
   --ps-yellow-dim: rgba(252, 221, 9, 0.55);
   --ps-yellow-soft: rgba(252, 221, 9, 0.12);
+  --ps-mint: var(--ps-yellow);
+  --ps-mint-dim: var(--ps-yellow-dim);
 
-  /* Alias histórico — acentos editoriales (amarillo del escudo) */
-  --ps-gold: var(--ps-yellow);
-  --ps-gold-dim: var(--ps-yellow-dim);
-
-  /* Rojo, cielo y verde del emblema central */
   --ps-red: #cc0000;
   --ps-sky: #75b2dd;
-  --ps-green: #2d5a27;
 
-  /* Neutros con matiz institucional */
+  /* Blanco y verdes para texto */
   --ps-white: #ffffff;
-  --ps-paper: #eef6f0;
-  --ps-steel-400: #94b5a8;
-  --ps-steel-300: #c5d9cf;
-  --ps-line: rgba(201, 228, 197, 0.1);
-  --ps-line-strong: rgba(201, 228, 197, 0.18);
+  --ps-paper: #f5faf6;
+  --ps-steel-400: #b8d4bc;
+  --ps-steel-300: #dcebdd;
+  --ps-line: rgba(201, 228, 197, 0.22);
+  --ps-line-strong: rgba(201, 228, 197, 0.38);
 
-  --ps-header-bg: rgba(0, 8, 20, 0.94);
+  --ps-header-bg: rgba(0, 28, 85, 0.98);
   --ps-overlay-navy: 0, 28, 85;
 
   --ps-font-display: "Libre Baskerville", "Times New Roman", Georgia, serif;
   --ps-font-body: "Manrope", ui-sans-serif, sans-serif;
 
   color: var(--ps-paper);
-  background: var(--ps-navy-950);
+  background: var(--ps-navy-800);
   font-family: var(--ps-font-body);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -91,7 +88,7 @@
   margin-top: 0.5rem;
   width: 100%;
   border: 1px solid var(--ps-line-strong);
-  background: var(--ps-navy-950);
+  background: color-mix(in srgb, var(--ps-navy-900) 88%, var(--ps-green) 12%);
   padding: 0.75rem 0.85rem;
   font-size: 0.875rem;
   color: var(--ps-paper);
@@ -99,7 +96,15 @@
 }
 
 .ps-input:focus {
-  border-color: color-mix(in srgb, var(--ps-yellow) 60%, transparent);
+  border-color: var(--ps-mint);
+}
+
+.ps-banner-marks {
+  background: var(--ps-mint);
+}
+
+.ps-mark-list li {
+  background: transparent;
 }
 
 .ps-eyebrow {
@@ -114,7 +119,7 @@
   background:
     linear-gradient(
       145deg,
-      color-mix(in srgb, var(--ps-navy-900) 92%, var(--ps-mint) 8%) 0%,
+      color-mix(in srgb, var(--ps-navy-900) 72%, var(--ps-green) 28%) 0%,
       var(--ps-navy-900) 100%
     );
 }
@@ -137,12 +142,13 @@
 }
 
 .ps-btn-primary {
-  background: var(--ps-yellow);
+  background: var(--ps-white);
   color: var(--ps-navy-800);
 }
 
 .ps-btn-primary:hover {
-  background: #ffe566;
+  background: var(--ps-mint);
+  color: var(--ps-green);
 }
 
 .ps-btn-ghost {
@@ -173,12 +179,12 @@
   background:
     linear-gradient(
       160deg,
-      color-mix(in srgb, var(--ps-navy-800) 98%, var(--ps-mint) 2%) 0%,
-      var(--ps-navy-950) 100%
+      var(--ps-navy-800) 0%,
+      color-mix(in srgb, var(--ps-navy-900) 80%, var(--ps-green) 20%) 100%
     ),
     repeating-linear-gradient(
       -45deg,
-      rgba(201, 228, 197, 0.03) 0 1px,
+      rgba(201, 228, 197, 0.06) 0 1px,
       transparent 1px 12px
     );
 }
@@ -234,7 +240,7 @@
 .ps-gold-rule {
   width: 2.75rem;
   height: 2px;
-  background: var(--ps-yellow);
+  background: var(--ps-mint);
   border: 0;
 }
 
@@ -244,41 +250,21 @@
   isolation: isolate;
   min-height: 88svh;
   overflow: hidden;
-  background: var(--ps-navy-950);
+  background: var(--ps-navy-800);
 }
 
 .ps-hero--institutional {
   background:
     radial-gradient(
       ellipse 80% 60% at 78% 38%,
-      color-mix(in srgb, var(--ps-mint) 18%, transparent) 0%,
+      color-mix(in srgb, var(--ps-mint) 35%, transparent) 0%,
       transparent 68%
-    ),
-    radial-gradient(
-      ellipse 55% 45% at 12% 88%,
-      color-mix(in srgb, var(--ps-sky) 14%, transparent) 0%,
-      transparent 72%
     ),
     linear-gradient(
       155deg,
       var(--ps-navy-800) 0%,
-      var(--ps-navy-950) 52%,
-      #000510 100%
+      color-mix(in srgb, var(--ps-navy-900) 75%, var(--ps-green) 25%) 100%
     );
-}
-
-.ps-hero__identity {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem 1.25rem;
-  padding-bottom: 0.25rem;
-}
-
-@media (min-width: 640px) {
-  .ps-hero__identity {
-    gap: 1.25rem 1.75rem;
-  }
 }
 
 @media (min-width: 768px) {
@@ -290,23 +276,6 @@
 .ps-hero__media {
   position: absolute;
   inset: 0;
-}
-
-.ps-hero__crest {
-  position: absolute;
-  right: 6%;
-  top: 18%;
-  opacity: 0.14;
-  pointer-events: none;
-  z-index: 1;
-}
-
-@media (max-width: 767px) {
-  .ps-hero__crest {
-    right: 4%;
-    top: 12%;
-    opacity: 0.1;
-  }
 }
 
 .ps-hero__content {
@@ -332,7 +301,7 @@
 @media (min-width: 768px) {
   .ps-hero__panel {
     padding-block: 6rem;
-    border-left: 2px solid var(--ps-yellow);
+    border-left: 2px solid var(--ps-mint);
     padding-left: 1.5rem;
   }
 }
@@ -344,14 +313,13 @@
   background:
     radial-gradient(
       ellipse 70% 55% at 72% 55%,
-      color-mix(in srgb, var(--ps-navy-700) 85%, var(--ps-sky) 15%) 0%,
+      color-mix(in srgb, var(--ps-mint) 28%, transparent) 0%,
       transparent 70%
     ),
     linear-gradient(
       160deg,
-      var(--ps-navy-900) 0%,
-      var(--ps-navy-950) 55%,
-      #000510 100%
+      var(--ps-navy-800) 0%,
+      color-mix(in srgb, var(--ps-navy-900) 70%, var(--ps-green) 30%) 100%
     );
 }
 
@@ -365,7 +333,7 @@
       90deg,
       transparent 0%,
       transparent 58%,
-      var(--ps-yellow-soft) 72%,
+      var(--ps-mint-wash) 72%,
       transparent 88%
     );
   opacity: 0.9;
@@ -403,7 +371,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    var(--ps-yellow-dim),
+    var(--ps-mint-dim),
     transparent
   );
 }

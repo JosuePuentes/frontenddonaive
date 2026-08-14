@@ -146,7 +146,7 @@ function PolisurPreinscripcionesAdmin({
         <article
           className={cn(
             "space-y-4 border-l-2 pl-4",
-            isPolisur ? "border-[var(--ps-gold)]" : "border-primary",
+            isPolisur ? "border-[var(--ps-mint)]" : "border-primary",
           )}
         >
           <div>
@@ -168,7 +168,7 @@ function PolisurPreinscripcionesAdmin({
             <DetailRow
               tone={tone}
               label="Cédula"
-              value={selected.cedula || "No indicada"}
+              value={selected.cedula}
             />
             <DetailRow
               tone={tone}

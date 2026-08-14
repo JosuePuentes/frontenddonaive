@@ -5,7 +5,7 @@ import { polisurCopy, polisurDivisionItems } from "@/content/polisur";
 function PolisurDivisions() {
   return (
     <section
-      className="border-b border-[var(--ps-line)] bg-[var(--ps-navy-950)]"
+      className="border-b border-[var(--ps-line)] bg-[var(--ps-navy-800)]"
       aria-labelledby="polisur-divisions-title"
     >
       <div className="ps-container py-12 sm:py-16">
@@ -35,7 +35,7 @@ function PolisurDivisions() {
             />
             <div className="ps-division-block__body">
               {item.featured ? (
-                <p className="ps-eyebrow text-[var(--ps-gold)]">Destacada</p>
+                <p className="ps-eyebrow text-[var(--ps-mint)]">Destacada</p>
               ) : null}
               <h3 className="mt-2 text-2xl text-[var(--ps-white)] sm:text-3xl">
                 {item.name}

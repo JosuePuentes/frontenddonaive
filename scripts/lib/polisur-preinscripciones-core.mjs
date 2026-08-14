@@ -75,6 +75,12 @@ export function normalizePayload(body) {
     err.statusCode = 400;
     throw err;
   }
+  const cedulaDigits = cedula.replace(/\D/g, "");
+  if (cedulaDigits.length < 6 || cedulaDigits.length > 10) {
+    const err = new Error("Indique una cédula válida.");
+    err.statusCode = 400;
+    throw err;
+  }
   if (!looksLikeEmail(correo)) {
     const err = new Error("Indique un correo válido.");
     err.statusCode = 400;

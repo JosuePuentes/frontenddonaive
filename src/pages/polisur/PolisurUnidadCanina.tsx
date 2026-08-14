@@ -30,7 +30,7 @@ export default function PolisurUnidadCanina() {
       <section className="ps-canina-stage border-b border-[var(--ps-line)]">
         <div className="ps-container relative grid gap-8 py-12 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-end lg:gap-6 lg:py-10">
           <div className="relative z-[1] max-w-md pb-4 lg:pb-16">
-            <p className="ps-eyebrow text-[var(--ps-gold)]">POLISUR</p>
+            <p className="ps-eyebrow text-[var(--ps-mint)]">POLISUR</p>
             <h1 className="ps-display mt-3 text-4xl uppercase tracking-wide text-[var(--ps-white)] sm:text-6xl">
               Unidad Canina
             </h1>

@@ -15,7 +15,7 @@ export type PolisurPreinscripcion = {
 export type PolisurPreinscripcionPayload = {
   nombres: string;
   apellidos: string;
-  cedula?: string;
+  cedula: string;
   correo: string;
   telefono: string;
   unidad: string;

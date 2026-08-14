@@ -27,7 +27,7 @@ export default function PolisurPreinscripcion() {
         className={
           isCanina
             ? "ps-canina-stage border-b border-[var(--ps-line)]"
-            : "border-b border-[var(--ps-line)] bg-[var(--ps-navy-950)]"
+            : "border-b border-[var(--ps-line)] bg-[var(--ps-navy-800)]"
         }
       >
         <div className="ps-container py-14 sm:py-20">
@@ -44,7 +44,7 @@ export default function PolisurPreinscripcion() {
               <PolisurCrest size="lg" />
             )}
             <div className="max-w-xl">
-              <p className="ps-eyebrow text-[var(--ps-gold)]">
+              <p className="ps-eyebrow text-[var(--ps-mint)]">
                 {isCanina ? "Unidad de Patrullaje Canino" : "Aspirantes"}
               </p>
               <h1 className="mt-3 text-3xl uppercase tracking-wide text-[var(--ps-white)] sm:text-5xl">
@@ -71,7 +71,7 @@ export default function PolisurPreinscripcion() {
               Datos del aspirante
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-[var(--ps-steel-400)]">
-              Indique sus nombres, correo, teléfono y la unidad a la que desea
+              Indique sus nombres, cédula, correo, teléfono y la unidad a la que desea
               pertenecer. Este registro no constituye ingreso automático.
             </p>
             {isCanina ? (

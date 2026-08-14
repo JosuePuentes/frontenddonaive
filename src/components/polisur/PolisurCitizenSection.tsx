@@ -5,7 +5,7 @@ function PolisurCitizenSection() {
   return (
     <section
       id="ciudadania"
-      className="scroll-mt-28 border-b border-[var(--ps-line)] bg-[var(--ps-navy-950)]"
+      className="scroll-mt-28 border-b border-[var(--ps-line)] bg-[var(--ps-navy-900)]"
       aria-labelledby="polisur-citizen-title"
     >
       <div className="grid lg:grid-cols-[0.95fr_1.05fr]">
@@ -27,7 +27,7 @@ function PolisurCitizenSection() {
               {polisurCopy.citizen.pillars.map((item) => (
                 <li
                   key={item}
-                  className="border-l-2 border-[var(--ps-gold)]/65 pl-3 text-sm font-medium tracking-wide text-[var(--ps-paper)]"
+                  className="border-l-2 border-[var(--ps-mint)]/65 pl-3 text-sm font-medium tracking-wide text-[var(--ps-paper)]"
                 >
                   {item}
                 </li>

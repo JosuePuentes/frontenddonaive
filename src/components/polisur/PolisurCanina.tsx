@@ -20,7 +20,7 @@ function PolisurCanina() {
       <div className="grid lg:grid-cols-[0.92fr_1.08fr] lg:items-stretch">
         <div className="relative z-[1] flex items-center px-5 py-14 sm:px-10 sm:py-16 lg:px-14 lg:py-20">
           <div className="max-w-md">
-            <p className="ps-eyebrow text-[var(--ps-gold)]">
+            <p className="ps-eyebrow text-[var(--ps-mint)]">
               {polisurCopy.canina.eyebrow}
             </p>
             <h2

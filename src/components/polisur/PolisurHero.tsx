@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { PolisurCrest } from "@/components/polisur/PolisurCrest";
-import { PolisurInstitutionalMarks } from "@/components/polisur/PolisurInstitutionalMarks";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import { POLISUR_ROUTES } from "@/constants/polisur-routes";
 import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
@@ -25,19 +23,10 @@ function PolisurHero() {
         onImageError={() => setPhotoMissing(true)}
       />
 
-      <div className="ps-hero__crest" aria-hidden>
-        <PolisurCrest size="xl" />
-      </div>
-
       <div className="ps-hero__content">
         <div className="ps-container w-full">
           <div className="ps-hero__panel">
-            <div className="ps-hero__identity">
-              <PolisurCrest size="lg" />
-              <PolisurInstitutionalMarks size="md" />
-            </div>
-
-            <p className="ps-eyebrow mt-6 text-[var(--ps-gold)]">
+            <p className="ps-eyebrow text-[var(--ps-mint)]">
               {polisurCopy.hero.subtitle}
             </p>
             <h1

@@ -16,7 +16,7 @@ function PolisurNavbar() {
   const { isCanina } = usePolisurTheme();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--ps-line)] bg-[var(--ps-header-bg)] backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-[var(--ps-line)] bg-[var(--ps-navy-800)] backdrop-blur-md">
       <div className="ps-container flex h-[3.75rem] items-center justify-between sm:h-[4.25rem]">
         <Link
           to={isCanina ? POLISUR_ROUTES.unidadCanina : POLISUR_ROUTES.home}
@@ -24,7 +24,7 @@ function PolisurNavbar() {
           onClick={() => setOpen(false)}
         >
           {isCanina ? (
-            <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden">
+            <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center">
               <PolisurMark
                 src={POLISUR_MEDIA.k9}
                 alt="Unidad de Patrullaje Canino"
@@ -79,7 +79,7 @@ function PolisurNavbar() {
       </div>
 
       {!isCanina ? (
-        <div className="border-t border-[var(--ps-line)] bg-[color-mix(in_srgb,var(--ps-navy-950)_92%,var(--ps-mint)_8%)]">
+        <div className="ps-banner-marks border-t border-[var(--ps-line)]">
           <div className="ps-container flex h-12 items-center sm:h-14">
             <PolisurInstitutionalMarks size="sm" />
           </div>
@@ -88,7 +88,7 @@ function PolisurNavbar() {
 
       {open ? (
         <nav
-          className="border-t border-[var(--ps-line)] bg-[var(--ps-navy-950)] xl:hidden"
+          className="border-t border-[var(--ps-line)] bg-[var(--ps-navy-800)] xl:hidden"
           aria-label="Móvil"
         >
           <ul className="ps-container flex flex-col py-2">

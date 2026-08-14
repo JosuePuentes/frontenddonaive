@@ -29,7 +29,7 @@ function PolisurCrest({
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden",
+        "relative inline-flex shrink-0 items-center justify-center bg-transparent",
         sizeClass[size],
         className,
       )}
@@ -38,13 +38,13 @@ function PolisurCrest({
         <img
           src={POLISUR_MEDIA.logo}
           alt="Escudo POLISUR"
-          className={cn("h-full w-full object-contain", imgClassName)}
+          className={cn("h-full w-full bg-transparent object-contain", imgClassName)}
           onError={() => setFailed(true)}
         />
       ) : (
         <span
           aria-hidden
-          className="h-[70%] w-[70%] rounded-[2px] border border-[var(--ps-line-strong)] bg-[var(--ps-navy-800)]"
+          className="h-[70%] w-[70%] rounded-[2px] border border-[var(--ps-line-strong)] bg-transparent"
         />
       )}
     </span>

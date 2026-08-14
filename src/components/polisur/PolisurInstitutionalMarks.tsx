@@ -34,13 +34,13 @@ function PolisurInstitutionalMarks({
   const box = size === "md" ? "h-10 w-10 sm:h-12 sm:w-12" : "h-8 w-8 sm:h-9 sm:w-9";
 
   return (
-    <ul className="flex flex-wrap items-center gap-3 sm:gap-4">
+    <ul className="ps-mark-list flex flex-wrap items-center gap-3 sm:gap-5">
       {INSTITUTIONAL_MARKS.map((mark) => (
         <li key={mark.src} className={box}>
           <PolisurMark
             src={mark.src}
             alt={mark.alt}
-            className="h-full w-full"
+            className="h-full w-full bg-transparent"
           />
         </li>
       ))}

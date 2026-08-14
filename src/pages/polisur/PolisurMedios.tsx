@@ -301,14 +301,14 @@ export default function PolisurMedios() {
                   spellCheck={false}
                   value={clave}
                   onChange={(e) => setClave(e.target.value)}
-                  className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-gold)]/60"
+                  className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-mint)]/60"
                 />
               </label>
 
               <button
                 type="submit"
                 disabled={busy}
-                className="border-b border-[var(--ps-gold)]/70 pb-1 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)] disabled:opacity-50"
+                className="border-b border-[var(--ps-mint)]/70 pb-1 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)] disabled:opacity-50"
               >
                 {busy ? "Verificando…" : "Ingresar"}
               </button>
@@ -339,7 +339,7 @@ export default function PolisurMedios() {
                   onClick={() => setModulo("preinscripciones")}
                   className={
                     modulo === "preinscripciones"
-                      ? "border-b border-[var(--ps-gold)] pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-white)]"
+                      ? "border-b border-[var(--ps-mint)] pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-white)]"
                       : "pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-400)]"
                   }
                 >
@@ -350,7 +350,7 @@ export default function PolisurMedios() {
                   onClick={() => setModulo("documentos")}
                   className={
                     modulo === "documentos"
-                      ? "border-b border-[var(--ps-gold)] pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-white)]"
+                      ? "border-b border-[var(--ps-mint)] pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-white)]"
                       : "pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-400)]"
                   }
                 >
@@ -372,7 +372,7 @@ export default function PolisurMedios() {
                   <select
                     value={selectedId}
                     onChange={(e) => setSelectedId(e.target.value)}
-                    className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-gold)]/60"
+                    className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-mint)]/60"
                   >
                     {POLISUR_ASSET_SLOTS.map((slot) => (
                       <option key={slot.id} value={slot.id}>
@@ -396,7 +396,7 @@ export default function PolisurMedios() {
                         value={concepto}
                         onChange={(e) => setConcepto(e.target.value)}
                         placeholder="Ej. VISIPOL, Cuadrantes de Paz"
-                        className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-gold)]/60"
+                        className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-mint)]/60"
                       />
                     </label>
                     <label className="block sm:col-span-2">
@@ -410,7 +410,7 @@ export default function PolisurMedios() {
                             e.target.value as (typeof CARPETAS)[number]["id"],
                           )
                         }
-                        className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-gold)]/60"
+                        className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-mint)]/60"
                       >
                         {CARPETAS.map((item) => (
                           <option key={item.id} value={item.id}>
@@ -445,7 +445,7 @@ export default function PolisurMedios() {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="border-b border-[var(--ps-gold)]/70 pb-1 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)] disabled:opacity-50"
+                  className="border-b border-[var(--ps-mint)]/70 pb-1 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)] disabled:opacity-50"
                 >
                   {busy ? "Registrando…" : "Registrar material"}
                 </button>
@@ -484,7 +484,7 @@ export default function PolisurMedios() {
           )}
 
           {message ? (
-            <p className="mt-8 border-l-2 border-[var(--ps-gold)]/70 pl-3 text-sm text-[var(--ps-paper)]">
+            <p className="mt-8 border-l-2 border-[var(--ps-mint)]/70 pl-3 text-sm text-[var(--ps-paper)]">
               {message}
             </p>
           ) : null}

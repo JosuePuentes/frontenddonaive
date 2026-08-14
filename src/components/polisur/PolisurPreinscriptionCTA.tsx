@@ -8,7 +8,7 @@ function PolisurPreinscriptionCTA() {
       className="ps-surface-mint border-b border-[var(--ps-line)]"
       aria-labelledby="polisur-preinscripcion-title"
     >
-      <div className="ps-container flex flex-col gap-8 border-l-2 border-[var(--ps-gold)] py-14 pl-5 sm:flex-row sm:items-end sm:justify-between sm:py-16 sm:pl-8">
+      <div className="ps-container flex flex-col gap-8 border-l-2 border-[var(--ps-mint)] py-14 pl-5 sm:flex-row sm:items-end sm:justify-between sm:py-16 sm:pl-8">
         <div className="max-w-xl">
           <p className="ps-eyebrow">Aspirantes</p>
           <h2
