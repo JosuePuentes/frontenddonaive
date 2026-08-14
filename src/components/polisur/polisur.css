@@ -1,18 +1,42 @@
-/* Tokens y tipografía exclusivos de POLISUR */
+/* Tokens y tipografía exclusivos de POLISUR — paleta del escudo institucional */
 .polisur-shell {
-  --ps-navy-950: #050a12;
-  --ps-navy-900: #0a1420;
-  --ps-navy-850: #0e1a2b;
-  --ps-navy-800: #132338;
-  --ps-navy-700: #1b3048;
-  --ps-steel-400: #8b9cb0;
-  --ps-steel-300: #b7c3d1;
-  --ps-white: #f5f7fa;
-  --ps-paper: #eef2f6;
-  --ps-gold: #c4a646;
-  --ps-gold-dim: rgba(196, 166, 70, 0.55);
-  --ps-line: rgba(245, 247, 250, 0.09);
-  --ps-line-strong: rgba(245, 247, 250, 0.16);
+  /* Azul marino del borde del escudo */
+  --ps-navy-950: #000814;
+  --ps-navy-900: #00102e;
+  --ps-navy-850: #001428;
+  --ps-navy-800: #001c55;
+  --ps-navy-700: #002366;
+
+  /* Verde menta del interior del escudo */
+  --ps-mint: #c9e4c5;
+  --ps-mint-dim: rgba(201, 228, 197, 0.55);
+  --ps-mint-muted: rgba(201, 228, 197, 0.1);
+  --ps-mint-wash: rgba(201, 228, 197, 0.06);
+
+  /* Amarillo solar de las cintas y cuadrante superior */
+  --ps-yellow: #fcdd09;
+  --ps-yellow-dim: rgba(252, 221, 9, 0.55);
+  --ps-yellow-soft: rgba(252, 221, 9, 0.12);
+
+  /* Alias histórico — acentos editoriales (amarillo del escudo) */
+  --ps-gold: var(--ps-yellow);
+  --ps-gold-dim: var(--ps-yellow-dim);
+
+  /* Rojo, cielo y verde del emblema central */
+  --ps-red: #cc0000;
+  --ps-sky: #75b2dd;
+  --ps-green: #2d5a27;
+
+  /* Neutros con matiz institucional */
+  --ps-white: #ffffff;
+  --ps-paper: #eef6f0;
+  --ps-steel-400: #94b5a8;
+  --ps-steel-300: #c5d9cf;
+  --ps-line: rgba(201, 228, 197, 0.1);
+  --ps-line-strong: rgba(201, 228, 197, 0.18);
+
+  --ps-header-bg: rgba(0, 8, 20, 0.94);
+  --ps-overlay-navy: 0, 28, 85;
 
   --ps-font-display: "Libre Baskerville", "Times New Roman", Georgia, serif;
   --ps-font-body: "Manrope", ui-sans-serif, sans-serif;
@@ -39,7 +63,7 @@
 }
 
 .polisur-shell ::selection {
-  background: rgba(196, 166, 70, 0.28);
+  background: rgba(252, 221, 9, 0.28);
   color: var(--ps-white);
 }
 
@@ -62,6 +86,15 @@
   color: var(--ps-steel-400);
 }
 
+.ps-surface-mint {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--ps-navy-900) 92%, var(--ps-mint) 8%) 0%,
+      var(--ps-navy-900) 100%
+    );
+}
+
 .ps-btn {
   display: inline-flex;
   align-items: center;
@@ -80,12 +113,12 @@
 }
 
 .ps-btn-primary {
-  background: var(--ps-white);
-  color: var(--ps-navy-950);
+  background: var(--ps-yellow);
+  color: var(--ps-navy-800);
 }
 
 .ps-btn-primary:hover {
-  background: var(--ps-paper);
+  background: #ffe566;
 }
 
 .ps-btn-ghost {
@@ -95,29 +128,33 @@
 }
 
 .ps-btn-ghost:hover {
-  border-color: var(--ps-gold-dim);
+  border-color: var(--ps-mint-dim);
   color: var(--ps-white);
 }
 
 .ps-btn-gold {
-  border: 1px solid var(--ps-gold-dim);
+  border: 1px solid var(--ps-yellow-dim);
   color: var(--ps-white);
   background: transparent;
 }
 
 .ps-btn-gold:hover {
-  border-color: var(--ps-gold);
-  background: rgba(196, 166, 70, 0.08);
+  border-color: var(--ps-yellow);
+  background: var(--ps-yellow-soft);
 }
 
 .ps-media-frame {
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(160deg, rgba(19, 35, 56, 0.98), rgba(10, 20, 32, 0.99)),
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--ps-navy-800) 98%, var(--ps-mint) 2%) 0%,
+      var(--ps-navy-950) 100%
+    ),
     repeating-linear-gradient(
       -45deg,
-      rgba(255, 255, 255, 0.02) 0 1px,
+      rgba(201, 228, 197, 0.03) 0 1px,
       transparent 1px 12px
     );
 }
@@ -126,6 +163,42 @@
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.ps-overlay-soft {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(var(--ps-overlay-navy), 0.58) 0%,
+    transparent 100%
+  );
+}
+
+.ps-overlay-readable {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(var(--ps-overlay-navy), 0.68) 0%,
+    rgba(var(--ps-overlay-navy), 0.32) 38%,
+    rgba(var(--ps-overlay-navy), 0.1) 70%,
+    rgba(var(--ps-overlay-navy), 0.26) 100%
+  );
+}
+
+.ps-overlay-strong {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--ps-overlay-navy), 0.42) 0%,
+    rgba(var(--ps-overlay-navy), 0.52) 45%,
+    rgba(var(--ps-overlay-navy), 0.74) 100%
+  );
 }
 
 .ps-rule {
@@ -137,7 +210,7 @@
 .ps-gold-rule {
   width: 2.75rem;
   height: 2px;
-  background: var(--ps-gold);
+  background: var(--ps-yellow);
   border: 0;
 }
 
@@ -201,7 +274,7 @@
 @media (min-width: 768px) {
   .ps-hero__panel {
     padding-block: 6rem;
-    border-left: 2px solid var(--ps-gold);
+    border-left: 2px solid var(--ps-yellow);
     padding-left: 1.5rem;
   }
 }
@@ -213,10 +286,15 @@
   background:
     radial-gradient(
       ellipse 70% 55% at 72% 55%,
-      rgba(27, 48, 72, 0.85) 0%,
+      color-mix(in srgb, var(--ps-navy-700) 85%, var(--ps-sky) 15%) 0%,
       transparent 70%
     ),
-    linear-gradient(160deg, var(--ps-navy-900) 0%, var(--ps-navy-950) 55%, #04080f 100%);
+    linear-gradient(
+      160deg,
+      var(--ps-navy-900) 0%,
+      var(--ps-navy-950) 55%,
+      #000510 100%
+    );
 }
 
 .ps-canina-stage::before {
@@ -229,7 +307,7 @@
       90deg,
       transparent 0%,
       transparent 58%,
-      rgba(196, 166, 70, 0.06) 72%,
+      var(--ps-yellow-soft) 72%,
       transparent 88%
     );
   opacity: 0.9;
@@ -267,7 +345,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    var(--ps-gold-dim),
+    var(--ps-yellow-dim),
     transparent
   );
 }

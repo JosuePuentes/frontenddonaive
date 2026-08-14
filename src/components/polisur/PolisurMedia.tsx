@@ -47,25 +47,14 @@ function PolisurMedia({
         />
       ) : null}
 
-      {overlay === "soft" ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(6,13,22,0.55)] via-transparent to-transparent"
-        />
-      ) : null}
+      {overlay === "soft" ? <div aria-hidden className="ps-overlay-soft" /> : null}
 
       {overlay === "readable" ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,rgba(5,10,18,0.62)_0%,rgba(5,10,18,0.28)_38%,rgba(5,10,18,0.08)_70%,rgba(5,10,18,0.22)_100%)]"
-        />
+        <div aria-hidden className="ps-overlay-readable" />
       ) : null}
 
       {overlay === "strong" ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(6,13,22,0.4)_0%,rgba(6,13,22,0.5)_45%,rgba(6,13,22,0.72)_100%)]"
-        />
+        <div aria-hidden className="ps-overlay-strong" />
       ) : null}
     </div>
   );

@@ -16,7 +16,7 @@ function PolisurNavbar() {
   const { isCanina } = usePolisurTheme();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--ps-line)] bg-[rgba(5,10,18,0.94)] backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-[var(--ps-line)] bg-[var(--ps-header-bg)] backdrop-blur-md">
       <div className="ps-container flex h-[3.75rem] items-center justify-between sm:h-[4.25rem]">
         <Link
           to={isCanina ? POLISUR_ROUTES.unidadCanina : POLISUR_ROUTES.home}
@@ -79,7 +79,7 @@ function PolisurNavbar() {
       </div>
 
       {!isCanina ? (
-        <div className="border-t border-[var(--ps-line)] bg-[var(--ps-navy-950)]">
+        <div className="border-t border-[var(--ps-line)] bg-[color-mix(in_srgb,var(--ps-navy-950)_92%,var(--ps-mint)_8%)]">
           <div className="ps-container flex h-12 items-center sm:h-14">
             <PolisurInstitutionalMarks size="sm" />
           </div>

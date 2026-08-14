@@ -17,7 +17,7 @@ function PolisurAbout() {
           overlay="soft"
         />
 
-        <div className="flex items-center bg-[var(--ps-navy-900)] px-5 py-14 sm:px-10 sm:py-16 lg:px-14">
+        <div className="ps-surface-mint flex items-center px-5 py-14 sm:px-10 sm:py-16 lg:px-14">
           <div className="max-w-lg">
             <p className="ps-eyebrow">{polisurCopy.about.eyebrow}</p>
             <h2
