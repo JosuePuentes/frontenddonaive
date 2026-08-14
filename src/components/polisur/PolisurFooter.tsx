@@ -66,7 +66,15 @@ function PolisurFooter() {
       <div className="border-t border-[var(--ps-line)]">
         <div className="ps-container flex flex-col gap-2 py-5 text-xs text-[var(--ps-steel-400)] sm:flex-row sm:items-center sm:justify-between">
           <span>© {polisurCopy.brand.name}</span>
-          <span>Portal institucional</span>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>Portal institucional</span>
+            <Link
+              to={POLISUR_ROUTES.medios}
+              className="text-[var(--ps-steel-400)] underline-offset-4 hover:text-[var(--ps-steel-300)] hover:underline"
+            >
+              Acceso institucional
+            </Link>
+          </span>
         </div>
       </div>
     </footer>

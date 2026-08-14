@@ -15,6 +15,8 @@ export const POLISUR_ROUTES = {
   unidadCanina: "/polisur/unidad-canina",
   preinscripcion: "/polisur/preinscripcion",
   contacto: "/polisur/contacto",
+  /** Acceso interno — no incluir en navegación principal */
+  medios: "/polisur/medios",
 } as const;
 
 export type PolisurRouteKey = keyof typeof POLISUR_ROUTES;

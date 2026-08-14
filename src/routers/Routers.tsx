@@ -33,6 +33,7 @@ const PolisurPreinscripcion = lazy(
   () => import("@/pages/polisur/PolisurPreinscripcion"),
 );
 const PolisurContacto = lazy(() => import("@/pages/polisur/PolisurContacto"));
+const PolisurMedios = lazy(() => import("@/pages/polisur/PolisurMedios"));
 
 const Dashboard = lazy(() => import("@/pages/dashboard/Dashboard"));
 const Users = lazy(() => import("@/pages/dashboard/Users"));
@@ -118,6 +119,7 @@ const AppRouter = () => (
           element={<PolisurPreinscripcion />}
         />
         <Route path={POLISUR_ROUTES.contacto} element={<PolisurContacto />} />
+        <Route path={POLISUR_ROUTES.medios} element={<PolisurMedios />} />
       </Route>
 
       {/* Privado — scaffolding sin PrivateRoute funcional */}
