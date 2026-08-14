@@ -1,41 +1,88 @@
+import { getPolisurBasePath } from "@/lib/polisur-host";
+
 /**
  * Rutas públicas de POLISUR.
  *
- * Namespace `/polisur` para no colisionar con Donaive
- * (cuya raíz `/` y `/contacto` ya existen).
- *
- * Cuando el dominio oficial de POLISUR apunte a este despliegue,
- * se podrá mapear el host a este namespace (rewrite/Vercel) sin
- * reemplazar las rutas de Donaive.
+ * - Donaive / desarrollo: prefijo `/polisur` (no colisiona con `/`, `/contacto`, etc.)
+ * - Dominio propio polisur.com.ve: rutas en raíz (`/`, `/unidad-canina`, …)
  */
-export const POLISUR_ROUTES = {
-  home: "/polisur",
-  institucion: "/polisur#institucion",
-  divisiones: "/polisur/divisiones",
-  unidadCanina: "/polisur/unidad-canina",
-  preinscripcion: "/polisur/preinscripcion",
-  preinscripcionCanina: "/polisur/preinscripcion?unidad=canina",
-  contacto: "/polisur/contacto",
-  /** Acceso interno — no incluir en navegación principal */
-  medios: "/polisur/medios",
+const POLISUR_SEGMENTS = {
+  divisiones: "/divisiones",
+  unidadCanina: "/unidad-canina",
+  preinscripcion: "/preinscripcion",
+  contacto: "/contacto",
+  medios: "/medios",
 } as const;
 
-export type PolisurRouteKey = keyof typeof POLISUR_ROUTES;
-export type PolisurRoutePath = (typeof POLISUR_ROUTES)[PolisurRouteKey];
+export type PolisurRoutes = {
+  home: string;
+  institucion: string;
+  divisiones: string;
+  unidadCanina: string;
+  preinscripcion: string;
+  preinscripcionCanina: string;
+  contacto: string;
+  medios: string;
+};
 
-export const polisurNavItems = [
-  { key: "inicio", label: "Inicio", to: POLISUR_ROUTES.home },
-  { key: "institucion", label: "Institución", to: POLISUR_ROUTES.institucion },
-  { key: "divisiones", label: "Divisiones", to: POLISUR_ROUTES.divisiones },
-  {
-    key: "unidad-canina",
-    label: "Unidad Canina",
-    to: POLISUR_ROUTES.unidadCanina,
-  },
-  {
-    key: "preinscripcion",
-    label: "Preinscripción",
-    to: POLISUR_ROUTES.preinscripcion,
-  },
-  { key: "contacto", label: "Contacto", to: POLISUR_ROUTES.contacto },
-] as const;
+function joinPolisurPath(base: "" | "/polisur", segment: string): string {
+  if (!segment) {
+    return base || "/";
+  }
+  return `${base}${segment}`;
+}
+
+export function getPolisurRoutes(base = getPolisurBasePath()): PolisurRoutes {
+  const home = joinPolisurPath(base, "");
+  return {
+    home,
+    institucion: `${home}#institucion`,
+    divisiones: joinPolisurPath(base, POLISUR_SEGMENTS.divisiones),
+    unidadCanina: joinPolisurPath(base, POLISUR_SEGMENTS.unidadCanina),
+    preinscripcion: joinPolisurPath(base, POLISUR_SEGMENTS.preinscripcion),
+    preinscripcionCanina: `${joinPolisurPath(base, POLISUR_SEGMENTS.preinscripcion)}?unidad=canina`,
+    contacto: joinPolisurPath(base, POLISUR_SEGMENTS.contacto),
+    medios: joinPolisurPath(base, POLISUR_SEGMENTS.medios),
+  };
+}
+
+/** Alias estático para compatibilidad (resuelve en runtime según hostname). */
+export const POLISUR_ROUTES = getPolisurRoutes();
+
+export type PolisurRouteKey = keyof PolisurRoutes;
+export type PolisurRoutePath = PolisurRoutes[PolisurRouteKey];
+
+export function getPolisurNavItems(base = getPolisurBasePath()) {
+  const routes = getPolisurRoutes(base);
+  return [
+    { key: "inicio", label: "Inicio", to: routes.home },
+    { key: "institucion", label: "Institución", to: routes.institucion },
+    { key: "divisiones", label: "Divisiones", to: routes.divisiones },
+    {
+      key: "unidad-canina",
+      label: "Unidad Canina",
+      to: routes.unidadCanina,
+    },
+    {
+      key: "preinscripcion",
+      label: "Preinscripción",
+      to: routes.preinscripcion,
+    },
+    { key: "contacto", label: "Contacto", to: routes.contacto },
+  ] as const;
+}
+
+export const polisurNavItems = getPolisurNavItems();
+
+/** Prefijos de ruta registrados en React Router (dominio propio + namespace legacy). */
+export const POLISUR_ROUTE_PREFIXES = ["", "/polisur"] as const;
+
+export function polisurRouterPath(
+  prefix: "" | "/polisur",
+  segment: keyof typeof POLISUR_SEGMENTS | "home",
+): string {
+  if (segment === "home") {
+    return prefix || "/";
+  }
+  return joinPolisurPath(prefix, POLISUR_SEGMENTS[segment]);
+}

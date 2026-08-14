@@ -1,3 +1,5 @@
+import { getPolisurRoutes } from "@/constants/polisur-routes";
+
 /**
  * Contenido institucional de POLISUR.
  * Textos basados en información pública sobre el Instituto Autónomo
@@ -118,13 +120,15 @@ export const polisurCopy = {
   },
 } as const;
 
+const polisurRoutes = getPolisurRoutes();
+
 export const polisurDivisionItems = [
   {
     key: "unidad-canina",
     name: "Unidad Canina",
     summary:
       "Patrullaje canino y apoyo especializado con binomios entrenados al servicio de la institución.",
-    to: "/polisur/unidad-canina",
+    to: polisurRoutes.unidadCanina,
     featured: true,
     image: POLISUR_MEDIA.home.canina,
     imagePosition: "center 40%",
@@ -134,7 +138,7 @@ export const polisurDivisionItems = [
     name: "Unidades operativas",
     summary:
       "Patrullaje preventivo, orden público y respuesta operativa en las siete parroquias del municipio.",
-    to: "/polisur/divisiones",
+    to: polisurRoutes.divisiones,
     featured: false,
     image: POLISUR_MEDIA.home.about,
     imagePosition: "center",
@@ -144,7 +148,7 @@ export const polisurDivisionItems = [
     name: "Prevención y Cuadrantes de Paz",
     summary:
       "Vinculación comunitaria, Mesas y Cuadrantes de Paz, y prevención para la convivencia ciudadana.",
-    to: "/polisur/divisiones",
+    to: polisurRoutes.divisiones,
     featured: false,
     image: POLISUR_MEDIA.home.ciudadania,
     imagePosition: "center",
