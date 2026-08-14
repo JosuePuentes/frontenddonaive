@@ -7,7 +7,7 @@ import { PageLoader } from "@/components/page/PageLoader";
 import { ROUTES } from "@/constants/routes";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { isPolisurHost } from "@/lib/polisur-host";
-import { PolisurRouteTree } from "@/routers/PolisurRouteTree";
+import { polisurRouteTree } from "@/routers/PolisurRouteTree";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Empresa = lazy(() => import("@/pages/Empresa"));
@@ -100,8 +100,8 @@ const AppRouter = () => {
 
         {/* POLISUR — dominio propio (/) + namespace /polisur en Donaive */}
         <Route element={<PolisurLayout />}>
-          {onPolisurDomain ? <PolisurRouteTree prefix="" /> : null}
-          <PolisurRouteTree prefix="/polisur" />
+          {onPolisurDomain ? polisurRouteTree("") : null}
+          {polisurRouteTree("/polisur")}
         </Route>
 
         {!onPolisurDomain ? (

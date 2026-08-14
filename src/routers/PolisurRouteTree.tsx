@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { lazy, type ReactNode } from "react";
 import { Route } from "react-router";
 import { polisurRouterPath } from "@/constants/polisur-routes";
 
@@ -15,14 +15,14 @@ const PolisurPreinscripcion = lazy(
 const PolisurContacto = lazy(() => import("@/pages/polisur/PolisurContacto"));
 const PolisurMedios = lazy(() => import("@/pages/polisur/PolisurMedios"));
 
-type PolisurRouteTreeProps = {
-  prefix: "" | "/polisur";
-};
-
 /**
- * Árbol de rutas POLISUR para un prefijo (`/` en dominio propio, `/polisur` en Donaive).
+ * Devuelve `<Route>` hijos para un prefijo POLISUR.
+ *
+ * Debe invocarse como función (`{polisurRouteTree("/polisur")}`), no como
+ * componente `<PolisurRouteTree />`: React Router exige que los hijos de
+ * `<Routes>` / layout `<Route>` sean `<Route>` o Fragment, no componentes custom.
  */
-function PolisurRouteTree({ prefix }: PolisurRouteTreeProps) {
+function polisurRouteTree(prefix: "" | "/polisur"): ReactNode {
   return (
     <>
       <Route
@@ -53,4 +53,4 @@ function PolisurRouteTree({ prefix }: PolisurRouteTreeProps) {
   );
 }
 
-export { PolisurRouteTree };
+export { polisurRouteTree };
