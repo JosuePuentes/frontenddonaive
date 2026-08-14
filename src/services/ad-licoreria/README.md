@@ -744,6 +744,13 @@ Implementación UI: `src/lib/ad-licoreria/report-presets.ts`.
 
 ## J. Decisiones de negocio pendientes
 
+> **Fase 5 (análisis / propuestas):** ver  
+> [`DECISIONES-NEGOCIO-FASE5.md`](./DECISIONES-NEGOCIO-FASE5.md)  
+> — tabla J.1–J.10, alternativas, PROPUESTAS y qué requiere aprobación.  
+> Nada de lo siguiente está aprobado hasta confirmación del negocio.
+
+### Listado breve (Fase 4 original)
+
 | ID | Tema | Opciones | Impacto |
 |---|---|---|---|
 | J.1 | Stock del prepago | (a) Descontar al crear (mock actual) (b) Descontar al consumir (c) Reserva soft | Kardex y reportes de existencia |
