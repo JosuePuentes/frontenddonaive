@@ -2,6 +2,7 @@ import type {
   AdAccount,
   AdAuditEvent,
   AdCashSession,
+  AdCustomer,
   AdInventoryMovement,
   AdPresentation,
   AdProduct,
@@ -150,6 +151,23 @@ export const AD_DEMO_STOCK: AdStockBalance[] = [
   { productId: "prod-snack", warehouseId: "wh-barra", qtyBase: 40 },
 ];
 
+export const AD_DEMO_CUSTOMERS: AdCustomer[] = [
+  {
+    id: "cli-1",
+    name: "Cliente mesa 12",
+    phone: "0414-0000000",
+    notes: "Prepago cerveza frecuente",
+    active: true,
+  },
+  {
+    id: "cli-2",
+    name: "Eventos corporativos",
+    phone: "0424-1111111",
+    notes: "Pedidos por caja",
+    active: true,
+  },
+];
+
 export const AD_DEMO_TABLES: AdTable[] = [
   { id: "mesa-1", number: "1", capacity: 4, status: "libre", active: true },
   { id: "mesa-5", number: "5", capacity: 6, status: "ocupada", active: true },
@@ -169,6 +187,7 @@ export const AD_DEMO_ACCOUNTS: AdAccount[] = [
     number: "000184",
     tableId: "mesa-12",
     mesoneraName: "María",
+    customerId: "cli-1",
     customerName: "Cliente mesa 12",
     status: "prepago_activa",
     prepaid: true,

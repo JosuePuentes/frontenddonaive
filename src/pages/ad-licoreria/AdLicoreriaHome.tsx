@@ -17,11 +17,14 @@ export default function AdLicoreriaHome() {
           {adLicoreriaBrand.description}
         </p>
         <div className="ad-landing__actions">
-          <Link to={AD_LICORERIA_ROUTES.dashboard} className="ad-btn ad-btn--gold">
-            Entrar al dashboard
+          <Link to={AD_LICORERIA_ROUTES.inicio} className="ad-btn ad-btn--gold">
+            Entrar al inicio
           </Link>
-          <Link to={AD_LICORERIA_ROUTES.pos} className="ad-btn ad-btn--primary">
-            Abrir POS
+          <Link
+            to={AD_LICORERIA_ROUTES.ventas}
+            className="ad-btn ad-btn--primary"
+          >
+            Abrir ventas
           </Link>
           <Link to={AD_LICORERIA_ROUTES.mesonera} className="ad-btn">
             Vista mesonera

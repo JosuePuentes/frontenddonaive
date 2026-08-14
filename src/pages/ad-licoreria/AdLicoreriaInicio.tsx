@@ -3,7 +3,7 @@ import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { accountAvailable } from "@/lib/ad-licoreria/conversions";
 
-export default function AdLicoreriaDashboard() {
+export default function AdLicoreriaInicio() {
   const { products, stock, accounts, tables, sales, cash, movements } =
     useAdLicoreria();
   const totalBase = stock.reduce((a, s) => a + s.qtyBase, 0);
@@ -51,8 +51,8 @@ export default function AdLicoreriaDashboard() {
         <section className="ad-panel">
           <h2 className="ad-panel-title">Accesos rápidos</h2>
           <div className="flex flex-wrap gap-2">
-            <Link to={AD_LICORERIA_ROUTES.pos} className="ad-btn ad-btn--gold">
-              POS
+            <Link to={AD_LICORERIA_ROUTES.ventas} className="ad-btn ad-btn--gold">
+              Ventas
             </Link>
             <Link to={AD_LICORERIA_ROUTES.inventario} className="ad-btn">
               Inventario
@@ -60,8 +60,11 @@ export default function AdLicoreriaDashboard() {
             <Link to={AD_LICORERIA_ROUTES.depositos} className="ad-btn">
               Transferir
             </Link>
-            <Link to={AD_LICORERIA_ROUTES.prepagos} className="ad-btn">
-              Prepagos
+            <Link to={AD_LICORERIA_ROUTES.cuentas} className="ad-btn">
+              Cuentas
+            </Link>
+            <Link to={AD_LICORERIA_ROUTES.clientes} className="ad-btn">
+              Clientes
             </Link>
             <Link to={AD_LICORERIA_ROUTES.mesonera} className="ad-btn">
               Mesonera

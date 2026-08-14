@@ -8,6 +8,20 @@ export default function AdLicoreriaCuentas() {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <Link to={AD_LICORERIA_ROUTES.mesonera} className="ad-btn ad-btn--gold">
+          Mesonera
+        </Link>
+        <Link to={AD_LICORERIA_ROUTES.prepagos} className="ad-btn">
+          Prepagos
+        </Link>
+        <Link to={AD_LICORERIA_ROUTES.qr} className="ad-btn">
+          QR
+        </Link>
+        <Link to={AD_LICORERIA_ROUTES.mesas} className="ad-btn">
+          Mesas
+        </Link>
+      </div>
       <div className="ad-table-wrap">
         <table className="ad-table">
           <thead>

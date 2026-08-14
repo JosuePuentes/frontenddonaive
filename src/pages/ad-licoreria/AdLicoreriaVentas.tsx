@@ -18,7 +18,7 @@ const PAY_METHODS: { id: AdPaymentMethod; label: string }[] = [
   { id: "otro", label: "Otro" },
 ];
 
-export default function AdLicoreriaPos() {
+export default function AdLicoreriaVentas() {
   const {
     products,
     presentations,

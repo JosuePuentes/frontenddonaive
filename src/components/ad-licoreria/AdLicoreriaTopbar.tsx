@@ -4,8 +4,8 @@ import { normalizeAdLicoreriaPathname } from "@/lib/ad-licoreria-host";
 
 const titles: Record<string, string> = {
   "/": "Portal",
-  "/dashboard": "Dashboard",
-  "/pos": "Punto de venta",
+  "/inicio": "Inicio",
+  "/ventas": "Ventas / POS",
   "/inventario": "Inventario / Kardex",
   "/productos": "Productos",
   "/presentaciones": "Presentaciones",
@@ -14,10 +14,10 @@ const titles: Record<string, string> = {
   "/cuentas": "Cuentas",
   "/prepagos": "Cuentas prepagadas",
   "/qr": "QR de cuenta",
-  "/caja": "Caja",
-  "/cierres": "Cierres",
+  "/cierres": "Cierres y caja",
+  "/clientes": "Clientes",
   "/reportes": "Reportes",
-  "/auditoria": "Auditoría",
+  "/configuracion": "Configuración",
   "/mesonera": "Interfaz mesonera",
 };
 
@@ -38,8 +38,8 @@ function AdLicoreriaTopbar() {
         <Link to={AD_LICORERIA_ROUTES.mesonera} className="ad-btn">
           Mesonera
         </Link>
-        <Link to={AD_LICORERIA_ROUTES.pos} className="ad-btn ad-btn--gold">
-          Abrir POS
+        <Link to={AD_LICORERIA_ROUTES.ventas} className="ad-btn ad-btn--gold">
+          Abrir ventas
         </Link>
       </div>
     </header>

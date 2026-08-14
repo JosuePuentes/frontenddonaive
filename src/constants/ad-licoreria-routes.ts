@@ -1,40 +1,45 @@
 import { getAdLicoreriaBasePath } from "@/lib/ad-licoreria-host";
 
+/**
+ * Rutas canónicas A&D Licorería & Bodegón.
+ * Prefijo `/licoreria` en Donaive; vacío cuando exista dominio propio.
+ */
 const AD_SEGMENTS = {
-  dashboard: "/dashboard",
-  pos: "/pos",
+  inicio: "/inicio",
+  ventas: "/ventas",
+  cuentas: "/cuentas",
   inventario: "/inventario",
   productos: "/productos",
-  presentaciones: "/presentaciones",
   depositos: "/depositos",
-  mesas: "/mesas",
-  cuentas: "/cuentas",
+  cierres: "/cierres",
+  clientes: "/clientes",
+  reportes: "/reportes",
+  configuracion: "/configuracion",
+  /** Sub-vistas operativas (accesibles, no necesariamente en nav principal). */
+  mesonera: "/mesonera",
+  presentaciones: "/presentaciones",
   prepagos: "/prepagos",
   qr: "/qr",
-  caja: "/caja",
-  cierres: "/cierres",
-  reportes: "/reportes",
-  auditoria: "/auditoria",
-  mesonera: "/mesonera",
+  mesas: "/mesas",
 } as const;
 
 export type AdLicoreriaRoutes = {
   home: string;
-  dashboard: string;
-  pos: string;
+  inicio: string;
+  ventas: string;
+  cuentas: string;
   inventario: string;
   productos: string;
-  presentaciones: string;
   depositos: string;
-  mesas: string;
-  cuentas: string;
+  cierres: string;
+  clientes: string;
+  reportes: string;
+  configuracion: string;
+  mesonera: string;
+  presentaciones: string;
   prepagos: string;
   qr: string;
-  caja: string;
-  cierres: string;
-  reportes: string;
-  auditoria: string;
-  mesonera: string;
+  mesas: string;
 };
 
 function joinPath(base: "" | "/licoreria", segment: string): string {
@@ -47,21 +52,21 @@ export function getAdLicoreriaRoutes(
 ): AdLicoreriaRoutes {
   return {
     home: joinPath(base, ""),
-    dashboard: joinPath(base, AD_SEGMENTS.dashboard),
-    pos: joinPath(base, AD_SEGMENTS.pos),
+    inicio: joinPath(base, AD_SEGMENTS.inicio),
+    ventas: joinPath(base, AD_SEGMENTS.ventas),
+    cuentas: joinPath(base, AD_SEGMENTS.cuentas),
     inventario: joinPath(base, AD_SEGMENTS.inventario),
     productos: joinPath(base, AD_SEGMENTS.productos),
-    presentaciones: joinPath(base, AD_SEGMENTS.presentaciones),
     depositos: joinPath(base, AD_SEGMENTS.depositos),
-    mesas: joinPath(base, AD_SEGMENTS.mesas),
-    cuentas: joinPath(base, AD_SEGMENTS.cuentas),
+    cierres: joinPath(base, AD_SEGMENTS.cierres),
+    clientes: joinPath(base, AD_SEGMENTS.clientes),
+    reportes: joinPath(base, AD_SEGMENTS.reportes),
+    configuracion: joinPath(base, AD_SEGMENTS.configuracion),
+    mesonera: joinPath(base, AD_SEGMENTS.mesonera),
+    presentaciones: joinPath(base, AD_SEGMENTS.presentaciones),
     prepagos: joinPath(base, AD_SEGMENTS.prepagos),
     qr: joinPath(base, AD_SEGMENTS.qr),
-    caja: joinPath(base, AD_SEGMENTS.caja),
-    cierres: joinPath(base, AD_SEGMENTS.cierres),
-    reportes: joinPath(base, AD_SEGMENTS.reportes),
-    auditoria: joinPath(base, AD_SEGMENTS.auditoria),
-    mesonera: joinPath(base, AD_SEGMENTS.mesonera),
+    mesas: joinPath(base, AD_SEGMENTS.mesas),
   };
 }
 
@@ -70,21 +75,16 @@ export const AD_LICORERIA_ROUTES = getAdLicoreriaRoutes();
 export function getAdLicoreriaNavItems(base = getAdLicoreriaBasePath()) {
   const r = getAdLicoreriaRoutes(base);
   return [
-    { key: "dashboard", label: "Dashboard", to: r.dashboard },
-    { key: "pos", label: "POS", to: r.pos },
+    { key: "inicio", label: "Inicio", to: r.inicio },
+    { key: "ventas", label: "Ventas", to: r.ventas },
+    { key: "cuentas", label: "Cuentas", to: r.cuentas },
     { key: "inventario", label: "Inventario", to: r.inventario },
     { key: "productos", label: "Productos", to: r.productos },
-    { key: "presentaciones", label: "Presentaciones", to: r.presentaciones },
     { key: "depositos", label: "Depósitos", to: r.depositos },
-    { key: "mesas", label: "Mesas", to: r.mesas },
-    { key: "cuentas", label: "Cuentas", to: r.cuentas },
-    { key: "prepagos", label: "Prepagos", to: r.prepagos },
-    { key: "qr", label: "QR", to: r.qr },
-    { key: "caja", label: "Caja", to: r.caja },
     { key: "cierres", label: "Cierres", to: r.cierres },
+    { key: "clientes", label: "Clientes", to: r.clientes },
     { key: "reportes", label: "Reportes", to: r.reportes },
-    { key: "auditoria", label: "Auditoría", to: r.auditoria },
-    { key: "mesonera", label: "Mesonera", to: r.mesonera },
+    { key: "configuracion", label: "Configuración", to: r.configuracion },
   ] as const;
 }
 

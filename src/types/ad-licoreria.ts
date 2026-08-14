@@ -156,11 +156,20 @@ export type AdAccountLine = {
   unitPrice: AdPrice;
 };
 
+export type AdCustomer = {
+  id: string;
+  name: string;
+  phone?: string;
+  notes?: string;
+  active: boolean;
+};
+
 export type AdAccount = {
   id: string;
   number: string;
   tableId?: string;
   mesoneraName?: string;
+  customerId?: string;
   customerName?: string;
   status: AdAccountStatus;
   prepaid: boolean;

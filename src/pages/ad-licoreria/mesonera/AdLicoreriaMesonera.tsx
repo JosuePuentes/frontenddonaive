@@ -50,7 +50,7 @@ export default function AdLicoreriaMesonera() {
     <div className="mx-auto min-h-screen max-w-lg px-4 py-6">
       <div className="mb-6 flex items-center justify-between gap-3">
         <AdLicoreriaBrandMark size="sm" />
-        <Link to={AD_LICORERIA_ROUTES.dashboard} className="ad-btn">
+        <Link to={AD_LICORERIA_ROUTES.inicio} className="ad-btn">
           Admin
         </Link>
       </div>

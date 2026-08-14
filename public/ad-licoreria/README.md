@@ -12,8 +12,21 @@ Reglas:
 - Preferir PNG con fondo transparente.
 - La UI muestra monograma tipográfico "A&D" solo si el archivo aún no existe.
 
-## Ruta del portal
+## Rutas del portal (Donaive)
 
-- En Donaive: `/licoreria`
-- Dominio propio: arquitectura lista (`isAdLicoreriaHost` + prefijo vacío).
-  No se ha configurado dominio real todavía.
+```
+/licoreria
+/licoreria/inicio
+/licoreria/ventas
+/licoreria/cuentas
+/licoreria/inventario
+/licoreria/productos
+/licoreria/depositos
+/licoreria/cierres
+/licoreria/clientes
+/licoreria/reportes
+/licoreria/configuracion
+```
+
+Dominio propio: arquitectura lista (`isAdLicoreriaHost` + prefijo vacío).
+No hay dominio real configurado todavía.

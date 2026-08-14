@@ -1,4 +1,6 @@
+import { Link } from "react-router";
 import { formatAdPrice } from "@/lib/ad-licoreria/conversions";
+import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
 export default function AdLicoreriaProductos() {
@@ -6,10 +8,15 @@ export default function AdLicoreriaProductos() {
 
   return (
     <div className="space-y-4">
-      <p className="max-w-2xl text-sm text-[var(--ad-muted)]">
-        Producto + presentaciones + unidad base. El inventario se mueve siempre
-        en unidad base (ej. 1 caja = 36 cervezas → −36).
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-sm text-[var(--ad-muted)]">
+          Producto + presentaciones + unidad base. El inventario se mueve siempre
+          en unidad base (ej. 1 caja = 36 cervezas → −36).
+        </p>
+        <Link to={AD_LICORERIA_ROUTES.presentaciones} className="ad-btn">
+          Ver presentaciones
+        </Link>
+      </div>
       <div className="ad-table-wrap">
         <table className="ad-table">
           <thead>
@@ -39,7 +46,9 @@ export default function AdLicoreriaProductos() {
                     .join(", ")}
                 </td>
                 <td>
-                  <span className={p.active ? "ad-badge ad-badge--ok" : "ad-badge"}>
+                  <span
+                    className={p.active ? "ad-badge ad-badge--ok" : "ad-badge"}
+                  >
                     {p.active ? "Activo" : "Inactivo"}
                   </span>
                 </td>

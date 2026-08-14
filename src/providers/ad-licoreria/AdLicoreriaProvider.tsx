@@ -10,6 +10,7 @@ import {
   AD_DEMO_ACCOUNTS,
   AD_DEMO_AUDIT,
   AD_DEMO_CASH,
+  AD_DEMO_CUSTOMERS,
   AD_DEMO_MOVEMENTS,
   AD_DEMO_PRESENTATIONS,
   AD_DEMO_PRODUCTS,
@@ -24,6 +25,7 @@ import type {
   AdAccount,
   AdAuditEvent,
   AdCashSession,
+  AdCustomer,
   AdInventoryMovement,
   AdPaymentLine,
   AdPresentation,
@@ -45,6 +47,7 @@ type AdStore = {
   movements: AdInventoryMovement[];
   tables: AdTable[];
   accounts: AdAccount[];
+  customers: AdCustomer[];
   sales: AdSale[];
   serviceLogs: AdServiceLog[];
   cash: AdCashSession;
@@ -89,6 +92,7 @@ export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
   const [movements, setMovements] = useState(AD_DEMO_MOVEMENTS);
   const [tables] = useState(AD_DEMO_TABLES);
   const [accounts, setAccounts] = useState(AD_DEMO_ACCOUNTS);
+  const [customers] = useState(AD_DEMO_CUSTOMERS);
   const [sales, setSales] = useState(AD_DEMO_SALES);
   const [serviceLogs, setServiceLogs] = useState(AD_DEMO_SERVICE_LOGS);
   const [cash] = useState(AD_DEMO_CASH);
@@ -328,6 +332,7 @@ export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
       movements,
       tables,
       accounts,
+      customers,
       sales,
       serviceLogs,
       cash,
@@ -346,6 +351,7 @@ export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
       movements,
       tables,
       accounts,
+      customers,
       sales,
       serviceLogs,
       cash,
