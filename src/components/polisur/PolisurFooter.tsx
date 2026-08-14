@@ -1,27 +1,45 @@
 import { Link } from "react-router";
 import { PolisurCrest } from "@/components/polisur/PolisurCrest";
+import { PolisurInstitutionalMarks } from "@/components/polisur/PolisurInstitutionalMarks";
+import { PolisurMark } from "@/components/polisur/PolisurMark";
+import { usePolisurTheme } from "@/components/polisur/usePolisurTheme";
 import { POLISUR_ROUTES, polisurNavItems } from "@/constants/polisur-routes";
-import { polisurCopy } from "@/content/polisur";
+import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
 
 function PolisurFooter() {
+  const { isCanina } = usePolisurTheme();
+
   return (
     <footer className="bg-[var(--ps-navy-950)]">
       <div className="ps-container grid gap-10 border-t border-[var(--ps-line)] py-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
           <div className="flex items-center gap-3">
-            <PolisurCrest size="md" />
+            {isCanina ? (
+              <span className="relative inline-flex h-11 w-11 shrink-0 overflow-hidden">
+                <PolisurMark
+                  src={POLISUR_MEDIA.k9}
+                  alt="Unidad de Patrullaje Canino"
+                  className="h-full w-full"
+                />
+              </span>
+            ) : (
+              <PolisurCrest size="md" />
+            )}
             <div>
               <div className="ps-display text-xl text-[var(--ps-white)]">
-                {polisurCopy.brand.name}
+                {isCanina ? "Unidad Canina" : polisurCopy.brand.name}
               </div>
               <p className="mt-0.5 text-[0.65rem] uppercase tracking-[0.14em] text-[var(--ps-steel-400)]">
-                {polisurCopy.brand.line}
+                {isCanina ? polisurCopy.brand.name : polisurCopy.brand.line}
               </p>
             </div>
           </div>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-[var(--ps-steel-400)]">
             {polisurCopy.brand.identification}
           </p>
+          <div className="mt-6">
+            <PolisurInstitutionalMarks size="sm" />
+          </div>
         </div>
 
         <div>

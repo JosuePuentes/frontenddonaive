@@ -14,6 +14,7 @@ export const POLISUR_ROUTES = {
   divisiones: "/polisur/divisiones",
   unidadCanina: "/polisur/unidad-canina",
   preinscripcion: "/polisur/preinscripcion",
+  preinscripcionCanina: "/polisur/preinscripcion?unidad=canina",
   contacto: "/polisur/contacto",
   /** Acceso interno — no incluir en navegación principal */
   medios: "/polisur/medios",

@@ -11,6 +11,9 @@ export const POLISUR_MEDIA = {
   parche: "/polisur/logo/parche.png",
   /** Emblema Unidad de Patrullaje Canino (K-9) */
   k9: "/polisur/logo/k9-emblema.png",
+  visipol: "/polisur/logo/visipol.png",
+  cuadrantesPaz: "/polisur/logo/cuadrantes-paz.png",
+  justiciaPaz: "/polisur/logo/justicia-paz.png",
   home: {
     hero: "/polisur/home/hero.jpg",
     about: "/polisur/home/about.jpg",

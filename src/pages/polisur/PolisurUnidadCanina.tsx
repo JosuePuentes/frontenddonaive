@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { PageMeta } from "@/components/page/PageMeta";
-import { PolisurCrest } from "@/components/polisur/PolisurCrest";
+import { PolisurMark } from "@/components/polisur/PolisurMark";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import { POLISUR_ROUTES } from "@/constants/polisur-routes";
 import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
@@ -39,7 +39,7 @@ export default function PolisurUnidadCanina() {
               {polisurCopy.canina.body}
             </p>
             <Link
-              to={POLISUR_ROUTES.preinscripcion}
+              to={POLISUR_ROUTES.preinscripcionCanina}
               className="ps-btn ps-btn-ghost mt-8"
             >
               Preinscripción
@@ -48,7 +48,11 @@ export default function PolisurUnidadCanina() {
 
           <div className="relative">
             <div className="ps-canina-stage__crest" aria-hidden>
-              <PolisurCrest size="lg" />
+              <PolisurMark
+                src={POLISUR_MEDIA.k9}
+                alt=""
+                className="h-16 w-16 object-contain sm:h-20 sm:w-20"
+              />
             </div>
             <div className="ps-canina-stage__frame">
               {!binomioFailed ? (

@@ -2,30 +2,44 @@ import { Link, NavLink } from "react-router";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { PolisurCrest } from "@/components/polisur/PolisurCrest";
+import { PolisurInstitutionalMarks } from "@/components/polisur/PolisurInstitutionalMarks";
+import { PolisurMark } from "@/components/polisur/PolisurMark";
+import { usePolisurTheme } from "@/components/polisur/usePolisurTheme";
 import {
   POLISUR_ROUTES,
   polisurNavItems,
 } from "@/constants/polisur-routes";
-import { polisurCopy } from "@/content/polisur";
+import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
 
 function PolisurNavbar() {
   const [open, setOpen] = useState(false);
+  const { isCanina } = usePolisurTheme();
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--ps-line)] bg-[rgba(5,10,18,0.94)] backdrop-blur-md">
       <div className="ps-container flex h-[3.75rem] items-center justify-between sm:h-[4.25rem]">
         <Link
-          to={POLISUR_ROUTES.home}
+          to={isCanina ? POLISUR_ROUTES.unidadCanina : POLISUR_ROUTES.home}
           className="flex min-w-0 items-center gap-3"
           onClick={() => setOpen(false)}
         >
-          <PolisurCrest size="md" />
+          {isCanina ? (
+            <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden">
+              <PolisurMark
+                src={POLISUR_MEDIA.k9}
+                alt="Unidad de Patrullaje Canino"
+                className="h-full w-full"
+              />
+            </span>
+          ) : (
+            <PolisurCrest size="md" />
+          )}
           <span className="min-w-0 leading-tight">
             <span className="ps-display block truncate text-[1.1rem] text-[var(--ps-white)] sm:text-xl">
-              {polisurCopy.brand.name}
+              {isCanina ? "Unidad Canina" : polisurCopy.brand.name}
             </span>
             <span className="block truncate text-[0.62rem] uppercase tracking-[0.14em] text-[var(--ps-steel-400)] sm:text-[0.65rem]">
-              {polisurCopy.brand.line}
+              {isCanina ? polisurCopy.brand.name : polisurCopy.brand.line}
             </span>
           </span>
         </Link>
@@ -63,6 +77,14 @@ function PolisurNavbar() {
           {open ? <X size={18} /> : <Menu size={18} />}
         </button>
       </div>
+
+      {!isCanina ? (
+        <div className="border-t border-[var(--ps-line)] bg-[var(--ps-navy-950)]">
+          <div className="ps-container flex h-12 items-center sm:h-14">
+            <PolisurInstitutionalMarks size="sm" />
+          </div>
+        </div>
+      ) : null}
 
       {open ? (
         <nav
