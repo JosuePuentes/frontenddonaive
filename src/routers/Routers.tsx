@@ -6,7 +6,8 @@ import { PolisurLayout } from "@/components/polisur/PolisurLayout";
 import { PageLoader } from "@/components/page/PageLoader";
 import { ROUTES } from "@/constants/routes";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
-import { POLISUR_ROUTES } from "@/constants/polisur-routes";
+import { isPolisurHost } from "@/lib/polisur-host";
+import { PolisurRouteTree } from "@/routers/PolisurRouteTree";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Empresa = lazy(() => import("@/pages/Empresa"));
@@ -21,19 +22,6 @@ const Diagnostico = lazy(() => import("@/pages/Diagnostico"));
 const ProyectosDiagnostico = lazy(
   () => import("@/pages/ProyectosDiagnostico"),
 );
-
-const PolisurHome = lazy(() => import("@/pages/polisur/PolisurHome"));
-const PolisurUnidadCanina = lazy(
-  () => import("@/pages/polisur/PolisurUnidadCanina"),
-);
-const PolisurDivisionesPage = lazy(
-  () => import("@/pages/polisur/PolisurDivisionesPage"),
-);
-const PolisurPreinscripcion = lazy(
-  () => import("@/pages/polisur/PolisurPreinscripcion"),
-);
-const PolisurContacto = lazy(() => import("@/pages/polisur/PolisurContacto"));
-const PolisurMedios = lazy(() => import("@/pages/polisur/PolisurMedios"));
 
 const Dashboard = lazy(() => import("@/pages/dashboard/Dashboard"));
 const Users = lazy(() => import("@/pages/dashboard/Users"));
@@ -85,112 +73,113 @@ const PolisurPreinscripciones = lazy(
   () => import("@/pages/dashboard/PolisurPreinscripciones"),
 );
 
-const AppRouter = () => (
-  <Suspense fallback={<PageLoader />}>
-    <Routes>
-      {/* Público */}
-      <Route element={<Layout />}>
-        <Route path={ROUTES.home} element={<Home />} />
-        <Route path={ROUTES.empresa} element={<Empresa />} />
-        <Route path={ROUTES.soluciones} element={<Soluciones />} />
-        <Route path={ROUTES.academy} element={<Academy />} />
-        <Route path={ROUTES.media} element={<Media />} />
-        <Route path={ROUTES.blog} element={<Blog />} />
-        <Route path={ROUTES.contacto} element={<Contacto />} />
-        <Route path={ROUTES.privacidad} element={<Privacidad />} />
-        <Route path={ROUTES.terminos} element={<Terminos />} />
-        <Route path="/diagnostico" element={<Diagnostico />} />
-        <Route
-          path="/diagnostico/proyectos"
-          element={<ProyectosDiagnostico />}
-        />
-      </Route>
+const AppRouter = () => {
+  const onPolisurDomain = isPolisurHost();
 
-      {/* POLISUR — experiencia institucional independiente (no reemplaza Donaive) */}
-      <Route element={<PolisurLayout />}>
-        <Route path={POLISUR_ROUTES.home} element={<PolisurHome />} />
-        <Route
-          path={POLISUR_ROUTES.unidadCanina}
-          element={<PolisurUnidadCanina />}
-        />
-        <Route
-          path={POLISUR_ROUTES.divisiones}
-          element={<PolisurDivisionesPage />}
-        />
-        <Route
-          path={POLISUR_ROUTES.preinscripcion}
-          element={<PolisurPreinscripcion />}
-        />
-        <Route path={POLISUR_ROUTES.contacto} element={<PolisurContacto />} />
-        <Route path={POLISUR_ROUTES.medios} element={<PolisurMedios />} />
-      </Route>
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {!onPolisurDomain ? (
+          <Route element={<Layout />}>
+            <Route path={ROUTES.home} element={<Home />} />
+            <Route path={ROUTES.empresa} element={<Empresa />} />
+            <Route path={ROUTES.soluciones} element={<Soluciones />} />
+            <Route path={ROUTES.academy} element={<Academy />} />
+            <Route path={ROUTES.media} element={<Media />} />
+            <Route path={ROUTES.blog} element={<Blog />} />
+            <Route path={ROUTES.contacto} element={<Contacto />} />
+            <Route path={ROUTES.privacidad} element={<Privacidad />} />
+            <Route path={ROUTES.terminos} element={<Terminos />} />
+            <Route path="/diagnostico" element={<Diagnostico />} />
+            <Route
+              path="/diagnostico/proyectos"
+              element={<ProyectosDiagnostico />}
+            />
+          </Route>
+        ) : null}
 
-      {/* Privado — scaffolding sin PrivateRoute funcional */}
-      <Route element={<DashboardLayout />}>
-        <Route path={DASHBOARD_ROUTES.root} element={<Dashboard />} />
-        <Route path={DASHBOARD_ROUTES.usuarios} element={<Users />} />
-        <Route path={DASHBOARD_ROUTES.roles} element={<Roles />} />
-        <Route path={DASHBOARD_ROUTES.blog} element={<DashboardBlog />} />
-        <Route path={DASHBOARD_ROUTES.academy} element={<DashboardAcademy />} />
-        <Route path={DASHBOARD_ROUTES.media} element={<DashboardMedia />} />
-        <Route path={DASHBOARD_ROUTES.productos} element={<Products />} />
-        <Route
-          path={DASHBOARD_ROUTES.servicioNuevo}
-          element={<ServiceNew />}
-        />
-        <Route
-          path={DASHBOARD_ROUTES.servicioDetail}
-          element={<ServiceDetail />}
-        />
-        <Route path={DASHBOARD_ROUTES.servicios} element={<Services />} />
-        <Route path={DASHBOARD_ROUTES.casos} element={<Cases />} />
-        <Route path={DASHBOARD_ROUTES.archivos} element={<Files />} />
-        <Route path={DASHBOARD_ROUTES.configuracion} element={<Settings />} />
-        <Route path={DASHBOARD_ROUTES.perfil} element={<Profile />} />
+        {/* POLISUR — dominio propio (/) + namespace /polisur en Donaive */}
+        <Route element={<PolisurLayout />}>
+          {onPolisurDomain ? <PolisurRouteTree prefix="" /> : null}
+          <PolisurRouteTree prefix="/polisur" />
+        </Route>
 
-        {/* CRM */}
-        <Route path={DASHBOARD_ROUTES.crm} element={<CrmDashboard />} />
-        <Route path={DASHBOARD_ROUTES.crmLeads} element={<CrmLeads />} />
-        <Route
-          path={DASHBOARD_ROUTES.crmLeadDetail}
-          element={<CrmLeadDetail />}
-        />
-        <Route
-          path={DASHBOARD_ROUTES.crmOportunidades}
-          element={<CrmOpportunities />}
-        />
-        <Route
-          path={DASHBOARD_ROUTES.crmDiagnosticoNuevo}
-          element={<CrmDiagnosisNew />}
-        />
-        <Route
-          path={DASHBOARD_ROUTES.crmDiagnosticoDetail}
-          element={<CrmDiagnosisDetail />}
-        />
-        <Route
-          path={DASHBOARD_ROUTES.crmDiagnosticos}
-          element={<CrmDiagnostics />}
-        />
-        <Route
-          path={DASHBOARD_ROUTES.crmPropuestaNueva}
-          element={<CrmProposalNew />}
-        />
-        <Route
-          path={DASHBOARD_ROUTES.crmPropuestaDetail}
-          element={<CrmProposalDetail />}
-        />
-        <Route
-          path={DASHBOARD_ROUTES.crmPropuestas}
-          element={<CrmProposals />}
-        />
-        <Route path={DASHBOARD_ROUTES.crmProyectos} element={<CrmProjects />} />
-        <Route
-          path={DASHBOARD_ROUTES.polisurPreinscripciones}
-          element={<PolisurPreinscripciones />}
-        />
-      </Route>
-    </Routes>
-  </Suspense>
-);
+        {!onPolisurDomain ? (
+          <Route element={<DashboardLayout />}>
+            <Route path={DASHBOARD_ROUTES.root} element={<Dashboard />} />
+            <Route path={DASHBOARD_ROUTES.usuarios} element={<Users />} />
+            <Route path={DASHBOARD_ROUTES.roles} element={<Roles />} />
+            <Route path={DASHBOARD_ROUTES.blog} element={<DashboardBlog />} />
+            <Route
+              path={DASHBOARD_ROUTES.academy}
+              element={<DashboardAcademy />}
+            />
+            <Route path={DASHBOARD_ROUTES.media} element={<DashboardMedia />} />
+            <Route path={DASHBOARD_ROUTES.productos} element={<Products />} />
+            <Route
+              path={DASHBOARD_ROUTES.servicioNuevo}
+              element={<ServiceNew />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.servicioDetail}
+              element={<ServiceDetail />}
+            />
+            <Route path={DASHBOARD_ROUTES.servicios} element={<Services />} />
+            <Route path={DASHBOARD_ROUTES.casos} element={<Cases />} />
+            <Route path={DASHBOARD_ROUTES.archivos} element={<Files />} />
+            <Route
+              path={DASHBOARD_ROUTES.configuracion}
+              element={<Settings />}
+            />
+            <Route path={DASHBOARD_ROUTES.perfil} element={<Profile />} />
+
+            <Route path={DASHBOARD_ROUTES.crm} element={<CrmDashboard />} />
+            <Route path={DASHBOARD_ROUTES.crmLeads} element={<CrmLeads />} />
+            <Route
+              path={DASHBOARD_ROUTES.crmLeadDetail}
+              element={<CrmLeadDetail />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.crmOportunidades}
+              element={<CrmOpportunities />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.crmDiagnosticoNuevo}
+              element={<CrmDiagnosisNew />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.crmDiagnosticoDetail}
+              element={<CrmDiagnosisDetail />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.crmDiagnosticos}
+              element={<CrmDiagnostics />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.crmPropuestaNueva}
+              element={<CrmProposalNew />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.crmPropuestaDetail}
+              element={<CrmProposalDetail />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.crmPropuestas}
+              element={<CrmProposals />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.crmProyectos}
+              element={<CrmProjects />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.polisurPreinscripciones}
+              element={<PolisurPreinscripciones />}
+            />
+          </Route>
+        ) : null}
+      </Routes>
+    </Suspense>
+  );
+};
 
 export default AppRouter;
