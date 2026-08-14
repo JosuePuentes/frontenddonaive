@@ -38,7 +38,7 @@ function assertClave(clave) {
     err.statusCode = 503;
     throw err;
   }
-  if (!clave || clave !== expected) {
+  if (!clave || String(clave).trim() !== String(expected).trim()) {
     const err = new Error("Clave institucional no válida.");
     err.statusCode = 401;
     throw err;
@@ -111,10 +111,14 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const body =
-      typeof req.body === "string"
-        ? JSON.parse(req.body || "{}")
-        : req.body || {};
+    let body = {};
+    if (typeof req.body === "string") {
+      body = JSON.parse(req.body || "{}");
+    } else if (Buffer.isBuffer(req.body)) {
+      body = JSON.parse(req.body.toString("utf8") || "{}");
+    } else if (req.body && typeof req.body === "object") {
+      body = req.body;
+    }
 
     if (req.method === "POST" && action === "auth") {
       assertClave(body.clave);

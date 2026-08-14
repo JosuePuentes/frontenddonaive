@@ -22,6 +22,29 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+async function readApiJson(res: Response): Promise<{
+  ok?: boolean;
+  error?: string;
+  slots?: SlotState[];
+  path?: string;
+}> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as {
+      ok?: boolean;
+      error?: string;
+      slots?: SlotState[];
+      path?: string;
+    };
+  } catch {
+    throw new Error(
+      res.ok
+        ? "El servidor no devolvió una respuesta válida."
+        : "No se pudo contactar el registro documental.",
+    );
+  }
+}
+
 export default function PolisurMedios() {
   const [clave, setClave] = useState("");
   const [authed, setAuthed] = useState(false);
@@ -90,11 +113,11 @@ export default function PolisurMedios() {
       const res = await fetch("/api/polisur-medios?action=auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clave }),
+        body: JSON.stringify({ clave: clave.trim() }),
       });
-      const data = await res.json();
+      const data = await readApiJson(res);
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || "No autorizado.");
+        throw new Error(data.error || "Clave institucional no válida.");
       }
       sessionStorage.setItem(SESSION_KEY, clave);
       setAuthed(true);
@@ -137,7 +160,7 @@ export default function PolisurMedios() {
           dataBase64,
         }),
       });
-      const data = await res.json();
+      const data = await readApiJson(res);
       if (!res.ok || !data.ok) {
         throw new Error(data.error || "No se pudo registrar el archivo.");
       }
@@ -179,7 +202,7 @@ export default function PolisurMedios() {
       <section className="bg-[var(--ps-navy-900)]">
         <div className="ps-container max-w-2xl py-12 sm:py-16">
           {!authed ? (
-            <form onSubmit={onAuth} className="space-y-6">
+            <form onSubmit={onAuth} noValidate className="space-y-6">
               <div>
                 <p className="ps-eyebrow">Identificación institucional</p>
                 <h2 className="mt-3 text-2xl text-[var(--ps-white)]">
@@ -195,12 +218,15 @@ export default function PolisurMedios() {
                   Clave de acceso
                 </span>
                 <input
-                  type="password"
-                  autoComplete="current-password"
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={clave}
                   onChange={(e) => setClave(e.target.value)}
                   className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-gold)]/60"
-                  required
                 />
               </label>
 
@@ -230,7 +256,7 @@ export default function PolisurMedios() {
                 </button>
               </div>
 
-              <form onSubmit={onUpload} className="space-y-6">
+              <form onSubmit={onUpload} noValidate className="space-y-6">
                 <label className="block">
                   <span className="text-xs uppercase tracking-[0.16em] text-[var(--ps-steel-400)]">
                     Destino documental
@@ -256,11 +282,9 @@ export default function PolisurMedios() {
                   </span>
                   <input
                     type="file"
-                    accept={selected.accept}
-                    capture={undefined}
+                    accept="image/*"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
                     className="mt-2 block w-full text-sm text-[var(--ps-steel-300)] file:mr-4 file:border file:border-[var(--ps-line-strong)] file:bg-transparent file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-[0.12em] file:text-[var(--ps-paper)]"
-                    required
                   />
                 </label>
 
