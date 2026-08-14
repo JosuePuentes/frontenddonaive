@@ -5,7 +5,7 @@ function PolisurCitizenSection() {
   return (
     <section
       id="ciudadania"
-      className="scroll-mt-20 border-b border-[var(--ps-line)] bg-[var(--ps-navy-950)]"
+      className="scroll-mt-28 border-b border-[var(--ps-line)] bg-[var(--ps-navy-950)]"
       aria-labelledby="polisur-citizen-title"
     >
       <div className="grid lg:grid-cols-[0.95fr_1.05fr]">
