@@ -24,6 +24,7 @@ export const DASHBOARD_ROUTES = {
   crmPropuestaNueva: "/dashboard/crm/propuestas/nueva",
   crmPropuestaDetail: "/dashboard/crm/propuestas/:id",
   crmProyectos: "/dashboard/crm/proyectos",
+  polisurPreinscripciones: "/dashboard/polisur/preinscripciones",
 } as const;
 
 export type DashboardRouteKey = keyof typeof DASHBOARD_ROUTES;
@@ -47,7 +48,8 @@ export type DashboardNavIcon =
   | "pipeline"
   | "diagnosis"
   | "proposals"
-  | "projects";
+  | "projects"
+  | "polisur";
 
 export type DashboardNavItem = {
   key: string;
@@ -144,6 +146,20 @@ export const crmNavGroup: DashboardNavGroup = {
       label: "Proyectos",
       to: DASHBOARD_ROUTES.crmProyectos,
       icon: "projects",
+    },
+  ],
+};
+
+export const polisurNavGroup: DashboardNavGroup = {
+  key: "polisur",
+  label: "POLISUR",
+  icon: "polisur",
+  items: [
+    {
+      key: "polisur-preinscripciones",
+      label: "Preinscripciones",
+      to: DASHBOARD_ROUTES.polisurPreinscripciones,
+      icon: "polisur",
     },
   ],
 };

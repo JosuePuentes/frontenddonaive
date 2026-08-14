@@ -81,6 +81,9 @@ const CrmProposalDetail = lazy(
 const CrmProjects = lazy(
   () => import("@/modules/private/crm/pages/CrmProjects"),
 );
+const PolisurPreinscripciones = lazy(
+  () => import("@/pages/dashboard/PolisurPreinscripciones"),
+);
 
 const AppRouter = () => (
   <Suspense fallback={<PageLoader />}>
@@ -181,6 +184,10 @@ const AppRouter = () => (
           element={<CrmProposals />}
         />
         <Route path={DASHBOARD_ROUTES.crmProyectos} element={<CrmProjects />} />
+        <Route
+          path={DASHBOARD_ROUTES.polisurPreinscripciones}
+          element={<PolisurPreinscripciones />}
+        />
       </Route>
     </Routes>
   </Suspense>

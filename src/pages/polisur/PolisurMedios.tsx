@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurCrest } from "@/components/polisur/PolisurCrest";
+import { PolisurPreinscripcionesAdmin } from "@/components/polisur/PolisurPreinscripcionesAdmin";
 import { POLISUR_ASSET_SLOTS } from "@/content/polisur-asset-slots";
+import { POLISUR_SESSION_KEY } from "@/content/polisur-preinscripcion";
 
-const SESSION_KEY = "polisur-medios-session-v1";
+const SESSION_KEY = POLISUR_SESSION_KEY;
 const NUEVO_CONCEPTO = "__nuevo__";
 
 const CARPETAS = [
@@ -85,6 +87,9 @@ export default function PolisurMedios() {
   const [carpeta, setCarpeta] =
     useState<(typeof CARPETAS)[number]["id"]>("logo");
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
+  const [modulo, setModulo] = useState<"documentos" | "preinscripciones">(
+    "preinscripciones",
+  );
 
   const selected = useMemo(
     () => POLISUR_ASSET_SLOTS.find((s) => s.id === selectedId) ?? null,
@@ -269,16 +274,17 @@ export default function PolisurMedios() {
       </section>
 
       <section className="bg-[var(--ps-navy-900)]">
-        <div className="ps-container max-w-2xl py-12 sm:py-16">
+        <div className="ps-container max-w-4xl py-12 sm:py-16">
           {!authed ? (
             <form onSubmit={onAuth} noValidate className="space-y-6">
               <div>
                 <p className="ps-eyebrow">Identificación institucional</p>
                 <h2 className="mt-3 text-2xl text-[var(--ps-white)]">
-                  Acceso al registro
+                  Acceso institucional
                 </h2>
                 <p className="mt-3 text-sm text-[var(--ps-steel-400)]">
-                  Ingrese la clave institucional asignada para esta gestión.
+                  Ingrese la clave institucional para documentos y
+                  preinscripciones.
                 </p>
               </div>
 
@@ -304,7 +310,7 @@ export default function PolisurMedios() {
                 disabled={busy}
                 className="border-b border-[var(--ps-gold)]/70 pb-1 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)] disabled:opacity-50"
               >
-                {busy ? "Verificando…" : "Ingresar al registro"}
+                {busy ? "Verificando…" : "Ingresar"}
               </button>
             </form>
           ) : (
@@ -313,7 +319,9 @@ export default function PolisurMedios() {
                 <div>
                   <p className="ps-eyebrow">Sesión activa</p>
                   <h2 className="mt-2 text-2xl text-[var(--ps-white)]">
-                    Carga de material
+                    {modulo === "preinscripciones"
+                      ? "Preinscripciones"
+                      : "Carga de material"}
                   </h2>
                 </div>
                 <button
@@ -325,6 +333,37 @@ export default function PolisurMedios() {
                 </button>
               </div>
 
+              <div className="flex gap-6 border-b border-[var(--ps-line)]">
+                <button
+                  type="button"
+                  onClick={() => setModulo("preinscripciones")}
+                  className={
+                    modulo === "preinscripciones"
+                      ? "border-b border-[var(--ps-gold)] pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-white)]"
+                      : "pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-400)]"
+                  }
+                >
+                  Preinscripciones
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModulo("documentos")}
+                  className={
+                    modulo === "documentos"
+                      ? "border-b border-[var(--ps-gold)] pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-white)]"
+                      : "pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-400)]"
+                  }
+                >
+                  Documentos
+                </button>
+              </div>
+
+              {modulo === "preinscripciones" ? (
+                <PolisurPreinscripcionesAdmin clave={clave} tone="polisur" />
+              ) : null}
+
+              {modulo === "documentos" ? (
+                <>
               <form onSubmit={onUpload} noValidate className="space-y-6">
                 <label className="block">
                   <span className="text-xs uppercase tracking-[0.16em] text-[var(--ps-steel-400)]">
@@ -438,6 +477,8 @@ export default function PolisurMedios() {
                     ))}
                   </ul>
                 </div>
+              ) : null}
+                </>
               ) : null}
             </div>
           )}

@@ -2,12 +2,15 @@ import { Link, useSearchParams } from "react-router";
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurCrest } from "@/components/polisur/PolisurCrest";
 import { PolisurMark } from "@/components/polisur/PolisurMark";
+import { PolisurPreinscripcionForm } from "@/components/polisur/PolisurPreinscripcionForm";
 import { POLISUR_ROUTES } from "@/constants/polisur-routes";
 import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
+import { unitFromSearchParam } from "@/content/polisur-preinscripcion";
 
 export default function PolisurPreinscripcion() {
   const [params] = useSearchParams();
   const isCanina = params.get("unidad") === "canina";
+  const defaultUnidad = unitFromSearchParam(params.get("unidad"));
 
   return (
     <>
@@ -17,7 +20,7 @@ export default function PolisurPreinscripcion() {
             ? "Preinscripción Unidad Canina — POLISUR"
             : "Preinscripción — POLISUR"
         }
-        description="Canal de preinscripción para aspirantes a POLISUR."
+        description="Formulario de preinscripción para aspirantes a POLISUR."
       />
 
       <section
@@ -52,7 +55,7 @@ export default function PolisurPreinscripcion() {
               <hr className="ps-gold-rule mt-6" />
               <p className="mt-6 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
                 {isCanina
-                  ? "Canal de preinscripción para aspirantes a la Unidad Canina. El formulario y la conexión con backend se implementarán en una fase posterior."
+                  ? "Complete el formulario para registrar su interés en la Unidad Canina. Los datos serán revisados por la institución."
                   : polisurCopy.preinscripcion.body}
               </p>
             </div>
@@ -60,63 +63,36 @@ export default function PolisurPreinscripcion() {
         </div>
       </section>
 
-      {!isCanina ? (
-        <section className="bg-[var(--ps-navy-900)]">
-          <div className="ps-container grid gap-px bg-[var(--ps-line)] py-0 sm:grid-cols-2">
-            <article className="bg-[var(--ps-navy-900)] px-5 py-10 sm:px-8 sm:py-14">
-              <p className="ps-eyebrow">Institución</p>
-              <h2 className="mt-3 text-2xl text-[var(--ps-white)]">
+      <section className="border-b border-[var(--ps-line)] bg-[var(--ps-navy-900)]">
+        <div className="ps-container grid gap-12 py-12 sm:py-16 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div>
+            <p className="ps-eyebrow">Formulario</p>
+            <h2 className="mt-3 text-2xl text-[var(--ps-white)]">
+              Datos del aspirante
+            </h2>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-[var(--ps-steel-400)]">
+              Indique sus nombres, correo, teléfono y la unidad a la que desea
+              pertenecer. Este registro no constituye ingreso automático.
+            </p>
+            {isCanina ? (
+              <Link
+                to={POLISUR_ROUTES.preinscripcion}
+                className="ps-btn ps-btn-ghost mt-8"
+              >
                 Preinscripción general
-              </h2>
-              <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-400)]">
-                Proceso de aspirantes a POLISUR. El formulario oficial se
-                publicará cuando esté validado.
-              </p>
-            </article>
-
-            <article className="bg-[var(--ps-navy-950)] px-5 py-10 sm:px-8 sm:py-14">
-              <p className="ps-eyebrow text-[var(--ps-gold)]">Especialidad</p>
-              <h2 className="mt-3 text-2xl text-[var(--ps-white)]">
-                Unidad Canina
-              </h2>
-              <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-400)]">
-                Si el interés es la Unidad de Patrullaje Canino, continúe en el
-                diseño institucional de esa división.
-              </p>
+              </Link>
+            ) : (
               <Link
                 to={POLISUR_ROUTES.preinscripcionCanina}
                 className="ps-btn ps-btn-gold mt-8"
               >
-                Continuar en Unidad Canina
+                Prefiero Unidad Canina
               </Link>
-            </article>
+            )}
           </div>
-        </section>
-      ) : (
-        <section className="border-b border-[var(--ps-line)] bg-[var(--ps-navy-900)]">
-          <div className="ps-container py-12 sm:py-16">
-            <p className="max-w-xl text-sm leading-relaxed text-[var(--ps-steel-300)]">
-              Esta vía queda identificada con la Unidad Canina. Los requisitos
-              y el formulario oficiales se publicarán cuando la institución los
-              valide.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to={POLISUR_ROUTES.unidadCanina}
-                className="ps-btn ps-btn-ghost"
-              >
-                Volver a la Unidad
-              </Link>
-              <Link
-                to={POLISUR_ROUTES.preinscripcion}
-                className="ps-btn ps-btn-ghost"
-              >
-                Preinscripción general
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
+          <PolisurPreinscripcionForm defaultUnidad={defaultUnidad} />
+        </div>
+      </section>
     </>
   );
 }

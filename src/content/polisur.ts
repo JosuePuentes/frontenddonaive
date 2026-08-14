@@ -71,7 +71,7 @@ export const polisurCopy = {
   preinscripcion: {
     title: "¿Quieres formar parte de POLISUR?",
     body:
-      "Si deseas iniciar un proceso de preinscripción, utiliza el canal institucional preparado para aspirantes.",
+      "Complete el formulario institucional con sus datos de contacto y la unidad a la que desea pertenecer.",
     cta: "Realizar preinscripción",
   },
   footer: {

@@ -78,6 +78,30 @@
   }
 }
 
+.ps-field-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ps-steel-400);
+}
+
+.ps-input {
+  margin-top: 0.5rem;
+  width: 100%;
+  border: 1px solid var(--ps-line-strong);
+  background: var(--ps-navy-950);
+  padding: 0.75rem 0.85rem;
+  font-size: 0.875rem;
+  color: var(--ps-paper);
+  outline: none;
+}
+
+.ps-input:focus {
+  border-color: color-mix(in srgb, var(--ps-yellow) 60%, transparent);
+}
+
 .ps-eyebrow {
   font-size: 0.6875rem;
   font-weight: 650;

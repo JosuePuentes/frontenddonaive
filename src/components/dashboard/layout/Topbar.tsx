@@ -7,6 +7,7 @@ import {
   DASHBOARD_ROUTES,
   crmNavGroup,
   dashboardNavItems,
+  polisurNavGroup,
 } from "@/constants/dashboard-routes";
 import type { BreadcrumbItem } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
@@ -121,6 +122,18 @@ function resolvePageMeta(pathname: string): {
         { label: "Dashboard", to: DASHBOARD_ROUTES.root },
         { label: "Servicios", to: DASHBOARD_ROUTES.servicios },
         { label: "Detalle" },
+      ],
+    };
+  }
+
+  const polisurItem = polisurNavGroup.items.find((item) => item.to === pathname);
+  if (polisurItem) {
+    return {
+      title: polisurItem.label,
+      breadcrumbs: [
+        { label: "Dashboard", to: DASHBOARD_ROUTES.root },
+        { label: "POLISUR" },
+        { label: polisurItem.label },
       ],
     };
   }
