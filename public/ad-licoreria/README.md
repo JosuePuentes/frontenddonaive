@@ -30,3 +30,10 @@ Reglas:
 
 Dominio propio: arquitectura lista (`isAdLicoreriaHost` + prefijo vacío).
 No hay dominio real configurado todavía.
+
+## Diseño administrativo (Fase 4)
+
+Modelo funcional, entidades, reglas, permisos y contratos API futuros:
+
+→ [`src/services/ad-licoreria/README.md`](../../src/services/ad-licoreria/README.md)
+
