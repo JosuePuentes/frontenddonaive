@@ -40,7 +40,7 @@ async function readApiJson(res: Response): Promise<{
     throw new Error(
       res.ok
         ? "El servidor no devolvió una respuesta válida."
-        : "No se pudo contactar el registro documental.",
+        : `No se pudo contactar el registro documental (${res.status}).`,
     );
   }
 }

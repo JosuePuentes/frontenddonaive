@@ -1,6 +1,6 @@
 /**
  * Endpoint Vercel del registro documental POLISUR.
- * Secrets: POLISUR_MEDIOS_CLAVE, GITHUB_TOKEN,
+ * Secrets: POLISUR_MEDIOS_CLAVE, GITHUB_TOKEN
  * opcionales: POLISUR_MEDIOS_BRANCH, POLISUR_MEDIOS_REPO
  */
 
@@ -43,6 +43,26 @@ function assertClave(clave) {
     err.statusCode = 401;
     throw err;
   }
+}
+
+async function readBody(req) {
+  if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+    return req.body;
+  }
+  if (typeof req.body === "string") {
+    return req.body ? JSON.parse(req.body) : {};
+  }
+  if (Buffer.isBuffer(req.body)) {
+    const text = req.body.toString("utf8");
+    return text ? JSON.parse(text) : {};
+  }
+
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
+  const raw = Buffer.concat(chunks).toString("utf8");
+  return raw ? JSON.parse(raw) : {};
 }
 
 async function putGitHub({ path, contentBase64, message }) {
@@ -94,7 +114,7 @@ async function putGitHub({ path, contentBase64, message }) {
   return { commit: data.commit?.sha || null };
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return json(res, 204, {});
   }
@@ -103,22 +123,18 @@ module.exports = async function handler(req, res) {
   const action = url.searchParams.get("action") || "health";
 
   try {
-    if (req.method === "GET" && action === "health") {
-      return json(res, 200, {
-        ok: true,
-        configured: Boolean(process.env.POLISUR_MEDIOS_CLAVE),
-        github: Boolean(process.env.GITHUB_TOKEN),
-      });
+    if (req.method === "GET" && (action === "health" || action === "status")) {
+      if (action === "health") {
+        return json(res, 200, {
+          ok: true,
+          configured: Boolean(process.env.POLISUR_MEDIOS_CLAVE),
+          github: Boolean(process.env.GITHUB_TOKEN),
+        });
+      }
+      return json(res, 200, { ok: true, slots: [] });
     }
 
-    let body = {};
-    if (typeof req.body === "string") {
-      body = JSON.parse(req.body || "{}");
-    } else if (Buffer.isBuffer(req.body)) {
-      body = JSON.parse(req.body.toString("utf8") || "{}");
-    } else if (req.body && typeof req.body === "object") {
-      body = req.body;
-    }
+    const body = req.method === "POST" ? await readBody(req) : {};
 
     if (req.method === "POST" && action === "auth") {
       assertClave(body.clave);
@@ -167,4 +183,4 @@ module.exports = async function handler(req, res) {
       error: err.message || "Error en registro documental.",
     });
   }
-};
+}
