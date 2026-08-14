@@ -12,14 +12,18 @@ import type {
   AdInventoryItem,
   AdInventoryMovement,
   AdOperator,
+  AdPaymentMethodConfig,
   AdPrepaidAccount,
   AdPrepaidConsumption,
   AdPresentation,
   AdProduct,
+  AdPurchase,
+  AdReceipt,
   AdSale,
   AdServiceLog,
   AdTable,
   AdWarehouse,
+  AdWhatsAppLog,
 } from "@/types/ad-licoreria";
 
 const now = () => new Date().toISOString();
@@ -29,7 +33,94 @@ export const AD_DEMO_SETTINGS: AdAppSettings = {
   suggestBsFromRate: true,
   brandName: "A&D",
   brandTagline: "LICORERÍA & BODEGÓN",
+  whatsappEnabled: true,
 };
+
+export const AD_DEMO_PAYMENT_METHODS: AdPaymentMethodConfig[] = [
+  {
+    id: "pm-cash-usd",
+    code: "efectivo_usd",
+    name: "Efectivo USD",
+    currency: "USD",
+    active: true,
+    requiresReference: false,
+    requiresVoucher: false,
+    requiresBank: false,
+    notes: "Billetes USD",
+  },
+  {
+    id: "pm-cash-bs",
+    code: "efectivo_bs",
+    name: "Efectivo Bs",
+    currency: "BS",
+    active: true,
+    requiresReference: false,
+    requiresVoucher: false,
+    requiresBank: false,
+  },
+  {
+    id: "pm-pago-movil",
+    code: "pago_movil",
+    name: "Pago móvil",
+    currency: "BS",
+    active: true,
+    requiresReference: true,
+    requiresVoucher: false,
+    requiresBank: true,
+    notes: "Banco + referencia + teléfono origen",
+  },
+  {
+    id: "pm-transfer",
+    code: "transferencia",
+    name: "Transferencia",
+    currency: "BS",
+    active: true,
+    requiresReference: true,
+    requiresVoucher: true,
+    requiresBank: true,
+  },
+  {
+    id: "pm-zelle",
+    code: "zelle",
+    name: "Zelle",
+    currency: "USD",
+    active: true,
+    requiresReference: true,
+    requiresVoucher: false,
+    requiresBank: false,
+  },
+  {
+    id: "pm-card",
+    code: "tarjeta",
+    name: "Tarjeta",
+    currency: "BS",
+    active: true,
+    requiresReference: true,
+    requiresVoucher: false,
+    requiresBank: false,
+  },
+  {
+    id: "pm-qr",
+    code: "qr",
+    name: "QR",
+    currency: "USD",
+    active: true,
+    requiresReference: true,
+    requiresVoucher: false,
+    requiresBank: false,
+  },
+  {
+    id: "pm-other",
+    code: "otro",
+    name: "Otro",
+    currency: "USD",
+    active: true,
+    requiresReference: false,
+    requiresVoucher: false,
+    requiresBank: false,
+    notes: "Especificar en observaciones",
+  },
+];
 
 export const AD_DEMO_OPERATORS: AdOperator[] = [
   { id: "op-admin", name: "Admin A&D", role: "admin", active: true },
@@ -147,6 +238,8 @@ export const AD_DEMO_PRESENTATIONS: AdPresentation[] = [
     code: "REG-1",
     unitsPerPresentation: 1,
     price: { usd: 1, bs: 370 },
+    minPrice: { usd: 0.8, bs: 296 },
+    maxPrice: { usd: 1.5, bs: 555 },
     active: true,
   },
   {
@@ -156,12 +249,14 @@ export const AD_DEMO_PRESENTATIONS: AdPresentation[] = [
     code: "REG-BALDE",
     unitsPerPresentation: 10,
     price: { usd: 5, bs: 1850 },
+    minPrice: { usd: 4.5, bs: 1665 },
+    maxPrice: { usd: 6, bs: 2220 },
     active: true,
   },
   {
     id: "pres-reg-caja",
     productId: "prod-regional",
-    name: "Caja",
+    name: "Caja x36",
     code: "REG-CAJA",
     unitsPerPresentation: 36,
     price: { usd: 28, bs: 10360 },
@@ -253,15 +348,21 @@ export const AD_DEMO_TABLES: AdTable[] = [
 export const AD_DEMO_CUSTOMERS: AdCustomer[] = [
   {
     id: "cli-1",
+    firstName: "Juan",
+    lastName: "Pérez",
     name: "Juan Pérez",
     phone: "0414-0000000",
     documentId: "V-12345678",
+    email: "juan@example.com",
+    address: "Valencia, Carabobo",
     notes: "Cliente frecuente — prepago cerveza",
     active: true,
     createdAt: now(),
   },
   {
     id: "cli-2",
+    firstName: "Eventos",
+    lastName: "Corporativos",
     name: "Eventos Corporativos",
     phone: "0424-1111111",
     notes: "Pedidos por caja",
@@ -279,6 +380,7 @@ export const AD_DEMO_ACCOUNTS: AdAccount[] = [
     mesoneraName: "María",
     customerId: "cli-1",
     customerName: "Juan Pérez",
+    customerPhone: "0414-0000000",
     status: "PREPAGADA",
     prepaid: true,
     items: [
@@ -301,6 +403,8 @@ export const AD_DEMO_ACCOUNTS: AdAccount[] = [
         createdAt: now(),
       },
     ],
+    discountUsd: 0,
+    discountBs: 0,
     openedAt: now(),
     updatedAt: now(),
   },
@@ -324,6 +428,8 @@ export const AD_DEMO_ACCOUNTS: AdAccount[] = [
       },
     ],
     payments: [],
+    discountUsd: 0,
+    discountBs: 0,
     openedAt: now(),
     updatedAt: now(),
   },
@@ -332,10 +438,11 @@ export const AD_DEMO_ACCOUNTS: AdAccount[] = [
 export const AD_DEMO_PREPAIDS: AdPrepaidAccount[] = [
   {
     id: "pp-125",
-    code: "A&D-2026-000125",
-    qrToken: "ad_qr_pp_000125_x7k9m2",
+    code: "PRE-2026-000125",
+    qrToken: "ad_qr_pre_2026_000125_x7k9m2",
     customerId: "cli-1",
     customerName: "Juan Pérez",
+    customerPhone: "0414-0000000",
     status: "ACTIVO",
     items: [
       {
@@ -446,6 +553,9 @@ export const AD_DEMO_MOVEMENTS: AdInventoryMovement[] = [
 ];
 
 export const AD_DEMO_SALES: AdSale[] = [];
+export const AD_DEMO_RECEIPTS: AdReceipt[] = [];
+export const AD_DEMO_PURCHASES: AdPurchase[] = [];
+export const AD_DEMO_WHATSAPP_LOGS: AdWhatsAppLog[] = [];
 export const AD_DEMO_SERVICE_LOGS: AdServiceLog[] = [];
 export const AD_DEMO_DAILY_CLOSURES: AdDailyClosure[] = [];
 export const AD_DEMO_INVENTORY_CLOSURES: AdInventoryClosure[] = [];
@@ -458,6 +568,9 @@ export const AD_DEMO_AUDIT: AdAuditEvent[] = [
     entityId: "mov-1",
     userName: "Admin A&D",
     detail: "100 Regional: DEP1 → DEP2",
+    beforeValue: "DEP1=1000 DEP2=120",
+    afterValue: "DEP1=900 DEP2=220",
+    reason: "Reposición",
     createdAt: now(),
   },
 ];

@@ -27,7 +27,12 @@ export default function AdLicoreriaPrepagos() {
               {a.code}
             </h3>
             <p className="mt-2 text-sm text-[var(--ad-muted)]">
-              {a.customerName ?? "Cliente"} · token{" "}
+              {a.customerName ?? "Cliente"}
+              {a.customerPhone ? ` · ${a.customerPhone}` : ""}
+              {a.receiptNumber ? ` · ${a.receiptNumber}` : ""}
+            </p>
+            <p className="mt-1 text-xs text-[var(--ad-muted)]">
+              QR token (opaco):{" "}
               <code className="text-[var(--ad-gold-soft)]">{a.qrToken}</code>
             </p>
             <ul className="mt-4 space-y-2 text-sm">

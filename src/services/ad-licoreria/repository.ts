@@ -13,25 +13,32 @@ import {
   AD_DEMO_INVENTORY_CLOSURES,
   AD_DEMO_MOVEMENTS,
   AD_DEMO_OPERATORS,
+  AD_DEMO_PAYMENT_METHODS,
   AD_DEMO_PREPAID_CONSUMPTIONS,
   AD_DEMO_PREPAIDS,
   AD_DEMO_PRESENTATIONS,
   AD_DEMO_PRODUCTS,
+  AD_DEMO_PURCHASES,
+  AD_DEMO_RECEIPTS,
   AD_DEMO_SALES,
   AD_DEMO_SERVICE_LOGS,
   AD_DEMO_SETTINGS,
   AD_DEMO_TABLES,
   AD_DEMO_WAREHOUSES,
+  AD_DEMO_WHATSAPP_LOGS,
 } from "@/content/ad-licoreria/demo-data";
 import {
   addPrices,
+  customerDisplayName,
   multiplyPrice,
   nextAccountNumber,
   nextPrepaidCode,
+  nextReceiptNumber,
   prepaidAvailable,
   toBaseUnits,
   uid,
 } from "@/lib/ad-licoreria/conversions";
+import { adWhatsAppService } from "@/services/ad-licoreria/whatsapp";
 import type {
   AdAccount,
   AdAccountItem,
@@ -47,16 +54,21 @@ import type {
   AdInventoryMovementType,
   AdOperator,
   AdPayment,
-  AdPaymentMethod,
+  AdPaymentMethodCode,
+  AdPaymentMethodConfig,
   AdPrepaidAccount,
   AdPrepaidConsumption,
   AdPresentation,
   AdProduct,
+  AdPurchase,
+  AdPurchaseItem,
+  AdReceipt,
   AdSale,
   AdSaleItem,
   AdServiceLog,
   AdTable,
   AdWarehouse,
+  AdWhatsAppLog,
 } from "@/types/ad-licoreria";
 
 export type AdRepositoryState = {
@@ -74,12 +86,18 @@ export type AdRepositoryState = {
   prepaidConsumptions: AdPrepaidConsumption[];
   customers: AdCustomer[];
   sales: AdSale[];
+  receipts: AdReceipt[];
+  purchases: AdPurchase[];
+  paymentMethods: AdPaymentMethodConfig[];
   serviceLogs: AdServiceLog[];
   dailyClosures: AdDailyClosure[];
   inventoryClosures: AdInventoryClosure[];
   audit: AdAuditEvent[];
+  whatsappLogs: AdWhatsAppLog[];
   accountSeq: number;
   prepaidSeq: number;
+  receiptSeq: number;
+  purchaseSeq: number;
 };
 
 export type AdResult<T = void> =
@@ -102,12 +120,18 @@ function cloneState(): AdRepositoryState {
     prepaidConsumptions: structuredClone(AD_DEMO_PREPAID_CONSUMPTIONS),
     customers: structuredClone(AD_DEMO_CUSTOMERS),
     sales: structuredClone(AD_DEMO_SALES),
+    receipts: structuredClone(AD_DEMO_RECEIPTS),
+    purchases: structuredClone(AD_DEMO_PURCHASES),
+    paymentMethods: structuredClone(AD_DEMO_PAYMENT_METHODS),
     serviceLogs: structuredClone(AD_DEMO_SERVICE_LOGS),
     dailyClosures: structuredClone(AD_DEMO_DAILY_CLOSURES),
     inventoryClosures: structuredClone(AD_DEMO_INVENTORY_CLOSURES),
     audit: structuredClone(AD_DEMO_AUDIT),
+    whatsappLogs: structuredClone(AD_DEMO_WHATSAPP_LOGS),
     accountSeq: 186,
     prepaidSeq: 126,
+    receiptSeq: 1,
+    purchaseSeq: 1,
   };
 }
 
@@ -124,6 +148,7 @@ function audit(
   userName: string,
   detail: string,
   entityId?: string,
+  extra?: { beforeValue?: string; afterValue?: string; reason?: string },
 ) {
   state.audit = [
     {
@@ -133,6 +158,9 @@ function audit(
       entityId,
       userName,
       detail,
+      beforeValue: extra?.beforeValue,
+      afterValue: extra?.afterValue,
+      reason: extra?.reason,
       createdAt: new Date().toISOString(),
     },
     ...state.audit,
@@ -170,6 +198,132 @@ function pushMovement(mov: AdInventoryMovement) {
   state.movements = [mov, ...state.movements];
 }
 
+function accountSubtotal(account: AdAccount) {
+  return account.items.reduce(
+    (acc, it) => addPrices(acc, multiplyPrice(it.unitPrice, it.qty)),
+    { usd: 0, bs: 0 },
+  );
+}
+
+function accountTotals(account: AdAccount) {
+  const sub = accountSubtotal(account);
+  return {
+    subtotal: sub,
+    total: {
+      usd: Number((sub.usd - (account.discountUsd || 0)).toFixed(2)),
+      bs: Number((sub.bs - (account.discountBs || 0)).toFixed(2)),
+    },
+  };
+}
+
+function paidByCurrency(payments: AdPayment[]) {
+  return payments.reduce(
+    (acc, p) => {
+      if (p.currency === "USD") acc.usd += p.amount;
+      else acc.bs += p.amount;
+      return acc;
+    },
+    { usd: 0, bs: 0 },
+  );
+}
+
+function productName(id: string) {
+  return state.products.find((p) => p.id === id)?.name ?? id;
+}
+
+function presentationName(id: string) {
+  return state.presentations.find((p) => p.id === id)?.name ?? id;
+}
+
+function tableNumber(id?: string) {
+  if (!id) return undefined;
+  return state.tables.find((t) => t.id === id)?.number;
+}
+
+function buildReceiptFromSale(sale: AdSale): AdReceipt {
+  return {
+    id: uid("rcpt"),
+    number: sale.receiptNumber,
+    kind: "sale",
+    saleId: sale.id,
+    accountId: sale.accountId,
+    customerId: sale.customerId,
+    customerName: sale.customerName,
+    customerPhone: sale.customerPhone,
+    mesoneraName: sale.mesoneraName,
+    cashierName: sale.cashierName ?? sale.userName,
+    tableNumber: tableNumber(sale.tableId),
+    items: sale.items.map((it) => ({
+      productName: productName(it.productId),
+      presentationName: presentationName(it.presentationId),
+      qty: it.qty,
+      unitPrice: it.unitPrice,
+      lineTotal: multiplyPrice(it.unitPrice, it.qty),
+    })),
+    payments: sale.payments,
+    subtotal: sale.subtotal,
+    discountUsd: sale.discountUsd,
+    discountBs: sale.discountBs,
+    total: sale.total,
+    paidUsd: paidByCurrency(sale.payments).usd,
+    paidBs: paidByCurrency(sale.payments).bs,
+    balanceUsd: Number(
+      (sale.total.usd - paidByCurrency(sale.payments).usd).toFixed(2),
+    ),
+    notes: sale.notes,
+    createdAt: sale.createdAt,
+  };
+}
+
+function buildReceiptFromAccount(account: AdAccount): AdReceipt {
+  const { subtotal, total } = accountTotals(account);
+  const paid = paidByCurrency(account.payments);
+  return {
+    id: uid("rcpt"),
+    number: account.receiptNumber ?? nextReceiptNumber(state.receiptSeq++),
+    kind: "account",
+    accountId: account.id,
+    customerId: account.customerId,
+    customerName: account.customerName,
+    customerPhone: account.customerPhone,
+    mesoneraName: account.mesoneraName,
+    cashierName: account.cashierName,
+    tableNumber: tableNumber(account.tableId),
+    items: account.items.map((it) => ({
+      productName: productName(it.productId),
+      presentationName: presentationName(it.presentationId),
+      qty: it.qty,
+      qtyServed: it.qtyServed,
+      unitPrice: it.unitPrice,
+      lineTotal: multiplyPrice(it.unitPrice, it.qty),
+    })),
+    payments: account.payments,
+    subtotal,
+    discountUsd: account.discountUsd,
+    discountBs: account.discountBs,
+    total,
+    paidUsd: paid.usd,
+    paidBs: paid.bs,
+    balanceUsd: Number((total.usd - paid.usd).toFixed(2)),
+    notes: account.notes,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+async function notifyWhatsApp(
+  fn: () => Promise<AdWhatsAppLog | void>,
+): Promise<void> {
+  if (!state.settings.whatsappEnabled) return;
+  try {
+    const msg = await fn();
+    if (msg) {
+      state.whatsappLogs = [msg, ...state.whatsappLogs];
+    }
+  } catch {
+    /* mock: no romper flujo operativo */
+  }
+}
+
 export const adLicoreriaRepository = {
   subscribe(listener: () => void) {
     listeners.add(listener);
@@ -193,11 +347,41 @@ export const adLicoreriaRepository = {
     );
   },
 
+  getPaymentMethods(activeOnly = false) {
+    const list = [...state.paymentMethods].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    return activeOnly ? list.filter((m) => m.active) : list;
+  },
+
   updateSettings(patch: Partial<AdAppSettings>): AdResult {
+    const before = JSON.stringify(state.settings);
     state.settings = { ...state.settings, ...patch };
-    audit("config", "settings", "Admin A&D", "Actualizó configuración");
+    audit("config", "settings", "Admin A&D", "Actualizó configuración", undefined, {
+      beforeValue: before,
+      afterValue: JSON.stringify(state.settings),
+    });
     emit();
     return { ok: true, data: undefined };
+  },
+
+  upsertPaymentMethod(
+    method: AdPaymentMethodConfig,
+  ): AdResult<AdPaymentMethodConfig> {
+    const idx = state.paymentMethods.findIndex((m) => m.id === method.id);
+    const before = idx >= 0 ? JSON.stringify(state.paymentMethods[idx]) : undefined;
+    if (idx === -1) state.paymentMethods = [...state.paymentMethods, method];
+    else {
+      const next = [...state.paymentMethods];
+      next[idx] = method;
+      state.paymentMethods = next;
+    }
+    audit("upsert", "payment_method", "Admin A&D", method.name, method.id, {
+      beforeValue: before,
+      afterValue: JSON.stringify(method),
+    });
+    emit();
+    return { ok: true, data: method };
   },
 
   upsertProduct(product: AdProduct): AdResult<AdProduct> {
@@ -218,6 +402,7 @@ export const adLicoreriaRepository = {
       return { ok: false, error: "La conversión debe ser mayor a 0" };
     }
     const idx = state.presentations.findIndex((p) => p.id === pres.id);
+    const before = idx >= 0 ? JSON.stringify(state.presentations[idx].price) : undefined;
     if (idx === -1) state.presentations = [pres, ...state.presentations];
     else {
       const next = [...state.presentations];
@@ -230,6 +415,11 @@ export const adLicoreriaRepository = {
       "Admin A&D",
       `${pres.name} ×${pres.unitsPerPresentation}`,
       pres.id,
+      {
+        beforeValue: before,
+        afterValue: JSON.stringify(pres.price),
+        reason: "Cambio de precio/presentación",
+      },
     );
     emit();
     return { ok: true, data: pres };
@@ -254,12 +444,15 @@ export const adLicoreriaRepository = {
       ? toBaseUnits(presentation, input.qtyPresentation)
       : input.qtyPresentation;
 
-    if (
+    const outbound =
       input.type === "VENTA" ||
       input.type === "TRASLADO_SALIDA" ||
       input.type === "AJUSTE_SALIDA" ||
-      input.type === "CONSUMO_CUENTA"
-    ) {
+      input.type === "CONSUMO_CUENTA" ||
+      input.type === "PERDIDA" ||
+      input.type === "ROTURA";
+
+    if (outbound) {
       if (qtyBase > getStock(input.productId, input.warehouseId)) {
         return { ok: false, error: "Stock insuficiente" };
       }
@@ -304,6 +497,9 @@ export const adLicoreriaRepository = {
     userName: string;
     reason?: string;
   }): AdResult {
+    if (input.fromId === input.toId) {
+      return { ok: false, error: "Depósitos origen y destino deben ser distintos" };
+    }
     const out = this.registerMovement({
       type: "TRASLADO_SALIDA",
       productId: input.productId,
@@ -337,9 +533,14 @@ export const adLicoreriaRepository = {
     mesoneraName: string;
     customerId?: string;
     customerName?: string;
+    customerPhone?: string;
     prepaid?: boolean;
+    notes?: string;
   }): AdResult<AdAccount> {
     const number = nextAccountNumber(state.accountSeq++);
+    const customer = input.customerId
+      ? state.customers.find((c) => c.id === input.customerId)
+      : undefined;
     const account: AdAccount = {
       id: uid("acc"),
       number,
@@ -347,11 +548,15 @@ export const adLicoreriaRepository = {
       mesoneraId: input.mesoneraId,
       mesoneraName: input.mesoneraName,
       customerId: input.customerId,
-      customerName: input.customerName,
+      customerName: input.customerName ?? customer?.name,
+      customerPhone: input.customerPhone ?? customer?.phone,
       status: input.prepaid ? "PREPAGADA" : "ABIERTA",
       prepaid: Boolean(input.prepaid),
       items: [],
       payments: [],
+      discountUsd: 0,
+      discountBs: 0,
+      notes: input.notes,
       openedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -371,26 +576,108 @@ export const adLicoreriaRepository = {
     return { ok: true, data: account };
   },
 
-  addAccountItem(input: {
+  updateAccountItemQty(input: {
     accountId: string;
-    productId: string;
-    presentationId: string;
+    itemId: string;
     qty: number;
     userName: string;
-    deductStock?: boolean;
-    warehouseId?: string;
   }): AdResult<AdAccount> {
     const account = state.accounts.find((a) => a.id === input.accountId);
     if (!account) return { ok: false, error: "Cuenta no encontrada" };
     if (account.status === "CERRADA" || account.status === "CANCELADA") {
       return { ok: false, error: "Cuenta cerrada" };
     }
+    const item = account.items.find((i) => i.id === input.itemId);
+    if (!item) return { ok: false, error: "Ítem no encontrado" };
+    if (input.qty < item.qtyServed) {
+      return {
+        ok: false,
+        error: `No puede bajar de ${item.qtyServed} (ya servidas)`,
+      };
+    }
+    const pres = state.presentations.find((p) => p.id === item.presentationId);
+    if (!pres) return { ok: false, error: "Presentación no encontrada" };
+    state.accounts = state.accounts.map((a) =>
+      a.id !== account.id
+        ? a
+        : {
+            ...a,
+            updatedAt: new Date().toISOString(),
+            items: a.items.map((i) =>
+              i.id === item.id
+                ? {
+                    ...i,
+                    qty: input.qty,
+                    qtyBase: toBaseUnits(pres, input.qty),
+                  }
+                : i,
+            ),
+          },
+    );
+    audit(
+      "update_qty",
+      "account",
+      input.userName,
+      `Ítem ${item.id} → ${input.qty}`,
+      account.id,
+      { beforeValue: String(item.qty), afterValue: String(input.qty) },
+    );
+    emit();
+    return { ok: true, data: state.accounts.find((a) => a.id === account.id)! };
+  },
+
+  removeAccountItem(input: {
+    accountId: string;
+    itemId: string;
+    userName: string;
+  }): AdResult<AdAccount> {
+    const account = state.accounts.find((a) => a.id === input.accountId);
+    if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    const item = account.items.find((i) => i.id === input.itemId);
+    if (!item) return { ok: false, error: "Ítem no encontrado" };
+    if (item.qtyServed > 0) {
+      return { ok: false, error: "No se puede eliminar: ya hay productos servidos" };
+    }
+    state.accounts = state.accounts.map((a) =>
+      a.id !== account.id
+        ? a
+        : {
+            ...a,
+            items: a.items.filter((i) => i.id !== item.id),
+            updatedAt: new Date().toISOString(),
+          },
+    );
+    audit("remove_item", "account", input.userName, item.id, account.id);
+    emit();
+    return { ok: true, data: state.accounts.find((a) => a.id === account.id)! };
+  },
+
+  addAccountItem(input: {
+    accountId: string;
+    productId: string;
+    presentationId: string;
+    qty: number;
+    userName: string;
+    /** false = dejar pendiente (no descuenta hasta servir). Default false en POS cuenta. */
+    deductStock?: boolean;
+    warehouseId?: string;
+  }): AdResult<AdAccount> {
+    const account = state.accounts.find((a) => a.id === input.accountId);
+    if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    if (
+      account.status === "CERRADA" ||
+      account.status === "CANCELADA" ||
+      account.status === "PAGADA"
+    ) {
+      return { ok: false, error: "Cuenta no admite ítems" };
+    }
     const pres = state.presentations.find((p) => p.id === input.presentationId);
     if (!pres) return { ok: false, error: "Presentación no encontrada" };
     const qtyBase = toBaseUnits(pres, input.qty);
     const warehouseId = input.warehouseId ?? "wh-2";
+    const deduct = input.deductStock === true;
 
-    if (input.deductStock !== false) {
+    if (deduct) {
       const mov = this.registerMovement({
         type: "VENTA",
         productId: input.productId,
@@ -409,7 +696,7 @@ export const adLicoreriaRepository = {
       productId: input.productId,
       presentationId: input.presentationId,
       qty: input.qty,
-      qtyServed: input.deductStock === false ? 0 : input.qty,
+      qtyServed: deduct ? input.qty : 0,
       unitPrice: { ...pres.price },
       qtyBase,
     };
@@ -433,9 +720,13 @@ export const adLicoreriaRepository = {
     itemId: string;
     qty: number;
     mesoneraName: string;
+    warehouseId?: string;
   }): AdResult {
     const account = state.accounts.find((a) => a.id === input.accountId);
     if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    if (account.status === "CERRADA" || account.status === "CANCELADA") {
+      return { ok: false, error: "Cuenta cerrada" };
+    }
     const item = account.items.find((i) => i.id === input.itemId);
     if (!item) return { ok: false, error: "Ítem no encontrado" };
     const available = item.qty - item.qtyServed;
@@ -445,13 +736,14 @@ export const adLicoreriaRepository = {
     const pres = state.presentations.find((p) => p.id === item.presentationId);
     if (!pres) return { ok: false, error: "Presentación no encontrada" };
     const qtyBase = toBaseUnits(pres, input.qty);
+    const warehouseId = input.warehouseId ?? "wh-2";
 
     const mov = this.registerMovement({
       type: "CONSUMO_CUENTA",
       productId: item.productId,
       presentationId: item.presentationId,
       qtyPresentation: input.qty,
-      warehouseId: "wh-2",
+      warehouseId,
       userName: input.mesoneraName,
       reason: `Servicio cuenta #${account.number}`,
       reference: account.id,
@@ -485,24 +777,66 @@ export const adLicoreriaRepository = {
       },
       ...state.serviceLogs,
     ];
+
+    const updated = state.accounts.find((a) => a.id === account.id)!;
+    const pending = updated.items
+      .filter((i) => i.qty > i.qtyServed)
+      .map(
+        (i) =>
+          `${productName(i.productId)} (${presentationName(i.presentationId)}): ${i.qty - i.qtyServed}`,
+      )
+      .join("\n");
+    if (pending && updated.customerPhone) {
+      void notifyWhatsApp(() =>
+        adWhatsAppService.send({
+          toPhone: updated.customerPhone!,
+          template: "pending_items",
+          customerId: updated.customerId,
+          body: adWhatsAppService.buildPendingItems({
+            customerName: updated.customerName ?? "Cliente",
+            accountNumber: updated.number,
+            pendingSummary: pending,
+          }),
+        }),
+      );
+    }
+
     emit();
     return { ok: true, data: undefined };
   },
 
   addAccountPayment(input: {
     accountId: string;
-    method: AdPaymentMethod;
+    method: AdPaymentMethodCode;
     currency: "USD" | "BS";
     amount: number;
     userName: string;
+    bank?: string;
+    reference?: string;
+    originPhone?: string;
+    voucherNote?: string;
   }): AdResult {
     const account = state.accounts.find((a) => a.id === input.accountId);
     if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    const cfg = state.paymentMethods.find((m) => m.code === input.method);
+    if (cfg?.requiresBank && !input.bank?.trim()) {
+      return { ok: false, error: "Este método requiere banco" };
+    }
+    if (cfg?.requiresReference && !input.reference?.trim()) {
+      return { ok: false, error: "Este método requiere referencia" };
+    }
+    if (cfg?.requiresVoucher && !input.voucherNote?.trim()) {
+      return { ok: false, error: "Este método requiere comprobante" };
+    }
     const payment: AdPayment = {
       id: uid("pay"),
       method: input.method,
       currency: input.currency,
       amount: input.amount,
+      bank: input.bank,
+      reference: input.reference,
+      originPhone: input.originPhone,
+      voucherNote: input.voucherNote,
       createdAt: new Date().toISOString(),
     };
     state.accounts = state.accounts.map((a) =>
@@ -515,9 +849,134 @@ export const adLicoreriaRepository = {
             updatedAt: new Date().toISOString(),
           },
     );
-    audit("payment", "account", input.userName, `${input.method} ${input.amount}`, account.id);
+    audit(
+      "payment",
+      "account",
+      input.userName,
+      `${input.method} ${input.amount}`,
+      account.id,
+      { afterValue: JSON.stringify(payment) },
+    );
     emit();
     return { ok: true, data: undefined };
+  },
+
+  applyDiscount(input: {
+    accountId: string;
+    discountUsd: number;
+    discountBs: number;
+    reason: string;
+    userName: string;
+    authorizedBy: string;
+  }): AdResult<AdAccount> {
+    if (!input.reason.trim()) {
+      return { ok: false, error: "Motivo de descuento obligatorio" };
+    }
+    if (!input.authorizedBy.trim()) {
+      return { ok: false, error: "Autorización requerida" };
+    }
+    const account = state.accounts.find((a) => a.id === input.accountId);
+    if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    const before = `USD ${account.discountUsd} / Bs ${account.discountBs}`;
+    state.accounts = state.accounts.map((a) =>
+      a.id !== account.id
+        ? a
+        : {
+            ...a,
+            discountUsd: input.discountUsd,
+            discountBs: input.discountBs,
+            discountReason: `${input.reason} (auth: ${input.authorizedBy})`,
+            updatedAt: new Date().toISOString(),
+          },
+    );
+    audit(
+      "discount",
+      "account",
+      input.userName,
+      input.reason,
+      account.id,
+      {
+        beforeValue: before,
+        afterValue: `USD ${input.discountUsd} / Bs ${input.discountBs}`,
+        reason: input.reason,
+      },
+    );
+    emit();
+    return { ok: true, data: state.accounts.find((a) => a.id === account.id)! };
+  },
+
+  reopenAccount(input: {
+    accountId: string;
+    userName: string;
+    reason: string;
+  }): AdResult<AdAccount> {
+    const account = state.accounts.find((a) => a.id === input.accountId);
+    if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    if (account.status !== "CERRADA" && account.status !== "PAGADA") {
+      return { ok: false, error: "Solo se reabren cuentas cerradas/pagadas" };
+    }
+    if (!input.reason.trim()) {
+      return { ok: false, error: "Motivo obligatorio" };
+    }
+    const reopened: AdAccount = {
+      ...account,
+      status: "ABIERTA",
+      closedAt: undefined,
+      closedBy: undefined,
+      notes: `${account.notes ?? ""}\nReabierta: ${input.reason}`.trim(),
+      updatedAt: new Date().toISOString(),
+    };
+    state.accounts = state.accounts.map((a) =>
+      a.id === account.id ? reopened : a,
+    );
+    if (account.tableId) {
+      state.tables = state.tables.map((t) =>
+        t.id === account.tableId ? { ...t, status: "cuenta_abierta" } : t,
+      );
+    }
+    audit("reopen", "account", input.userName, input.reason, account.id, {
+      beforeValue: account.status,
+      afterValue: "ABIERTA",
+      reason: input.reason,
+    });
+    emit();
+    return { ok: true, data: reopened };
+  },
+
+  voidAccount(input: {
+    accountId: string;
+    userName: string;
+    reason: string;
+    authorizedBy: string;
+  }): AdResult<AdAccount> {
+    const account = state.accounts.find((a) => a.id === input.accountId);
+    if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    if (!input.reason.trim() || !input.authorizedBy.trim()) {
+      return { ok: false, error: "Motivo y autorización obligatorios" };
+    }
+    const voided: AdAccount = {
+      ...account,
+      status: "CANCELADA",
+      voidedAt: new Date().toISOString(),
+      voidedBy: input.userName,
+      voidReason: `${input.reason} (auth: ${input.authorizedBy})`,
+      updatedAt: new Date().toISOString(),
+    };
+    state.accounts = state.accounts.map((a) =>
+      a.id === account.id ? voided : a,
+    );
+    if (account.tableId) {
+      state.tables = state.tables.map((t) =>
+        t.id === account.tableId ? { ...t, status: "disponible" } : t,
+      );
+    }
+    audit("void", "account", input.userName, input.reason, account.id, {
+      beforeValue: account.status,
+      afterValue: "CANCELADA",
+      reason: input.reason,
+    });
+    emit();
+    return { ok: true, data: voided };
   },
 
   closeAccount(input: {
@@ -527,12 +986,15 @@ export const adLicoreriaRepository = {
   }): AdResult<AdAccount> {
     const account = state.accounts.find((a) => a.id === input.accountId);
     if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    const receiptNumber = nextReceiptNumber(state.receiptSeq++);
     const closed: AdAccount = {
       ...account,
       status: "CERRADA",
+      receiptNumber,
+      cashierName: input.userName,
       closedAt: new Date().toISOString(),
       closedBy: input.userName,
-      notes: input.notes,
+      notes: input.notes ?? account.notes,
       updatedAt: new Date().toISOString(),
     };
     state.accounts = state.accounts.map((a) =>
@@ -543,7 +1005,59 @@ export const adLicoreriaRepository = {
         t.id === account.tableId ? { ...t, status: "disponible" } : t,
       );
     }
-    audit("close", "account", input.userName, `Cerró #${account.number}`, account.id);
+
+    const { subtotal, total } = accountTotals(closed);
+    const sale: AdSale = {
+      id: uid("sale"),
+      receiptNumber,
+      accountId: closed.id,
+      tableId: closed.tableId,
+      mesoneraName: closed.mesoneraName,
+      cashierName: input.userName,
+      customerId: closed.customerId,
+      customerName: closed.customerName,
+      customerPhone: closed.customerPhone,
+      items: closed.items.map((it) => ({
+        productId: it.productId,
+        presentationId: it.presentationId,
+        qty: it.qty,
+        unitPrice: it.unitPrice,
+        qtyBase: it.qtyBase,
+      })),
+      payments: closed.payments,
+      subtotal,
+      discountUsd: closed.discountUsd,
+      discountBs: closed.discountBs,
+      total,
+      warehouseId: "wh-2",
+      userName: input.userName,
+      status: "completed",
+      notes: closed.notes,
+      createdAt: closed.closedAt!,
+    };
+    state.sales = [sale, ...state.sales];
+    const receipt = buildReceiptFromAccount(closed);
+    receipt.number = receiptNumber;
+    receipt.saleId = sale.id;
+    state.receipts = [receipt, ...state.receipts];
+
+    if (closed.customerPhone) {
+      void notifyWhatsApp(() =>
+        adWhatsAppService.send({
+          toPhone: closed.customerPhone!,
+          template: "account_closed",
+          customerId: closed.customerId,
+          receiptNumber,
+          body: adWhatsAppService.buildAccountClosed({
+            customerName: closed.customerName ?? "Cliente",
+            receiptNumber,
+            totalUsd: total.usd,
+          }),
+        }),
+      );
+    }
+
+    audit("close", "account", input.userName, `Cerró #${account.number} → ${receiptNumber}`, account.id);
     emit();
     return { ok: true, data: closed };
   },
@@ -551,16 +1065,26 @@ export const adLicoreriaRepository = {
   createPrepaid(input: {
     customerId?: string;
     customerName?: string;
+    customerPhone?: string;
     items: {
       productId: string;
       presentationId: string;
       qty: number;
     }[];
+    payments?: Omit<AdPayment, "id" | "createdAt">[];
     userName: string;
   }): AdResult<AdPrepaidAccount> {
     if (!input.items.length) return { ok: false, error: "Agregue productos" };
+    const customer = input.customerId
+      ? state.customers.find((c) => c.id === input.customerId)
+      : undefined;
+    const phone = input.customerPhone ?? customer?.phone;
+    if (!phone?.trim()) {
+      return { ok: false, error: "Teléfono del cliente obligatorio" };
+    }
     const code = nextPrepaidCode(state.prepaidSeq++);
     const token = `ad_qr_${code.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()}_${uid("t").slice(-4)}`;
+    const receiptNumber = nextReceiptNumber(state.receiptSeq++);
     const items = input.items.map((it) => {
       const pres = state.presentations.find((p) => p.id === it.presentationId)!;
       return {
@@ -583,6 +1107,7 @@ export const adLicoreriaRepository = {
         warehouseId: "wh-2",
         userName: input.userName,
         reason: `Prepago ${code}`,
+        reference: code,
       });
       if (!mov.ok) return mov;
     }
@@ -591,14 +1116,74 @@ export const adLicoreriaRepository = {
       id: uid("pp"),
       code,
       qrToken: token,
+      receiptNumber,
       customerId: input.customerId,
-      customerName: input.customerName,
+      customerName: input.customerName ?? customer?.name,
+      customerPhone: phone,
       status: "ACTIVO",
       items,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     state.prepaids = [prepaid, ...state.prepaids];
+
+    const subtotal = items.reduce(
+      (acc, it) => addPrices(acc, multiplyPrice(it.unitPrice, it.qtyPurchased)),
+      { usd: 0, bs: 0 },
+    );
+    const payments: AdPayment[] = (input.payments ?? []).map((p) => ({
+      ...p,
+      id: uid("pay"),
+      createdAt: new Date().toISOString(),
+    }));
+    const receipt: AdReceipt = {
+      id: uid("rcpt"),
+      number: receiptNumber,
+      kind: "prepaid",
+      prepaidId: prepaid.id,
+      customerId: prepaid.customerId,
+      customerName: prepaid.customerName,
+      customerPhone: prepaid.customerPhone,
+      cashierName: input.userName,
+      items: items.map((it) => ({
+        productName: productName(it.productId),
+        presentationName: presentationName(it.presentationId),
+        qty: it.qtyPurchased,
+        unitPrice: it.unitPrice,
+        lineTotal: multiplyPrice(it.unitPrice, it.qtyPurchased),
+      })),
+      payments,
+      subtotal,
+      discountUsd: 0,
+      discountBs: 0,
+      total: subtotal,
+      paidUsd: paidByCurrency(payments).usd,
+      paidBs: paidByCurrency(payments).bs,
+      balanceUsd: 0,
+      createdAt: prepaid.createdAt,
+    };
+    state.receipts = [receipt, ...state.receipts];
+
+    const balanceSummary = items
+      .map(
+        (it) =>
+          `${productName(it.productId)}: ${it.qtyPurchased} pendientes`,
+      )
+      .join("\n");
+    void notifyWhatsApp(() =>
+      adWhatsAppService.send({
+        toPhone: phone,
+        template: "prepaid_balance",
+        customerId: prepaid.customerId,
+        receiptNumber,
+        body: adWhatsAppService.buildPrepaidBalance({
+          customerName: prepaid.customerName ?? "Cliente",
+          code,
+          balanceSummary,
+        }),
+      }),
+    );
+
     audit("create", "prepaid", input.userName, code, prepaid.id);
     emit();
     return { ok: true, data: prepaid };
@@ -627,8 +1212,8 @@ export const adLicoreriaRepository = {
       return { ok: false, error: `Disponibles: ${available}` };
     }
 
+    const before = available;
     const qtyBase = item.qtyBasePerUnit * input.qty;
-    // Stock ya se descontó al crear el prepago; el consumo es operativo.
     state.prepaids = state.prepaids.map((p) => {
       if (p.id !== prepaid.id) return p;
       const items = p.items.map((i) =>
@@ -671,12 +1256,36 @@ export const adLicoreriaRepository = {
       },
       ...state.serviceLogs,
     ];
+
+    if (prepaid.customerPhone) {
+      void notifyWhatsApp(() =>
+        adWhatsAppService.send({
+          toPhone: prepaid.customerPhone!,
+          template: "prepaid_consume",
+          customerId: prepaid.customerId,
+          receiptNumber: prepaid.receiptNumber,
+          body: adWhatsAppService.buildPrepaidConsume({
+            customerName: prepaid.customerName ?? "Cliente",
+            code: prepaid.code,
+            before,
+            consumed: input.qty,
+            after: before - input.qty,
+            productName: productName(input.productId),
+          }),
+        }),
+      );
+    }
+
     audit(
       "consume",
       "prepaid",
       input.mesoneraName,
       `${prepaid.code} −${input.qty}`,
       prepaid.id,
+      {
+        beforeValue: String(before),
+        afterValue: String(before - input.qty),
+      },
     );
     emit();
     return { ok: true, data: undefined };
@@ -690,6 +1299,13 @@ export const adLicoreriaRepository = {
     );
   },
 
+  findReceipt(numberOrId: string): AdReceipt | undefined {
+    const q = numberOrId.trim().toLowerCase();
+    return state.receipts.find(
+      (r) => r.number.toLowerCase() === q || r.id.toLowerCase() === q,
+    );
+  },
+
   completeSale(input: {
     items: AdSaleItem[];
     payments: Omit<AdPayment, "id" | "createdAt">[];
@@ -697,11 +1313,26 @@ export const adLicoreriaRepository = {
     userName: string;
     tableId?: string;
     mesoneraName?: string;
+    customerId?: string;
     customerName?: string;
+    customerPhone?: string;
     accountId?: string;
+    discountUsd?: number;
+    discountBs?: number;
+    notes?: string;
   }): AdResult<AdSale> {
     if (!input.items.length) return { ok: false, error: "Agregue productos" };
     if (!input.payments.length) return { ok: false, error: "Registre pagos" };
+
+    for (const pay of input.payments) {
+      const cfg = state.paymentMethods.find((m) => m.code === pay.method);
+      if (cfg?.requiresBank && !pay.bank?.trim()) {
+        return { ok: false, error: `${cfg.name}: requiere banco` };
+      }
+      if (cfg?.requiresReference && !pay.reference?.trim()) {
+        return { ok: false, error: `${cfg.name}: requiere referencia` };
+      }
+    }
 
     for (const line of input.items) {
       if (line.qtyBase > getStock(line.productId, input.warehouseId)) {
@@ -722,63 +1353,247 @@ export const adLicoreriaRepository = {
       if (!mov.ok) return mov;
     }
 
+    const customer = input.customerId
+      ? state.customers.find((c) => c.id === input.customerId)
+      : undefined;
     const subtotal = input.items.reduce(
       (acc, l) => addPrices(acc, multiplyPrice(l.unitPrice, l.qty)),
       { usd: 0, bs: 0 },
     );
+    const discountUsd = input.discountUsd ?? 0;
+    const discountBs = input.discountBs ?? 0;
+    const total = {
+      usd: Number((subtotal.usd - discountUsd).toFixed(2)),
+      bs: Number((subtotal.bs - discountBs).toFixed(2)),
+    };
     const payments: AdPayment[] = input.payments.map((p) => ({
       ...p,
       id: uid("pay"),
       createdAt: new Date().toISOString(),
     }));
+    const receiptNumber = nextReceiptNumber(state.receiptSeq++);
     const sale: AdSale = {
       id: uid("sale"),
+      receiptNumber,
       accountId: input.accountId,
       tableId: input.tableId,
       mesoneraName: input.mesoneraName,
-      customerName: input.customerName,
+      cashierName: input.userName,
+      customerId: input.customerId,
+      customerName: input.customerName ?? customer?.name,
+      customerPhone: input.customerPhone ?? customer?.phone,
       items: input.items,
       payments,
       subtotal,
-      total: subtotal,
+      discountUsd,
+      discountBs,
+      total,
       warehouseId: input.warehouseId,
       userName: input.userName,
       status: "completed",
+      notes: input.notes,
       createdAt: new Date().toISOString(),
     };
     state.sales = [sale, ...state.sales];
-    audit("venta", "pos", input.userName, `$${sale.total.usd}`, sale.id);
+    const receipt = buildReceiptFromSale(sale);
+    state.receipts = [receipt, ...state.receipts];
+
+    if (sale.customerPhone) {
+      const itemsSummary = sale.items
+        .map(
+          (it) =>
+            `${productName(it.productId)} ${presentationName(it.presentationId)} x${it.qty}`,
+        )
+        .join("\n");
+      const paymentSummary = payments
+        .map((p) => `${p.method} ${p.currency} ${p.amount}`)
+        .join(" + ");
+      void notifyWhatsApp(() =>
+        adWhatsAppService.send({
+          toPhone: sale.customerPhone!,
+          template: "purchase_thanks",
+          customerId: sale.customerId,
+          receiptNumber,
+          body: adWhatsAppService.buildPurchaseThanks({
+            customerName: sale.customerName ?? "Cliente",
+            receiptNumber,
+            totalUsd: total.usd,
+            totalBs: total.bs,
+            paymentSummary,
+            itemsSummary,
+          }),
+        }),
+      );
+    }
+
+    audit("venta", "pos", input.userName, `${receiptNumber} $${sale.total.usd}`, sale.id);
     emit();
     return { ok: true, data: sale };
   },
 
-  upsertCustomer(customer: AdCustomer): AdResult<AdCustomer> {
-    const idx = state.customers.findIndex((c) => c.id === customer.id);
-    if (idx === -1) state.customers = [customer, ...state.customers];
-    else {
-      const next = [...state.customers];
-      next[idx] = customer;
-      state.customers = next;
+  voidSale(input: {
+    saleId: string;
+    userName: string;
+    reason: string;
+    authorizedBy: string;
+  }): AdResult<AdSale> {
+    const sale = state.sales.find((s) => s.id === input.saleId);
+    if (!sale) return { ok: false, error: "Venta no encontrada" };
+    if (sale.status === "voided") return { ok: false, error: "Ya anulada" };
+    if (!input.reason.trim() || !input.authorizedBy.trim()) {
+      return { ok: false, error: "Motivo y autorización obligatorios" };
     }
+    const voided: AdSale = {
+      ...sale,
+      status: "voided",
+      voidReason: `${input.reason} (auth: ${input.authorizedBy})`,
+    };
+    state.sales = state.sales.map((s) => (s.id === sale.id ? voided : s));
+    audit("void", "sale", input.userName, input.reason, sale.id, {
+      beforeValue: "completed",
+      afterValue: "voided",
+      reason: input.reason,
+    });
     emit();
-    return { ok: true, data: customer };
+    return { ok: true, data: voided };
   },
 
-  createDailyClosure(userName: string): AdResult<AdDailyClosure> {
+  upsertCustomer(customer: AdCustomer): AdResult<AdCustomer> {
+    if (!customer.phone?.trim()) {
+      return { ok: false, error: "Teléfono obligatorio" };
+    }
+    if (!customer.firstName?.trim() || !customer.lastName?.trim()) {
+      return { ok: false, error: "Nombre y apellido obligatorios" };
+    }
+    const normalized: AdCustomer = {
+      ...customer,
+      name: customerDisplayName(customer.firstName, customer.lastName),
+      phone: customer.phone.trim(),
+    };
+    const idx = state.customers.findIndex((c) => c.id === normalized.id);
+    if (idx === -1) state.customers = [normalized, ...state.customers];
+    else {
+      const next = [...state.customers];
+      next[idx] = normalized;
+      state.customers = next;
+    }
+    audit("upsert", "customer", "Admin A&D", normalized.name, normalized.id);
+    emit();
+    return { ok: true, data: normalized };
+  },
+
+  createPurchase(input: {
+    supplierName: string;
+    invoiceNumber: string;
+    date: string;
+    warehouseId: string;
+    items: {
+      productId: string;
+      presentationId: string;
+      qty: number;
+      unitCostUsd: number;
+      unitCostBs: number;
+    }[];
+    paymentMethod?: AdPaymentMethodCode;
+    reference?: string;
+    userName: string;
+    notes?: string;
+  }): AdResult<AdPurchase> {
+    if (!input.items.length) return { ok: false, error: "Agregue productos" };
+    const items: AdPurchaseItem[] = [];
+    for (const raw of input.items) {
+      const pres = state.presentations.find((p) => p.id === raw.presentationId);
+      if (!pres) return { ok: false, error: "Presentación no encontrada" };
+      const qtyBase = toBaseUnits(pres, raw.qty);
+      const unitCost = { usd: raw.unitCostUsd, bs: raw.unitCostBs };
+      items.push({
+        id: uid("puri"),
+        productId: raw.productId,
+        presentationId: raw.presentationId,
+        qty: raw.qty,
+        qtyBase,
+        unitCost,
+        lineCost: multiplyPrice(unitCost, raw.qty),
+      });
+      const mov = this.registerMovement({
+        type: "COMPRA",
+        productId: raw.productId,
+        presentationId: raw.presentationId,
+        qtyPresentation: raw.qty,
+        warehouseId: input.warehouseId,
+        userName: input.userName,
+        reason: `Compra ${input.invoiceNumber}`,
+        reference: input.invoiceNumber,
+      });
+      if (!mov.ok) return mov;
+    }
+    const totalCost = items.reduce(
+      (acc, it) => addPrices(acc, it.lineCost),
+      { usd: 0, bs: 0 },
+    );
+    const purchase: AdPurchase = {
+      id: uid("pur"),
+      supplierName: input.supplierName,
+      invoiceNumber: input.invoiceNumber || `FAC-${state.purchaseSeq++}`,
+      date: input.date,
+      warehouseId: input.warehouseId,
+      items,
+      totalCost,
+      paymentMethod: input.paymentMethod,
+      reference: input.reference,
+      userName: input.userName,
+      createdAt: new Date().toISOString(),
+      notes: input.notes,
+    };
+    state.purchases = [purchase, ...state.purchases];
+    audit("create", "purchase", input.userName, purchase.invoiceNumber, purchase.id);
+    emit();
+    return { ok: true, data: purchase };
+  },
+
+  createDailyClosure(input: {
+    userName: string;
+    countedCashUsd: number;
+    countedCashBs: number;
+    notes?: string;
+  }): AdResult<AdDailyClosure> {
+    const today = new Date().toISOString().slice(0, 10);
+    const todaySales = state.sales.filter(
+      (s) => s.createdAt.slice(0, 10) === today && s.status === "completed",
+    );
+    const voidedCount = state.sales.filter(
+      (s) => s.createdAt.slice(0, 10) === today && s.status === "voided",
+    ).length;
+
     const byMethod: AdDailyClosure["byMethod"] = {};
-    for (const sale of state.sales) {
+    let expectedCashUsd = 0;
+    let expectedCashBs = 0;
+    let collectedUsd = 0;
+    let collectedBs = 0;
+    let discountUsd = 0;
+
+    for (const sale of todaySales) {
+      discountUsd += sale.discountUsd;
       for (const pay of sale.payments) {
         const cur = byMethod[pay.method] ?? { usd: 0, bs: 0 };
-        if (pay.currency === "USD") cur.usd += pay.amount;
-        else cur.bs += pay.amount;
+        if (pay.currency === "USD") {
+          cur.usd += pay.amount;
+          collectedUsd += pay.amount;
+          if (pay.method === "efectivo_usd") expectedCashUsd += pay.amount;
+        } else {
+          cur.bs += pay.amount;
+          collectedBs += pay.amount;
+          if (pay.method === "efectivo_bs") expectedCashBs += pay.amount;
+        }
         byMethod[pay.method] = cur;
       }
     }
+
     const byMesoneraMap = new Map<
       string,
       { name: string; salesCount: number; totalUsd: number }
     >();
-    for (const sale of state.sales) {
+    for (const sale of todaySales) {
       const name = sale.mesoneraName ?? sale.userName;
       const prev = byMesoneraMap.get(name) ?? {
         name,
@@ -789,26 +1604,59 @@ export const adLicoreriaRepository = {
       prev.totalUsd += sale.total.usd;
       byMesoneraMap.set(name, prev);
     }
+
+    const openAccounts = state.accounts.filter(
+      (a) =>
+        a.status === "ABIERTA" ||
+        a.status === "PREPAGADA" ||
+        a.status === "PARCIALMENTE_PAGADA",
+    );
+    const pendingUsd = openAccounts.reduce((acc, a) => {
+      const { total } = accountTotals(a);
+      return acc + Math.max(0, total.usd - paidByCurrency(a.payments).usd);
+    }, 0);
+
     const closure: AdDailyClosure = {
       id: uid("dclose"),
-      date: new Date().toISOString().slice(0, 10),
-      salesCount: state.sales.length,
-      totalUsd: state.sales.reduce((a, s) => a + s.total.usd, 0),
-      totalBs: state.sales.reduce((a, s) => a + s.total.bs, 0),
-      openAccounts: state.accounts.filter(
-        (a) => a.status === "ABIERTA" || a.status === "PREPAGADA",
+      date: today,
+      salesCount: todaySales.length,
+      totalUsd: todaySales.reduce((a, s) => a + s.total.usd, 0),
+      totalBs: todaySales.reduce((a, s) => a + s.total.bs, 0),
+      collectedUsd,
+      collectedBs,
+      pendingUsd: Number(pendingUsd.toFixed(2)),
+      discountUsd,
+      voidedCount,
+      expectedCashUsd,
+      countedCashUsd: input.countedCashUsd,
+      cashDifferenceUsd: Number(
+        (input.countedCashUsd - expectedCashUsd).toFixed(2),
+      ),
+      expectedCashBs,
+      countedCashBs: input.countedCashBs,
+      cashDifferenceBs: Number(
+        (input.countedCashBs - expectedCashBs).toFixed(2),
+      ),
+      openAccounts: openAccounts.length,
+      closedAccounts: state.accounts.filter(
+        (a) => a.status === "CERRADA" && a.closedAt?.slice(0, 10) === today,
       ).length,
-      closedAccounts: state.accounts.filter((a) => a.status === "CERRADA")
-        .length,
       prepaidsActive: state.prepaids.filter((p) => p.status === "ACTIVO")
         .length,
       byMethod,
       byMesonera: [...byMesoneraMap.values()],
       createdAt: new Date().toISOString(),
-      createdBy: userName,
+      createdBy: input.userName,
+      notes: input.notes,
     };
     state.dailyClosures = [closure, ...state.dailyClosures];
-    audit("daily_close", "closure", userName, closure.date, closure.id);
+    audit("daily_close", "closure", input.userName, closure.date, closure.id, {
+      afterValue: JSON.stringify({
+        expectedCashUsd,
+        countedCashUsd: input.countedCashUsd,
+        diff: closure.cashDifferenceUsd,
+      }),
+    });
     emit();
     return { ok: true, data: closure };
   },

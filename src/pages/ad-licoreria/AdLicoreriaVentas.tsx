@@ -5,18 +5,12 @@ import {
 } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import type {
-  AdPaymentMethod,
+  AdPayment,
+  AdPaymentMethodCode,
   AdSaleItem,
 } from "@/types/ad-licoreria";
 
-const PAY_METHODS: { id: AdPaymentMethod; label: string }[] = [
-  { id: "efectivo_usd", label: "Efectivo USD" },
-  { id: "efectivo_bs", label: "Efectivo Bs" },
-  { id: "transferencia", label: "Transferencia" },
-  { id: "pago_movil", label: "Pago móvil" },
-  { id: "qr", label: "QR" },
-  { id: "otro", label: "Otro" },
-];
+type DraftPayment = Omit<AdPayment, "id" | "createdAt">;
 
 export default function AdLicoreriaVentas() {
   const {
@@ -25,6 +19,7 @@ export default function AdLicoreriaVentas() {
     tables,
     operators,
     customers,
+    paymentMethods,
     getPresentationsFor,
     getStock,
     completeSale,
@@ -33,7 +28,11 @@ export default function AdLicoreriaVentas() {
     createPrepaid,
   } = useAdLicoreria();
 
-  const mesoneras = operators.filter((o) => o.role === "mesonera" && o.active);
+  const mesoneras = operators.filter(
+    (o) => (o.role === "mesonera" || o.role === "cajero") && o.active,
+  );
+  const activeMethods = paymentMethods.filter((m) => m.active);
+
   const [query, setQuery] = useState("");
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [presentationId, setPresentationId] = useState("");
@@ -42,11 +41,15 @@ export default function AdLicoreriaVentas() {
   const [mesoneraId, setMesoneraId] = useState(mesoneras[0]?.id ?? "");
   const [customerId, setCustomerId] = useState("");
   const [cart, setCart] = useState<AdSaleItem[]>([]);
-  const [payMethod, setPayMethod] = useState<AdPaymentMethod>("efectivo_usd");
+  const [notes, setNotes] = useState("");
+  const [payMethod, setPayMethod] = useState<AdPaymentMethodCode>(
+    activeMethods[0]?.code ?? "efectivo_usd",
+  );
   const [payAmount, setPayAmount] = useState("");
-  const [payments, setPayments] = useState<
-    { method: AdPaymentMethod; currency: "USD" | "BS"; amount: number }[]
-  >([]);
+  const [payBank, setPayBank] = useState("");
+  const [payRef, setPayRef] = useState("");
+  const [payOrigin, setPayOrigin] = useState("");
+  const [payments, setPayments] = useState<DraftPayment[]>([]);
   const [msg, setMsg] = useState("");
 
   const filteredProducts = useMemo(() => {
@@ -57,6 +60,7 @@ export default function AdLicoreriaVentas() {
         p.active &&
         (p.name.toLowerCase().includes(q) ||
           p.sku.toLowerCase().includes(q) ||
+          (p.barcode ?? "").toLowerCase().includes(q) ||
           p.brand.toLowerCase().includes(q)),
     );
   }, [products, query]);
@@ -66,30 +70,85 @@ export default function AdLicoreriaVentas() {
     presentations.find((p) => p.id === presentationId) ?? availablePres[0];
   const mesonera = operators.find((o) => o.id === mesoneraId);
   const customer = customers.find((c) => c.id === customerId);
+  const methodCfg = activeMethods.find((m) => m.code === payMethod);
   const totalUsd = cart.reduce((a, l) => a + l.unitPrice.usd * l.qty, 0);
+  const totalBs = cart.reduce((a, l) => a + l.unitPrice.bs * l.qty, 0);
 
   function addLine() {
     const pres = activePres;
-    if (!pres) return;
-    setCart((prev) => [
-      ...prev,
-      {
-        productId,
-        presentationId: pres.id,
-        qty,
-        unitPrice: { ...pres.price },
-        qtyBase: toBaseUnits(pres, qty),
-      },
-    ]);
+    if (!pres || qty <= 0) return;
+    setCart((prev) => {
+      const idx = prev.findIndex((l) => l.presentationId === pres.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        const line = next[idx];
+        const newQty = line.qty + qty;
+        next[idx] = {
+          ...line,
+          qty: newQty,
+          qtyBase: toBaseUnits(pres, newQty),
+        };
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          productId,
+          presentationId: pres.id,
+          qty,
+          unitPrice: { ...pres.price },
+          qtyBase: toBaseUnits(pres, qty),
+        },
+      ];
+    });
     setMsg("");
+  }
+
+  function setLineQty(index: number, nextQty: number) {
+    setCart((prev) =>
+      prev
+        .map((l, i) => {
+          if (i !== index) return l;
+          const pres = presentations.find((p) => p.id === l.presentationId);
+          if (!pres || nextQty <= 0) return l;
+          return {
+            ...l,
+            qty: nextQty,
+            qtyBase: toBaseUnits(pres, nextQty),
+          };
+        })
+        .filter((l) => l.qty > 0),
+    );
   }
 
   function addPayment() {
     const amount = Number(payAmount);
     if (!amount || amount <= 0) return;
-    const currency = payMethod === "efectivo_bs" ? "BS" : "USD";
-    setPayments((p) => [...p, { method: payMethod, currency, amount }]);
+    const currency = methodCfg?.currency ?? "USD";
+    if (methodCfg?.requiresBank && !payBank.trim()) {
+      setMsg("Este método requiere banco");
+      return;
+    }
+    if (methodCfg?.requiresReference && !payRef.trim()) {
+      setMsg("Este método requiere referencia");
+      return;
+    }
+    setPayments((p) => [
+      ...p,
+      {
+        method: payMethod,
+        currency,
+        amount,
+        bank: payBank.trim() || undefined,
+        reference: payRef.trim() || undefined,
+        originPhone: payOrigin.trim() || undefined,
+      },
+    ]);
     setPayAmount("");
+    setPayBank("");
+    setPayRef("");
+    setPayOrigin("");
+    setMsg("");
   }
 
   function checkout() {
@@ -100,7 +159,10 @@ export default function AdLicoreriaVentas() {
       userName: mesonera?.name ?? "Cajero",
       tableId: tableId || undefined,
       mesoneraName: mesonera?.name,
+      customerId: customer?.id,
       customerName: customer?.name,
+      customerPhone: customer?.phone,
+      notes: notes.trim() || undefined,
     });
     if (!result.ok) {
       setMsg(result.error);
@@ -108,7 +170,10 @@ export default function AdLicoreriaVentas() {
     }
     setCart([]);
     setPayments([]);
-    setMsg(`Venta OK · $${result.data.total.usd.toFixed(2)}`);
+    setNotes("");
+    setMsg(
+      `Venta OK · Recibo ${result.data.receiptNumber} · $${result.data.total.usd.toFixed(2)}`,
+    );
   }
 
   function leaveOpen() {
@@ -122,6 +187,8 @@ export default function AdLicoreriaVentas() {
       mesoneraName: mesonera?.name ?? "Mesonera",
       customerId: customer?.id,
       customerName: customer?.name,
+      customerPhone: customer?.phone,
+      notes: notes.trim() || undefined,
     });
     if (!opened.ok) {
       setMsg(opened.error);
@@ -134,7 +201,7 @@ export default function AdLicoreriaVentas() {
         presentationId: line.presentationId,
         qty: line.qty,
         userName: mesonera?.name ?? "Mesonera",
-        deductStock: true,
+        deductStock: false,
         warehouseId: "wh-2",
       });
       if (!r.ok) {
@@ -144,7 +211,10 @@ export default function AdLicoreriaVentas() {
     }
     setCart([]);
     setPayments([]);
-    setMsg(`Cuenta abierta #${opened.data.number}`);
+    setNotes("");
+    setMsg(
+      `Cuenta #${opened.data.number} abierta · productos pendientes de servir`,
+    );
   }
 
   function toPrepaid() {
@@ -152,14 +222,20 @@ export default function AdLicoreriaVentas() {
       setMsg("Agregue productos");
       return;
     }
+    if (!customer?.phone) {
+      setMsg("Seleccione un cliente con teléfono para prepago");
+      return;
+    }
     const result = createPrepaid({
-      customerId: customer?.id,
-      customerName: customer?.name,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone,
       items: cart.map((c) => ({
         productId: c.productId,
         presentationId: c.presentationId,
         qty: c.qty,
       })),
+      payments,
       userName: mesonera?.name ?? "Cajero",
     });
     if (!result.ok) {
@@ -168,13 +244,16 @@ export default function AdLicoreriaVentas() {
     }
     setCart([]);
     setPayments([]);
-    setMsg(`Prepago ${result.data.code} · QR listo`);
+    setNotes("");
+    setMsg(
+      `Prepago ${result.data.code} · Recibo ${result.data.receiptNumber} · QR listo`,
+    );
   }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
       <section className="ad-panel space-y-3">
-        <h2 className="ad-panel-title">Centro de ventas</h2>
+        <h2 className="ad-panel-title">Punto de venta</h2>
         <div className="grid gap-2 sm:grid-cols-3">
           <select
             className="ad-select"
@@ -197,7 +276,7 @@ export default function AdLicoreriaVentas() {
           >
             {mesoneras.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.name}
+                {m.name} · {m.role}
               </option>
             ))}
           </select>
@@ -206,18 +285,20 @@ export default function AdLicoreriaVentas() {
             value={customerId}
             onChange={(e) => setCustomerId(e.target.value)}
           >
-            <option value="">Cliente opcional</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            <option value="">Cliente</option>
+            {customers
+              .filter((c) => c.active)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} · {c.phone}
+                </option>
+              ))}
           </select>
         </div>
 
         <input
           className="ad-input"
-          placeholder="Buscar producto, SKU o marca…"
+          placeholder="Buscar por nombre, SKU o código…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -234,6 +315,7 @@ export default function AdLicoreriaVentas() {
               }}
             >
               {p.name}
+              <span className="mt-0.5 block text-xs opacity-70">{p.sku}</span>
             </button>
           ))}
         </div>
@@ -294,7 +376,15 @@ export default function AdLicoreriaVentas() {
                   <tr key={`${l.presentationId}-${i}`}>
                     <td>{prod?.name}</td>
                     <td>{pres?.name}</td>
-                    <td>{l.qty}</td>
+                    <td>
+                      <input
+                        className="ad-input w-16"
+                        type="number"
+                        min={1}
+                        value={l.qty}
+                        onChange={(e) => setLineQty(i, Number(e.target.value))}
+                      />
+                    </td>
                     <td>{l.qtyBase}</td>
                     <td>
                       {formatAdPrice({
@@ -326,6 +416,13 @@ export default function AdLicoreriaVentas() {
             </tbody>
           </table>
         </div>
+
+        <textarea
+          className="ad-input min-h-16"
+          placeholder="Observaciones de la venta / cuenta"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
       </section>
 
       <section className="ad-panel space-y-3">
@@ -333,44 +430,89 @@ export default function AdLicoreriaVentas() {
         <p className="ad-display text-4xl text-[var(--ad-gold-soft)]">
           ${totalUsd.toFixed(2)}
         </p>
+        <p className="text-sm text-[var(--ad-muted)]">
+          Bs {totalBs.toLocaleString("es-VE")} · pagos mixtos permitidos
+        </p>
         <div className="grid gap-2">
           <select
             className="ad-select"
             value={payMethod}
-            onChange={(e) => setPayMethod(e.target.value as AdPaymentMethod)}
+            onChange={(e) =>
+              setPayMethod(e.target.value as AdPaymentMethodCode)
+            }
           >
-            {PAY_METHODS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
+            {activeMethods.map((m) => (
+              <option key={m.id} value={m.code}>
+                {m.name} ({m.currency})
               </option>
             ))}
           </select>
           <input
             className="ad-input"
-            placeholder="Monto"
+            placeholder={`Monto ${methodCfg?.currency ?? ""}`}
             value={payAmount}
             onChange={(e) => setPayAmount(e.target.value)}
           />
+          {methodCfg?.requiresBank ? (
+            <input
+              className="ad-input"
+              placeholder="Banco"
+              value={payBank}
+              onChange={(e) => setPayBank(e.target.value)}
+            />
+          ) : null}
+          {methodCfg?.requiresReference ? (
+            <input
+              className="ad-input"
+              placeholder="Referencia"
+              value={payRef}
+              onChange={(e) => setPayRef(e.target.value)}
+            />
+          ) : null}
+          {payMethod === "pago_movil" ? (
+            <input
+              className="ad-input"
+              placeholder="Teléfono origen"
+              value={payOrigin}
+              onChange={(e) => setPayOrigin(e.target.value)}
+            />
+          ) : null}
           <button type="button" className="ad-btn" onClick={addPayment}>
             Añadir pago
           </button>
         </div>
         <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
           {payments.map((p, i) => (
-            <li key={`${p.method}-${i}`}>
-              {p.method} · {p.currency} {p.amount}
+            <li key={`${p.method}-${i}`} className="flex justify-between gap-2">
+              <span>
+                {p.method} · {p.currency} {p.amount}
+                {p.reference ? ` · ref ${p.reference}` : ""}
+              </span>
+              <button
+                type="button"
+                className="ad-btn"
+                onClick={() =>
+                  setPayments((list) => list.filter((_, idx) => idx !== i))
+                }
+              >
+                ×
+              </button>
             </li>
           ))}
         </ul>
         <div className="grid gap-2">
           <button type="button" className="ad-btn ad-btn--gold" onClick={checkout}>
-            Cobrar y cerrar
+            Cobrar y cerrar (recibo)
           </button>
-          <button type="button" className="ad-btn ad-btn--primary" onClick={leaveOpen}>
-            Dejar cuenta abierta
+          <button
+            type="button"
+            className="ad-btn ad-btn--primary"
+            onClick={leaveOpen}
+          >
+            Abrir cuenta (servir después)
           </button>
           <button type="button" className="ad-btn" onClick={toPrepaid}>
-            Convertir a prepago + QR
+            Prepago + QR
           </button>
         </div>
         {msg ? <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p> : null}

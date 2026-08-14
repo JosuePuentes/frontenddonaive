@@ -1,6 +1,6 @@
 /**
- * Modelos de dominio A&D Licorería & Bodegón (Fase 2).
- * Preparados para conectar backend real sin rehacer la UI.
+ * Modelos de dominio A&D Licorería & Bodegón.
+ * Preparados para API + PostgreSQL + Prisma sin rehacer la UI.
  */
 
 export type MoneyCurrency = "USD" | "BS";
@@ -11,6 +11,56 @@ export type AdPrice = {
 };
 
 export type AdRole = "admin" | "mesonera" | "cajero" | "inventario";
+
+export type AdModulePermission =
+  | "ventas"
+  | "cuentas"
+  | "pagos"
+  | "clientes"
+  | "cierres_caja"
+  | "mesas"
+  | "servir"
+  | "inventario"
+  | "depositos"
+  | "kardex"
+  | "conteos"
+  | "productos"
+  | "reportes"
+  | "configuracion"
+  | "anulaciones"
+  | "descuentos";
+
+export const AD_ROLE_PERMISSIONS: Record<AdRole, AdModulePermission[]> = {
+  admin: [
+    "ventas",
+    "cuentas",
+    "pagos",
+    "clientes",
+    "cierres_caja",
+    "mesas",
+    "servir",
+    "inventario",
+    "depositos",
+    "kardex",
+    "conteos",
+    "productos",
+    "reportes",
+    "configuracion",
+    "anulaciones",
+    "descuentos",
+  ],
+  cajero: [
+    "ventas",
+    "cuentas",
+    "pagos",
+    "clientes",
+    "cierres_caja",
+    "mesas",
+    "reportes",
+  ],
+  mesonera: ["mesas", "cuentas", "servir"],
+  inventario: ["inventario", "depositos", "kardex", "conteos", "productos"],
+};
 
 export type AdOperator = {
   id: string;
@@ -34,7 +84,6 @@ export type AdProduct = {
   sku: string;
   barcode?: string;
   description?: string;
-  /** Etiqueta de la unidad base (ej. unidad, botella). */
   baseUnitLabel: string;
   cost: AdPrice;
   minStockBase: number;
@@ -42,17 +91,16 @@ export type AdProduct = {
   createdAt: string;
 };
 
-/**
- * Presentación configurable: conversión a unidad base NO hardcodeada.
- * unitsPerPresentation = cuántas unidades base descuenta 1 presentación.
- */
 export type AdPresentation = {
   id: string;
   productId: string;
   name: string;
   code?: string;
+  /** Factor de conversión a unidad base (configurable). */
   unitsPerPresentation: number;
   price: AdPrice;
+  minPrice?: AdPrice;
+  maxPrice?: AdPrice;
   specialPrice?: AdPrice;
   sku?: string;
   barcode?: string;
@@ -67,7 +115,6 @@ export type AdWarehouse = {
   active: boolean;
 };
 
-/** Stock siempre en unidades base por producto y depósito. */
 export type AdInventoryItem = {
   productId: string;
   warehouseId: string;
@@ -84,7 +131,9 @@ export type AdInventoryMovementType =
   | "DEVOLUCION"
   | "INVENTARIO_INICIAL"
   | "CONSUMO_CUENTA"
-  | "CONTEO_FISICO";
+  | "CONTEO_FISICO"
+  | "PERDIDA"
+  | "ROTURA";
 
 export type AdInventoryMovement = {
   id: string;
@@ -107,6 +156,7 @@ export type AdTableStatus =
   | "ocupada"
   | "cuenta_abierta"
   | "cuenta_prepagada"
+  | "reservada"
   | "cerrada";
 
 export type AdTable = {
@@ -118,19 +168,41 @@ export type AdTable = {
   active: boolean;
 };
 
-export type AdPaymentMethod =
+/** Código estable del método de pago. */
+export type AdPaymentMethodCode =
   | "efectivo_usd"
   | "efectivo_bs"
-  | "transferencia"
   | "pago_movil"
+  | "transferencia"
+  | "zelle"
+  | "tarjeta"
   | "qr"
   | "otro";
 
+/** @deprecated usar AdPaymentMethodCode — alias de compatibilidad. */
+export type AdPaymentMethod = AdPaymentMethodCode;
+
+export type AdPaymentMethodConfig = {
+  id: string;
+  code: AdPaymentMethodCode;
+  name: string;
+  currency: MoneyCurrency;
+  active: boolean;
+  requiresReference: boolean;
+  requiresVoucher: boolean;
+  requiresBank: boolean;
+  notes?: string;
+};
+
 export type AdPayment = {
   id: string;
-  method: AdPaymentMethod;
+  method: AdPaymentMethodCode;
   currency: MoneyCurrency;
   amount: number;
+  bank?: string;
+  reference?: string;
+  originPhone?: string;
+  voucherNote?: string;
   createdAt: string;
 };
 
@@ -146,35 +218,42 @@ export type AdAccountItem = {
   id: string;
   productId: string;
   presentationId: string;
-  /** Cantidad vendida/pedida en presentación. */
+  /** Solicitadas. */
   qty: number;
-  /** Ya servida (consumo parcial). */
+  /** Servidas. */
   qtyServed: number;
   unitPrice: AdPrice;
-  /** Equivalente en unidades base de qty. */
   qtyBase: number;
 };
 
 export type AdAccount = {
   id: string;
   number: string;
+  receiptNumber?: string;
   tableId?: string;
   mesoneraId?: string;
   mesoneraName?: string;
+  cashierName?: string;
   customerId?: string;
   customerName?: string;
+  customerPhone?: string;
   status: AdAccountStatus;
   prepaid: boolean;
   items: AdAccountItem[];
   payments: AdPayment[];
+  discountUsd: number;
+  discountBs: number;
+  discountReason?: string;
   openedAt: string;
   closedAt?: string;
   closedBy?: string;
+  voidedAt?: string;
+  voidedBy?: string;
+  voidReason?: string;
   notes?: string;
   updatedAt: string;
 };
 
-/** Línea de prepago multiproducto. */
 export type AdPrepaidItem = {
   id: string;
   productId: string;
@@ -190,10 +269,11 @@ export type AdPrepaidStatus = "ACTIVO" | "AGOTADO" | "CERRADO" | "VENCIDO";
 export type AdPrepaidAccount = {
   id: string;
   code: string;
-  /** Token opaco para QR (no embebe datos sensibles). */
   qrToken: string;
+  receiptNumber?: string;
   customerId?: string;
   customerName?: string;
+  customerPhone?: string;
   status: AdPrepaidStatus;
   items: AdPrepaidItem[];
   createdAt: string;
@@ -213,16 +293,22 @@ export type AdPrepaidConsumption = {
 
 export type AdQrReference = {
   token: string;
-  kind: "prepaid" | "account";
+  kind: "prepaid" | "account" | "receipt";
   entityId: string;
   code: string;
 };
 
 export type AdCustomer = {
   id: string;
+  firstName: string;
+  lastName: string;
+  /** Nombre completo (derivado / display). */
   name: string;
-  phone?: string;
+  /** Obligatorio en flujo normal. */
+  phone: string;
   documentId?: string;
+  email?: string;
+  address?: string;
   notes?: string;
   active: boolean;
   createdAt: string;
@@ -238,18 +324,84 @@ export type AdSaleItem = {
 
 export type AdSale = {
   id: string;
+  receiptNumber: string;
   accountId?: string;
   tableId?: string;
   mesoneraName?: string;
+  cashierName?: string;
+  customerId?: string;
   customerName?: string;
+  customerPhone?: string;
   items: AdSaleItem[];
   payments: AdPayment[];
   subtotal: AdPrice;
+  discountUsd: number;
+  discountBs: number;
   total: AdPrice;
   warehouseId: string;
   userName: string;
   status: "completed" | "voided";
+  voidReason?: string;
+  notes?: string;
   createdAt: string;
+};
+
+export type AdReceipt = {
+  id: string;
+  number: string;
+  kind: "sale" | "account" | "prepaid";
+  saleId?: string;
+  accountId?: string;
+  prepaidId?: string;
+  customerId?: string;
+  customerName?: string;
+  customerPhone?: string;
+  mesoneraName?: string;
+  cashierName?: string;
+  tableNumber?: string;
+  items: {
+    productName: string;
+    presentationName: string;
+    qty: number;
+    qtyServed?: number;
+    unitPrice: AdPrice;
+    lineTotal: AdPrice;
+  }[];
+  payments: AdPayment[];
+  subtotal: AdPrice;
+  discountUsd: number;
+  discountBs: number;
+  total: AdPrice;
+  paidUsd: number;
+  paidBs: number;
+  balanceUsd: number;
+  notes?: string;
+  createdAt: string;
+};
+
+export type AdPurchaseItem = {
+  id: string;
+  productId: string;
+  presentationId: string;
+  qty: number;
+  qtyBase: number;
+  unitCost: AdPrice;
+  lineCost: AdPrice;
+};
+
+export type AdPurchase = {
+  id: string;
+  supplierName: string;
+  invoiceNumber: string;
+  date: string;
+  warehouseId: string;
+  items: AdPurchaseItem[];
+  totalCost: AdPrice;
+  paymentMethod?: AdPaymentMethodCode;
+  reference?: string;
+  userName: string;
+  createdAt: string;
+  notes?: string;
 };
 
 export type AdDailyClosure = {
@@ -258,13 +410,27 @@ export type AdDailyClosure = {
   salesCount: number;
   totalUsd: number;
   totalBs: number;
+  collectedUsd: number;
+  collectedBs: number;
+  pendingUsd: number;
+  discountUsd: number;
+  voidedCount: number;
+  expectedCashUsd: number;
+  countedCashUsd: number;
+  cashDifferenceUsd: number;
+  expectedCashBs: number;
+  countedCashBs: number;
+  cashDifferenceBs: number;
   openAccounts: number;
   closedAccounts: number;
   prepaidsActive: number;
-  byMethod: Partial<Record<AdPaymentMethod, { usd: number; bs: number }>>;
+  byMethod: Partial<
+    Record<AdPaymentMethodCode, { usd: number; bs: number }>
+  >;
   byMesonera: { name: string; salesCount: number; totalUsd: number }[];
   createdAt: string;
   createdBy: string;
+  notes?: string;
 };
 
 export type AdInventoryClosureLine = {
@@ -286,10 +452,10 @@ export type AdInventoryClosure = {
 
 export type AdAppSettings = {
   exchangeRateUsdToBs: number;
-  /** Si true, sugerir Bs = USD × tasa al editar (nunca forzar). */
   suggestBsFromRate: boolean;
   brandName: string;
   brandTagline: string;
+  whatsappEnabled: boolean;
 };
 
 export type AdServiceLog = {
@@ -312,5 +478,35 @@ export type AdAuditEvent = {
   entityId?: string;
   userName: string;
   detail: string;
+  beforeValue?: string;
+  afterValue?: string;
+  reason?: string;
   createdAt: string;
 };
+
+/** WhatsApp — arquitectura desacoplada (sin envío real). */
+export type AdWhatsAppTemplateCode =
+  | "purchase_thanks"
+  | "pending_items"
+  | "prepaid_balance"
+  | "prepaid_consume"
+  | "account_closed";
+
+export type AdWhatsAppMessage = {
+  id: string;
+  toPhone: string;
+  template: AdWhatsAppTemplateCode;
+  body: string;
+  customerId?: string;
+  receiptNumber?: string;
+  status: "queued" | "mock_sent" | "failed";
+  createdAt: string;
+};
+
+export type AdWhatsAppTemplate = {
+  code: AdWhatsAppTemplateCode;
+  name: string;
+  description: string;
+};
+
+export type AdWhatsAppLog = AdWhatsAppMessage;

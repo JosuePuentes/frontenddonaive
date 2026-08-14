@@ -18,11 +18,14 @@ export default function AdLicoreriaCierres() {
 
   const [warehouseId, setWarehouseId] = useState("wh-1");
   const [physical, setPhysical] = useState<Record<string, number>>({});
+  const [countedUsd, setCountedUsd] = useState(0);
+  const [countedBs, setCountedBs] = useState(0);
+  const [notes, setNotes] = useState("");
   const [msg, setMsg] = useState("");
 
   const byMethod = useMemo(() => {
     const map: Record<string, { usd: number; bs: number }> = {};
-    for (const sale of sales) {
+    for (const sale of sales.filter((s) => s.status === "completed")) {
       for (const pay of sale.payments) {
         const cur = map[pay.method] ?? { usd: 0, bs: 0 };
         if (pay.currency === "USD") cur.usd += pay.amount;
@@ -33,9 +36,34 @@ export default function AdLicoreriaCierres() {
     return map;
   }, [sales]);
 
+  const expectedCash = useMemo(() => {
+    let usd = 0;
+    let bs = 0;
+    for (const sale of sales.filter((s) => s.status === "completed")) {
+      for (const pay of sale.payments) {
+        if (pay.method === "efectivo_usd" && pay.currency === "USD") {
+          usd += pay.amount;
+        }
+        if (pay.method === "efectivo_bs" && pay.currency === "BS") {
+          bs += pay.amount;
+        }
+      }
+    }
+    return { usd, bs };
+  }, [sales]);
+
   function runDaily() {
-    const r = createDailyClosure("Admin A&D");
-    setMsg(r.ok ? `Cierre diario ${r.data.date} guardado` : r.error);
+    const r = createDailyClosure({
+      userName: "Admin A&D",
+      countedCashUsd: countedUsd,
+      countedCashBs: countedBs,
+      notes: notes.trim() || undefined,
+    });
+    setMsg(
+      r.ok
+        ? `Cierre ${r.data.date}: dif USD ${r.data.cashDifferenceUsd} · dif Bs ${r.data.cashDifferenceBs}`
+        : r.error,
+    );
   }
 
   function runInventory() {
@@ -67,44 +95,48 @@ export default function AdLicoreriaCierres() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-[var(--ad-muted)]">
-        Cierre diario de caja/ventas y cierre de inventario teórico vs físico.
+        Cierre de caja (efectivo esperado vs contado) e inventario teórico vs
+        físico. Los cierres no reescriben historial silenciosamente.
       </p>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="ad-panel space-y-3">
-          <h2 className="ad-panel-title">Cierre diario</h2>
+          <h2 className="ad-panel-title">Cierre de caja</h2>
           <div className="ad-grid-stats">
             <div className="ad-stat">
               <div className="ad-stat__value">
-                ${sales.reduce((a, s) => a + s.total.usd, 0).toFixed(0)}
+                ${sales.filter((s) => s.status === "completed").reduce((a, s) => a + s.total.usd, 0).toFixed(0)}
               </div>
-              <div className="ad-stat__label">Total USD</div>
+              <div className="ad-stat__label">Total vendido USD</div>
             </div>
             <div className="ad-stat">
               <div className="ad-stat__value">
-                {sales.reduce((a, s) => a + s.total.bs, 0).toLocaleString("es-VE")}
+                {sales.filter((s) => s.status === "voided").length}
               </div>
-              <div className="ad-stat__label">Total Bs</div>
+              <div className="ad-stat__label">Anulaciones</div>
             </div>
             <div className="ad-stat">
-              <div className="ad-stat__value">{sales.length}</div>
-              <div className="ad-stat__label">Ventas</div>
+              <div className="ad-stat__value">${expectedCash.usd.toFixed(2)}</div>
+              <div className="ad-stat__label">Efectivo USD esperado</div>
+            </div>
+            <div className="ad-stat">
+              <div className="ad-stat__value">
+                {expectedCash.bs.toLocaleString("es-VE")}
+              </div>
+              <div className="ad-stat__label">Efectivo Bs esperado</div>
             </div>
             <div className="ad-stat">
               <div className="ad-stat__value">
                 {
                   accounts.filter(
-                    (a) => a.status === "ABIERTA" || a.status === "PREPAGADA",
+                    (a) =>
+                      a.status === "ABIERTA" ||
+                      a.status === "PREPAGADA" ||
+                      a.status === "PARCIALMENTE_PAGADA",
                   ).length
                 }
               </div>
               <div className="ad-stat__label">Cuentas abiertas</div>
-            </div>
-            <div className="ad-stat">
-              <div className="ad-stat__value">
-                {accounts.filter((a) => a.status === "CERRADA").length}
-              </div>
-              <div className="ad-stat__label">Cuentas cerradas</div>
             </div>
             <div className="ad-stat">
               <div className="ad-stat__value">
@@ -113,6 +145,7 @@ export default function AdLicoreriaCierres() {
               <div className="ad-stat__label">Prepagos activos</div>
             </div>
           </div>
+
           <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
             {Object.entries(byMethod).map(([method, v]) => (
               <li key={method}>
@@ -121,13 +154,46 @@ export default function AdLicoreriaCierres() {
             ))}
             {!Object.keys(byMethod).length ? <li>Sin pagos aún</li> : null}
           </ul>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="text-sm text-[var(--ad-muted)]">
+              Efectivo USD contado
+              <input
+                className="ad-input mt-1"
+                type="number"
+                value={countedUsd}
+                onChange={(e) => setCountedUsd(Number(e.target.value))}
+              />
+            </label>
+            <label className="text-sm text-[var(--ad-muted)]">
+              Efectivo Bs contado
+              <input
+                className="ad-input mt-1"
+                type="number"
+                value={countedBs}
+                onChange={(e) => setCountedBs(Number(e.target.value))}
+              />
+            </label>
+          </div>
+          <input
+            className="ad-input"
+            placeholder="Observaciones del cierre"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+          <p className="text-xs text-[var(--ad-muted)]">
+            Diferencia estimada: USD{" "}
+            {(countedUsd - expectedCash.usd).toFixed(2)} · Bs{" "}
+            {(countedBs - expectedCash.bs).toLocaleString("es-VE")}
+          </p>
           <button type="button" className="ad-btn ad-btn--gold" onClick={runDaily}>
             Generar cierre diario
           </button>
           <ul className="text-xs text-[var(--ad-muted)]">
-            {dailyClosures.slice(0, 3).map((c) => (
+            {dailyClosures.slice(0, 5).map((c) => (
               <li key={c.id}>
-                {c.date} · ${c.totalUsd.toFixed(2)} · {c.createdBy}
+                {c.date} · ${c.totalUsd.toFixed(2)} · dif USD{" "}
+                {c.cashDifferenceUsd} · {c.createdBy}
               </li>
             ))}
           </ul>
@@ -184,7 +250,11 @@ export default function AdLicoreriaCierres() {
               </tbody>
             </table>
           </div>
-          <button type="button" className="ad-btn ad-btn--primary" onClick={runInventory}>
+          <button
+            type="button"
+            className="ad-btn ad-btn--primary"
+            onClick={runInventory}
+          >
             Guardar cierre e aplicar ajustes
           </button>
           <ul className="text-xs text-[var(--ad-muted)]">

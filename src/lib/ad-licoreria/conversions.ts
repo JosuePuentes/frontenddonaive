@@ -66,5 +66,14 @@ export function nextAccountNumber(seq: number): string {
 
 export function nextPrepaidCode(seq: number): string {
   const year = new Date().getFullYear();
-  return `A&D-${year}-${String(seq).padStart(6, "0")}`;
+  return `PRE-${year}-${String(seq).padStart(6, "0")}`;
+}
+
+export function nextReceiptNumber(seq: number): string {
+  const year = new Date().getFullYear();
+  return `AD-${year}-${String(seq).padStart(6, "0")}`;
+}
+
+export function customerDisplayName(firstName: string, lastName: string): string {
+  return `${firstName.trim()} ${lastName.trim()}`.trim();
 }

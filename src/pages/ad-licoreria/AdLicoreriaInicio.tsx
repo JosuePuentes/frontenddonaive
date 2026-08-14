@@ -33,8 +33,37 @@ export default function AdLicoreriaInicio() {
       ),
     0,
   );
-  const salesUsd = sales.reduce((a, s) => a + s.total.usd, 0);
-  const salesBs = sales.reduce((a, s) => a + s.total.bs, 0);
+  const completedSales = sales.filter((s) => s.status === "completed");
+  const salesUsd = completedSales.reduce((a, s) => a + s.total.usd, 0);
+  const salesBs = completedSales.reduce((a, s) => a + s.total.bs, 0);
+  const pendingProducts = openAccounts.reduce(
+    (acc, a) =>
+      acc + a.items.reduce((x, i) => x + Math.max(0, i.qty - i.qtyServed), 0),
+    0,
+  );
+  const byPay = new Map<string, number>();
+  for (const s of completedSales) {
+    for (const p of s.payments) {
+      if (p.currency === "USD") {
+        byPay.set(p.method, (byPay.get(p.method) ?? 0) + p.amount);
+      }
+    }
+  }
+  const topProducts = (() => {
+    const map = new Map<string, number>();
+    for (const s of completedSales) {
+      for (const it of s.items) {
+        map.set(it.productId, (map.get(it.productId) ?? 0) + it.qtyBase);
+      }
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, qty]) => ({
+        name: products.find((p) => p.id === id)?.name ?? id,
+        qty,
+      }));
+  })();
   const lowStock = products.filter((p) => {
     const qty = inventory
       .filter((i) => i.productId === p.id)
@@ -76,8 +105,12 @@ export default function AdLicoreriaInicio() {
           <div className="ad-stat__label">Unidades base stock</div>
         </div>
         <div className="ad-stat">
-          <div className="ad-stat__value">{sales.length}</div>
+          <div className="ad-stat__value">{completedSales.length}</div>
           <div className="ad-stat__label">Tickets venta</div>
+        </div>
+        <div className="ad-stat">
+          <div className="ad-stat__value">{pendingProducts}</div>
+          <div className="ad-stat__label">Productos pendientes</div>
         </div>
       </div>
 
@@ -124,13 +157,30 @@ export default function AdLicoreriaInicio() {
         <section className="ad-panel">
           <h2 className="ad-panel-title">Últimas ventas</h2>
           <ul className="space-y-2 text-sm text-[var(--ad-muted)]">
-            {sales.slice(0, 5).map((s) => (
+            {completedSales.slice(0, 5).map((s) => (
               <li key={s.id}>
-                ${s.total.usd.toFixed(2)} · {s.userName} ·{" "}
-                {new Date(s.createdAt).toLocaleTimeString("es-VE")}
+                {s.receiptNumber} · ${s.total.usd.toFixed(2)} ·{" "}
+                {s.mesoneraName ?? s.userName}
               </li>
             ))}
-            {!sales.length ? <li>Sin ventas aún</li> : null}
+            {!completedSales.length ? <li>Sin ventas aún</li> : null}
+          </ul>
+        </section>
+
+        <section className="ad-panel">
+          <h2 className="ad-panel-title">Top productos / pagos USD</h2>
+          <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
+            {topProducts.map((p) => (
+              <li key={p.name}>
+                {p.name}: {p.qty} u.
+              </li>
+            ))}
+            {[...byPay.entries()].slice(0, 4).map(([m, usd]) => (
+              <li key={m}>
+                {m}: ${usd.toFixed(2)}
+              </li>
+            ))}
+            {!topProducts.length && !byPay.size ? <li>Sin datos</li> : null}
           </ul>
         </section>
 
