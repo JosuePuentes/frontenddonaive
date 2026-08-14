@@ -53,7 +53,7 @@ export default function AdLicoreriaQr() {
           className="ad-input"
           value={token}
           onChange={(e) => setToken(e.target.value)}
-          placeholder="A&D-2026-000125 o ad_qr_…"
+          placeholder="PRE-2026-000125 o ad_qr_…"
         />
         {account ? (
           <div className="rounded-[2px] border border-dashed border-[var(--ad-line-strong)] p-4 text-center">

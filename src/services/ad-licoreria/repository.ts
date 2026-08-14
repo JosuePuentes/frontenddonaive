@@ -1443,6 +1443,20 @@ export const adLicoreriaRepository = {
     if (!input.reason.trim() || !input.authorizedBy.trim()) {
       return { ok: false, error: "Motivo y autorización obligatorios" };
     }
+    // Devolver stock al depósito de la venta (no silenciar historial: queda movimiento DEVOLUCION).
+    for (const line of sale.items) {
+      const mov = this.registerMovement({
+        type: "DEVOLUCION",
+        productId: line.productId,
+        presentationId: line.presentationId,
+        qtyPresentation: line.qty,
+        warehouseId: sale.warehouseId,
+        userName: input.userName,
+        reason: `Anulación ${sale.receiptNumber}: ${input.reason}`,
+        reference: sale.id,
+      });
+      if (!mov.ok) return mov;
+    }
     const voided: AdSale = {
       ...sale,
       status: "voided",
