@@ -19,6 +19,7 @@ Opcional (institucionales auxiliares):
 public/polisur/logo/visipol.png
 public/polisur/logo/cuadrantes-paz.png
 public/polisur/logo/justicia-paz.png
+public/polisur/extras/   ← logos aún no asignados a una sección
 ```
 
 ## Home

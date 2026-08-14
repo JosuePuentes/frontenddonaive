@@ -25,6 +25,27 @@ export const POLISUR_ASSET_SLOTS = [
     accept: "image/png,image/jpeg,image/webp",
   },
   {
+    id: "logo-visipol",
+    path: "public/polisur/logo/visipol.png",
+    publicUrl: "/polisur/logo/visipol.png",
+    label: "Logo VISIPOL",
+    accept: "image/png,image/jpeg,image/webp",
+  },
+  {
+    id: "logo-cuadrantes",
+    path: "public/polisur/logo/cuadrantes-paz.png",
+    publicUrl: "/polisur/logo/cuadrantes-paz.png",
+    label: "Gran Misión Cuadrantes de Paz",
+    accept: "image/png,image/jpeg,image/webp",
+  },
+  {
+    id: "logo-justicia-paz",
+    path: "public/polisur/logo/justicia-paz.png",
+    publicUrl: "/polisur/logo/justicia-paz.png",
+    label: "Justicia y Paz",
+    accept: "image/png,image/jpeg,image/webp",
+  },
+  {
     id: "home-hero",
     path: "public/polisur/home/hero.jpg",
     publicUrl: "/polisur/home/hero.jpg",

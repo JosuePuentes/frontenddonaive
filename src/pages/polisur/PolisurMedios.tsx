@@ -3,9 +3,34 @@ import type { FormEvent } from "react";
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurCrest } from "@/components/polisur/PolisurCrest";
 import { POLISUR_ASSET_SLOTS } from "@/content/polisur-asset-slots";
-import type { PolisurAssetSlotId } from "@/content/polisur-asset-slots";
 
 const SESSION_KEY = "polisur-medios-session-v1";
+const NUEVO_CONCEPTO = "__nuevo__";
+
+const CARPETAS = [
+  { id: "logo", label: "Logos / insignias" },
+  { id: "home", label: "Home" },
+  { id: "unidad-canina", label: "Unidad Canina" },
+  { id: "extras", label: "Otros (sin asignar aún)" },
+] as const;
+
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+}
+
+function extensionFromFile(file: File | null, folder: string) {
+  const type = file?.type || "";
+  if (type.includes("png")) return "png";
+  if (type.includes("webp")) return "webp";
+  if (type.includes("jpeg") || type.includes("jpg")) return "jpg";
+  return folder === "home" || folder === "unidad-canina" ? "jpg" : "png";
+}
 
 type SlotState = {
   path: string;
@@ -52,15 +77,26 @@ export default function PolisurMedios() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [slots, setSlots] = useState<SlotState[]>([]);
-  const [selectedId, setSelectedId] = useState<PolisurAssetSlotId>(
+  const [selectedId, setSelectedId] = useState<string>(
     POLISUR_ASSET_SLOTS[0].id,
   );
   const [file, setFile] = useState<File | null>(null);
+  const [concepto, setConcepto] = useState("");
+  const [carpeta, setCarpeta] =
+    useState<(typeof CARPETAS)[number]["id"]>("logo");
 
   const selected = useMemo(
-    () => POLISUR_ASSET_SLOTS.find((s) => s.id === selectedId)!,
+    () => POLISUR_ASSET_SLOTS.find((s) => s.id === selectedId) ?? null,
     [selectedId],
   );
+
+  const customPath = useMemo(() => {
+    const slug = slugify(concepto) || "concepto";
+    const ext = extensionFromFile(file, carpeta);
+    return `public/polisur/${carpeta}/${slug}.${ext}`;
+  }, [concepto, carpeta, file]);
+
+  const destinationPath = selected?.path ?? customPath;
 
   useEffect(() => {
     const saved = sessionStorage.getItem(SESSION_KEY);
@@ -146,6 +182,10 @@ export default function PolisurMedios() {
       setError("Seleccione una fotografía o logo.");
       return;
     }
+    if (selectedId === NUEVO_CONCEPTO && !slugify(concepto)) {
+      setError("Escriba un nombre de concepto para renombrar el archivo.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -156,7 +196,7 @@ export default function PolisurMedios() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clave,
-          path: selected.path,
+          path: destinationPath,
           dataBase64,
         }),
       });
@@ -164,7 +204,7 @@ export default function PolisurMedios() {
       if (!res.ok || !data.ok) {
         throw new Error(data.error || "No se pudo registrar el archivo.");
       }
-      setMessage(`Registrado: ${selected.path}`);
+      setMessage(`Registrado: ${destinationPath}`);
       setFile(null);
       await refreshStatus(clave);
     } catch (err) {
@@ -263,9 +303,7 @@ export default function PolisurMedios() {
                   </span>
                   <select
                     value={selectedId}
-                    onChange={(e) =>
-                      setSelectedId(e.target.value as PolisurAssetSlotId)
-                    }
+                    onChange={(e) => setSelectedId(e.target.value)}
                     className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-gold)]/60"
                   >
                     {POLISUR_ASSET_SLOTS.map((slot) => (
@@ -273,8 +311,48 @@ export default function PolisurMedios() {
                         {slot.label} — {slot.path.replace("public/", "")}
                       </option>
                     ))}
+                    <option value={NUEVO_CONCEPTO}>
+                      Nuevo concepto — nombrar y guardar
+                    </option>
                   </select>
                 </label>
+
+                {selectedId === NUEVO_CONCEPTO ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block sm:col-span-2">
+                      <span className="text-xs uppercase tracking-[0.16em] text-[var(--ps-steel-400)]">
+                        Nombre del concepto
+                      </span>
+                      <input
+                        type="text"
+                        value={concepto}
+                        onChange={(e) => setConcepto(e.target.value)}
+                        placeholder="Ej. VISIPOL, Cuadrantes de Paz"
+                        className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-gold)]/60"
+                      />
+                    </label>
+                    <label className="block sm:col-span-2">
+                      <span className="text-xs uppercase tracking-[0.16em] text-[var(--ps-steel-400)]">
+                        Carpeta
+                      </span>
+                      <select
+                        value={carpeta}
+                        onChange={(e) =>
+                          setCarpeta(
+                            e.target.value as (typeof CARPETAS)[number]["id"],
+                          )
+                        }
+                        className="mt-2 w-full border border-[var(--ps-line-strong)] bg-[var(--ps-navy-950)] px-3 py-3 text-sm text-[var(--ps-paper)] outline-none focus:border-[var(--ps-gold)]/60"
+                      >
+                        {CARPETAS.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                ) : null}
 
                 <label className="block">
                   <span className="text-xs uppercase tracking-[0.16em] text-[var(--ps-steel-400)]">
@@ -290,7 +368,9 @@ export default function PolisurMedios() {
 
                 <p className="text-xs leading-relaxed text-[var(--ps-steel-400)]">
                   Se registrará exactamente en{" "}
-                  <span className="text-[var(--ps-steel-300)]">{selected.path}</span>
+                  <span className="text-[var(--ps-steel-300)]">
+                    {destinationPath}
+                  </span>
                   . No se modifican rostros, uniformes ni el contenido visual.
                 </p>
 

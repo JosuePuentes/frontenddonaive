@@ -11,6 +11,9 @@ const SLOT_PATHS = new Set([
   "public/polisur/logo/escudo.png",
   "public/polisur/logo/parche.png",
   "public/polisur/logo/k9-emblema.png",
+  "public/polisur/logo/visipol.png",
+  "public/polisur/logo/cuadrantes-paz.png",
+  "public/polisur/logo/justicia-paz.png",
   "public/polisur/home/hero.jpg",
   "public/polisur/home/about.jpg",
   "public/polisur/home/canina.jpg",
@@ -19,6 +22,19 @@ const SLOT_PATHS = new Set([
   "public/polisur/unidad-canina/entrenamiento.jpg",
   "public/polisur/unidad-canina/binomio.png",
 ]);
+
+const CUSTOM_PATH =
+  /^public\/polisur\/(logo|home|unidad-canina|extras)\/[a-z0-9][a-z0-9-]{0,39}\.(png|jpg|webp)$/;
+
+export function assertSlotPath(relPath) {
+  const clean = String(relPath || "").replace(/\\/g, "/");
+  if (!SLOT_PATHS.has(clean) && !CUSTOM_PATH.test(clean)) {
+    const err = new Error("Destino documental no autorizado.");
+    err.statusCode = 400;
+    throw err;
+  }
+  return clean;
+}
 
 export function getMediosClave() {
   return (
@@ -42,16 +58,6 @@ export function assertAuthorized(clave) {
     err.statusCode = 401;
     throw err;
   }
-}
-
-export function assertSlotPath(relPath) {
-  const clean = String(relPath || "").replace(/\\/g, "/");
-  if (!SLOT_PATHS.has(clean)) {
-    const err = new Error("Destino documental no autorizado.");
-    err.statusCode = 400;
-    throw err;
-  }
-  return clean;
 }
 
 export function resolveSafePath(root, relPath) {

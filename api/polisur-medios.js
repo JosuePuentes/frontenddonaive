@@ -8,6 +8,9 @@ const SLOT_PATHS = new Set([
   "public/polisur/logo/escudo.png",
   "public/polisur/logo/parche.png",
   "public/polisur/logo/k9-emblema.png",
+  "public/polisur/logo/visipol.png",
+  "public/polisur/logo/cuadrantes-paz.png",
+  "public/polisur/logo/justicia-paz.png",
   "public/polisur/home/hero.jpg",
   "public/polisur/home/about.jpg",
   "public/polisur/home/canina.jpg",
@@ -16,6 +19,19 @@ const SLOT_PATHS = new Set([
   "public/polisur/unidad-canina/entrenamiento.jpg",
   "public/polisur/unidad-canina/binomio.png",
 ]);
+
+const CUSTOM_PATH =
+  /^public\/polisur\/(logo|home|unidad-canina|extras)\/[a-z0-9][a-z0-9-]{0,39}\.(png|jpg|webp)$/;
+
+function assertAllowedPath(relPath) {
+  const clean = String(relPath || "").replace(/\\/g, "/");
+  if (!SLOT_PATHS.has(clean) && !CUSTOM_PATH.test(clean)) {
+    const err = new Error("Destino documental no autorizado.");
+    err.statusCode = 400;
+    throw err;
+  }
+  return clean;
+}
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -114,6 +130,41 @@ async function putGitHub({ path, contentBase64, message }) {
   return { commit: data.commit?.sha || null };
 }
 
+async function listRepoAssets() {
+  const repo =
+    process.env.POLISUR_MEDIOS_REPO || "JosuePuentes/frontenddonaive";
+  const branch =
+    process.env.POLISUR_MEDIOS_BRANCH ||
+    "cursor/polisur-portal-fotografico-335d";
+  const token = process.env.GITHUB_TOKEN;
+  const folders = ["logo", "home", "unidad-canina", "extras"];
+  const items = [];
+
+  for (const folder of folders) {
+    const api = `https://api.github.com/repos/${repo}/contents/public/polisur/${folder}?ref=${encodeURIComponent(branch)}`;
+    const res = await fetch(api, {
+      headers: token
+        ? {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github+json",
+          }
+        : { Accept: "application/vnd.github+json" },
+    });
+    if (!res.ok) continue;
+    const data = await res.json();
+    if (!Array.isArray(data)) continue;
+    for (const file of data) {
+      if (file.type !== "file" || file.name === ".gitkeep") continue;
+      items.push({
+        path: file.path,
+        status: "OK",
+        bytes: file.size || 0,
+      });
+    }
+  }
+  return items;
+}
+
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return json(res, 204, {});
@@ -131,7 +182,10 @@ export default async function handler(req, res) {
           github: Boolean(process.env.GITHUB_TOKEN),
         });
       }
-      return json(res, 200, { ok: true, slots: [] });
+      const clave = url.searchParams.get("clave") || "";
+      assertClave(clave);
+      const listed = await listRepoAssets();
+      return json(res, 200, { ok: true, slots: listed });
     }
 
     const body = req.method === "POST" ? await readBody(req) : {};
@@ -143,12 +197,7 @@ export default async function handler(req, res) {
 
     if (req.method === "POST" && action === "upload") {
       assertClave(body.clave);
-      if (!SLOT_PATHS.has(body.path)) {
-        return json(res, 400, {
-          ok: false,
-          error: "Destino documental no autorizado.",
-        });
-      }
+      const dest = assertAllowedPath(body.path);
       if (!process.env.GITHUB_TOKEN) {
         return json(res, 503, {
           ok: false,
@@ -169,11 +218,11 @@ export default async function handler(req, res) {
         });
       }
       const saved = await putGitHub({
-        path: body.path,
+        path: dest,
         contentBase64: base64,
-        message: `chore(polisur): registrar asset ${body.path}`,
+        message: `chore(polisur): registrar asset ${dest}`,
       });
-      return json(res, 200, { ok: true, path: body.path, bytes, ...saved });
+      return json(res, 200, { ok: true, path: dest, bytes, ...saved });
     }
 
     return json(res, 404, { ok: false, error: "Acción no encontrada." });
