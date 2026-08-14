@@ -1,13 +1,13 @@
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
 export default function AdLicoreriaInventario() {
-  const { products, warehouses, stock, movements } = useAdLicoreria();
+  const { products, warehouses, inventory, movements } = useAdLicoreria();
 
   return (
     <div className="space-y-5">
       <p className="max-w-2xl text-sm text-[var(--ad-muted)]">
-        Existencias y kardex en <strong>unidad base</strong>. Los movimientos
-        guardan presentación, equivalente base, depósitos, usuario y motivo.
+        Existencias y kardex en <strong>unidad base</strong>. Cada presentación
+        define su conversión configurable al registrar movimientos.
       </p>
 
       <section className="ad-panel">
@@ -20,17 +20,19 @@ export default function AdLicoreriaInventario() {
                 {warehouses.map((w) => (
                   <th key={w.id}>{w.name}</th>
                 ))}
-                <th>Total base</th>
+                <th>Total</th>
+                <th>Mín.</th>
               </tr>
             </thead>
             <tbody>
               {products.map((p) => {
                 const rows = warehouses.map(
                   (w) =>
-                    stock.find(
+                    inventory.find(
                       (s) => s.productId === p.id && s.warehouseId === w.id,
                     )?.qtyBase ?? 0,
                 );
+                const total = rows.reduce((a, b) => a + b, 0);
                 return (
                   <tr key={p.id}>
                     <td>
@@ -42,7 +44,16 @@ export default function AdLicoreriaInventario() {
                     {rows.map((q, i) => (
                       <td key={warehouses[i].id}>{q}</td>
                     ))}
-                    <td>{rows.reduce((a, b) => a + b, 0)}</td>
+                    <td
+                      className={
+                        total < p.minStockBase
+                          ? "text-[var(--ad-danger)]"
+                          : undefined
+                      }
+                    >
+                      {total}
+                    </td>
+                    <td>{p.minStockBase}</td>
                   </tr>
                 );
               })}
@@ -61,6 +72,7 @@ export default function AdLicoreriaInventario() {
                 <th>Producto</th>
                 <th>Cant. pres.</th>
                 <th>Base</th>
+                <th>Depósito</th>
                 <th>Origen</th>
                 <th>Destino</th>
                 <th>Usuario</th>
@@ -71,6 +83,7 @@ export default function AdLicoreriaInventario() {
             <tbody>
               {movements.map((m) => {
                 const product = products.find((p) => p.id === m.productId);
+                const wh = warehouses.find((w) => w.id === m.warehouseId);
                 const from = warehouses.find((w) => w.id === m.warehouseFromId);
                 const to = warehouses.find((w) => w.id === m.warehouseToId);
                 return (
@@ -79,6 +92,7 @@ export default function AdLicoreriaInventario() {
                     <td>{product?.name}</td>
                     <td>{m.qtyPresentation}</td>
                     <td>{m.qtyBase}</td>
+                    <td>{wh?.code ?? "—"}</td>
                     <td>{from?.code ?? "—"}</td>
                     <td>{to?.code ?? "—"}</td>
                     <td>{m.userName}</td>

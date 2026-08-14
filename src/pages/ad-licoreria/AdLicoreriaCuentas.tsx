@@ -1,10 +1,21 @@
 import { Link } from "react-router";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
-import { accountAvailable } from "@/lib/ad-licoreria/conversions";
+import {
+  accountAvailable,
+  formatAdPrice,
+  multiplyPrice,
+  addPrices,
+} from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
 export default function AdLicoreriaCuentas() {
-  const { accounts, products, presentations, tables } = useAdLicoreria();
+  const {
+    accounts,
+    products,
+    presentations,
+    tables,
+    closeAccount,
+  } = useAdLicoreria();
 
   return (
     <div className="space-y-4">
@@ -21,49 +32,74 @@ export default function AdLicoreriaCuentas() {
         <Link to={AD_LICORERIA_ROUTES.mesas} className="ad-btn">
           Mesas
         </Link>
+        <Link to={AD_LICORERIA_ROUTES.ventas} className="ad-btn">
+          Ventas
+        </Link>
       </div>
+
       <div className="ad-table-wrap">
         <table className="ad-table">
           <thead>
             <tr>
-              <th>Cuenta</th>
+              <th>ID</th>
               <th>Mesa</th>
+              <th>Cliente</th>
               <th>Mesonera</th>
+              <th>Apertura</th>
+              <th>Consumo</th>
+              <th>Total</th>
               <th>Estado</th>
-              <th>Prepago</th>
-              <th>Líneas</th>
-              <th>QR token</th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {accounts.map((a) => {
               const table = tables.find((t) => t.id === a.tableId);
+              const total = a.items.reduce(
+                (acc, it) => addPrices(acc, multiplyPrice(it.unitPrice, it.qty)),
+                { usd: 0, bs: 0 },
+              );
               return (
                 <tr key={a.id}>
                   <td>#{a.number}</td>
                   <td>{table?.number ?? "—"}</td>
+                  <td>{a.customerName ?? "—"}</td>
                   <td>{a.mesoneraName ?? "—"}</td>
-                  <td>{a.status}</td>
-                  <td>{a.prepaid ? "Sí" : "No"}</td>
+                  <td>{new Date(a.openedAt).toLocaleString("es-VE")}</td>
                   <td>
-                    {a.lines.map((l) => {
+                    {a.items.map((l) => {
                       const p = products.find((x) => x.id === l.productId);
                       const pr = presentations.find(
                         (x) => x.id === l.presentationId,
                       );
                       return (
-                        <div key={`${l.productId}-${l.presentationId}`}>
-                          {p?.name} ({pr?.name}): pagadas {l.qtyPaid} ·
-                          servidas {l.qtyServed} · disp.{" "}
-                          {accountAvailable(l.qtyPaid, l.qtyServed)}
+                        <div key={l.id}>
+                          {p?.name} ({pr?.name}): {l.qtyServed}/{l.qty} · disp.{" "}
+                          {accountAvailable(l.qty, l.qtyServed)}
                         </div>
                       );
                     })}
+                    {!a.items.length ? "—" : null}
+                  </td>
+                  <td>{formatAdPrice(total)}</td>
+                  <td>
+                    <span className="ad-badge">{a.status}</span>
                   </td>
                   <td>
-                    <code className="text-xs text-[var(--ad-gold-soft)]">
-                      {a.qrToken}
-                    </code>
+                    {a.status !== "CERRADA" && a.status !== "CANCELADA" ? (
+                      <button
+                        type="button"
+                        className="ad-btn"
+                        onClick={() =>
+                          closeAccount({
+                            accountId: a.id,
+                            userName: "Admin A&D",
+                          })
+                        }
+                      >
+                        Cerrar
+                      </button>
+                    ) : null}
                   </td>
                 </tr>
               );
@@ -71,9 +107,6 @@ export default function AdLicoreriaCuentas() {
           </tbody>
         </table>
       </div>
-      <Link to={AD_LICORERIA_ROUTES.qr} className="ad-btn">
-        Ver consulta QR
-      </Link>
     </div>
   );
 }

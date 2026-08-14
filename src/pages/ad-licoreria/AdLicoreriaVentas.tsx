@@ -1,19 +1,19 @@
 import { useMemo, useState } from "react";
-import { formatAdPrice, toBaseUnits } from "@/lib/ad-licoreria/conversions";
+import {
+  formatAdPrice,
+  toBaseUnits,
+} from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import type {
-  AdPaymentLine,
   AdPaymentMethod,
-  AdSaleLine,
+  AdSaleItem,
 } from "@/types/ad-licoreria";
 
 const PAY_METHODS: { id: AdPaymentMethod; label: string }[] = [
   { id: "efectivo_usd", label: "Efectivo USD" },
-  { id: "efectivo_bs", label: "Efectivo BS" },
-  { id: "pago_movil", label: "Pago móvil" },
+  { id: "efectivo_bs", label: "Efectivo Bs" },
   { id: "transferencia", label: "Transferencia" },
-  { id: "zelle", label: "Zelle" },
-  { id: "punto_venta", label: "Punto de venta" },
+  { id: "pago_movil", label: "Pago móvil" },
   { id: "qr", label: "QR" },
   { id: "otro", label: "Otro" },
 ];
@@ -22,46 +22,63 @@ export default function AdLicoreriaVentas() {
   const {
     products,
     presentations,
+    tables,
+    operators,
+    customers,
     getPresentationsFor,
     getStock,
     completeSale,
+    openAccount,
+    addAccountItem,
+    createPrepaid,
   } = useAdLicoreria();
+
+  const mesoneras = operators.filter((o) => o.role === "mesonera" && o.active);
+  const [query, setQuery] = useState("");
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [presentationId, setPresentationId] = useState("");
   const [qty, setQty] = useState(1);
-  const [lines, setLines] = useState<AdSaleLine[]>([]);
+  const [tableId, setTableId] = useState("");
+  const [mesoneraId, setMesoneraId] = useState(mesoneras[0]?.id ?? "");
+  const [customerId, setCustomerId] = useState("");
+  const [cart, setCart] = useState<AdSaleItem[]>([]);
   const [payMethod, setPayMethod] = useState<AdPaymentMethod>("efectivo_usd");
   const [payAmount, setPayAmount] = useState("");
-  const [payments, setPayments] = useState<AdPaymentLine[]>([]);
+  const [payments, setPayments] = useState<
+    { method: AdPaymentMethod; currency: "USD" | "BS"; amount: number }[]
+  >([]);
   const [msg, setMsg] = useState("");
 
-  const availablePres = useMemo(
-    () => getPresentationsFor(productId),
-    [getPresentationsFor, productId],
-  );
+  const filteredProducts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return products.filter((p) => p.active);
+    return products.filter(
+      (p) =>
+        p.active &&
+        (p.name.toLowerCase().includes(q) ||
+          p.sku.toLowerCase().includes(q) ||
+          p.brand.toLowerCase().includes(q)),
+    );
+  }, [products, query]);
 
+  const availablePres = getPresentationsFor(productId);
   const activePres =
     presentations.find((p) => p.id === presentationId) ?? availablePres[0];
-
-  const totalUsd = lines.reduce((a, l) => a + l.unitPrice.usd * l.qty, 0);
-  const paidUsd = payments
-    .filter((p) => p.currency === "USD")
-    .reduce((a, p) => a + p.amount, 0);
+  const mesonera = operators.find((o) => o.id === mesoneraId);
+  const customer = customers.find((c) => c.id === customerId);
+  const totalUsd = cart.reduce((a, l) => a + l.unitPrice.usd * l.qty, 0);
 
   function addLine() {
     const pres = activePres;
     if (!pres) return;
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
-    const qtyBase = toBaseUnits(pres, qty);
-    setLines((prev) => [
+    setCart((prev) => [
       ...prev,
       {
         productId,
         presentationId: pres.id,
         qty,
         unitPrice: { ...pres.price },
-        qtyBase,
+        qtyBase: toBaseUnits(pres, qty),
       },
     ]);
     setMsg("");
@@ -70,92 +87,188 @@ export default function AdLicoreriaVentas() {
   function addPayment() {
     const amount = Number(payAmount);
     if (!amount || amount <= 0) return;
-    const currency = payMethod.includes("bs") ? "BS" : "USD";
-    setPayments((p) => [
-      ...p,
-      { method: payMethod, currency, amount },
-    ]);
+    const currency = payMethod === "efectivo_bs" ? "BS" : "USD";
+    setPayments((p) => [...p, { method: payMethod, currency, amount }]);
     setPayAmount("");
   }
 
   function checkout() {
     const result = completeSale({
-      lines,
+      items: cart,
       payments,
-      warehouseId: "wh-barra",
-      userName: "Cajero",
+      warehouseId: "wh-2",
+      userName: mesonera?.name ?? "Cajero",
+      tableId: tableId || undefined,
+      mesoneraName: mesonera?.name,
+      customerName: customer?.name,
     });
     if (!result.ok) {
       setMsg(result.error);
       return;
     }
-    setLines([]);
+    setCart([]);
     setPayments([]);
-    setMsg(`Venta registrada · $${result.sale.total.usd.toFixed(2)}`);
+    setMsg(`Venta OK · $${result.data.total.usd.toFixed(2)}`);
+  }
+
+  function leaveOpen() {
+    if (!cart.length) {
+      setMsg("Agregue productos");
+      return;
+    }
+    const opened = openAccount({
+      tableId: tableId || undefined,
+      mesoneraId: mesonera?.id,
+      mesoneraName: mesonera?.name ?? "Mesonera",
+      customerId: customer?.id,
+      customerName: customer?.name,
+    });
+    if (!opened.ok) {
+      setMsg(opened.error);
+      return;
+    }
+    for (const line of cart) {
+      const r = addAccountItem({
+        accountId: opened.data.id,
+        productId: line.productId,
+        presentationId: line.presentationId,
+        qty: line.qty,
+        userName: mesonera?.name ?? "Mesonera",
+        deductStock: true,
+        warehouseId: "wh-2",
+      });
+      if (!r.ok) {
+        setMsg(r.error);
+        return;
+      }
+    }
+    setCart([]);
+    setPayments([]);
+    setMsg(`Cuenta abierta #${opened.data.number}`);
+  }
+
+  function toPrepaid() {
+    if (!cart.length) {
+      setMsg("Agregue productos");
+      return;
+    }
+    const result = createPrepaid({
+      customerId: customer?.id,
+      customerName: customer?.name,
+      items: cart.map((c) => ({
+        productId: c.productId,
+        presentationId: c.presentationId,
+        qty: c.qty,
+      })),
+      userName: mesonera?.name ?? "Cajero",
+    });
+    if (!result.ok) {
+      setMsg(result.error);
+      return;
+    }
+    setCart([]);
+    setPayments([]);
+    setMsg(`Prepago ${result.data.code} · QR listo`);
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+    <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
       <section className="ad-panel space-y-3">
-        <h2 className="ad-panel-title">Agregar producto</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1 text-xs text-[var(--ad-muted)]">
-            Producto
-            <select
-              className="ad-select"
-              value={productId}
-              onChange={(e) => {
-                setProductId(e.target.value);
+        <h2 className="ad-panel-title">Centro de ventas</h2>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <select
+            className="ad-select"
+            value={tableId}
+            onChange={(e) => setTableId(e.target.value)}
+          >
+            <option value="">Sin mesa</option>
+            {tables
+              .filter((t) => t.active)
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  Mesa {t.number} ({t.status})
+                </option>
+              ))}
+          </select>
+          <select
+            className="ad-select"
+            value={mesoneraId}
+            onChange={(e) => setMesoneraId(e.target.value)}
+          >
+            {mesoneras.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="ad-select"
+            value={customerId}
+            onChange={(e) => setCustomerId(e.target.value)}
+          >
+            <option value="">Cliente opcional</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <input
+          className="ad-input"
+          placeholder="Buscar producto, SKU o marca…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+
+        <div className="grid max-h-40 gap-1 overflow-auto sm:grid-cols-2">
+          {filteredProducts.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`ad-btn text-left ${productId === p.id ? "ad-btn--primary" : ""}`}
+              onClick={() => {
+                setProductId(p.id);
                 setPresentationId("");
               }}
             >
-              {products
-                .filter((p) => p.active)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="space-y-1 text-xs text-[var(--ad-muted)]">
-            Presentación
-            <select
-              className="ad-select"
-              value={activePres?.id ?? ""}
-              onChange={(e) => setPresentationId(e.target.value)}
-            >
-              {availablePres.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.unitsPerPresentation} u.) · {formatAdPrice(p.price)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-1 text-xs text-[var(--ad-muted)]">
-            Cantidad
-            <input
-              className="ad-input"
-              type="number"
-              min={1}
-              value={qty}
-              onChange={(e) => setQty(Number(e.target.value))}
-            />
-          </label>
-          <div className="flex items-end">
-            <button type="button" className="ad-btn ad-btn--primary w-full" onClick={addLine}>
-              Agregar
+              {p.name}
             </button>
-          </div>
+          ))}
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[1.4fr_0.6fr_auto]">
+          <select
+            className="ad-select"
+            value={activePres?.id ?? ""}
+            onChange={(e) => setPresentationId(e.target.value)}
+          >
+            {availablePres.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.unitsPerPresentation} u.) · {formatAdPrice(p.price)}
+              </option>
+            ))}
+          </select>
+          <input
+            className="ad-input"
+            type="number"
+            min={1}
+            value={qty}
+            onChange={(e) => setQty(Number(e.target.value))}
+          />
+          <button type="button" className="ad-btn ad-btn--gold" onClick={addLine}>
+            + Agregar
+          </button>
         </div>
         <p className="text-xs text-[var(--ad-muted)]">
-          Stock barra:{" "}
+          Stock Depósito 2:{" "}
           <strong className="text-[var(--ad-gold-soft)]">
-            {getStock(productId, "wh-barra")}
+            {getStock(productId, "wh-2")}
           </strong>{" "}
-          unidades base
+          u. base
           {activePres
-            ? ` · esta línea = ${toBaseUnits(activePres, qty)} u. base`
+            ? ` · línea = ${toBaseUnits(activePres, qty)} u. base`
             : null}
         </p>
 
@@ -168,26 +281,45 @@ export default function AdLicoreriaVentas() {
                 <th>Cant.</th>
                 <th>Base</th>
                 <th>Total</th>
+                <th />
               </tr>
             </thead>
             <tbody>
-              {lines.map((l, i) => {
+              {cart.map((l, i) => {
                 const prod = products.find((p) => p.id === l.productId);
-                const pres = presentations.find((p) => p.id === l.presentationId);
+                const pres = presentations.find(
+                  (p) => p.id === l.presentationId,
+                );
                 return (
                   <tr key={`${l.presentationId}-${i}`}>
                     <td>{prod?.name}</td>
                     <td>{pres?.name}</td>
                     <td>{l.qty}</td>
                     <td>{l.qtyBase}</td>
-                    <td>{formatAdPrice({ usd: l.unitPrice.usd * l.qty, bs: l.unitPrice.bs * l.qty })}</td>
+                    <td>
+                      {formatAdPrice({
+                        usd: l.unitPrice.usd * l.qty,
+                        bs: l.unitPrice.bs * l.qty,
+                      })}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="ad-btn"
+                        onClick={() =>
+                          setCart((c) => c.filter((_, idx) => idx !== i))
+                        }
+                      >
+                        Quitar
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
-              {!lines.length ? (
+              {!cart.length ? (
                 <tr>
-                  <td colSpan={5} className="text-[var(--ad-muted)]">
-                    Sin ítems
+                  <td colSpan={6} className="text-[var(--ad-muted)]">
+                    Carrito vacío
                   </td>
                 </tr>
               ) : null}
@@ -197,8 +329,8 @@ export default function AdLicoreriaVentas() {
       </section>
 
       <section className="ad-panel space-y-3">
-        <h2 className="ad-panel-title">Pago (puede ser mixto)</h2>
-        <p className="ad-display text-3xl text-[var(--ad-gold-soft)]">
+        <h2 className="ad-panel-title">Cobro / cuenta</h2>
+        <p className="ad-display text-4xl text-[var(--ad-gold-soft)]">
           ${totalUsd.toFixed(2)}
         </p>
         <div className="grid gap-2">
@@ -230,12 +362,17 @@ export default function AdLicoreriaVentas() {
             </li>
           ))}
         </ul>
-        <p className="text-xs text-[var(--ad-muted)]">
-          Pagado USD: ${paidUsd.toFixed(2)}
-        </p>
-        <button type="button" className="ad-btn ad-btn--gold w-full" onClick={checkout}>
-          Cerrar venta
-        </button>
+        <div className="grid gap-2">
+          <button type="button" className="ad-btn ad-btn--gold" onClick={checkout}>
+            Cobrar y cerrar
+          </button>
+          <button type="button" className="ad-btn ad-btn--primary" onClick={leaveOpen}>
+            Dejar cuenta abierta
+          </button>
+          <button type="button" className="ad-btn" onClick={toPrepaid}>
+            Convertir a prepago + QR
+          </button>
+        </div>
         {msg ? <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p> : null}
       </section>
     </div>

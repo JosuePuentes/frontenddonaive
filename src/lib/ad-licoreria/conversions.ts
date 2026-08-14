@@ -1,6 +1,6 @@
-import type { AdPresentation, AdPrice } from "@/types/ad-licoreria";
+import type { AdAppSettings, AdPresentation, AdPrice } from "@/types/ad-licoreria";
 
-/** Convierte cantidad de presentación → unidades base. */
+/** Convierte cantidad de presentación → unidades base (conversión configurable). */
 export function toBaseUnits(
   presentation: Pick<AdPresentation, "unitsPerPresentation">,
   qtyPresentation: number,
@@ -8,7 +8,6 @@ export function toBaseUnits(
   return qtyPresentation * presentation.unitsPerPresentation;
 }
 
-/** Convierte unidades base → cantidad de presentación (puede ser fraccional). */
 export function fromBaseUnits(
   presentation: Pick<AdPresentation, "unitsPerPresentation">,
   qtyBase: number,
@@ -41,7 +40,31 @@ export function addPrices(...prices: AdPrice[]): AdPrice {
   );
 }
 
-/** Disponibles en presentación = pagadas − servidas. */
-export function accountAvailable(qtyPaid: number, qtyServed: number): number {
-  return Math.max(0, qtyPaid - qtyServed);
+export function accountAvailable(qty: number, qtyServed: number): number {
+  return Math.max(0, qty - qtyServed);
+}
+
+export function prepaidAvailable(purchased: number, consumed: number): number {
+  return Math.max(0, purchased - consumed);
+}
+
+/** Solo sugerencia: el precio Bs sigue siendo editable y no se fuerza. */
+export function suggestBsFromUsd(
+  usd: number,
+  settings: Pick<AdAppSettings, "exchangeRateUsdToBs">,
+): number {
+  return Number((usd * settings.exchangeRateUsdToBs).toFixed(2));
+}
+
+export function uid(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function nextAccountNumber(seq: number): string {
+  return String(seq).padStart(6, "0");
+}
+
+export function nextPrepaidCode(seq: number): string {
+  const year = new Date().getFullYear();
+  return `A&D-${year}-${String(seq).padStart(6, "0")}`;
 }

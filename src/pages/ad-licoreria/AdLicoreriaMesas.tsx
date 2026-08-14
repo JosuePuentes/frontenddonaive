@@ -8,12 +8,16 @@ export default function AdLicoreriaMesas() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-[var(--ad-muted)]">
-        Mesas con estado operativo. La mesonera opera desde una interfaz
-        simplificada sin el panel admin completo.
+        Estados: disponible, ocupada, cuenta abierta, cuenta prepagada, cerrada.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {tables.map((t) => {
-          const account = accounts.find((a) => a.tableId === t.id);
+          const account = accounts.find(
+            (a) =>
+              a.tableId === t.id &&
+              a.status !== "CERRADA" &&
+              a.status !== "CANCELADA",
+          );
           return (
             <article key={t.id} className="ad-panel">
               <p className="ad-eyebrow">Mesa</p>
@@ -23,13 +27,13 @@ export default function AdLicoreriaMesas() {
               <p className="mt-2 text-sm text-[var(--ad-muted)]">
                 Capacidad {t.capacity}
               </p>
-              <span className="ad-badge mt-3">{t.status.replace("_", " ")}</span>
+              <span className="ad-badge mt-3">{t.status.replace(/_/g, " ")}</span>
               {account ? (
                 <p className="mt-3 text-sm">
                   Cuenta #{account.number}
                   <br />
                   <span className="text-[var(--ad-muted)]">
-                    {account.mesoneraName ?? "Sin mesonera"}
+                    {account.mesoneraName ?? "Sin mesonera"} · {account.status}
                   </span>
                 </p>
               ) : null}

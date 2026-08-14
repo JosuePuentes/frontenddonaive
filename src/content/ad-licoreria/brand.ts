@@ -1,7 +1,6 @@
 /**
  * Identidad A&D Licorería & Bodegón.
- * El logo oficial se coloca en public/ad-licoreria/logo/oficial.png
- * — no inventar ni reemplazar el logo del propietario.
+ * Logo oficial: public/ad-licoreria/logo/oficial.png (no inventar).
  */
 export const AD_LICORERIA_MEDIA = {
   logo: "/ad-licoreria/logo/oficial.png",
@@ -12,5 +11,5 @@ export const adLicoreriaBrand = {
   tagline: "LICORERÍA & BODEGÓN",
   short: "A&D Licorería",
   description:
-    "Portal operativo para ventas, inventario por presentaciones, mesas, prepagos y control de caja.",
+    "Sistema operativo para ventas, mesas, prepagos, inventario por presentaciones y cierres.",
 } as const;

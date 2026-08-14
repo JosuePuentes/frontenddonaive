@@ -1,32 +1,73 @@
+/**
+ * Seed mock A&D — separado de la UI y de cualquier API real.
+ */
 import type {
   AdAccount,
+  AdAppSettings,
   AdAuditEvent,
-  AdCashSession,
+  AdCategory,
   AdCustomer,
+  AdDailyClosure,
+  AdInventoryClosure,
+  AdInventoryItem,
   AdInventoryMovement,
+  AdOperator,
+  AdPrepaidAccount,
+  AdPrepaidConsumption,
   AdPresentation,
   AdProduct,
   AdSale,
   AdServiceLog,
-  AdStockBalance,
   AdTable,
   AdWarehouse,
 } from "@/types/ad-licoreria";
 
 const now = () => new Date().toISOString();
 
+export const AD_DEMO_SETTINGS: AdAppSettings = {
+  exchangeRateUsdToBs: 370,
+  suggestBsFromRate: true,
+  brandName: "A&D",
+  brandTagline: "LICORERÍA & BODEGÓN",
+};
+
+export const AD_DEMO_OPERATORS: AdOperator[] = [
+  { id: "op-admin", name: "Admin A&D", role: "admin", active: true },
+  { id: "op-maria", name: "María", role: "mesonera", active: true },
+  { id: "op-carlos", name: "Carlos", role: "mesonera", active: true },
+  { id: "op-caja", name: "Cajero", role: "cajero", active: true },
+  { id: "op-inv", name: "Inventario", role: "inventario", active: true },
+];
+
+export const AD_DEMO_CATEGORIES: AdCategory[] = [
+  { id: "cat-cerveza", name: "Cervezas", slug: "cervezas", active: true },
+  { id: "cat-licor", name: "Licores", slug: "licores", active: true },
+  { id: "cat-whisky", name: "Whisky", slug: "whisky", active: true },
+  { id: "cat-ron", name: "Ron", slug: "ron", active: true },
+  { id: "cat-vodka", name: "Vodka", slug: "vodka", active: true },
+  { id: "cat-ginebra", name: "Ginebra", slug: "ginebra", active: true },
+  { id: "cat-tequila", name: "Tequila", slug: "tequila", active: true },
+  { id: "cat-vino", name: "Vinos", slug: "vinos", active: true },
+  { id: "cat-refresco", name: "Refrescos", slug: "refrescos", active: true },
+  { id: "cat-agua", name: "Agua", slug: "agua", active: true },
+  { id: "cat-hielo", name: "Hielo", slug: "hielo", active: true },
+  { id: "cat-snack", name: "Snacks", slug: "snacks", active: true },
+  { id: "cat-comida", name: "Comida", slug: "comida", active: true },
+  { id: "cat-otro", name: "Otros", slug: "otros", active: true },
+];
+
 export const AD_DEMO_WAREHOUSES: AdWarehouse[] = [
   {
-    id: "wh-principal",
-    name: "Depósito principal",
-    code: "PRINCIPAL",
+    id: "wh-1",
+    name: "Depósito 1",
+    code: "DEP1",
     kind: "principal",
     active: true,
   },
   {
-    id: "wh-barra",
-    name: "Depósito barra / venta",
-    code: "BARRA",
+    id: "wh-2",
+    name: "Depósito 2 / Barra",
+    code: "DEP2",
     kind: "barra",
     active: true,
   },
@@ -34,15 +75,28 @@ export const AD_DEMO_WAREHOUSES: AdWarehouse[] = [
 
 export const AD_DEMO_PRODUCTS: AdProduct[] = [
   {
+    id: "prod-regional",
+    name: "Cerveza Regional",
+    brand: "Regional",
+    categoryId: "cat-cerveza",
+    sku: "CER-REG",
+    barcode: "7591001000100",
+    description: "Cerveza Regional",
+    baseUnitLabel: "unidad",
+    cost: { usd: 0.5, bs: 185 },
+    minStockBase: 48,
+    active: true,
+    createdAt: now(),
+  },
+  {
     id: "prod-polar",
     name: "Cerveza Polar",
     brand: "Polar",
-    category: "cerveza",
+    categoryId: "cat-cerveza",
     sku: "CER-POLAR",
-    barcode: "7591001000011",
-    description: "Cerveza Polar Pilsen",
-    baseUnitLabel: "cerveza",
-    cost: { usd: 0.55, bs: 55 },
+    baseUnitLabel: "unidad",
+    cost: { usd: 0.55, bs: 200 },
+    minStockBase: 36,
     active: true,
     createdAt: now(),
   },
@@ -50,10 +104,23 @@ export const AD_DEMO_PRODUCTS: AdProduct[] = [
     id: "prod-ron",
     name: "Ron Santa Teresa Gran Reserva",
     brand: "Santa Teresa",
-    category: "ron",
+    categoryId: "cat-ron",
     sku: "RON-ST-GR",
     baseUnitLabel: "botella",
-    cost: { usd: 12, bs: 1200 },
+    cost: { usd: 12, bs: 4440 },
+    minStockBase: 6,
+    active: true,
+    createdAt: now(),
+  },
+  {
+    id: "prod-refresco",
+    name: "Refresco 1.5L",
+    brand: "Pepsi",
+    categoryId: "cat-refresco",
+    sku: "REF-15",
+    baseUnitLabel: "unidad",
+    cost: { usd: 0.9, bs: 330 },
+    minStockBase: 12,
     active: true,
     createdAt: now(),
   },
@@ -61,34 +128,51 @@ export const AD_DEMO_PRODUCTS: AdProduct[] = [
     id: "prod-agua",
     name: "Agua mineral 600ml",
     brand: "Minalba",
-    category: "agua",
+    categoryId: "cat-agua",
     sku: "AGU-600",
     baseUnitLabel: "unidad",
-    cost: { usd: 0.3, bs: 30 },
-    active: true,
-    createdAt: now(),
-  },
-  {
-    id: "prod-snack",
-    name: "Doritos Nacho",
-    brand: "Doritos",
-    category: "snack",
-    sku: "SNK-DOR",
-    baseUnitLabel: "unidad",
-    cost: { usd: 0.8, bs: 80 },
+    cost: { usd: 0.3, bs: 110 },
+    minStockBase: 24,
     active: true,
     createdAt: now(),
   },
 ];
 
-/** Presentaciones: inventario interno siempre en unidad base. */
+/** Conversiones configurables (no hardcodeadas en lógica de negocio). */
 export const AD_DEMO_PRESENTATIONS: AdPresentation[] = [
+  {
+    id: "pres-reg-1",
+    productId: "prod-regional",
+    name: "Individual",
+    code: "REG-1",
+    unitsPerPresentation: 1,
+    price: { usd: 1, bs: 370 },
+    active: true,
+  },
+  {
+    id: "pres-reg-balde",
+    productId: "prod-regional",
+    name: "Balde",
+    code: "REG-BALDE",
+    unitsPerPresentation: 10,
+    price: { usd: 5, bs: 1850 },
+    active: true,
+  },
+  {
+    id: "pres-reg-caja",
+    productId: "prod-regional",
+    name: "Caja",
+    code: "REG-CAJA",
+    unitsPerPresentation: 36,
+    price: { usd: 28, bs: 10360 },
+    active: true,
+  },
   {
     id: "pres-polar-1",
     productId: "prod-polar",
     name: "Individual",
     unitsPerPresentation: 1,
-    price: { usd: 1, bs: 100 },
+    price: { usd: 1, bs: 370 },
     active: true,
   },
   {
@@ -96,7 +180,7 @@ export const AD_DEMO_PRESENTATIONS: AdPresentation[] = [
     productId: "prod-polar",
     name: "Balde",
     unitsPerPresentation: 6,
-    price: { usd: 5, bs: 500 },
+    price: { usd: 5, bs: 1850 },
     active: true,
   },
   {
@@ -104,15 +188,23 @@ export const AD_DEMO_PRESENTATIONS: AdPresentation[] = [
     productId: "prod-polar",
     name: "Caja",
     unitsPerPresentation: 36,
-    price: { usd: 28, bs: 2800 },
+    price: { usd: 28, bs: 10360 },
     active: true,
   },
   {
-    id: "pres-ron-botella",
+    id: "pres-ron-1",
     productId: "prod-ron",
     name: "Botella 750ml",
     unitsPerPresentation: 1,
-    price: { usd: 22, bs: 2200 },
+    price: { usd: 22, bs: 8140 },
+    active: true,
+  },
+  {
+    id: "pres-ref-1",
+    productId: "prod-refresco",
+    name: "Unidad",
+    unitsPerPresentation: 1,
+    price: { usd: 1.5, bs: 555 },
     active: true,
   },
   {
@@ -120,65 +212,62 @@ export const AD_DEMO_PRESENTATIONS: AdPresentation[] = [
     productId: "prod-agua",
     name: "Unidad",
     unitsPerPresentation: 1,
-    price: { usd: 0.6, bs: 60 },
-    active: true,
-  },
-  {
-    id: "pres-agua-pack",
-    productId: "prod-agua",
-    name: "Pack x12",
-    unitsPerPresentation: 12,
-    price: { usd: 6, bs: 600 },
-    active: true,
-  },
-  {
-    id: "pres-snack-1",
-    productId: "prod-snack",
-    name: "Unidad",
-    unitsPerPresentation: 1,
-    price: { usd: 1.5, bs: 150 },
+    price: { usd: 0.6, bs: 220 },
     active: true,
   },
 ];
 
-export const AD_DEMO_STOCK: AdStockBalance[] = [
-  { productId: "prod-polar", warehouseId: "wh-principal", qtyBase: 1000 },
-  { productId: "prod-polar", warehouseId: "wh-barra", qtyBase: 120 },
-  { productId: "prod-ron", warehouseId: "wh-principal", qtyBase: 48 },
-  { productId: "prod-ron", warehouseId: "wh-barra", qtyBase: 6 },
-  { productId: "prod-agua", warehouseId: "wh-principal", qtyBase: 240 },
-  { productId: "prod-agua", warehouseId: "wh-barra", qtyBase: 36 },
-  { productId: "prod-snack", warehouseId: "wh-barra", qtyBase: 40 },
+export const AD_DEMO_INVENTORY: AdInventoryItem[] = [
+  { productId: "prod-regional", warehouseId: "wh-1", qtyBase: 1000 },
+  { productId: "prod-regional", warehouseId: "wh-2", qtyBase: 120 },
+  { productId: "prod-polar", warehouseId: "wh-1", qtyBase: 800 },
+  { productId: "prod-polar", warehouseId: "wh-2", qtyBase: 90 },
+  { productId: "prod-ron", warehouseId: "wh-1", qtyBase: 40 },
+  { productId: "prod-ron", warehouseId: "wh-2", qtyBase: 8 },
+  { productId: "prod-refresco", warehouseId: "wh-1", qtyBase: 200 },
+  { productId: "prod-refresco", warehouseId: "wh-2", qtyBase: 40 },
+  { productId: "prod-agua", warehouseId: "wh-1", qtyBase: 300 },
+  { productId: "prod-agua", warehouseId: "wh-2", qtyBase: 50 },
+];
+
+export const AD_DEMO_TABLES: AdTable[] = [
+  { id: "mesa-1", number: "1", capacity: 4, status: "disponible", active: true },
+  { id: "mesa-2", number: "2", capacity: 4, status: "ocupada", active: true },
+  {
+    id: "mesa-3",
+    number: "3",
+    capacity: 6,
+    status: "cuenta_abierta",
+    active: true,
+  },
+  {
+    id: "mesa-12",
+    number: "12",
+    capacity: 8,
+    status: "cuenta_prepagada",
+    active: true,
+  },
+  { id: "mesa-18", number: "18", capacity: 4, status: "disponible", active: true },
 ];
 
 export const AD_DEMO_CUSTOMERS: AdCustomer[] = [
   {
     id: "cli-1",
-    name: "Cliente mesa 12",
+    name: "Juan Pérez",
     phone: "0414-0000000",
-    notes: "Prepago cerveza frecuente",
+    documentId: "V-12345678",
+    notes: "Cliente frecuente — prepago cerveza",
     active: true,
+    createdAt: now(),
   },
   {
     id: "cli-2",
-    name: "Eventos corporativos",
+    name: "Eventos Corporativos",
     phone: "0424-1111111",
     notes: "Pedidos por caja",
     active: true,
+    createdAt: now(),
   },
-];
-
-export const AD_DEMO_TABLES: AdTable[] = [
-  { id: "mesa-1", number: "1", capacity: 4, status: "libre", active: true },
-  { id: "mesa-5", number: "5", capacity: 6, status: "ocupada", active: true },
-  {
-    id: "mesa-12",
-    number: "12",
-    capacity: 8,
-    status: "cuenta_abierta",
-    active: true,
-  },
-  { id: "mesa-18", number: "18", capacity: 4, status: "libre", active: true },
 ];
 
 export const AD_DEMO_ACCOUNTS: AdAccount[] = [
@@ -186,76 +275,180 @@ export const AD_DEMO_ACCOUNTS: AdAccount[] = [
     id: "acc-184",
     number: "000184",
     tableId: "mesa-12",
+    mesoneraId: "op-maria",
     mesoneraName: "María",
     customerId: "cli-1",
-    customerName: "Cliente mesa 12",
-    status: "prepago_activa",
+    customerName: "Juan Pérez",
+    status: "PREPAGADA",
     prepaid: true,
-    lines: [
+    items: [
       {
-        productId: "prod-polar",
-        presentationId: "pres-polar-1",
-        qtyPaid: 20,
+        id: "acci-1",
+        productId: "prod-regional",
+        presentationId: "pres-reg-1",
+        qty: 20,
         qtyServed: 5,
-        unitPrice: { usd: 1, bs: 100 },
+        unitPrice: { usd: 1, bs: 370 },
+        qtyBase: 20,
       },
     ],
-    qrToken: "ad_qr_demo_000184_x7k9m2",
+    payments: [
+      {
+        id: "pay-1",
+        method: "efectivo_usd",
+        currency: "USD",
+        amount: 20,
+        createdAt: now(),
+      },
+    ],
+    openedAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "acc-185",
+    number: "000185",
+    tableId: "mesa-3",
+    mesoneraId: "op-carlos",
+    mesoneraName: "Carlos",
+    status: "ABIERTA",
+    prepaid: false,
+    items: [
+      {
+        id: "acci-2",
+        productId: "prod-polar",
+        presentationId: "pres-polar-1",
+        qty: 8,
+        qtyServed: 8,
+        unitPrice: { usd: 1, bs: 370 },
+        qtyBase: 8,
+      },
+    ],
+    payments: [],
+    openedAt: now(),
+    updatedAt: now(),
+  },
+];
+
+export const AD_DEMO_PREPAIDS: AdPrepaidAccount[] = [
+  {
+    id: "pp-125",
+    code: "A&D-2026-000125",
+    qrToken: "ad_qr_pp_000125_x7k9m2",
+    customerId: "cli-1",
+    customerName: "Juan Pérez",
+    status: "ACTIVO",
+    items: [
+      {
+        id: "ppi-1",
+        productId: "prod-regional",
+        presentationId: "pres-reg-1",
+        qtyPurchased: 20,
+        qtyConsumed: 11,
+        unitPrice: { usd: 1, bs: 370 },
+        qtyBasePerUnit: 1,
+      },
+      {
+        id: "ppi-2",
+        productId: "prod-refresco",
+        presentationId: "pres-ref-1",
+        qtyPurchased: 3,
+        qtyConsumed: 1,
+        unitPrice: { usd: 1.5, bs: 555 },
+        qtyBasePerUnit: 1,
+      },
+      {
+        id: "ppi-3",
+        productId: "prod-agua",
+        presentationId: "pres-agua-1",
+        qtyPurchased: 2,
+        qtyConsumed: 2,
+        unitPrice: { usd: 0.6, bs: 220 },
+        qtyBasePerUnit: 1,
+      },
+    ],
     createdAt: now(),
     updatedAt: now(),
   },
 ];
 
-export const AD_DEMO_MOVEMENTS: AdInventoryMovement[] = [
+export const AD_DEMO_PREPAID_CONSUMPTIONS: AdPrepaidConsumption[] = [
   {
-    id: "mov-1",
-    type: "traslado",
-    productId: "prod-polar",
-    presentationId: "pres-polar-1",
-    qtyPresentation: 100,
-    qtyBase: 100,
-    warehouseFromId: "wh-principal",
-    warehouseToId: "wh-barra",
-    userName: "Admin",
-    reason: "Reposición barra",
-    createdAt: now(),
-  },
-];
-
-export const AD_DEMO_SALES: AdSale[] = [];
-export const AD_DEMO_SERVICE_LOGS: AdServiceLog[] = [
-  {
-    id: "svc-1",
-    accountId: "acc-184",
-    tableId: "mesa-12",
-    productId: "prod-polar",
-    presentationId: "pres-polar-1",
-    qtyServed: 3,
-    qtyBase: 3,
+    id: "ppc-1",
+    prepaidId: "pp-125",
+    productId: "prod-regional",
+    presentationId: "pres-reg-1",
+    qty: 4,
+    qtyBase: 4,
     mesoneraName: "María",
     createdAt: now(),
   },
   {
-    id: "svc-2",
-    accountId: "acc-184",
-    tableId: "mesa-12",
-    productId: "prod-polar",
-    presentationId: "pres-polar-1",
-    qtyServed: 2,
+    id: "ppc-2",
+    prepaidId: "pp-125",
+    productId: "prod-regional",
+    presentationId: "pres-reg-1",
+    qty: 7,
+    qtyBase: 7,
+    mesoneraName: "María",
+    createdAt: now(),
+  },
+  {
+    id: "ppc-3",
+    prepaidId: "pp-125",
+    productId: "prod-refresco",
+    presentationId: "pres-ref-1",
+    qty: 1,
+    qtyBase: 1,
+    mesoneraName: "Carlos",
+    createdAt: now(),
+  },
+  {
+    id: "ppc-4",
+    prepaidId: "pp-125",
+    productId: "prod-agua",
+    presentationId: "pres-agua-1",
+    qty: 2,
     qtyBase: 2,
     mesoneraName: "María",
     createdAt: now(),
   },
 ];
 
-export const AD_DEMO_CASH: AdCashSession = {
-  id: "cash-1",
-  openedAt: now(),
-  openedBy: "Cajero",
-  openingFloatUsd: 50,
-  openingFloatBs: 5000,
-  status: "open",
-};
+export const AD_DEMO_MOVEMENTS: AdInventoryMovement[] = [
+  {
+    id: "mov-1",
+    type: "TRASLADO_SALIDA",
+    productId: "prod-regional",
+    presentationId: "pres-reg-1",
+    qtyPresentation: 100,
+    qtyBase: 100,
+    warehouseId: "wh-1",
+    warehouseFromId: "wh-1",
+    warehouseToId: "wh-2",
+    userName: "Admin A&D",
+    reason: "Reposición Depósito 2",
+    createdAt: now(),
+  },
+  {
+    id: "mov-2",
+    type: "TRASLADO_ENTRADA",
+    productId: "prod-regional",
+    presentationId: "pres-reg-1",
+    qtyPresentation: 100,
+    qtyBase: 100,
+    warehouseId: "wh-2",
+    warehouseFromId: "wh-1",
+    warehouseToId: "wh-2",
+    userName: "Admin A&D",
+    reason: "Reposición Depósito 2",
+    createdAt: now(),
+  },
+];
+
+export const AD_DEMO_SALES: AdSale[] = [];
+export const AD_DEMO_SERVICE_LOGS: AdServiceLog[] = [];
+export const AD_DEMO_DAILY_CLOSURES: AdDailyClosure[] = [];
+export const AD_DEMO_INVENTORY_CLOSURES: AdInventoryClosure[] = [];
 
 export const AD_DEMO_AUDIT: AdAuditEvent[] = [
   {
@@ -263,17 +456,8 @@ export const AD_DEMO_AUDIT: AdAuditEvent[] = [
     action: "traslado",
     entity: "inventario",
     entityId: "mov-1",
-    userName: "Admin",
-    detail: "100 cervezas Polar: Principal → Barra",
-    createdAt: now(),
-  },
-  {
-    id: "aud-2",
-    action: "servicio",
-    entity: "cuenta",
-    entityId: "acc-184",
-    userName: "María",
-    detail: "Sirvió 3 cervezas en mesa 12",
+    userName: "Admin A&D",
+    detail: "100 Regional: DEP1 → DEP2",
     createdAt: now(),
   },
 ];

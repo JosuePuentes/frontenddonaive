@@ -1,83 +1,151 @@
 import { Link } from "react-router";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import { prepaidAvailable } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
-import { accountAvailable } from "@/lib/ad-licoreria/conversions";
 
 export default function AdLicoreriaInicio() {
-  const { products, stock, accounts, tables, sales, cash, movements } =
-    useAdLicoreria();
-  const totalBase = stock.reduce((a, s) => a + s.qtyBase, 0);
-  const openTables = tables.filter((t) => t.status !== "libre").length;
-  const prepaid = accounts.filter((a) => a.prepaid && a.status !== "cerrada");
-  const availablePrepaid = prepaid.reduce(
-    (acc, a) =>
+  const {
+    products,
+    inventory,
+    accounts,
+    tables,
+    sales,
+    prepaids,
+    movements,
+    audit,
+  } = useAdLicoreria();
+
+  const totalBase = inventory.reduce((a, s) => a + s.qtyBase, 0);
+  const openTables = tables.filter((t) => t.status !== "disponible").length;
+  const openAccounts = accounts.filter(
+    (a) =>
+      a.status === "ABIERTA" ||
+      a.status === "PREPAGADA" ||
+      a.status === "PARCIALMENTE_PAGADA",
+  );
+  const activePrepaids = prepaids.filter((p) => p.status === "ACTIVO");
+  const prepaidUnits = activePrepaids.reduce(
+    (acc, p) =>
       acc +
-      a.lines.reduce((x, l) => x + accountAvailable(l.qtyPaid, l.qtyServed), 0),
+      p.items.reduce(
+        (x, i) => x + prepaidAvailable(i.qtyPurchased, i.qtyConsumed),
+        0,
+      ),
     0,
   );
+  const salesUsd = sales.reduce((a, s) => a + s.total.usd, 0);
+  const salesBs = sales.reduce((a, s) => a + s.total.bs, 0);
+  const lowStock = products.filter((p) => {
+    const qty = inventory
+      .filter((i) => i.productId === p.id)
+      .reduce((a, i) => a + i.qtyBase, 0);
+    return qty < p.minStockBase;
+  });
 
   return (
     <div className="space-y-5">
       <div className="ad-grid-stats">
         <div className="ad-stat">
-          <div className="ad-stat__value">{products.filter((p) => p.active).length}</div>
-          <div className="ad-stat__label">Productos activos</div>
+          <div className="ad-stat__value">${salesUsd.toFixed(0)}</div>
+          <div className="ad-stat__label">Ventas USD hoy</div>
         </div>
         <div className="ad-stat">
-          <div className="ad-stat__value">{totalBase}</div>
-          <div className="ad-stat__label">Unidades base en stock</div>
+          <div className="ad-stat__value">
+            Bs {salesBs.toLocaleString("es-VE", { maximumFractionDigits: 0 })}
+          </div>
+          <div className="ad-stat__label">Ventas Bs hoy</div>
+        </div>
+        <div className="ad-stat">
+          <div className="ad-stat__value">{openAccounts.length}</div>
+          <div className="ad-stat__label">Cuentas abiertas</div>
         </div>
         <div className="ad-stat">
           <div className="ad-stat__value">{openTables}</div>
           <div className="ad-stat__label">Mesas ocupadas</div>
         </div>
         <div className="ad-stat">
-          <div className="ad-stat__value">{availablePrepaid}</div>
+          <div className="ad-stat__value">{prepaidUnits}</div>
           <div className="ad-stat__label">Prepago disponible</div>
         </div>
         <div className="ad-stat">
-          <div className="ad-stat__value">{sales.length}</div>
-          <div className="ad-stat__label">Ventas sesión</div>
+          <div className="ad-stat__value">{lowStock.length}</div>
+          <div className="ad-stat__label">Stock bajo</div>
         </div>
         <div className="ad-stat">
-          <div className="ad-stat__value">
-            {cash.status === "open" ? "ABIERTA" : "CERRADA"}
-          </div>
-          <div className="ad-stat__label">Caja</div>
+          <div className="ad-stat__value">{totalBase}</div>
+          <div className="ad-stat__label">Unidades base stock</div>
+        </div>
+        <div className="ad-stat">
+          <div className="ad-stat__value">{sales.length}</div>
+          <div className="ad-stat__label">Tickets venta</div>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="ad-panel">
-          <h2 className="ad-panel-title">Accesos rápidos</h2>
+          <h2 className="ad-panel-title">Operación rápida</h2>
           <div className="flex flex-wrap gap-2">
             <Link to={AD_LICORERIA_ROUTES.ventas} className="ad-btn ad-btn--gold">
               Ventas
             </Link>
-            <Link to={AD_LICORERIA_ROUTES.inventario} className="ad-btn">
-              Inventario
-            </Link>
-            <Link to={AD_LICORERIA_ROUTES.depositos} className="ad-btn">
-              Transferir
+            <Link to={AD_LICORERIA_ROUTES.mesonera} className="ad-btn ad-btn--primary">
+              Mesonera
             </Link>
             <Link to={AD_LICORERIA_ROUTES.cuentas} className="ad-btn">
               Cuentas
             </Link>
-            <Link to={AD_LICORERIA_ROUTES.clientes} className="ad-btn">
-              Clientes
+            <Link to={AD_LICORERIA_ROUTES.prepagos} className="ad-btn">
+              Prepagos
             </Link>
-            <Link to={AD_LICORERIA_ROUTES.mesonera} className="ad-btn">
-              Mesonera
+            <Link to={AD_LICORERIA_ROUTES.depositos} className="ad-btn">
+              Depósitos
+            </Link>
+            <Link to={AD_LICORERIA_ROUTES.cierres} className="ad-btn">
+              Cierres
             </Link>
           </div>
         </section>
+
         <section className="ad-panel">
-          <h2 className="ad-panel-title">Últimos movimientos</h2>
+          <h2 className="ad-panel-title">Stock bajo</h2>
+          {lowStock.length ? (
+            <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
+              {lowStock.map((p) => (
+                <li key={p.id}>
+                  {p.name} · mín. {p.minStockBase} {p.baseUnitLabel}s
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-[var(--ad-muted)]">Sin alertas</p>
+          )}
+        </section>
+
+        <section className="ad-panel">
+          <h2 className="ad-panel-title">Últimas ventas</h2>
           <ul className="space-y-2 text-sm text-[var(--ad-muted)]">
-            {movements.slice(0, 5).map((m) => (
+            {sales.slice(0, 5).map((s) => (
+              <li key={s.id}>
+                ${s.total.usd.toFixed(2)} · {s.userName} ·{" "}
+                {new Date(s.createdAt).toLocaleTimeString("es-VE")}
+              </li>
+            ))}
+            {!sales.length ? <li>Sin ventas aún</li> : null}
+          </ul>
+        </section>
+
+        <section className="ad-panel">
+          <h2 className="ad-panel-title">Actividad reciente</h2>
+          <ul className="space-y-2 text-sm text-[var(--ad-muted)]">
+            {audit.slice(0, 6).map((e) => (
+              <li key={e.id}>
+                <span className="text-[var(--ad-gold-soft)]">{e.action}</span> ·{" "}
+                {e.detail}
+              </li>
+            ))}
+            {movements.slice(0, 2).map((m) => (
               <li key={m.id}>
-                <span className="text-[var(--ad-gold-soft)]">{m.type}</span> ·{" "}
-                {m.qtyBase} u. base · {m.userName}
+                {m.type} · {m.qtyBase} u. · {m.userName}
               </li>
             ))}
           </ul>
