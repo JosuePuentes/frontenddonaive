@@ -11,6 +11,7 @@ type PolisurMediaProps = {
   fit?: "cover" | "contain";
   overlay?: "none" | "soft" | "readable" | "strong";
   priority?: boolean;
+  onImageError?: () => void;
 };
 
 /**
@@ -27,8 +28,14 @@ function PolisurMedia({
   fit = "cover",
   overlay = "none",
   priority = false,
+  onImageError,
 }: PolisurMediaProps) {
   const [failed, setFailed] = useState(false);
+
+  const handleError = () => {
+    setFailed(true);
+    onImageError?.();
+  };
 
   return (
     <div className={cn("ps-media-frame", className)}>
@@ -41,7 +48,7 @@ function PolisurMedia({
             imgClassName,
           )}
           style={{ objectPosition }}
-          onError={() => setFailed(true)}
+          onError={handleError}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
         />

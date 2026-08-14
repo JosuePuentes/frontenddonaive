@@ -1,19 +1,28 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { PolisurCrest } from "@/components/polisur/PolisurCrest";
+import { PolisurInstitutionalMarks } from "@/components/polisur/PolisurInstitutionalMarks";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import { POLISUR_ROUTES } from "@/constants/polisur-routes";
 import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
+import { cn } from "@/lib/utils";
 
 function PolisurHero() {
+  const [photoMissing, setPhotoMissing] = useState(false);
+
   return (
-    <section className="ps-hero" aria-labelledby="polisur-hero-title">
+    <section
+      className={cn("ps-hero", photoMissing && "ps-hero--institutional")}
+      aria-labelledby="polisur-hero-title"
+    >
       <PolisurMedia
         src={POLISUR_MEDIA.home.hero}
         alt="Imagen institucional de POLISUR"
         className="ps-hero__media"
         objectPosition="center 28%"
-        overlay="readable"
+        overlay={photoMissing ? "none" : "readable"}
         priority
+        onImageError={() => setPhotoMissing(true)}
       />
 
       <div className="ps-hero__crest" aria-hidden>
@@ -23,7 +32,12 @@ function PolisurHero() {
       <div className="ps-hero__content">
         <div className="ps-container w-full">
           <div className="ps-hero__panel">
-            <p className="ps-eyebrow text-[var(--ps-gold)]">
+            <div className="ps-hero__identity">
+              <PolisurCrest size="lg" />
+              <PolisurInstitutionalMarks size="md" />
+            </div>
+
+            <p className="ps-eyebrow mt-6 text-[var(--ps-gold)]">
               {polisurCopy.hero.subtitle}
             </p>
             <h1
