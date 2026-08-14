@@ -11,10 +11,10 @@ function PolisurFooter() {
       <div className="ps-container grid gap-10 border-t border-[var(--ps-line)] py-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
           <div className="ps-display text-xl text-[var(--ps-white)]">
-            {isCanina ? "Unidad Canina" : polisurCopy.brand.name}
+            {isCanina ? "Unidad Canina" : polisurCopy.brand.fullName}
           </div>
           <p className="mt-1 text-[0.65rem] uppercase tracking-[0.14em] text-[var(--ps-mint)]">
-            {isCanina ? polisurCopy.brand.name : polisurCopy.brand.line}
+            {isCanina ? polisurCopy.brand.name : polisurCopy.brand.jurisdiction}
           </p>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-[var(--ps-steel-300)]">
             {polisurCopy.brand.identification}

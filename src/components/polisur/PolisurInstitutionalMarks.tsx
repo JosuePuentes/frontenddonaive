@@ -31,7 +31,7 @@ type PolisurInstitutionalMarksProps = {
 function PolisurInstitutionalMarks({
   size = "sm",
 }: PolisurInstitutionalMarksProps) {
-  const box = size === "md" ? "h-10 w-10 sm:h-12 sm:w-12" : "h-8 w-8 sm:h-9 sm:w-9";
+  const box = size === "md" ? "h-11 w-11 sm:h-14 sm:w-14" : "h-9 w-9 sm:h-10 sm:w-10";
 
   return (
     <ul className="ps-mark-list flex flex-wrap items-center gap-3 sm:gap-5">

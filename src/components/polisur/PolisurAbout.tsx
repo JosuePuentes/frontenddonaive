@@ -30,7 +30,47 @@ function PolisurAbout() {
             <p className="mt-6 text-[0.95rem] leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
               {polisurCopy.about.body}
             </p>
+            <p className="mt-4 text-[0.95rem] leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+              {polisurCopy.about.history}
+            </p>
+            <p className="mt-6 text-xs uppercase tracking-[0.14em] text-[var(--ps-mint)]">
+              {polisurCopy.brand.jurisdiction}
+            </p>
           </div>
+        </div>
+      </div>
+
+      <div className="ps-container grid gap-px border-t border-[var(--ps-line)] bg-[var(--ps-line)] py-0 sm:grid-cols-2 lg:grid-cols-3">
+        <article className="bg-[var(--ps-navy-900)] px-5 py-10 sm:px-8 sm:py-12">
+          <p className="ps-eyebrow">{polisurCopy.mission.title}</p>
+          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+            {polisurCopy.mission.body}
+          </p>
+        </article>
+        <article className="bg-[var(--ps-navy-800)] px-5 py-10 sm:px-8 sm:py-12">
+          <p className="ps-eyebrow">{polisurCopy.vision.title}</p>
+          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+            {polisurCopy.vision.body}
+          </p>
+        </article>
+        <article className="bg-[var(--ps-navy-900)] px-5 py-10 sm:px-8 sm:py-12 sm:col-span-2 lg:col-span-1">
+          <p className="ps-eyebrow">{polisurCopy.values.title}</p>
+          <ul className="mt-4 space-y-2.5 text-sm text-[var(--ps-steel-300)]">
+            {polisurCopy.values.items.map((item) => (
+              <li key={item} className="border-l-2 border-[var(--ps-mint)] pl-3">
+                {item}
+              </li>
+            ))}
+          </ul>
+        </article>
+      </div>
+
+      <div className="border-t border-[var(--ps-line)] bg-[var(--ps-navy-800)]">
+        <div className="ps-container max-w-3xl py-10 sm:py-12">
+          <p className="ps-eyebrow">{polisurCopy.functions.title}</p>
+          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+            {polisurCopy.functions.body}
+          </p>
         </div>
       </div>
     </section>

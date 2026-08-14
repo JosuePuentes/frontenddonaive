@@ -18,8 +18,8 @@
   --ps-yellow: #fcdd09;
   --ps-yellow-dim: rgba(252, 221, 9, 0.55);
   --ps-yellow-soft: rgba(252, 221, 9, 0.12);
-  --ps-mint: var(--ps-yellow);
-  --ps-mint-dim: var(--ps-yellow-dim);
+  --ps-gold: var(--ps-yellow);
+  --ps-gold-dim: var(--ps-yellow-dim);
 
   --ps-red: #cc0000;
   --ps-sky: #75b2dd;
@@ -100,11 +100,16 @@
 }
 
 .ps-banner-marks {
-  background: var(--ps-mint);
+  background: var(--ps-navy-900);
 }
 
 .ps-mark-list li {
   background: transparent;
+}
+
+.ps-mark-list img {
+  background: transparent;
+  mix-blend-mode: normal;
 }
 
 .ps-eyebrow {
@@ -141,36 +146,50 @@
     border-color 160ms ease;
 }
 
+.polisur-shell a.ps-btn-primary,
+.polisur-shell button.ps-btn-primary,
 .ps-btn-primary {
   background: var(--ps-white);
   color: var(--ps-navy-800);
 }
 
+.polisur-shell a.ps-btn-primary:hover,
+.polisur-shell button.ps-btn-primary:hover,
 .ps-btn-primary:hover {
   background: var(--ps-mint);
   color: var(--ps-green);
 }
 
+.polisur-shell a.ps-btn-ghost,
+.polisur-shell button.ps-btn-ghost,
 .ps-btn-ghost {
   border: 1px solid var(--ps-line-strong);
   color: var(--ps-white);
   background: transparent;
 }
 
+.polisur-shell a.ps-btn-ghost:hover,
+.polisur-shell button.ps-btn-ghost:hover,
 .ps-btn-ghost:hover {
   border-color: var(--ps-mint-dim);
   color: var(--ps-white);
+  background: color-mix(in srgb, var(--ps-mint) 12%, transparent);
 }
 
+.polisur-shell a.ps-btn-gold,
+.polisur-shell button.ps-btn-gold,
 .ps-btn-gold {
-  border: 1px solid var(--ps-yellow-dim);
+  border: 1px solid var(--ps-mint-dim);
   color: var(--ps-white);
   background: transparent;
 }
 
+.polisur-shell a.ps-btn-gold:hover,
+.polisur-shell button.ps-btn-gold:hover,
 .ps-btn-gold:hover {
-  border-color: var(--ps-yellow);
-  background: var(--ps-yellow-soft);
+  border-color: var(--ps-mint);
+  background: color-mix(in srgb, var(--ps-mint) 14%, transparent);
+  color: var(--ps-white);
 }
 
 .ps-media-frame {
