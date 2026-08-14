@@ -9,6 +9,7 @@ import {
   readJsonBody,
   sendJson,
   writeSlotFile,
+  deleteSlotFile,
 } from "./lib/polisur-medios-core.mjs";
 
 function setCors(res) {
@@ -86,6 +87,15 @@ export async function handlePolisurMediosRequest(req, res, opts) {
       }
       const saved = await writeSlotFile(root, rel, buffer);
       sendJson(res, 200, { ok: true, ...saved });
+      return;
+    }
+
+    if (req.method === "POST" && action === "delete") {
+      const body = await readJsonBody(req);
+      assertAuthorized(body.clave);
+      const rel = assertSlotPath(body.path);
+      const removed = deleteSlotFile(root, rel);
+      sendJson(res, 200, { ok: true, ...removed });
       return;
     }
 

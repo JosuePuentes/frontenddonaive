@@ -2,7 +2,7 @@
  * Lógica compartida del registro documental POLISUR.
  * Escribe archivos en disco sin modificar el contenido binario de la imagen.
  */
-import { createWriteStream, existsSync, mkdirSync, statSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
@@ -92,6 +92,18 @@ export async function writeSlotFile(root, relPath, buffer) {
   mkdirSync(dirname(abs), { recursive: true });
   await pipeline(Readable.from(buffer), createWriteStream(abs));
   return { path: safeRel, bytes: buffer.length };
+}
+
+export function deleteSlotFile(root, relPath) {
+  const safeRel = assertSlotPath(relPath);
+  const abs = resolveSafePath(root, safeRel);
+  if (!existsSync(abs)) {
+    const err = new Error("El archivo no existe.");
+    err.statusCode = 404;
+    throw err;
+  }
+  unlinkSync(abs);
+  return { path: safeRel };
 }
 
 export function readJsonBody(req) {

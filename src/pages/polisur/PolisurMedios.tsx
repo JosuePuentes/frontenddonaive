@@ -84,6 +84,7 @@ export default function PolisurMedios() {
   const [concepto, setConcepto] = useState("");
   const [carpeta, setCarpeta] =
     useState<(typeof CARPETAS)[number]["id"]>("logo");
+  const [deletingPath, setDeletingPath] = useState<string | null>(null);
 
   const selected = useMemo(
     () => POLISUR_ASSET_SLOTS.find((s) => s.id === selectedId) ?? null,
@@ -385,20 +386,26 @@ export default function PolisurMedios() {
 
               {slots.length > 0 ? (
                 <div>
-                  <p className="ps-eyebrow">Estado de destinos</p>
+                  <p className="ps-eyebrow">Archivos registrados</p>
                   <ul className="mt-4 divide-y divide-[var(--ps-line)] border-y border-[var(--ps-line)]">
                     {slots.map((slot) => (
                       <li
                         key={slot.path}
                         className="flex items-center justify-between gap-3 py-3 text-sm"
                       >
-                        <span className="truncate text-[var(--ps-steel-300)]">
+                        <span className="min-w-0 truncate text-[var(--ps-steel-300)]">
                           {slot.path.replace("public/polisur/", "")}
                         </span>
-                        <span className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--ps-steel-400)]">
-                          {slot.status}
-                          {slot.bytes ? ` · ${slot.bytes} B` : ""}
-                        </span>
+                        <button
+                          type="button"
+                          disabled={Boolean(deletingPath) || busy}
+                          onClick={() => void onDelete(slot.path)}
+                          className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--ps-steel-400)] underline-offset-4 hover:text-[var(--ps-paper)] hover:underline disabled:opacity-50"
+                        >
+                          {deletingPath === slot.path
+                            ? "Eliminando…"
+                            : "Eliminar"}
+                        </button>
                       </li>
                     ))}
                   </ul>

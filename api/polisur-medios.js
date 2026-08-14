@@ -130,6 +130,52 @@ async function putGitHub({ path, contentBase64, message }) {
   return { commit: data.commit?.sha || null };
 }
 
+async function deleteGitHub({ path }) {
+  const repo =
+    process.env.POLISUR_MEDIOS_REPO || "JosuePuentes/frontenddonaive";
+  const branch =
+    process.env.POLISUR_MEDIOS_BRANCH ||
+    "cursor/polisur-portal-fotografico-335d";
+  const token = process.env.GITHUB_TOKEN;
+  const api = `https://api.github.com/repos/${repo}/contents/${path}`;
+
+  const existing = await fetch(`${api}?ref=${encodeURIComponent(branch)}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+    },
+  });
+  if (!existing.ok) {
+    const err = new Error("El archivo no existe en el repositorio.");
+    err.statusCode = 404;
+    throw err;
+  }
+  const data = await existing.json();
+  const res = await fetch(api, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      message: `chore(polisur): eliminar asset ${path}`,
+      sha: data.sha,
+      branch,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(
+      `GitHub no eliminó el archivo (${res.status}): ${text}`,
+    );
+    err.statusCode = 502;
+    throw err;
+  }
+  const payload = await res.json();
+  return { commit: payload.commit?.sha || null };
+}
+
 async function listRepoAssets() {
   const repo =
     process.env.POLISUR_MEDIOS_REPO || "JosuePuentes/frontenddonaive";
@@ -223,6 +269,19 @@ export default async function handler(req, res) {
         message: `chore(polisur): registrar asset ${dest}`,
       });
       return json(res, 200, { ok: true, path: dest, bytes, ...saved });
+    }
+
+    if (req.method === "POST" && action === "delete") {
+      assertClave(body.clave);
+      const dest = assertAllowedPath(body.path);
+      if (!process.env.GITHUB_TOKEN) {
+        return json(res, 503, {
+          ok: false,
+          error: "Falta GITHUB_TOKEN para eliminar en el repositorio.",
+        });
+      }
+      const removed = await deleteGitHub({ path: dest });
+      return json(res, 200, { ok: true, path: dest, ...removed });
     }
 
     return json(res, 404, { ok: false, error: "Acción no encontrada." });
