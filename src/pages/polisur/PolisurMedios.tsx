@@ -215,6 +215,34 @@ export default function PolisurMedios() {
     }
   }
 
+  async function onDelete(path: string) {
+    const short = path.replace("public/polisur/", "");
+    const ok = window.confirm(
+      `¿Eliminar ${short} del registro? Esta acción borra el archivo del repositorio.`,
+    );
+    if (!ok) return;
+    setDeletingPath(path);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/polisur-medios?action=delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clave, path }),
+      });
+      const data = await readApiJson(res);
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "No se pudo eliminar el archivo.");
+      }
+      setMessage(`Eliminado: ${path}`);
+      await refreshStatus(clave);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar.");
+    } finally {
+      setDeletingPath(null);
+    }
+  }
+
   return (
     <>
       <PageMeta
