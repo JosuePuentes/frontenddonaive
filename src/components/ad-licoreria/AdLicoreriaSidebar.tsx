@@ -15,7 +15,6 @@ type Props = {
   onClose: () => void;
 };
 
-/** Primera ruta “hub” de cada grupo (tap en el título = ir al módulo). */
 const GROUP_HUB_KEY: Partial<Record<AdNavGroupId, string>> = {
   principal: "inicio",
   operacion: "ventas",
@@ -33,37 +32,54 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
   const path = normalizeAdLicoreriaPathname(pathname);
   const { getCurrentOperator, getRolePermissionMatrix } = useAdLicoreria();
   const session = getCurrentOperator();
-  const matrix = getRolePermissionMatrix();
-  const items = filterNavForUser(session, matrix);
+  const sessionKey = session
+    ? `${session.id}:${session.role}:${session.active ? 1 : 0}`
+    : "none";
+
+  const items = useMemo(() => {
+    const matrix = getRolePermissionMatrix();
+    return filterNavForUser(session, matrix);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionKey]);
   const groups = useMemo(() => groupNavItems(items), [items]);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({
+    principal: true,
+    operacion: true,
+    tv: true,
+  });
   const brandTo = session ? routes.inicio : routes.home;
 
   useEffect(() => {
     setExpanded((prev) => {
+      let changed = false;
       const next = { ...prev };
       for (const group of groups) {
-        const hasActive = group.items.some((item) => {
-          const normalized = normalizeAdLicoreriaPathname(item.to);
-          return (
-            path === normalized ||
-            (normalized !== "/" && path.startsWith(`${normalized}/`))
-          );
-        });
-        if (open) {
-          next[group.id] = true;
-          continue;
+        const want = open
+          ? true
+          : group.id === "principal" ||
+            group.id === "operacion" ||
+            group.id === "tv" ||
+            group.items.some((item) => {
+              const normalized = normalizeAdLicoreriaPathname(item.to);
+              return (
+                path === normalized ||
+                (normalized !== "/" && path.startsWith(`${normalized}/`))
+              );
+            }) ||
+            Boolean(prev[group.id]);
+        if (next[group.id] !== want) {
+          next[group.id] = want;
+          changed = true;
         }
-        if (next[group.id] != null && !hasActive) continue;
-        next[group.id] =
-          group.id === "principal" ||
-          group.id === "operacion" ||
-          group.id === "tv" ||
-          hasActive;
       }
-      return next;
+      return changed ? next : prev;
     });
   }, [groups, path, open]);
+
+  function go(to: string) {
+    onClose();
+    navigate(to);
+  }
 
   function onGroupTitle(id: AdNavGroupId) {
     const group = groups.find((g) => g.id === id);
@@ -71,34 +87,30 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
     const hub = hubKey
       ? group?.items.find((i) => i.key === hubKey) ?? group?.items[0]
       : group?.items[0];
-
     setExpanded((prev) => ({ ...prev, [id]: true }));
-
-    if (hub) {
-      navigate(hub.to);
-      onClose();
-    }
+    if (hub) go(hub.to);
   }
 
   return (
     <>
-      <button
-        type="button"
-        className={`ad-nav-backdrop ${open ? "is-open" : ""}`}
-        aria-label="Cerrar menú"
-        tabIndex={open ? 0 : -1}
-        onClick={onClose}
-      />
-      <aside className={`ad-sidebar ${open ? "is-open" : ""}`}>
+      {open ? (
+        <button
+          type="button"
+          className="ad-nav-backdrop is-open"
+          aria-label="Cerrar menú"
+          onClick={onClose}
+        />
+      ) : null}
+          <aside
+        className={`ad-sidebar ${open ? "is-open" : ""}`}
+        aria-hidden={open ? undefined : true}
+      >
         <div className="ad-sidebar__head">
           <button
             type="button"
             className="ad-sidebar__brand"
             aria-label="Ir al inicio"
-            onClick={() => {
-              navigate(brandTo);
-              onClose();
-            }}
+            onClick={() => go(brandTo)}
           >
             <AdLicoreriaBrandMark size="md" />
           </button>
@@ -136,8 +148,7 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
                         to={item.to}
                         onClick={(e) => {
                           e.preventDefault();
-                          navigate(item.to);
-                          onClose();
+                          go(item.to);
                         }}
                         className={({ isActive }) =>
                           ["ad-nav-link", isActive ? "is-active" : ""].join(" ")

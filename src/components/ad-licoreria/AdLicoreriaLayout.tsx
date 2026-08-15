@@ -13,7 +13,7 @@ import {
   canAccessPath,
   isTvPlayerPath,
 } from "@/lib/ad-licoreria/route-access";
-import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import {
   filterNavForUser,
   mobilePrimaryNavKeys,
@@ -46,6 +46,7 @@ function isPublicAdPath(normalizedPath: string): boolean {
 function AdRouteGate({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const path = normalizeAdLicoreriaPathname(pathname);
+  const routes = getAdLicoreriaRoutes();
   const { getCurrentOperator, getRolePermissionMatrix } = useAdLicoreria();
   const session = getCurrentOperator();
   const matrix = getRolePermissionMatrix();
@@ -63,7 +64,7 @@ function AdRouteGate({ children }: { children: ReactNode }) {
   if (mode === "api" && !isPublicAdPath(path)) {
     if (!isAdSessionValid(apiSession)) {
       if (apiSession) clearAdSession();
-      return <Navigate to={AD_LICORERIA_ROUTES.login} replace />;
+      return <Navigate to={routes.login} replace />;
     }
   }
 
@@ -76,15 +77,15 @@ function AdRouteGate({ children }: { children: ReactNode }) {
             ? `${session.name} (${session.role}) no tiene permiso para esta ruta.`
             : "Sin sesión activa."}
         </p>
-        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.home}>
+        <Link className="ad-btn" to={routes.home}>
           Volver al Home
         </Link>
         {mode === "api" ? (
-          <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.login}>
+          <Link className="ad-btn ad-btn--gold" to={routes.login}>
             Iniciar sesión
           </Link>
         ) : (
-          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.inicio}>
+          <Link className="ad-btn" to={routes.inicio}>
             Volver al inicio
           </Link>
         )}
@@ -100,8 +101,14 @@ function AdMobileBottomNav({ onOpenMore }: { onOpenMore: () => void }) {
   const { pathname } = useLocation();
   const { getCurrentOperator, getRolePermissionMatrix } = useAdLicoreria();
   const session = getCurrentOperator();
-  const matrix = getRolePermissionMatrix();
-  const items = filterNavForUser(session, matrix);
+  const sessionKey = session
+    ? `${session.id}:${session.role}`
+    : "none";
+  const items = useMemo(() => {
+    const matrix = getRolePermissionMatrix();
+    return filterNavForUser(session, matrix);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionKey]);
   const keys = mobilePrimaryNavKeys(session?.role);
   const primary = useMemo(() => {
     const picked = keys

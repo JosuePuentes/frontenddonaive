@@ -33,6 +33,9 @@ import { getAdSessionHeaders, loadAdSession } from "./session";
 
 type Listener = () => void;
 
+/** Cache del operador sintetizado desde JWT (evita objetos nuevos por render). */
+let sessionOperatorCache: AdOperator | null = null;
+
 function emptyState(): AdRepositoryState {
   const published = adDesignRepository.getPublished();
   return {
@@ -460,6 +463,7 @@ async function hydrate(): Promise<AdResult> {
     );
     if (!snap.ok) return snap;
     state = mapSnapshotToState(snap.data);
+    sessionOperatorCache = null;
     emit();
     return { ok: true, data: undefined };
   } finally {
@@ -515,10 +519,20 @@ export const adApiBackedRepository = {
     if (fromState) return fromState;
     const session = loadAdSession();
     if (!session?.operatorId) return null;
+    /** Reutilizar instancia para no romper memo/efectos en cada render. */
+    const cached = sessionOperatorCache;
+    if (
+      cached &&
+      cached.id === session.operatorId &&
+      cached.role === session.role &&
+      cached.warehouseId === session.warehouseId
+    ) {
+      return cached;
+    }
     const sessionPerms = (session.permissions ?? []).filter(
       Boolean,
     ) as AdPermission[];
-    return {
+    const op: AdOperator = {
       id: session.operatorId,
       username: session.username,
       name: session.name,
@@ -531,7 +545,9 @@ export const adApiBackedRepository = {
       copAccess: true,
       purchaseAccess: true,
       closuresAccess: true,
-    } satisfies AdOperator;
+    };
+    sessionOperatorCache = op;
+    return op;
   },
   setCurrentOperator(operatorId: string | null): AdResult<AdOperator | null> {
     if (!operatorId) {

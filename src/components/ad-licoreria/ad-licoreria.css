@@ -113,9 +113,6 @@
     z-index: 40;
     border: 0;
     background: rgba(0, 0, 0, 0.55);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
   }
 
   .ad-nav-backdrop.is-open {
@@ -134,10 +131,14 @@
     transition: transform 0.22s ease;
     z-index: 50;
     padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    pointer-events: none;
+    visibility: hidden;
   }
 
   .ad-sidebar.is-open {
     transform: translateX(0);
+    pointer-events: auto;
+    visibility: visible;
   }
 
   .ad-sidebar__close {
@@ -230,8 +231,6 @@
   min-width: 0;
   min-height: 100vh;
   min-height: 100dvh;
-  max-height: 100dvh;
-  overflow: hidden;
 }
 
 .ad-topbar {
@@ -330,11 +329,6 @@
 
 .ad-content {
   padding: 1.25rem 1.5rem 2.5rem;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
 }
 
 .ad-panel {
