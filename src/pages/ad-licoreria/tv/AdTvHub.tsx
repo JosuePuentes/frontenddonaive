@@ -59,14 +59,19 @@ export default function AdTvHub() {
         <h2 className="ad-panel-title">Cómo usarlo (paso a paso)</h2>
         <ol className="list-decimal space-y-2 pl-5 text-sm text-[var(--ad-muted)]">
           <li>
-            <strong className="text-[var(--ad-text)]">Contenido</strong> — cree
-            una imagen/video/promo pegando una URL (hace falta permiso de
-            gestión: admin o tvadmin).
+            <strong className="text-[var(--ad-text)]">Contenido</strong> — suba
+            una imagen o pegue URL (
+            <Link
+              className="text-[var(--ad-gold-soft)] underline"
+              to={AD_LICORERIA_ROUTES.tvContenido}
+            >
+              ir a Contenido
+            </Link>
+            ).
           </li>
           <li>
             <strong className="text-[var(--ad-text)]">Entrar como TV</strong> —
-            en el dispositivo/TV abra el reproductor (no es el login admin).
-            Ejemplo:{" "}
+            en el televisor abra el navegador y pulse{" "}
             {demoScreen ? (
               <Link
                 className="text-[var(--ad-gold-soft)] underline"
@@ -78,7 +83,7 @@ export default function AdTvHub() {
             ) : (
               "/tv/reproductor/TV-001"
             )}
-            . Verá un código <code>A&amp;D-####</code>.
+            . Verá un código <code>A&amp;D-####</code> (sin login en la TV).
           </li>
           <li>
             <strong className="text-[var(--ad-text)]">Vincular</strong> — en{" "}
@@ -91,14 +96,14 @@ export default function AdTvHub() {
             escriba ese código y pulse Vincular.
           </li>
           <li>
-            <strong className="text-[var(--ad-text)]">Reproducir</strong> — vaya a{" "}
+            <strong className="text-[var(--ad-text)]">Reproducir</strong> — en{" "}
             <Link
               className="text-[var(--ad-gold-soft)] underline"
               to={AD_LICORERIA_ROUTES.tvControl}
             >
               Control
             </Link>
-            , elija contenido y pulse ▶ Reproducir.
+            , elija el contenido y ▶ Reproducir.
           </li>
         </ol>
         {!canManageContent ? (
