@@ -39,6 +39,29 @@ export const commercePurchaseLineSchema = z.object({
   presentationCostBs: z.number().nonnegative().optional(),
   lineTotalUsd: z.number().nonnegative().optional(),
   lineTotalBs: z.number().nonnegative().optional(),
+  taxable: z.boolean().optional(),
+  taxRate: z.number().min(0).max(1).optional(),
+});
+
+export const updateCommercePurchaseLineSchema = commercePurchaseLineSchema
+  .partial()
+  .extend({
+    presentationId: z.string().uuid().optional(),
+  });
+
+export const createProductFromPurchaseSchema = z.object({
+  sku: z.string().min(1).max(80),
+  name: z.string().min(1).max(200),
+  brand: z.string().max(120).optional(),
+  categoryId: z.string().uuid().optional(),
+  description: z.string().max(1000).optional(),
+  baseUnitLabel: z.string().max(40).optional(),
+  taxable: z.boolean().optional(),
+  presentationName: z.string().max(120).optional(),
+  unitsPerPresentation: z.number().positive().optional(),
+  barcode: z.string().max(80).optional(),
+  priceUsd: z.number().nonnegative().optional(),
+  priceBs: z.number().nonnegative().optional(),
 });
 
 export const createCommercePurchaseSchema = z.object({

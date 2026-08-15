@@ -272,9 +272,14 @@ describeE2E("A&D Fase 5 — E2E comercio PostgreSQL", () => {
     expect(Number(line.equivalentCostUsd)).toBeGreaterThan(0);
 
     const purchaseId = buy.body.data.id as string;
-    const recv = await request(app)
-      .post(`/api/v1/ad/purchases/${purchaseId}/receive`)
+    const tot = await request(app)
+      .post(`/api/v1/ad/commerce/purchases/${purchaseId}/totalize`)
       .set(auth(adminToken));
+    expect(tot.status).toBeLessThan(400);
+    const recv = await request(app)
+      .post(`/api/v1/ad/commerce/purchases/${purchaseId}/confirm`)
+      .set(auth(adminToken))
+      .send({});
     expect(recv.status).toBeLessThan(400);
 
     const after = await getPrisma().adProduct.findUnique({

@@ -97,6 +97,54 @@ export function resolvePurchaseLineCosts(
   };
 }
 
+/** IVA Venezuela compras — tasa por defecto 16%. */
+export const AD_DEFAULT_TAX_RATE = 0.16;
+
+export function applyLineTax(
+  lineSubtotal: number,
+  taxable: boolean,
+  taxRate = AD_DEFAULT_TAX_RATE,
+): { subtotal: number; tax: number; totalWithTax: number; taxRate: number } {
+  const subtotal = Number(lineSubtotal);
+  if (!(subtotal >= 0)) throw new Error("Subtotal inválido");
+  const rate = taxable ? Number(taxRate) : 0;
+  if (rate < 0 || rate > 1) throw new Error("Tasa IVA inválida");
+  const tax = taxable ? subtotal * rate : 0;
+  return {
+    subtotal,
+    tax,
+    totalWithTax: subtotal + tax,
+    taxRate: rate,
+  };
+}
+
+export type PurchaseTotalsLine = {
+  subtotal: number;
+  tax: number;
+  totalWithTax: number;
+};
+
+/** Suma subtotal / IVA / total general de líneas. */
+export function sumPurchaseDocumentTotals(lines: PurchaseTotalsLine[]): {
+  subtotal: number;
+  tax: number;
+  grandTotal: number;
+} {
+  let subtotal = 0;
+  let tax = 0;
+  for (const l of lines) {
+    subtotal += Number(l.subtotal);
+    tax += Number(l.tax);
+  }
+  return { subtotal, tax, grandTotal: subtotal + tax };
+}
+
+/** Redondeo monetario solo para presentación (no usar en CPP interno). */
+export function roundMoney(value: number, decimals = 2): number {
+  const f = 10 ** decimals;
+  return Math.round((Number(value) + Number.EPSILON) * f) / f;
+}
+
 /** Costo equivalente USD cuando la compra se pagó vía tasa protegida → Bs → BCV. */
 export function equivalentUsdFromProtected(
   amountUsd: number,

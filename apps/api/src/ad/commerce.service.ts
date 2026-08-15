@@ -13,12 +13,17 @@ import {
 } from "./authorization.js";
 import {
   avgDailyFromWindow,
-  equivalentUsdFromProtected,
   priceFromUtility,
-  resolvePurchaseLineCosts,
   suggestReplenishment,
   utilityFromPrice,
 } from "./commerce-domain.js";
+import {
+  aggregateBuiltLines,
+  buildPurchaseLineFromPresentation,
+  moneyDoc,
+  type RawPurchaseLineInput,
+} from "./commerce-purchase.js";
+import { weightedAverageCost } from "./availability.js";
 import { writeAdAudit } from "./service.js";
 
 function dec(n: number): Prisma.Decimal {
@@ -354,19 +359,9 @@ export const adCommerceService = {
       reference?: string;
       notes?: string;
       useProtectedRateRef?: boolean;
+      /** F6: siempre inicia DRAFT; preliminary solo marca intención documental. */
       preliminary?: boolean;
-      lines: {
-        presentationId: string;
-        qty: number;
-        qtyBonus?: number;
-        costMode: "UNIT" | "PRESENTATION" | "TOTAL";
-        unitCostUsd?: number;
-        unitCostBs?: number;
-        presentationCostUsd?: number;
-        presentationCostBs?: number;
-        lineTotalUsd?: number;
-        lineTotalBs?: number;
-      }[];
+      lines: (RawPurchaseLineInput & { taxable?: boolean; taxRate?: number })[];
     },
   ) {
     requireAdPermission(ctx, "purchases.create");
@@ -387,10 +382,20 @@ export const adCommerceService = {
       supplierName = supplier.name;
     }
     if (!supplierName) throw new ValidationError("Proveedor requerido");
+    if (!input.lines?.length) {
+      throw new ValidationError("Agregue al menos un producto");
+    }
+
+    let useProtected = Boolean(input.useProtectedRateRef);
+    if (input.paymentMethodId) {
+      const pm = await prisma.adPaymentMethod.findFirst({
+        where: { id: input.paymentMethodId, tenantId: ctx.tenantId },
+      });
+      if (pm?.usesSpecialRateRef) useProtected = true;
+    }
 
     const bcv = await latestRate(ctx.tenantId, "BCV");
     const protectedRate = await latestRate(ctx.tenantId, "PROTECTED");
-    const useProtected = Boolean(input.useProtectedRateRef);
     if (useProtected) {
       requireAdPermission(ctx, "rates.protected.manage");
       if (!protectedRate || !bcv) {
@@ -400,13 +405,7 @@ export const adCommerceService = {
       }
     }
 
-    const lineCreates: Prisma.AdPurchaseLineUncheckedCreateWithoutPurchaseInput[] =
-      [];
-    let totalInvoicedUsd = 0;
-    let totalInvoicedBs = 0;
-    let totalEffectiveUsd = 0;
-    let totalEffectiveBs = 0;
-
+    const built = [];
     for (const raw of input.lines) {
       const pres = await prisma.adPresentation.findUniqueOrThrow({
         where: { id: raw.presentationId },
@@ -415,71 +414,17 @@ export const adCommerceService = {
       if (pres.product.tenantId !== ctx.tenantId) {
         throw new ForbiddenError("Presentación fuera del tenant");
       }
-      const upp = num(pres.unitsPerPresentation);
-      const costsUsd = resolvePurchaseLineCosts({
-        qtyInvoiced: raw.qty,
-        qtyBonus: raw.qtyBonus,
-        unitsPerPresentation: upp,
-        costMode: raw.costMode,
-        unitCost: raw.unitCostUsd,
-        presentationCost: raw.presentationCostUsd,
-        lineTotal: raw.lineTotalUsd,
-      });
-      const costsBs = resolvePurchaseLineCosts({
-        qtyInvoiced: raw.qty,
-        qtyBonus: raw.qtyBonus,
-        unitsPerPresentation: upp,
-        costMode: raw.costMode,
-        unitCost: raw.unitCostBs ?? 0,
-        presentationCost: raw.presentationCostBs ?? 0,
-        lineTotal: raw.lineTotalBs ?? 0,
-      });
-
-      let equivalentUsd: number | null = null;
-      let equivalentBs: number | null = null;
-      if (useProtected && protectedRate && bcv) {
-        if (input.currency === "USD") {
-          equivalentUsd = equivalentUsdFromProtected(
-            costsUsd.invoicedTotal,
-            protectedRate,
-            bcv,
-          );
-          equivalentBs = costsUsd.invoicedTotal * protectedRate;
-        } else {
-          equivalentBs = costsBs.invoicedTotal;
-          equivalentUsd = costsBs.invoicedTotal / bcv;
-        }
-      }
-
-      totalInvoicedUsd += costsUsd.invoicedTotal;
-      totalInvoicedBs += costsBs.invoicedTotal;
-      totalEffectiveUsd += costsUsd.effectiveTotal;
-      totalEffectiveBs += costsBs.effectiveTotal;
-
-      lineCreates.push({
-        productId: pres.productId,
-        presentationId: pres.id,
-        qty: dec(costsUsd.qtyInvoiced),
-        qtyBase: dec(costsUsd.qtyInvoicedBase),
-        qtyBonus: dec(costsUsd.qtyBonus),
-        qtyBonusBase: dec(costsUsd.qtyBonusBase),
-        qtyReceivedBase: dec(costsUsd.qtyReceivedBase),
-        costMode: raw.costMode,
-        unitCostUsd: dec(costsUsd.unitCostInvoiced),
-        unitCostBs: dec(costsBs.unitCostInvoiced),
-        presentationCostUsd: dec(costsUsd.presentationCostInvoiced),
-        presentationCostBs: dec(costsBs.presentationCostInvoiced),
-        lineCostUsd: dec(costsUsd.invoicedTotal),
-        lineCostBs: dec(costsBs.invoicedTotal),
-        effectiveUnitCostUsd: dec(costsUsd.effectiveUnitCost),
-        effectiveUnitCostBs: dec(costsBs.effectiveUnitCost),
-        effectivePresentationCostUsd: dec(costsUsd.effectivePresentationCost),
-        effectivePresentationCostBs: dec(costsBs.effectivePresentationCost),
-        equivalentCostUsd:
-          equivalentUsd != null ? dec(equivalentUsd) : undefined,
-        equivalentCostBs: equivalentBs != null ? dec(equivalentBs) : undefined,
-      });
+      built.push(
+        buildPurchaseLineFromPresentation(pres, raw, {
+          tenantId: ctx.tenantId,
+          useProtected,
+          protectedRate,
+          bcv,
+          currency: input.currency,
+        }),
+      );
     }
+    const agg = aggregateBuiltLines(built);
 
     const invoiceDate = input.invoiceDate
       ? new Date(input.invoiceDate)
@@ -491,87 +436,419 @@ export const adCommerceService = {
       dueDate.setDate(dueDate.getDate() + creditDays);
     }
 
-    const status = input.preliminary ? "DRAFT" : "ORDERED";
-
-    const purchase = await prisma.$transaction(async (tx) => {
-      const created = await tx.adPurchase.create({
-        data: {
-          tenantId: ctx.tenantId,
-          warehouseId,
-          supplierId: input.supplierId,
-          supplierName,
-          invoiceNumber: input.invoiceNumber,
-          invoiceDate,
-          status,
-          currency: input.currency,
-          paymentMethodId: input.paymentMethodId,
-          paymentCondition: input.paymentCondition,
-          creditDays: creditDays || null,
-          dueDate,
-          reference: input.reference,
-          notes: input.notes,
-          bcvRateSnapshot: bcv != null ? dec(bcv) : undefined,
-          protectedRateSnapshot:
-            useProtected && protectedRate != null
-              ? dec(protectedRate)
-              : undefined,
-          useProtectedRateRef: useProtected,
-          totalCostUsd: dec(totalEffectiveUsd),
-          totalCostBs: dec(totalEffectiveBs),
-          totalInvoicedUsd: dec(totalInvoicedUsd),
-          totalInvoicedBs: dec(totalInvoicedBs),
-          createdById: ctx.operator.id,
-          lines: { create: lineCreates },
-        },
-        include: { lines: true, supplier: true },
-      });
-
-      if (
-        !input.preliminary &&
-        input.paymentCondition === "CREDITO" &&
-        input.supplierId
-      ) {
-        const amount =
-          input.currency === "USD" ? totalInvoicedUsd : totalInvoicedBs;
-        await tx.adPayable.create({
-          data: {
-            tenantId: ctx.tenantId,
-            supplierId: input.supplierId,
-            purchaseId: created.id,
-            invoiceNumber: input.invoiceNumber,
-            currency: input.currency,
-            amount: dec(amount),
-            balance: dec(amount),
-            issuedAt: invoiceDate,
-            dueDate,
-            status: "PENDIENTE",
-          },
-        });
-      }
-
-      return created;
+    /** F6: borrador hasta totalizar/confirmar — no inventario ni CxP aún. */
+    const purchase = await prisma.adPurchase.create({
+      data: {
+        tenantId: ctx.tenantId,
+        warehouseId,
+        supplierId: input.supplierId,
+        supplierName,
+        invoiceNumber: input.invoiceNumber,
+        invoiceDate,
+        status: "DRAFT",
+        currency: input.currency,
+        paymentMethodId: input.paymentMethodId,
+        paymentCondition: input.paymentCondition,
+        creditDays: creditDays || null,
+        dueDate,
+        reference: input.reference,
+        notes: input.notes,
+        bcvRateSnapshot: bcv != null ? dec(bcv) : undefined,
+        protectedRateSnapshot:
+          useProtected && protectedRate != null ? dec(protectedRate) : undefined,
+        useProtectedRateRef: useProtected,
+        totalCostUsd: dec(agg.totalEffectiveUsd),
+        totalCostBs: dec(agg.totalEffectiveBs),
+        totalInvoicedUsd: dec(agg.totalInvoicedUsd),
+        totalInvoicedBs: dec(agg.totalInvoicedBs),
+        subtotalUsd: dec(agg.subtotalUsd),
+        subtotalBs: dec(agg.subtotalBs),
+        taxUsd: dec(agg.taxUsd),
+        taxBs: dec(agg.taxBs),
+        grandTotalUsd: dec(agg.grandTotalUsd),
+        grandTotalBs: dec(agg.grandTotalBs),
+        createdById: ctx.operator.id,
+        lines: { create: built.map((b) => b.data) },
+      },
+      include: {
+        lines: { include: { product: true, presentation: true } },
+        supplier: true,
+        paymentMethod: true,
+      },
     });
 
     await writeAdAudit({
       tenantId: ctx.tenantId,
       operatorId: ctx.operator.id,
       warehouseId,
-      action: input.preliminary ? "preliminary" : "create",
+      action: "create",
       entity: "purchase",
       entityId: purchase.id,
       after: sanitizePurchaseForClient({
-        ...purchase,
-        protectedRateSnapshot: undefined,
+        status: purchase.status,
+        subtotalUsd: num(purchase.subtotalUsd),
+        taxUsd: num(purchase.taxUsd),
+        grandTotalUsd: num(purchase.grandTotalUsd),
+        lines: purchase.lines.length,
       }),
     });
 
-    return sanitizePurchaseForClient(purchase as unknown as Record<string, unknown>);
+    return {
+      ...sanitizePurchaseForClient(
+        purchase as unknown as Record<string, unknown>,
+      ),
+      totals: {
+        subtotal: num(
+          input.currency === "BS" ? purchase.subtotalBs : purchase.subtotalUsd,
+        ),
+        tax: num(input.currency === "BS" ? purchase.taxBs : purchase.taxUsd),
+        grandTotal: num(
+          input.currency === "BS"
+            ? purchase.grandTotalBs
+            : purchase.grandTotalUsd,
+        ),
+      },
+    };
   },
 
+  async getPurchase(ctx: AdRequestContext, purchaseId: string) {
+    requireAdPermission(ctx, "purchases.create");
+    const prisma = getPrisma();
+    const purchase = await prisma.adPurchase.findFirst({
+      where: { id: purchaseId, tenantId: ctx.tenantId },
+      include: {
+        lines: { include: { product: true, presentation: true } },
+        supplier: true,
+        paymentMethod: true,
+        payable: true,
+      },
+    });
+    if (!purchase) throw new NotFoundError("Compra no encontrada");
+    requireWarehouseAccess(ctx, purchase.warehouseId);
+    return {
+      ...sanitizePurchaseForClient(
+        purchase as unknown as Record<string, unknown>,
+      ),
+      ...moneyDoc(purchase),
+      totals: {
+        subtotal: num(
+          purchase.currency === "BS"
+            ? purchase.subtotalBs
+            : purchase.subtotalUsd,
+        ),
+        tax: num(
+          purchase.currency === "BS" ? purchase.taxBs : purchase.taxUsd,
+        ),
+        grandTotal: num(
+          purchase.currency === "BS"
+            ? purchase.grandTotalBs
+            : purchase.grandTotalUsd,
+        ),
+      },
+    };
+  },
+
+  async recalculatePurchaseTotals(
+    tx: Prisma.TransactionClient,
+    purchaseId: string,
+  ) {
+    const lines = await tx.adPurchaseLine.findMany({ where: { purchaseId } });
+    let subtotalUsd = 0,
+      taxUsd = 0,
+      subtotalBs = 0,
+      taxBs = 0,
+      effUsd = 0,
+      effBs = 0;
+    for (const l of lines) {
+      subtotalUsd += num(l.lineCostUsd);
+      taxUsd += num(l.lineTaxUsd);
+      subtotalBs += num(l.lineCostBs);
+      taxBs += num(l.lineTaxBs);
+      effUsd += num(l.effectiveUnitCostUsd) * num(l.qtyReceivedBase);
+      effBs += num(l.effectiveUnitCostBs) * num(l.qtyReceivedBase);
+    }
+    return tx.adPurchase.update({
+      where: { id: purchaseId },
+      data: {
+        subtotalUsd: dec(subtotalUsd),
+        taxUsd: dec(taxUsd),
+        grandTotalUsd: dec(subtotalUsd + taxUsd),
+        subtotalBs: dec(subtotalBs),
+        taxBs: dec(taxBs),
+        grandTotalBs: dec(subtotalBs + taxBs),
+        totalInvoicedUsd: dec(subtotalUsd),
+        totalInvoicedBs: dec(subtotalBs),
+        totalCostUsd: dec(effUsd),
+        totalCostBs: dec(effBs),
+      },
+      include: {
+        lines: { include: { product: true, presentation: true } },
+        supplier: true,
+        paymentMethod: true,
+      },
+    });
+  },
+
+  async addPurchaseLine(
+    ctx: AdRequestContext,
+    purchaseId: string,
+    raw: RawPurchaseLineInput & { taxable?: boolean; taxRate?: number },
+  ) {
+    requireAdPermission(ctx, "purchases.create");
+    const prisma = getPrisma();
+    const purchase = await prisma.adPurchase.findFirst({
+      where: { id: purchaseId, tenantId: ctx.tenantId },
+    });
+    if (!purchase) throw new NotFoundError("Compra no encontrada");
+    if (purchase.status !== "DRAFT" && purchase.status !== "PRELIMINARY") {
+      throw new ValidationError("Solo se editan compras en borrador/preliminar");
+    }
+    requireWarehouseAccess(ctx, purchase.warehouseId);
+
+    const pres = await prisma.adPresentation.findUniqueOrThrow({
+      where: { id: raw.presentationId },
+      include: { product: true },
+    });
+    const built = buildPurchaseLineFromPresentation(pres, raw, {
+      tenantId: ctx.tenantId,
+      useProtected: purchase.useProtectedRateRef,
+      protectedRate: purchase.protectedRateSnapshot
+        ? num(purchase.protectedRateSnapshot)
+        : null,
+      bcv: purchase.bcvRateSnapshot ? num(purchase.bcvRateSnapshot) : null,
+      currency: purchase.currency as "USD" | "BS",
+    });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.adPurchaseLine.create({
+        data: { ...built.data, purchaseId },
+      });
+      if (purchase.status === "PRELIMINARY") {
+        await tx.adPurchase.update({
+          where: { id: purchaseId },
+          data: { status: "DRAFT" },
+        });
+      }
+      await this.recalculatePurchaseTotals(tx, purchaseId);
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      warehouseId: purchase.warehouseId,
+      action: "add_line",
+      entity: "purchase",
+      entityId: purchaseId,
+      after: { presentationId: raw.presentationId, qty: raw.qty },
+    });
+    return this.getPurchase(ctx, purchaseId);
+  },
+
+  async updatePurchaseLine(
+    ctx: AdRequestContext,
+    purchaseId: string,
+    lineId: string,
+    raw: Partial<RawPurchaseLineInput> & { taxable?: boolean; taxRate?: number },
+  ) {
+    requireAdPermission(ctx, "purchases.create");
+    const prisma = getPrisma();
+    const purchase = await prisma.adPurchase.findFirst({
+      where: { id: purchaseId, tenantId: ctx.tenantId },
+      include: { lines: true },
+    });
+    if (!purchase) throw new NotFoundError("Compra no encontrada");
+    if (purchase.status !== "DRAFT" && purchase.status !== "PRELIMINARY") {
+      throw new ValidationError("Solo se editan compras en borrador/preliminar");
+    }
+    requireWarehouseAccess(ctx, purchase.warehouseId);
+    const existing = purchase.lines.find((l) => l.id === lineId);
+    if (!existing) throw new NotFoundError("Línea no encontrada");
+
+    const presentationId = raw.presentationId ?? existing.presentationId;
+    const pres = await prisma.adPresentation.findUniqueOrThrow({
+      where: { id: presentationId },
+      include: { product: true },
+    });
+    const merged: RawPurchaseLineInput = {
+      presentationId,
+      qty: raw.qty ?? num(existing.qty),
+      qtyBonus: raw.qtyBonus ?? num(existing.qtyBonus),
+      costMode: (raw.costMode ?? existing.costMode) as RawPurchaseLineInput["costMode"],
+      unitCostUsd: raw.unitCostUsd ?? num(existing.unitCostUsd),
+      unitCostBs: raw.unitCostBs ?? num(existing.unitCostBs),
+      presentationCostUsd:
+        raw.presentationCostUsd ?? num(existing.presentationCostUsd),
+      presentationCostBs:
+        raw.presentationCostBs ?? num(existing.presentationCostBs),
+      lineTotalUsd: raw.lineTotalUsd ?? num(existing.lineCostUsd),
+      lineTotalBs: raw.lineTotalBs ?? num(existing.lineCostBs),
+      taxable: raw.taxable ?? existing.taxable,
+      taxRate: raw.taxRate ?? num(existing.taxRate),
+    };
+    const built = buildPurchaseLineFromPresentation(pres, merged, {
+      tenantId: ctx.tenantId,
+      useProtected: purchase.useProtectedRateRef,
+      protectedRate: purchase.protectedRateSnapshot
+        ? num(purchase.protectedRateSnapshot)
+        : null,
+      bcv: purchase.bcvRateSnapshot ? num(purchase.bcvRateSnapshot) : null,
+      currency: purchase.currency as "USD" | "BS",
+    });
+
+    const before = {
+      qty: num(existing.qty),
+      unitCostUsd: num(existing.unitCostUsd),
+      taxable: existing.taxable,
+      qtyBonus: num(existing.qtyBonus),
+    };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.adPurchaseLine.update({
+        where: { id: lineId },
+        data: built.data,
+      });
+      if (purchase.status === "PRELIMINARY") {
+        await tx.adPurchase.update({
+          where: { id: purchaseId },
+          data: { status: "DRAFT" },
+        });
+      }
+      await this.recalculatePurchaseTotals(tx, purchaseId);
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      warehouseId: purchase.warehouseId,
+      action: "update_line",
+      entity: "purchase_line",
+      entityId: lineId,
+      before,
+      after: {
+        qty: merged.qty,
+        unitCostUsd: merged.unitCostUsd,
+        taxable: merged.taxable,
+        qtyBonus: merged.qtyBonus,
+      },
+    });
+    return this.getPurchase(ctx, purchaseId);
+  },
+
+  async deletePurchaseLine(
+    ctx: AdRequestContext,
+    purchaseId: string,
+    lineId: string,
+  ) {
+    requireAdPermission(ctx, "purchases.create");
+    const prisma = getPrisma();
+    const purchase = await prisma.adPurchase.findFirst({
+      where: { id: purchaseId, tenantId: ctx.tenantId },
+      include: { lines: true },
+    });
+    if (!purchase) throw new NotFoundError("Compra no encontrada");
+    if (purchase.status !== "DRAFT" && purchase.status !== "PRELIMINARY") {
+      throw new ValidationError("Solo se editan compras en borrador/preliminar");
+    }
+    requireWarehouseAccess(ctx, purchase.warehouseId);
+    const existing = purchase.lines.find((l) => l.id === lineId);
+    if (!existing) throw new NotFoundError("Línea no encontrada");
+
+    await prisma.$transaction(async (tx) => {
+      await tx.adPurchaseLine.delete({ where: { id: lineId } });
+      if (purchase.status === "PRELIMINARY") {
+        await tx.adPurchase.update({
+          where: { id: purchaseId },
+          data: { status: "DRAFT" },
+        });
+      }
+      await this.recalculatePurchaseTotals(tx, purchaseId);
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      warehouseId: purchase.warehouseId,
+      action: "delete_line",
+      entity: "purchase_line",
+      entityId: lineId,
+      before: {
+        presentationId: existing.presentationId,
+        qty: num(existing.qty),
+      },
+    });
+    return this.getPurchase(ctx, purchaseId);
+  },
+
+  /** Totalizar → PRELIMINARY (sin inventario ni CxP). */
+  async totalizePurchase(ctx: AdRequestContext, purchaseId: string) {
+    requireAdPermission(ctx, "purchases.create");
+    const prisma = getPrisma();
+    const before = await prisma.adPurchase.findFirst({
+      where: { id: purchaseId, tenantId: ctx.tenantId },
+      include: { lines: true },
+    });
+    if (!before) throw new NotFoundError("Compra no encontrada");
+    if (!before.lines.length) {
+      throw new ValidationError("Agregue líneas antes de totalizar");
+    }
+    requireWarehouseAccess(ctx, before.warehouseId);
+    if (before.status !== "DRAFT" && before.status !== "PRELIMINARY") {
+      throw new ValidationError("Estado no permite totalizar");
+    }
+
+    const updated = await prisma.adPurchase.update({
+      where: { id: purchaseId },
+      data: { status: "PRELIMINARY" },
+      include: {
+        lines: { include: { product: true, presentation: true } },
+        supplier: true,
+        paymentMethod: true,
+      },
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      warehouseId: before.warehouseId,
+      action: "totalize",
+      entity: "purchase",
+      entityId: purchaseId,
+      before: { status: before.status },
+      after: {
+        status: "PRELIMINARY",
+        subtotal: num(updated.subtotalUsd),
+        tax: num(updated.taxUsd),
+        grandTotal: num(updated.grandTotalUsd),
+      },
+    });
+
+    return {
+      ...sanitizePurchaseForClient(
+        updated as unknown as Record<string, unknown>,
+      ),
+      ...moneyDoc(updated),
+      totals: {
+        subtotal: num(
+          updated.currency === "BS" ? updated.subtotalBs : updated.subtotalUsd,
+        ),
+        tax: num(updated.currency === "BS" ? updated.taxBs : updated.taxUsd),
+        grandTotal: num(
+          updated.currency === "BS"
+            ? updated.grandTotalBs
+            : updated.grandTotalUsd,
+        ),
+      },
+    };
+  },
+
+  /**
+   * Confirmar compra F6 — transacción única:
+   * inventario + kardex + CPP + CxP (total general c/IVA) + auditoría.
+   */
   async confirmPurchase(
     ctx: AdRequestContext,
     purchaseId: string,
-    input: { receive?: boolean },
+    _input: { receive?: boolean } = {},
   ) {
     requireAdPermission(ctx, "purchases.approve");
     const prisma = getPrisma();
@@ -581,22 +858,118 @@ export const adCommerceService = {
     });
     if (!before) throw new NotFoundError("Compra no encontrada");
     requireWarehouseAccess(ctx, before.warehouseId);
+    if (!["DRAFT", "PRELIMINARY", "ORDERED"].includes(before.status)) {
+      throw new ValidationError("Compra no confirmable");
+    }
+    if (before.status === "RECEIVED") {
+      throw new ValidationError("Compra ya confirmada/recibida");
+    }
+    if (!before.lines.length) {
+      throw new ValidationError("Compra sin líneas");
+    }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      if (before.status === "DRAFT") {
-        await tx.adPurchase.update({
-          where: { id: purchaseId },
-          data: { status: "ORDERED" },
+    const result = await prisma.$transaction(async (tx) => {
+      for (const line of before.lines) {
+        const stock = await tx.adStock.findUnique({
+          where: {
+            warehouseId_productId: {
+              warehouseId: before.warehouseId,
+              productId: line.productId,
+            },
+          },
         });
-        if (
-          before.paymentCondition === "CREDITO" &&
-          before.supplierId &&
-          !(await tx.adPayable.findUnique({ where: { purchaseId } }))
-        ) {
-          const amount =
-            before.currency === "USD"
-              ? num(before.totalInvoicedUsd)
-              : num(before.totalInvoicedBs);
+        const prevQty = stock ? num(stock.qtyBase) : 0;
+        const product = await tx.adProduct.findUniqueOrThrow({
+          where: { id: line.productId },
+        });
+        const qtyIn =
+          num(line.qtyReceivedBase) > 0
+            ? num(line.qtyReceivedBase)
+            : num(line.qtyBase);
+        const unitUsd =
+          num(line.effectiveUnitCostUsd) > 0
+            ? num(line.effectiveUnitCostUsd)
+            : num(line.unitCostUsd);
+        const unitBs =
+          num(line.effectiveUnitCostBs) > 0
+            ? num(line.effectiveUnitCostBs)
+            : num(line.unitCostBs);
+        const avgUsd = weightedAverageCost(
+          prevQty,
+          num(product.avgCostUsd),
+          qtyIn,
+          unitUsd,
+        );
+        const avgBs = weightedAverageCost(
+          prevQty,
+          num(product.avgCostBs),
+          qtyIn,
+          unitBs,
+        );
+        await tx.adProduct.update({
+          where: { id: line.productId },
+          data: { avgCostUsd: dec(avgUsd), avgCostBs: dec(avgBs) },
+        });
+        await tx.adStock.upsert({
+          where: {
+            warehouseId_productId: {
+              warehouseId: before.warehouseId,
+              productId: line.productId,
+            },
+          },
+          create: {
+            warehouseId: before.warehouseId,
+            productId: line.productId,
+            qtyBase: dec(qtyIn),
+          },
+          update: { qtyBase: { increment: dec(qtyIn) } },
+        });
+        await tx.adInventoryMovement.create({
+          data: {
+            warehouseId: before.warehouseId,
+            productId: line.productId,
+            type: "PURCHASE",
+            qtyBase: dec(qtyIn),
+            presentationId: line.presentationId,
+            qtyPresentation: line.qty,
+            operatorId: ctx.operator.id,
+            reference: before.id,
+            reason: `Recepción ${before.invoiceNumber}`,
+          },
+        });
+      }
+
+      const grand =
+        before.currency === "BS"
+          ? num(before.grandTotalBs) || num(before.totalInvoicedBs)
+          : num(before.grandTotalUsd) || num(before.totalInvoicedUsd);
+      const subtotal =
+        before.currency === "BS"
+          ? num(before.subtotalBs)
+          : num(before.subtotalUsd);
+      const tax =
+        before.currency === "BS" ? num(before.taxBs) : num(before.taxUsd);
+
+      const updated = await tx.adPurchase.update({
+        where: { id: purchaseId },
+        data: {
+          status: "RECEIVED",
+          receivedAt: new Date(),
+          receivedById: ctx.operator.id,
+        },
+        include: {
+          lines: { include: { product: true, presentation: true } },
+          supplier: true,
+          paymentMethod: true,
+        },
+      });
+
+      if (before.supplierId) {
+        const existingPayable = await tx.adPayable.findUnique({
+          where: { purchaseId },
+        });
+        if (!existingPayable) {
+          const isCredit = before.paymentCondition === "CREDITO";
           await tx.adPayable.create({
             data: {
               tenantId: ctx.tenantId,
@@ -604,19 +977,22 @@ export const adCommerceService = {
               purchaseId,
               invoiceNumber: before.invoiceNumber,
               currency: before.currency,
-              amount: dec(amount),
-              balance: dec(amount),
+              amount: dec(grand),
+              subtotal: dec(subtotal),
+              taxAmount: dec(tax),
+              paidAmount: dec(isCredit ? 0 : grand),
+              balance: dec(isCredit ? grand : 0),
               issuedAt: before.invoiceDate ?? before.createdAt,
               dueDate: before.dueDate,
-              status: "PENDIENTE",
+              status: isCredit ? "PENDIENTE" : "PAGADA",
+              warehouseId: before.warehouseId,
+              paymentMethodId: before.paymentMethodId,
             },
           });
         }
       }
-      return tx.adPurchase.findUniqueOrThrow({
-        where: { id: purchaseId },
-        include: { lines: true, payable: true },
-      });
+
+      return updated;
     });
 
     await writeAdAudit({
@@ -626,17 +1002,94 @@ export const adCommerceService = {
       action: "confirm",
       entity: "purchase",
       entityId: purchaseId,
-      before: { status: before.status },
-      after: { status: updated.status },
+      before: {
+        status: before.status,
+        grandTotalUsd: num(before.grandTotalUsd),
+      },
+      after: {
+        status: "RECEIVED",
+        grandTotalUsd: num(result.grandTotalUsd),
+        inventory: true,
+        payable: Boolean(before.supplierId),
+      },
     });
 
-    if (input.receive) {
-      const { adOpsService } = await import("./ops.service.js");
-      return adOpsService.receivePurchase(ctx, purchaseId);
+    return {
+      ...sanitizePurchaseForClient(
+        result as unknown as Record<string, unknown>,
+      ),
+      ...moneyDoc(result),
+    };
+  },
+
+  /** Crear producto (+ presentación) desde el módulo de compras. */
+  async createProductFromPurchase(
+    ctx: AdRequestContext,
+    input: {
+      sku: string;
+      name: string;
+      brand?: string;
+      categoryId?: string;
+      description?: string;
+      baseUnitLabel?: string;
+      taxable?: boolean;
+      presentationName?: string;
+      unitsPerPresentation?: number;
+      barcode?: string;
+      priceUsd?: number;
+      priceBs?: number;
+    },
+  ) {
+    requireAdPermission(ctx, "products.manage");
+    const prisma = getPrisma();
+    const sku = input.sku.trim();
+    if (!sku || !input.name.trim()) {
+      throw new ValidationError("Código y descripción obligatorios");
     }
-    return sanitizePurchaseForClient(
-      updated as unknown as Record<string, unknown>,
-    );
+    const dup = await prisma.adProduct.findFirst({
+      where: { tenantId: ctx.tenantId, sku: { equals: sku, mode: "insensitive" } },
+    });
+    if (dup) throw new ValidationError("Ya existe un producto con ese código");
+
+    const product = await prisma.adProduct.create({
+      data: {
+        tenantId: ctx.tenantId,
+        sku,
+        name: input.name.trim(),
+        brand: input.brand,
+        categoryId: input.categoryId,
+        description: input.description,
+        baseUnitLabel: input.baseUnitLabel ?? "u",
+        taxable: input.taxable ?? false,
+        barcode: input.barcode,
+        presentations: {
+          create: {
+            name: input.presentationName ?? "Unidad",
+            code: "U",
+            unitsPerPresentation: dec(input.unitsPerPresentation ?? 1),
+            priceUsd: dec(input.priceUsd ?? 0),
+            priceBs: dec(input.priceBs ?? 0),
+            sku,
+            barcode: input.barcode,
+          },
+        },
+      },
+      include: { presentations: true },
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      action: "create",
+      entity: "product",
+      entityId: product.id,
+      after: {
+        sku: product.sku,
+        name: product.name,
+        taxable: product.taxable,
+      },
+    });
+    return product;
   },
 
   async listPayables(ctx: AdRequestContext) {

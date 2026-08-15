@@ -1,5 +1,5 @@
 /**
- * Cliente HTTP Fase 5 (comercio). Usa sesión JWT cuando VITE_AD_DATA_SOURCE=api.
+ * Cliente HTTP comercio F5/F6.
  */
 import { API_BASE_URL } from "@/config/api";
 import { getAdSessionHeaders, loadAdSession } from "./session";
@@ -45,12 +45,88 @@ async function commerceFetch<T>(
 
 export const adCommerceClient = {
   searchProducts: (q: string) =>
-    commerceFetch<unknown[]>("GET", `/api/v1/ad/products/search?q=${encodeURIComponent(q)}`),
-  listSuppliers: () => commerceFetch<unknown[]>("GET", "/api/v1/ad/suppliers"),
+    commerceFetch<
+      {
+        id: string;
+        name: string;
+        brand: string | null;
+        sku: string | null;
+        taxable?: boolean;
+        presentations: {
+          id: string;
+          name: string;
+          unitsPerPresentation: number;
+        }[];
+      }[]
+    >("GET", `/api/v1/ad/products/search?q=${encodeURIComponent(q)}`),
+  lookupByCode: (code: string, source: "manual" | "camera" | "wedge" = "manual") =>
+    commerceFetch(
+      "GET",
+      `/api/v1/ad/products/by-code?code=${encodeURIComponent(code)}&source=${source}`,
+    ),
+  listSuppliers: () =>
+    commerceFetch<{ id: string; name: string; creditDays: number }[]>(
+      "GET",
+      "/api/v1/ad/suppliers",
+    ),
   createSupplier: (body: Record<string, unknown>) =>
     commerceFetch("POST", "/api/v1/ad/suppliers", body),
+  listPaymentMethods: () =>
+    commerceFetch<
+      {
+        id: string;
+        name: string;
+        currency: string;
+        usesSpecialRateRef: boolean;
+        active: boolean;
+      }[]
+    >("GET", "/api/v1/ad/payment-methods"),
   createPurchase: (body: Record<string, unknown>) =>
-    commerceFetch("POST", "/api/v1/ad/commerce/purchases", body),
+    commerceFetch<Record<string, unknown>>(
+      "POST",
+      "/api/v1/ad/commerce/purchases",
+      body,
+    ),
+  getPurchase: (id: string) =>
+    commerceFetch<Record<string, unknown>>(
+      "GET",
+      `/api/v1/ad/commerce/purchases/${id}`,
+    ),
+  addLine: (purchaseId: string, body: Record<string, unknown>) =>
+    commerceFetch(
+      "POST",
+      `/api/v1/ad/commerce/purchases/${purchaseId}/lines`,
+      body,
+    ),
+  updateLine: (
+    purchaseId: string,
+    lineId: string,
+    body: Record<string, unknown>,
+  ) =>
+    commerceFetch(
+      "PATCH",
+      `/api/v1/ad/commerce/purchases/${purchaseId}/lines/${lineId}`,
+      body,
+    ),
+  deleteLine: (purchaseId: string, lineId: string) =>
+    commerceFetch(
+      "DELETE",
+      `/api/v1/ad/commerce/purchases/${purchaseId}/lines/${lineId}`,
+    ),
+  totalize: (purchaseId: string) =>
+    commerceFetch(
+      "POST",
+      `/api/v1/ad/commerce/purchases/${purchaseId}/totalize`,
+      {},
+    ),
+  confirm: (purchaseId: string) =>
+    commerceFetch(
+      "POST",
+      `/api/v1/ad/commerce/purchases/${purchaseId}/confirm`,
+      {},
+    ),
+  createProduct: (body: Record<string, unknown>) =>
+    commerceFetch("POST", "/api/v1/ad/commerce/products", body),
   listPayables: () => commerceFetch<unknown[]>("GET", "/api/v1/ad/payables"),
   getBcv: () => commerceFetch("GET", "/api/v1/ad/rates/bcv"),
   setBcv: (rate: number, reason?: string) =>

@@ -5,9 +5,11 @@ import {
   confirmPurchaseSchema,
   createComboSchema,
   createCommercePurchaseSchema,
+  createProductFromPurchaseSchema,
   createPromotionSchema,
   createPurchaseOrderSchema,
   createSupplierSchema,
+  commercePurchaseLineSchema,
   importConfirmSchema,
   importPreviewSchema,
   parseBody,
@@ -17,6 +19,7 @@ import {
   setBcvRateSchema,
   setPresentationPriceSchema,
   setProtectedRateSchema,
+  updateCommercePurchaseLineSchema,
   updateSupplierSchema,
   upsertPaymentMethodSchema,
 } from "./commerce.validation.js";
@@ -105,12 +108,97 @@ adCommerceRouter.post("/commerce/purchases", async (req, res, next) => {
   }
 });
 
+adCommerceRouter.get("/commerce/purchases/:id", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const data = await adCommerceService.getPurchase(ctx, req.params.id);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adCommerceRouter.post("/commerce/purchases/:id/lines", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(commercePurchaseLineSchema, req.body);
+    const data = await adCommerceService.addPurchaseLine(
+      ctx,
+      req.params.id,
+      body,
+    );
+    res.status(201).json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adCommerceRouter.patch(
+  "/commerce/purchases/:id/lines/:lineId",
+  async (req, res, next) => {
+    try {
+      const ctx = getAdContext(req);
+      const body = parseBody(updateCommercePurchaseLineSchema, req.body);
+      const data = await adCommerceService.updatePurchaseLine(
+        ctx,
+        req.params.id,
+        req.params.lineId,
+        body,
+      );
+      res.json({ data });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+adCommerceRouter.delete(
+  "/commerce/purchases/:id/lines/:lineId",
+  async (req, res, next) => {
+    try {
+      const ctx = getAdContext(req);
+      const data = await adCommerceService.deletePurchaseLine(
+        ctx,
+        req.params.id,
+        req.params.lineId,
+      );
+      res.json({ data });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+adCommerceRouter.post(
+  "/commerce/purchases/:id/totalize",
+  async (req, res, next) => {
+    try {
+      const ctx = getAdContext(req);
+      const data = await adCommerceService.totalizePurchase(ctx, req.params.id);
+      res.json({ data });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 adCommerceRouter.post("/commerce/purchases/:id/confirm", async (req, res, next) => {
   try {
     const ctx = getAdContext(req);
     const body = parseBody(confirmPurchaseSchema, req.body ?? {});
     const data = await adCommerceService.confirmPurchase(ctx, req.params.id, body);
     res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adCommerceRouter.post("/commerce/products", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(createProductFromPurchaseSchema, req.body);
+    const data = await adCommerceService.createProductFromPurchase(ctx, body);
+    res.status(201).json({ data });
   } catch (err) {
     next(err);
   }
