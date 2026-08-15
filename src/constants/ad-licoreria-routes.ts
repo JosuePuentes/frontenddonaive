@@ -29,6 +29,7 @@ const AD_SEGMENTS = {
   configUsuarios: "/configuracion/usuarios",
   configPermisos: "/configuracion/permisos",
   configDiseno: "/configuracion/diseno",
+  configDisenoPreview: "/configuracion/diseno/preview",
   /** Fase 10.2 — TV / Digital Signage */
   tv: "/tv",
   tvPantallas: "/tv/pantallas",
@@ -60,6 +61,7 @@ export type AdLicoreriaRoutes = {
   configUsuarios: string;
   configPermisos: string;
   configDiseno: string;
+  configDisenoPreview: string;
   tv: string;
   tvPantallas: string;
   tvContenido: string;
@@ -98,6 +100,7 @@ export function getAdLicoreriaRoutes(
     configUsuarios: joinPath(base, AD_SEGMENTS.configUsuarios),
     configPermisos: joinPath(base, AD_SEGMENTS.configPermisos),
     configDiseno: joinPath(base, AD_SEGMENTS.configDiseno),
+    configDisenoPreview: joinPath(base, AD_SEGMENTS.configDisenoPreview),
     tv: joinPath(base, AD_SEGMENTS.tv),
     tvPantallas: joinPath(base, AD_SEGMENTS.tvPantallas),
     tvContenido: joinPath(base, AD_SEGMENTS.tvContenido),

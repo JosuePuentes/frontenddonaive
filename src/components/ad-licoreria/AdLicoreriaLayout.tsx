@@ -63,6 +63,7 @@ function AdLicoreriaLayout() {
   const isLanding = path === "/";
   const isMesonera = path === "/mesonera";
   const isTvPlayer = isTvPlayerPath(path);
+  const isDesignPreview = path === "/configuracion/diseno/preview";
 
   useEffect(() => {
     const id = "ad-licoreria-fonts";
@@ -79,7 +80,7 @@ function AdLicoreriaLayout() {
       <AdTvProvider>
         <AdDesignApplier>
           <div className="ad-shell">
-            {isLanding || isMesonera || isTvPlayer ? (
+            {isLanding || isMesonera || isTvPlayer || isDesignPreview ? (
               <Outlet />
             ) : (
               <div className="ad-layout">

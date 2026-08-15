@@ -47,6 +47,13 @@ type AdStore = AdRepositoryState & {
     patch: Partial<AdSiteDesign> & { colors?: Partial<AdSiteDesign["colors"]> },
     userName?: string,
   ) => AdResult<AdSiteDesign>;
+  saveSiteDesignDraft: (
+    patch: Partial<AdSiteDesign> & { colors?: Partial<AdSiteDesign["colors"]> },
+    userName?: string,
+  ) => AdResult<AdSiteDesign>;
+  publishSiteDesign: (userName?: string) => AdResult<AdSiteDesign>;
+  discardSiteDesignDraft: () => AdResult<AdSiteDesign>;
+  getSiteDesignDraft: () => AdSiteDesign;
   resetSiteDesign: (userName?: string) => AdResult<AdSiteDesign>;
   upsertPaymentMethod: (
     method: AdPaymentMethodConfig,
@@ -295,6 +302,13 @@ export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
       updateSettings: (patch) => adLicoreriaRepository.updateSettings(patch),
       updateSiteDesign: (patch, userName) =>
         adLicoreriaRepository.updateSiteDesign(patch, userName),
+      saveSiteDesignDraft: (patch, userName) =>
+        adLicoreriaRepository.saveSiteDesignDraft(patch, userName),
+      publishSiteDesign: (userName) =>
+        adLicoreriaRepository.publishSiteDesign(userName),
+      discardSiteDesignDraft: () =>
+        adLicoreriaRepository.discardSiteDesignDraft(),
+      getSiteDesignDraft: () => adLicoreriaRepository.getSiteDesignDraft(),
       resetSiteDesign: (userName) =>
         adLicoreriaRepository.resetSiteDesign(userName),
       upsertPaymentMethod: (m) => adLicoreriaRepository.upsertPaymentMethod(m),

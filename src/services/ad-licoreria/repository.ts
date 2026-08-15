@@ -89,10 +89,9 @@ import type {
 } from "@/types/ad-licoreria";
 import {
   AD_DEFAULT_SITE_DESIGN,
-  loadSiteDesignFromStorage,
-  saveSiteDesignToStorage,
   type AdSiteDesign,
 } from "@/lib/ad-licoreria/site-design";
+import { adDesignRepository } from "@/services/ad-licoreria/design/repository";
 import {
   AD_DEFAULT_ROLE_PERMISSIONS,
   assertShortageOverride,
@@ -148,10 +147,10 @@ export type AdResult<T = void> =
   | { ok: false; error: string };
 
 function cloneState(): AdRepositoryState {
-  const storedDesign = loadSiteDesignFromStorage();
+  const published = adDesignRepository.getPublished();
   return {
     settings: { ...AD_DEMO_SETTINGS },
-    siteDesign: structuredClone(storedDesign ?? AD_DEFAULT_SITE_DESIGN),
+    siteDesign: structuredClone(published ?? AD_DEFAULT_SITE_DESIGN),
     operators: structuredClone(AD_DEMO_OPERATORS),
     categories: structuredClone(AD_DEMO_CATEGORIES),
     products: structuredClone(AD_DEMO_PRODUCTS),
@@ -440,7 +439,22 @@ export const adLicoreriaRepository = {
     return structuredClone(state.siteDesign);
   },
 
+  getSiteDesignDraft(): AdSiteDesign {
+    return adDesignRepository.getDraft();
+  },
+
+  /**
+   * Guarda borrador (no afecta Home hasta publicar).
+   * Compat: si se llama updateSiteDesign sin flag, también publica (legado).
+   */
   updateSiteDesign(
+    patch: Partial<AdSiteDesign> & { colors?: Partial<AdSiteDesign["colors"]> },
+    userName = "Admin A&D",
+  ): AdResult<AdSiteDesign> {
+    return this.saveSiteDesignDraft(patch, userName);
+  },
+
+  saveSiteDesignDraft(
     patch: Partial<AdSiteDesign> & { colors?: Partial<AdSiteDesign["colors"]> },
     userName = "Admin A&D",
   ): AdResult<AdSiteDesign> {
@@ -452,41 +466,120 @@ export const adLicoreriaRepository = {
     ) {
       return { ok: false, error: "Sin permiso settings.manage" };
     }
-    const before = JSON.stringify(state.siteDesign);
+    const current = adDesignRepository.getDraft();
     const next: AdSiteDesign = {
-      ...state.siteDesign,
+      ...current,
       ...patch,
+      brand: {
+        ...current.brand,
+        ...(patch.brand ?? {}),
+        commercialName:
+          patch.brand?.commercialName ??
+          patch.brandName ??
+          current.brand.commercialName,
+        tagline:
+          patch.brand?.tagline ?? patch.brandTagline ?? current.brand.tagline,
+        description:
+          patch.brand?.description ??
+          patch.brandDescription ??
+          current.brand.description,
+        logoUrl: patch.brand?.logoUrl ?? patch.logoUrl ?? current.brand.logoUrl,
+        faviconUrl:
+          patch.brand?.faviconUrl ??
+          patch.faviconUrl ??
+          current.brand.faviconUrl,
+      },
       colors: {
-        ...state.siteDesign.colors,
+        ...current.colors,
         ...(patch.colors ?? {}),
       },
+      hero: {
+        ...current.hero,
+        ...(patch.hero ?? {}),
+        backgroundUrl:
+          patch.hero?.backgroundUrl ??
+          patch.homeBackgroundUrl ??
+          current.hero.backgroundUrl,
+        overlay:
+          patch.hero?.overlay ??
+          patch.homeBackgroundOverlay ??
+          current.hero.overlay,
+        primaryLabel:
+          patch.hero?.primaryLabel ??
+          patch.homePrimaryCta ??
+          current.hero.primaryLabel,
+        secondaryLabel:
+          patch.hero?.secondaryLabel ??
+          patch.homeSecondaryCta ??
+          current.hero.secondaryLabel,
+      },
+      typography: {
+        ...current.typography,
+        ...(patch.typography ?? {}),
+      },
+      featuredProducts: {
+        ...current.featuredProducts,
+        ...(patch.featuredProducts ?? {}),
+      },
+      footer: { ...current.footer, ...(patch.footer ?? {}) },
+      seo: { ...current.seo, ...(patch.seo ?? {}) },
+      popup: { ...current.popup, ...(patch.popup ?? {}) },
+      sections: patch.sections
+        ? structuredClone(patch.sections)
+        : current.sections,
       banners: patch.banners
         ? structuredClone(patch.banners)
-        : state.siteDesign.banners,
-      updatedAt: new Date().toISOString(),
-      updatedBy: userName,
+        : current.banners,
+      gallery: patch.gallery
+        ? structuredClone(patch.gallery)
+        : current.gallery,
     };
-    if (!next.brandName.trim()) {
-      return { ok: false, error: "Nombre de marca obligatorio" };
+    if (!next.brand.commercialName.trim()) {
+      return { ok: false, error: "Nombre comercial obligatorio" };
     }
-    state.siteDesign = next;
-    /** Sincroniza settings legacy de marca. */
-    state.settings = {
-      ...state.settings,
-      brandName: next.brandName,
-      brandTagline: next.brandTagline,
-    };
-    saveSiteDesignToStorage(next);
-    audit("config", "site_design", userName, "Actualizó diseño web", undefined, {
-      beforeValue: before,
+    const saved = adDesignRepository.saveDraft({ design: next, userName });
+    if (!saved.ok) return saved;
+    audit("config", "site_design", userName, "Guardó borrador diseño web", undefined, {
       afterValue: JSON.stringify({
-        brandName: next.brandName,
-        banners: next.banners.length,
-        colors: next.colors,
+        brandName: saved.data.brand.commercialName,
+        banners: saved.data.banners.length,
       }),
     });
     emit();
-    return { ok: true, data: structuredClone(next) };
+    return { ok: true, data: saved.data };
+  },
+
+  publishSiteDesign(userName = "Admin A&D"): AdResult<AdSiteDesign> {
+    const actor = this.getCurrentOperator();
+    if (
+      actor &&
+      !hasPermission(actor, "settings.manage", state.rolePermissionOverrides) &&
+      actor.role !== "admin"
+    ) {
+      return { ok: false, error: "Sin permiso settings.manage" };
+    }
+    const published = adDesignRepository.publish({ userName });
+    if (!published.ok) return published;
+    state.siteDesign = structuredClone(published.data);
+    state.settings = {
+      ...state.settings,
+      brandName: published.data.brand.commercialName,
+      brandTagline: published.data.brand.tagline,
+    };
+    audit("config", "site_design", userName, "Publicó diseño web", undefined, {
+      afterValue: JSON.stringify({
+        brandName: published.data.brand.commercialName,
+        publishedAt: published.data.publishedAt,
+      }),
+    });
+    emit();
+    return { ok: true, data: published.data };
+  },
+
+  discardSiteDesignDraft(): AdResult<AdSiteDesign> {
+    const r = adDesignRepository.discardDraft();
+    emit();
+    return r;
   },
 
   resetSiteDesign(userName = "Admin A&D"): AdResult<AdSiteDesign> {
@@ -499,24 +592,20 @@ export const adLicoreriaRepository = {
       return { ok: false, error: "Sin permiso settings.manage" };
     }
     const before = JSON.stringify(state.siteDesign);
-    const next = {
-      ...structuredClone(AD_DEFAULT_SITE_DESIGN),
-      updatedAt: new Date().toISOString(),
-      updatedBy: userName,
-    };
-    state.siteDesign = next;
+    const restored = adDesignRepository.restoreDefaults({ userName });
+    if (!restored.ok) return restored;
+    state.siteDesign = structuredClone(restored.data);
     state.settings = {
       ...state.settings,
-      brandName: next.brandName,
-      brandTagline: next.brandTagline,
+      brandName: restored.data.brand.commercialName,
+      brandTagline: restored.data.brand.tagline,
     };
-    saveSiteDesignToStorage(next);
     audit("config", "site_design", userName, "Restableció diseño web", undefined, {
       beforeValue: before,
-      afterValue: JSON.stringify({ brandName: next.brandName }),
+      afterValue: JSON.stringify({ brandName: restored.data.brandName }),
     });
     emit();
-    return { ok: true, data: structuredClone(next) };
+    return { ok: true, data: restored.data };
   },
 
   upsertPaymentMethod(

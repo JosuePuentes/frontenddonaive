@@ -22,9 +22,18 @@ function AdLicoreriaBrandMark({
 }: AdLicoreriaBrandMarkProps) {
   const [failed, setFailed] = useState(false);
   const { siteDesign } = useAdLicoreria();
-  const logo = siteDesign.logoUrl || AD_LICORERIA_MEDIA.logo;
-  const name = siteDesign.brandName || adLicoreriaBrand.name;
-  const tagline = siteDesign.brandTagline || adLicoreriaBrand.tagline;
+  const logo =
+    siteDesign.brand?.logoUrl ||
+    siteDesign.logoUrl ||
+    AD_LICORERIA_MEDIA.logo;
+  const name =
+    siteDesign.brand?.commercialName ||
+    siteDesign.brandName ||
+    adLicoreriaBrand.name;
+  const tagline =
+    siteDesign.brand?.tagline ||
+    siteDesign.brandTagline ||
+    adLicoreriaBrand.tagline;
 
   return (
     <span className="inline-flex min-w-0 items-center gap-3">

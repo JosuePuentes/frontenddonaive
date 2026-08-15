@@ -541,3 +541,183 @@
   }
 }
 
+
+/* —— Home público / Diseño web 10.3 —— */
+.ad-public-home {
+  min-height: 100vh;
+}
+
+.ad-public-home__preview-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--ad-gold) 25%, #000);
+  color: var(--ad-gold-soft);
+}
+
+.ad-public-hero {
+  position: relative;
+  min-height: min(92vh, 820px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3rem 1.25rem;
+  overflow: hidden;
+}
+
+.ad-public-hero__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: 0.45;
+}
+
+.ad-public-hero__inner {
+  position: relative;
+  z-index: 1;
+  width: min(42rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ad-public-hero__title {
+  font-size: clamp(2.6rem, 8vw, 4.2rem);
+  line-height: 0.95;
+}
+
+.ad-public-hero__desc {
+  max-width: 32rem;
+  margin-top: 0.75rem;
+  color: var(--ad-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.ad-public-hero__actions {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ad-public-section {
+  padding: 2.5rem 1.25rem;
+  max-width: 68rem;
+  margin: 0 auto;
+}
+
+.ad-public-section h2 {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  color: var(--ad-gold-soft);
+  margin-bottom: 0.5rem;
+}
+
+.ad-public-muted {
+  color: var(--ad-muted);
+}
+
+.ad-public-grid {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+}
+
+.ad-public-card {
+  border: 1px solid var(--ad-line);
+  background: var(--ad-bg-panel);
+  padding: 0.85rem;
+}
+
+.ad-public-card__img {
+  height: 5.5rem;
+  margin-bottom: 0.6rem;
+  border: 1px solid var(--ad-line);
+}
+
+.ad-public-banners {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.ad-public-banner {
+  border: 1px solid var(--ad-line-strong);
+  background: var(--ad-bg-panel);
+  background-size: cover;
+  background-position: center;
+  padding: 1.25rem;
+  min-height: 7rem;
+}
+
+.ad-public-gallery {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+}
+
+.ad-public-gallery__item img {
+  width: 100%;
+  height: 8rem;
+  object-fit: cover;
+  border: 1px solid var(--ad-line);
+}
+
+.ad-public-footer {
+  margin-top: 2rem;
+  padding: 2.5rem 1.25rem 3rem;
+  border-top: 1px solid var(--ad-line);
+  background: var(--ad-bg-elevated, var(--ad-bg));
+}
+
+.ad-public-footer__grid {
+  max-width: 68rem;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.ad-public-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 1rem;
+}
+
+.ad-public-popup__card {
+  width: min(24rem, 100%);
+  background: var(--ad-bg-panel);
+  border: 1px solid var(--ad-line-strong);
+  padding: 1.25rem;
+}
+
+@media (min-width: 720px) {
+  .ad-public-footer__grid {
+    grid-template-columns: 1.4fr 1fr 1fr;
+  }
+  .ad-public-banners {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .ad-public-hero {
+    min-height: 78vh;
+    padding: 2rem 1rem;
+  }
+  .ad-public-hero__actions .ad-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

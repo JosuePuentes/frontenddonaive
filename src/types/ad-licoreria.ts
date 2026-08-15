@@ -600,12 +600,14 @@ export type AdAppSettings = {
   whatsappEnabled: boolean;
 };
 
-/** Re-export del diseño visual (admin). */
+/** Re-export del diseño visual (admin · Fase 10.3). */
 export type {
   AdSiteBanner,
   AdSiteColors,
   AdSiteDesign,
-} from "@/lib/ad-licoreria/site-design";
+  AdGalleryItem,
+  AdHomeSection,
+} from "@/types/ad-licoreria-design";
 
 export type AdServiceLog = {
   id: string;

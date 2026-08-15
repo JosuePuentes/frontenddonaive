@@ -64,7 +64,11 @@ const AdLicoreriaConfigPermisos = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaConfigPermisos"),
 );
 const AdLicoreriaConfigDiseno = lazy(
-  () => import("@/pages/ad-licoreria/AdLicoreriaConfigDiseno"),
+  () => import("@/pages/ad-licoreria/configuracion/AdLicoreriaConfigDiseno"),
+);
+const AdLicoreriaConfigDisenoPreview = lazy(
+  () =>
+    import("@/pages/ad-licoreria/configuracion/AdLicoreriaConfigDisenoPreview"),
 );
 const AdTvHub = lazy(() => import("@/pages/ad-licoreria/tv/AdTvHub"));
 const AdTvPantallas = lazy(
@@ -160,6 +164,10 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
       <Route
         path={adLicoreriaRouterPath(prefix, "configDiseno")}
         element={<AdLicoreriaConfigDiseno />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "configDisenoPreview")}
+        element={<AdLicoreriaConfigDisenoPreview />}
       />
       <Route
         path={adLicoreriaRouterPath(prefix, "tv")}
