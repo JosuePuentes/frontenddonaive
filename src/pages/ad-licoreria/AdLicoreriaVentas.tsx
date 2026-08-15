@@ -3,8 +3,14 @@ import {
   formatAdPrice,
   toBaseUnits,
 } from "@/lib/ad-licoreria/conversions";
+import {
+  AD_WH_BODEGON,
+  AD_WH_LICORERIA,
+  warehouseLabel,
+} from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import type {
+  AdInvoiceDraft,
   AdPayment,
   AdPaymentMethodCode,
   AdSaleItem,
@@ -22,10 +28,14 @@ export default function AdLicoreriaVentas() {
     paymentMethods,
     getPresentationsFor,
     getStock,
-    completeSale,
+    getOperationalAvailability,
     openAccount,
     addAccountItem,
     createPrepaid,
+    createInvoiceDraft,
+    confirmInvoiceDraft,
+    cancelInvoiceDraft,
+    logDocumentAction,
   } = useAdLicoreria();
 
   const mesoneras = operators.filter(
@@ -53,6 +63,8 @@ export default function AdLicoreriaVentas() {
   const [discountUsd, setDiscountUsd] = useState(0);
   const [discountAuth, setDiscountAuth] = useState("");
   const [msg, setMsg] = useState("");
+  const [draft, setDraft] = useState<AdInvoiceDraft | null>(null);
+  const [confirmedReceipt, setConfirmedReceipt] = useState<string | null>(null);
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -82,6 +94,33 @@ export default function AdLicoreriaVentas() {
   const paidBs = payments
     .filter((p) => p.currency === "BS")
     .reduce((a, p) => a + p.amount, 0);
+
+  const qtyAvail = useMemo(() => {
+    if (!activePres || qty <= 0) return null;
+    const requestedBase = toBaseUnits(activePres, qty);
+    return getOperationalAvailability(
+      productId,
+      requestedBase,
+      AD_WH_LICORERIA,
+    );
+  }, [activePres, qty, productId, getOperationalAvailability]);
+
+  const cartAlerts = useMemo(
+    () =>
+      cart.map((line) => {
+        const av = getOperationalAvailability(
+          line.productId,
+          line.qtyBase,
+          AD_WH_LICORERIA,
+        );
+        const shortfall = Math.max(
+          0,
+          line.qtyBase - av.availableOperationalTotal,
+        );
+        return { line, av, shortfall };
+      }),
+    [cart, getOperationalAvailability],
+  );
 
   function addLine() {
     const pres = activePres;
@@ -180,21 +219,30 @@ export default function AdLicoreriaVentas() {
     setMsg("");
   }
 
-  function checkout() {
+  function openPrelim() {
+    if (!cart.length) {
+      setMsg("Agregue productos");
+      return;
+    }
+    if (!payments.length) {
+      setMsg("Registre al menos un pago");
+      return;
+    }
     if (discountUsd > 0 && !discountAuth.trim()) {
       setMsg("Descuento requiere autorización");
       return;
     }
-    const result = completeSale({
+    const result = createInvoiceDraft({
       items: cart,
       payments,
-      warehouseId: "wh-2",
-      userName: mesonera?.name ?? "Cajero",
+      warehouseId: AD_WH_LICORERIA,
+      cashierName: mesonera?.name ?? "Cajero",
       tableId: tableId || undefined,
       mesoneraName: mesonera?.name,
       customerId: customer?.id,
       customerName: customer?.name,
       customerPhone: customer?.phone,
+      customerDocumentId: customer?.documentId,
       discountUsd,
       notes: notes.trim() || undefined,
     });
@@ -202,14 +250,33 @@ export default function AdLicoreriaVentas() {
       setMsg(result.error);
       return;
     }
+    setDraft(result.data);
+    setConfirmedReceipt(null);
+    setMsg(`Preliminar ${result.data.provisionalNumber}`);
+  }
+
+  function confirmDraft(continueWithShortage = false) {
+    if (!draft) return;
+    const result = confirmInvoiceDraft({
+      draftId: draft.id,
+      userName: mesonera?.name ?? "Cajero",
+      continueWithShortage,
+      shortageDecision: continueWithShortage
+        ? "continuar_con_faltante"
+        : undefined,
+    });
+    if (!result.ok) {
+      setMsg(result.error);
+      return;
+    }
+    setConfirmedReceipt(result.data.receiptNumber);
     setCart([]);
     setPayments([]);
     setNotes("");
     setDiscountUsd(0);
     setDiscountAuth("");
-    setMsg(
-      `Venta OK · Recibo ${result.data.receiptNumber} · $${result.data.total.usd.toFixed(2)}`,
-    );
+    setDraft(null);
+    setMsg(`Factura confirmada ${result.data.receiptNumber}`);
   }
 
   function leaveOpen() {
@@ -238,7 +305,7 @@ export default function AdLicoreriaVentas() {
         qty: line.qty,
         userName: mesonera?.name ?? "Mesonera",
         deductStock: false,
-        warehouseId: "wh-2",
+        warehouseId: AD_WH_LICORERIA,
       });
       if (!r.ok) {
         setMsg(r.error);
@@ -285,6 +352,16 @@ export default function AdLicoreriaVentas() {
       `Prepago ${result.data.code} · Recibo ${result.data.receiptNumber} · QR listo`,
     );
   }
+
+  const qtyShortfall = qtyAvail
+    ? Math.max(0, qtyAvail.requestedBase - qtyAvail.availableOperationalTotal)
+    : 0;
+  const licAv = qtyAvail?.byWarehouse.find(
+    (w) => w.warehouseId === AD_WH_LICORERIA,
+  );
+  const bodAv = qtyAvail?.byWarehouse.find(
+    (w) => w.warehouseId === AD_WH_BODEGON,
+  );
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
@@ -379,16 +456,41 @@ export default function AdLicoreriaVentas() {
             + Agregar
           </button>
         </div>
-        <p className="text-xs text-[var(--ad-muted)]">
-          Stock Depósito 2:{" "}
-          <strong className="text-[var(--ad-gold-soft)]">
-            {getStock(productId, "wh-2")}
-          </strong>{" "}
-          u. base
-          {activePres
-            ? ` · línea = ${toBaseUnits(activePres, qty)} u. base`
-            : null}
-        </p>
+
+        {qtyAvail ? (
+          <div className="ad-cop__alert text-sm">
+            <p>
+              Disponible operativo:{" "}
+              <strong>{qtyAvail.availableOperationalTotal}</strong>
+              {qtyShortfall > 0 ? (
+                <>
+                  {" "}
+                  · Faltan: <strong>{qtyShortfall}</strong>
+                </>
+              ) : null}
+            </p>
+            {qtyShortfall > 0 ? (
+              <>
+                <p className="text-[var(--ad-gold-soft)]">
+                  ⚠ Para cumplir completamente esta orden faltan {qtyShortfall}{" "}
+                  unidades.
+                </p>
+                <p className="text-[var(--ad-muted)]">
+                  Licorería: {licAv?.availableOperational ?? 0} · Bodegón:{" "}
+                  {bodAv?.availableOperational ?? 0} · Compra necesaria:{" "}
+                  {qtyAvail.plan.purchaseNeeded}
+                </p>
+              </>
+            ) : null}
+            <p className="text-xs text-[var(--ad-muted)]">
+              Stock físico Licorería: {getStock(productId, AD_WH_LICORERIA)} u.
+              base
+              {activePres
+                ? ` · línea = ${toBaseUnits(activePres, qty)} u. base`
+                : null}
+            </p>
+          </div>
+        ) : null}
 
         <div className="ad-table-wrap">
           <table className="ad-table">
@@ -410,9 +512,17 @@ export default function AdLicoreriaVentas() {
                 const pres = presentations.find(
                   (p) => p.id === l.presentationId,
                 );
+                const alert = cartAlerts[i];
                 return (
                   <tr key={`${l.presentationId}-${i}`}>
-                    <td>{prod?.name}</td>
+                    <td>
+                      {prod?.name}
+                      {alert && alert.shortfall > 0 ? (
+                        <span className="mt-1 block text-xs text-[var(--ad-gold-soft)]">
+                          Faltan {alert.shortfall} u.
+                        </span>
+                      ) : null}
+                    </td>
                     <td>{pres?.name}</td>
                     <td>
                       <input
@@ -582,8 +692,12 @@ export default function AdLicoreriaVentas() {
           ))}
         </ul>
         <div className="grid gap-2">
-          <button type="button" className="ad-btn ad-btn--gold" onClick={checkout}>
-            Cobrar y cerrar (recibo)
+          <button
+            type="button"
+            className="ad-btn ad-btn--gold"
+            onClick={openPrelim}
+          >
+            Facturar (preliminar)
           </button>
           <button
             type="button"
@@ -597,7 +711,168 @@ export default function AdLicoreriaVentas() {
           </button>
         </div>
         {msg ? <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p> : null}
+        {confirmedReceipt ? (
+          <div className="ad-cop__alert flex flex-wrap gap-2">
+            <span>Recibo {confirmedReceipt}</span>
+            <button
+              type="button"
+              className="ad-btn"
+              onClick={() =>
+                logDocumentAction({
+                  action: "print",
+                  entity: "sale",
+                  entityId: confirmedReceipt,
+                  userName: mesonera?.name ?? "Cajero",
+                  detail: confirmedReceipt,
+                })
+              }
+            >
+              Imprimir
+            </button>
+            <button
+              type="button"
+              className="ad-btn"
+              onClick={() =>
+                logDocumentAction({
+                  action: "download",
+                  entity: "sale",
+                  entityId: confirmedReceipt,
+                  userName: mesonera?.name ?? "Cajero",
+                  detail: confirmedReceipt,
+                })
+              }
+            >
+              Descargar
+            </button>
+            <button
+              type="button"
+              className="ad-btn"
+              onClick={() => setConfirmedReceipt(null)}
+            >
+              Cerrar
+            </button>
+          </div>
+        ) : null}
       </section>
+
+      {draft ? (
+        <div className="ad-modal-backdrop">
+          <div className="ad-modal ad-doc">
+            <p className="ad-eyebrow">Preliminar de factura</p>
+            <h3 className="ad-display text-3xl text-[var(--ad-gold-soft)]">
+              {draft.provisionalNumber}
+            </h3>
+            <div className="mt-3 grid gap-1 text-sm sm:grid-cols-2">
+              <p>Cliente: {draft.customerName ?? "—"}</p>
+              <p>Teléfono: {draft.customerPhone ?? "—"}</p>
+              <p>Cédula: {draft.customerDocumentId ?? "—"}</p>
+              <p>Mesa: {draft.tableNumber ?? "—"}</p>
+              <p>Mesonera: {draft.mesoneraName ?? "—"}</p>
+              <p>Fecha: {new Date(draft.createdAt).toLocaleString("es-VE")}</p>
+            </div>
+            <table className="ad-table mt-3">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Presentación</th>
+                  <th>Cant.</th>
+                  <th>Precio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {draft.items.map((it, i) => (
+                  <tr key={`${it.presentationId}-${i}`}>
+                    <td>
+                      {products.find((p) => p.id === it.productId)?.name}
+                    </td>
+                    <td>
+                      {
+                        presentations.find((p) => p.id === it.presentationId)
+                          ?.name
+                      }
+                    </td>
+                    <td>{it.qty}</td>
+                    <td>{formatAdPrice(it.unitPrice)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-sm">
+              Descuento USD {draft.discountUsd} · Métodos:{" "}
+              {draft.payments
+                .map((p) => `${p.method} ${p.currency} ${p.amount}`)
+                .join(" + ")}
+            </p>
+            {draft.supplyAlerts.some((a) => a.shortfall > 0) ? (
+              <div className="ad-cop__alert mt-3">
+                {draft.supplyAlerts
+                  .filter((a) => a.shortfall > 0)
+                  .map((a) => {
+                    const lic = a.availability.byWarehouse.find(
+                      (w) => w.warehouseId === AD_WH_LICORERIA,
+                    );
+                    const bod = a.availability.byWarehouse.find(
+                      (w) => w.warehouseId === AD_WH_BODEGON,
+                    );
+                    return (
+                      <div key={a.productId} className="mb-2 text-sm">
+                        <p>
+                          ⚠ Esta operación requiere {a.shortfall} unidades
+                          adicionales para cumplir completamente la orden (
+                          {a.productName}).
+                        </p>
+                        <p className="text-[var(--ad-muted)]">
+                          Físico: {a.availability.physicalTotal} · Comprometido:{" "}
+                          {a.availability.committedActiveTotal} · Disponible:{" "}
+                          {a.availability.availableOperationalTotal} · Pedido:{" "}
+                          {a.requestedBase} · Faltante: {a.shortfall}
+                        </p>
+                        <p className="text-[var(--ad-muted)]">
+                          {warehouseLabel(AD_WH_LICORERIA)}:{" "}
+                          {lic?.availableOperational ?? 0} ·{" "}
+                          {warehouseLabel(AD_WH_BODEGON)}:{" "}
+                          {bod?.availableOperational ?? 0} · Compra necesaria:{" "}
+                          {a.availability.plan.purchaseNeeded}
+                        </p>
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="ad-btn ad-btn--gold"
+                onClick={() => confirmDraft(false)}
+              >
+                Confirmar
+              </button>
+              {draft.supplyAlerts.some((a) => a.shortfall > 0) ? (
+                <button
+                  type="button"
+                  className="ad-btn ad-btn--primary"
+                  onClick={() => confirmDraft(true)}
+                >
+                  Continuar con faltante
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="ad-btn"
+                onClick={() => {
+                  cancelInvoiceDraft({
+                    draftId: draft.id,
+                    userName: mesonera?.name ?? "Cajero",
+                  });
+                  setDraft(null);
+                }}
+              >
+                Cancelar / editar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

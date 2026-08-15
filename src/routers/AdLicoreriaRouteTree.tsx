@@ -48,6 +48,15 @@ const AdLicoreriaConfiguracion = lazy(
 const AdLicoreriaMesonera = lazy(
   () => import("@/pages/ad-licoreria/mesonera/AdLicoreriaMesonera"),
 );
+const AdLicoreriaCop = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaCop"),
+);
+const AdLicoreriaCopTransferencias = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaCopTransferencias"),
+);
+const AdLicoreriaCopReportes = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaCopReportes"),
+);
 
 /**
  * Árbol de rutas A&D. Invocar como función:
@@ -63,6 +72,18 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
       <Route
         path={adLicoreriaRouterPath(prefix, "inicio")}
         element={<AdLicoreriaInicio />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "cop")}
+        element={<AdLicoreriaCop />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "copTransferencias")}
+        element={<AdLicoreriaCopTransferencias />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "copReportes")}
+        element={<AdLicoreriaCopReportes />}
       />
       <Route
         path={adLicoreriaRouterPath(prefix, "ventas")}

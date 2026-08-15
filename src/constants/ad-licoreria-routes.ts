@@ -21,6 +21,10 @@ const AD_SEGMENTS = {
   prepagos: "/prepagos",
   qr: "/qr",
   mesas: "/mesas",
+  /** Fase 7 — Centro de Operaciones */
+  cop: "/cop",
+  copTransferencias: "/cop/transferencias",
+  copReportes: "/cop/reportes",
 } as const;
 
 export type AdLicoreriaRoutes = {
@@ -40,6 +44,9 @@ export type AdLicoreriaRoutes = {
   prepagos: string;
   qr: string;
   mesas: string;
+  cop: string;
+  copTransferencias: string;
+  copReportes: string;
 };
 
 function joinPath(base: "" | "/licoreria", segment: string): string {
@@ -67,6 +74,9 @@ export function getAdLicoreriaRoutes(
     prepagos: joinPath(base, AD_SEGMENTS.prepagos),
     qr: joinPath(base, AD_SEGMENTS.qr),
     mesas: joinPath(base, AD_SEGMENTS.mesas),
+    cop: joinPath(base, AD_SEGMENTS.cop),
+    copTransferencias: joinPath(base, AD_SEGMENTS.copTransferencias),
+    copReportes: joinPath(base, AD_SEGMENTS.copReportes),
   };
 }
 
@@ -76,6 +86,7 @@ export function getAdLicoreriaNavItems(base = getAdLicoreriaBasePath()) {
   const r = getAdLicoreriaRoutes(base);
   return [
     { key: "inicio", label: "Inicio", to: r.inicio },
+    { key: "cop", label: "Centro de operaciones", to: r.cop },
     { key: "ventas", label: "Ventas", to: r.ventas },
     { key: "cuentas", label: "Cuentas", to: r.cuentas },
     { key: "inventario", label: "Inventario", to: r.inventario },

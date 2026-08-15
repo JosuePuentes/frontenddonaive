@@ -150,15 +150,15 @@ export const AD_DEMO_CATEGORIES: AdCategory[] = [
 export const AD_DEMO_WAREHOUSES: AdWarehouse[] = [
   {
     id: "wh-1",
-    name: "Depósito 1",
-    code: "DEP1",
+    name: "Bodegón",
+    code: "BOD",
     kind: "principal",
     active: true,
   },
   {
     id: "wh-2",
-    name: "Depósito 2 / Barra",
-    code: "DEP2",
+    name: "Licorería",
+    code: "LIC",
     kind: "barra",
     active: true,
   },
@@ -313,8 +313,9 @@ export const AD_DEMO_PRESENTATIONS: AdPresentation[] = [
 ];
 
 export const AD_DEMO_INVENTORY: AdInventoryItem[] = [
-  { productId: "prod-regional", warehouseId: "wh-1", qtyBase: 1000 },
-  { productId: "prod-regional", warehouseId: "wh-2", qtyBase: 120 },
+  /** Bodegón / Licorería — Cerveza Regional alineada a escenario COP. */
+  { productId: "prod-regional", warehouseId: "wh-1", qtyBase: 40 },
+  { productId: "prod-regional", warehouseId: "wh-2", qtyBase: 70 },
   { productId: "prod-polar", warehouseId: "wh-1", qtyBase: 800 },
   { productId: "prod-polar", warehouseId: "wh-2", qtyBase: 90 },
   { productId: "prod-ron", warehouseId: "wh-1", qtyBase: 40 },

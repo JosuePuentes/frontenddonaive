@@ -19,6 +19,7 @@ import type {
   AdInventoryClosureLine,
   AdInventoryMovement,
   AdInventoryMovementType,
+  AdInvoiceDraft,
   AdPayment,
   AdPaymentMethodCode,
   AdPaymentMethodConfig,
@@ -26,9 +27,12 @@ import type {
   AdPresentation,
   AdProduct,
   AdPurchase,
+  AdPurchaseRequest,
   AdReceipt,
   AdSale,
   AdSaleItem,
+  AdStockTransfer,
+  AdStockTransferStatus,
 } from "@/types/ad-licoreria";
 
 type AdStore = AdRepositoryState & {
@@ -173,6 +177,8 @@ type AdStore = AdRepositoryState & {
     discountUsd?: number;
     discountBs?: number;
     notes?: string;
+    continueWithShortage?: boolean;
+    shortageDecision?: string;
   }) => AdResult<AdSale>;
   voidSale: (input: {
     saleId: string;
@@ -211,6 +217,21 @@ type AdStore = AdRepositoryState & {
     notes?: string;
     applyAdjustments?: boolean;
   }) => AdResult<AdInventoryClosure>;
+  getOperationalAvailability: typeof adLicoreriaRepository.getOperationalAvailability;
+  getAvailabilityMessage: typeof adLicoreriaRepository.getAvailabilityMessage;
+  createInvoiceDraft: typeof adLicoreriaRepository.createInvoiceDraft;
+  confirmInvoiceDraft: typeof adLicoreriaRepository.confirmInvoiceDraft;
+  cancelInvoiceDraft: typeof adLicoreriaRepository.cancelInvoiceDraft;
+  createTransferDraft: typeof adLicoreriaRepository.createTransferDraft;
+  updateTransferDraft: typeof adLicoreriaRepository.updateTransferDraft;
+  confirmTransfer: typeof adLicoreriaRepository.confirmTransfer;
+  advanceTransferStatus: typeof adLicoreriaRepository.advanceTransferStatus;
+  createPurchaseRequest: typeof adLicoreriaRepository.createPurchaseRequest;
+  fulfillPurchaseRequest: typeof adLicoreriaRepository.fulfillPurchaseRequest;
+  getCopDashboard: typeof adLicoreriaRepository.getCopDashboard;
+  getCopReports: typeof adLicoreriaRepository.getCopReports;
+  logDocumentAction: typeof adLicoreriaRepository.logDocumentAction;
+  setInventoryQty: typeof adLicoreriaRepository.setInventoryQty;
 };
 
 const AdLicoreriaContext = createContext<AdStore | null>(null);
@@ -268,6 +289,34 @@ export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
         adLicoreriaRepository.createDailyClosure(input),
       createInventoryClosure: (input) =>
         adLicoreriaRepository.createInventoryClosure(input),
+      getOperationalAvailability: (...args) =>
+        adLicoreriaRepository.getOperationalAvailability(...args),
+      getAvailabilityMessage: (...args) =>
+        adLicoreriaRepository.getAvailabilityMessage(...args),
+      createInvoiceDraft: (input) =>
+        adLicoreriaRepository.createInvoiceDraft(input),
+      confirmInvoiceDraft: (input) =>
+        adLicoreriaRepository.confirmInvoiceDraft(input),
+      cancelInvoiceDraft: (input) =>
+        adLicoreriaRepository.cancelInvoiceDraft(input),
+      createTransferDraft: (input) =>
+        adLicoreriaRepository.createTransferDraft(input),
+      updateTransferDraft: (input) =>
+        adLicoreriaRepository.updateTransferDraft(input),
+      confirmTransfer: (input) =>
+        adLicoreriaRepository.confirmTransfer(input),
+      advanceTransferStatus: (input) =>
+        adLicoreriaRepository.advanceTransferStatus(input),
+      createPurchaseRequest: (input) =>
+        adLicoreriaRepository.createPurchaseRequest(input),
+      fulfillPurchaseRequest: (input) =>
+        adLicoreriaRepository.fulfillPurchaseRequest(input),
+      getCopDashboard: () => adLicoreriaRepository.getCopDashboard(),
+      getCopReports: () => adLicoreriaRepository.getCopReports(),
+      logDocumentAction: (input) =>
+        adLicoreriaRepository.logDocumentAction(input),
+      setInventoryQty: (productId, warehouseId, qtyBase) =>
+        adLicoreriaRepository.setInventoryQty(productId, warehouseId, qtyBase),
     }),
     [snap],
   );
@@ -286,3 +335,5 @@ export function useAdLicoreria() {
   }
   return ctx;
 }
+
+export type { AdInvoiceDraft, AdStockTransfer, AdPurchaseRequest, AdStockTransferStatus };

@@ -74,6 +74,26 @@ export function nextReceiptNumber(seq: number): string {
   return `AD-${year}-${String(seq).padStart(6, "0")}`;
 }
 
+export function nextTransferNumber(seq: number): string {
+  const year = new Date().getFullYear();
+  return `TR-${year}-${String(seq).padStart(6, "0")}`;
+}
+
+export function nextProvisionalTransferNumber(seq: number): string {
+  const year = new Date().getFullYear();
+  return `TR-BORR-${year}-${String(seq).padStart(4, "0")}`;
+}
+
+export function nextPurchaseRequestNumber(seq: number): string {
+  const year = new Date().getFullYear();
+  return `SC-${year}-${String(seq).padStart(6, "0")}`;
+}
+
+export function nextProvisionalInvoiceNumber(seq: number): string {
+  const year = new Date().getFullYear();
+  return `PF-${year}-${String(seq).padStart(6, "0")}`;
+}
+
 export function customerDisplayName(firstName: string, lastName: string): string {
   return `${firstName.trim()} ${lastName.trim()}`.trim();
 }

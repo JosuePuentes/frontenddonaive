@@ -33,11 +33,20 @@ import {
   multiplyPrice,
   nextAccountNumber,
   nextPrepaidCode,
+  nextProvisionalInvoiceNumber,
+  nextProvisionalTransferNumber,
+  nextPurchaseRequestNumber,
   nextReceiptNumber,
+  nextTransferNumber,
   prepaidAvailable,
   toBaseUnits,
   uid,
 } from "@/lib/ad-licoreria/conversions";
+import {
+  fulfillmentMessage,
+  getOperationalAvailability,
+} from "@/lib/ad-licoreria/operational-availability";
+import { AD_WH_LICORERIA } from "@/lib/ad-licoreria/warehouses";
 import { adWhatsAppService } from "@/services/ad-licoreria/whatsapp";
 import type {
   AdAccount,
@@ -46,12 +55,14 @@ import type {
   AdAuditEvent,
   AdCategory,
   AdCustomer,
+  AdCustomerCommitment,
   AdDailyClosure,
   AdInventoryClosure,
   AdInventoryClosureLine,
   AdInventoryItem,
   AdInventoryMovement,
   AdInventoryMovementType,
+  AdInvoiceDraft,
   AdOperator,
   AdPayment,
   AdPaymentMethodCode,
@@ -62,10 +73,14 @@ import type {
   AdProduct,
   AdPurchase,
   AdPurchaseItem,
+  AdPurchaseRequest,
   AdReceipt,
   AdSale,
   AdSaleItem,
   AdServiceLog,
+  AdStockTransfer,
+  AdStockTransferLine,
+  AdStockTransferStatus,
   AdTable,
   AdWarehouse,
   AdWhatsAppLog,
@@ -94,10 +109,17 @@ export type AdRepositoryState = {
   inventoryClosures: AdInventoryClosure[];
   audit: AdAuditEvent[];
   whatsappLogs: AdWhatsAppLog[];
+  stockTransfers: AdStockTransfer[];
+  purchaseRequests: AdPurchaseRequest[];
+  customerCommitments: AdCustomerCommitment[];
+  invoiceDrafts: AdInvoiceDraft[];
   accountSeq: number;
   prepaidSeq: number;
   receiptSeq: number;
   purchaseSeq: number;
+  transferSeq: number;
+  purchaseRequestSeq: number;
+  invoiceDraftSeq: number;
 };
 
 export type AdResult<T = void> =
@@ -128,10 +150,17 @@ function cloneState(): AdRepositoryState {
     inventoryClosures: structuredClone(AD_DEMO_INVENTORY_CLOSURES),
     audit: structuredClone(AD_DEMO_AUDIT),
     whatsappLogs: structuredClone(AD_DEMO_WHATSAPP_LOGS),
+    stockTransfers: [],
+    purchaseRequests: [],
+    customerCommitments: [],
+    invoiceDrafts: [],
     accountSeq: 186,
     prepaidSeq: 126,
     receiptSeq: 1,
     purchaseSeq: 1,
+    transferSeq: 1,
+    purchaseRequestSeq: 1,
+    invoiceDraftSeq: 1,
   };
 }
 
@@ -1077,6 +1106,43 @@ export const adLicoreriaRepository = {
       );
     }
 
+    /** Pendientes al cerrar → obligación con cliente (NO bloquean ventas). */
+    for (const it of closed.items) {
+      const remaining = Math.max(0, it.qty - it.qtyServed);
+      if (remaining <= 0) continue;
+      const pres = state.presentations.find((p) => p.id === it.presentationId);
+      const commitment: AdCustomerCommitment = {
+        id: uid("ccom"),
+        customerId: closed.customerId,
+        customerName: closed.customerName,
+        customerPhone: closed.customerPhone,
+        accountId: closed.id,
+        accountNumber: closed.number,
+        productId: it.productId,
+        presentationId: it.presentationId,
+        qtyRemaining: remaining,
+        qtyBaseRemaining: remaining * (pres?.unitsPerPresentation ?? 1),
+        status: "PENDIENTE",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      state.customerCommitments = [commitment, ...state.customerCommitments];
+      audit(
+        "customer_commitment",
+        "commitment",
+        input.userName,
+        `Obligación cliente cuenta #${closed.number}: ${productName(it.productId)} x${remaining}`,
+        commitment.id,
+        {
+          afterValue: JSON.stringify({
+            productId: it.productId,
+            qtyRemaining: remaining,
+            blocksSales: false,
+          }),
+        },
+      );
+    }
+
     const { subtotal, total } = accountTotals(closed);
     const sale: AdSale = {
       id: uid("sale"),
@@ -1100,7 +1166,7 @@ export const adLicoreriaRepository = {
       discountUsd: closed.discountUsd,
       discountBs: closed.discountBs,
       total,
-      warehouseId: "wh-2",
+      warehouseId: AD_WH_LICORERIA,
       userName: input.userName,
       status: "completed",
       notes: closed.notes,
@@ -1402,6 +1468,9 @@ export const adLicoreriaRepository = {
     discountUsd?: number;
     discountBs?: number;
     notes?: string;
+    /** No bloquear facturación por faltante; exige decisión auditada. */
+    continueWithShortage?: boolean;
+    shortageDecision?: string;
   }): AdResult<AdSale> {
     if (!input.items.length) return { ok: false, error: "Agregue productos" };
     if (!input.payments.length) return { ok: false, error: "Registre pagos" };
@@ -1416,23 +1485,100 @@ export const adLicoreriaRepository = {
       }
     }
 
+    const shortageLines: {
+      productId: string;
+      needed: number;
+      available: number;
+      shortfall: number;
+    }[] = [];
+
     for (const line of input.items) {
-      if (line.qtyBase > getStock(line.productId, input.warehouseId)) {
-        return { ok: false, error: "Stock insuficiente" };
+      const physical = getStock(line.productId, input.warehouseId);
+      if (line.qtyBase > physical) {
+        shortageLines.push({
+          productId: line.productId,
+          needed: line.qtyBase,
+          available: physical,
+          shortfall: line.qtyBase - physical,
+        });
       }
     }
 
+    if (shortageLines.length && !input.continueWithShortage) {
+      const detail = shortageLines
+        .map(
+          (s) =>
+            `${productName(s.productId)}: faltan ${s.shortfall} (disp. físico ${s.available})`,
+        )
+        .join("; ");
+      return {
+        ok: false,
+        error: `Stock insuficiente. ${detail}. Use preliminar y decida continuar con faltante, transferir o comprar.`,
+      };
+    }
+
     for (const line of input.items) {
-      const mov = this.registerMovement({
-        type: "VENTA",
-        productId: line.productId,
-        presentationId: line.presentationId,
-        qtyPresentation: line.qty,
-        warehouseId: input.warehouseId,
-        userName: input.userName,
-        reason: "Venta POS",
-      });
-      if (!mov.ok) return mov;
+      const physical = getStock(line.productId, input.warehouseId);
+      const deductQtyPres =
+        line.qtyBase <= physical
+          ? line.qty
+          : Math.max(
+              0,
+              Math.floor(
+                physical /
+                  (state.presentations.find((p) => p.id === line.presentationId)
+                    ?.unitsPerPresentation ?? 1),
+              ),
+            );
+      if (deductQtyPres > 0) {
+        const mov = this.registerMovement({
+          type: "VENTA",
+          productId: line.productId,
+          presentationId: line.presentationId,
+          qtyPresentation: deductQtyPres,
+          warehouseId: input.warehouseId,
+          userName: input.userName,
+          reason: shortageLines.length
+            ? "Venta POS (parcial por faltante)"
+            : "Venta POS",
+        });
+        if (!mov.ok) return mov;
+      }
+    }
+
+    if (shortageLines.length) {
+      audit(
+        "invoice_with_shortage",
+        "sale",
+        input.userName,
+        input.shortageDecision ??
+          "Continuar con faltante autorizado",
+        undefined,
+        {
+          afterValue: JSON.stringify({
+            shortageLines,
+            decision: input.shortageDecision ?? "continuar_con_faltante",
+            warehouseId: input.warehouseId,
+          }),
+          reason: input.shortageDecision,
+        },
+      );
+      // Recalcular déficits de compromiso cliente tras vender físico.
+      for (const s of shortageLines) {
+        const av = this.getOperationalAvailability(s.productId);
+        if (av.customerCommitmentDeficit > 0) {
+          audit(
+            "commitment_deficit",
+            "commitment",
+            input.userName,
+            `Déficit compromiso ${productName(s.productId)}: ${av.customerCommitmentDeficit}`,
+            s.productId,
+            {
+              afterValue: String(av.customerCommitmentDeficit),
+            },
+          );
+        }
+      }
     }
 
     const customer = input.customerId
@@ -1514,6 +1660,7 @@ export const adLicoreriaRepository = {
         total: sale.total,
         payments: sale.payments.length,
         customerId: sale.customerId,
+        withShortage: shortageLines.length > 0,
       }),
     });
     emit();
@@ -1891,6 +2038,9 @@ export const adLicoreriaRepository = {
     const lastSale = [...sales].sort((a, b) =>
       a.createdAt < b.createdAt ? 1 : -1,
     )[0];
+    const commitments = state.customerCommitments.filter(
+      (c) => c.customerId === customerId && c.status === "PENDIENTE",
+    );
     return {
       customer,
       sales,
@@ -1899,6 +2049,7 @@ export const adLicoreriaRepository = {
       payments,
       prepaids,
       pendingMerchandise,
+      commitments,
       whatsappLogs: state.whatsappLogs.filter((w) => w.customerId === customerId),
       totals: {
         totalPurchasedUsd: Number(totalPurchasedUsd.toFixed(2)),
@@ -1907,7 +2058,851 @@ export const adLicoreriaRepository = {
         lastPurchaseReceipt: lastSale?.receiptNumber,
         openAccounts: openAccounts.length,
         activePrepaids: prepaids.filter((p) => p.status === "ACTIVO").length,
+        customerCommitments: commitments.length,
       },
+    };
+  },
+
+  /* ═══════════════ Fase 7 — COP / disponibilidad ═══════════════ */
+
+  availabilitySnapshot() {
+    return {
+      inventory: state.inventory,
+      accounts: state.accounts,
+      presentations: state.presentations,
+      transfers: state.stockTransfers,
+      purchaseRequests: state.purchaseRequests,
+      customerCommitments: state.customerCommitments,
+    };
+  },
+
+  getOperationalAvailability(
+    productId: string,
+    requestedBase = 0,
+    preferredWarehouseId = AD_WH_LICORERIA,
+  ) {
+    return getOperationalAvailability(
+      this.availabilitySnapshot(),
+      productId,
+      requestedBase,
+      preferredWarehouseId,
+    );
+  },
+
+  getAvailabilityMessage(
+    productId: string,
+    requestedBase: number,
+    preferredWarehouseId = AD_WH_LICORERIA,
+  ) {
+    const av = this.getOperationalAvailability(
+      productId,
+      requestedBase,
+      preferredWarehouseId,
+    );
+    return { availability: av, message: fulfillmentMessage(av) };
+  },
+
+  /** Ajuste directo de inventario (pruebas / escenario COP). */
+  setInventoryQty(
+    productId: string,
+    warehouseId: string,
+    qtyBase: number,
+  ): AdResult {
+    const idx = state.inventory.findIndex(
+      (i) => i.productId === productId && i.warehouseId === warehouseId,
+    );
+    if (idx === -1) {
+      state.inventory = [
+        ...state.inventory,
+        { productId, warehouseId, qtyBase },
+      ];
+    } else {
+      const next = [...state.inventory];
+      next[idx] = { ...next[idx], qtyBase };
+      state.inventory = next;
+    }
+    emit();
+    return { ok: true, data: undefined };
+  },
+
+  createInvoiceDraft(input: {
+    kind?: "pos_sale" | "account_close";
+    items: AdSaleItem[];
+    payments: Omit<AdPayment, "id" | "createdAt">[];
+    warehouseId: string;
+    cashierName: string;
+    tableId?: string;
+    mesoneraName?: string;
+    customerId?: string;
+    customerName?: string;
+    customerPhone?: string;
+    customerDocumentId?: string;
+    discountUsd?: number;
+    discountBs?: number;
+    discountReason?: string;
+    notes?: string;
+    continueWithShortage?: boolean;
+    shortageDecision?: string;
+  }): AdResult<AdInvoiceDraft> {
+    if (!input.items.length) return { ok: false, error: "Agregue productos" };
+    const customer = input.customerId
+      ? state.customers.find((c) => c.id === input.customerId)
+      : undefined;
+    const table = input.tableId
+      ? state.tables.find((t) => t.id === input.tableId)
+      : undefined;
+    const supplyAlerts = input.items.map((line) => {
+      const av = this.getOperationalAvailability(
+        line.productId,
+        line.qtyBase,
+        input.warehouseId,
+      );
+      return {
+        productId: line.productId,
+        productName: productName(line.productId),
+        requestedBase: line.qtyBase,
+        availableOperational: av.availableOperationalTotal,
+        shortfall: Math.max(
+          0,
+          line.qtyBase - av.availableOperationalTotal,
+        ),
+        availability: av,
+      };
+    });
+    const draft: AdInvoiceDraft = {
+      id: uid("invd"),
+      provisionalNumber: nextProvisionalInvoiceNumber(state.invoiceDraftSeq++),
+      status: "PRELIMINAR",
+      kind: input.kind ?? "pos_sale",
+      customerId: input.customerId,
+      customerName: input.customerName ?? customer?.name,
+      customerPhone: input.customerPhone ?? customer?.phone,
+      customerDocumentId: input.customerDocumentId ?? customer?.documentId,
+      tableId: input.tableId,
+      tableNumber: table?.number,
+      mesoneraName: input.mesoneraName,
+      cashierName: input.cashierName,
+      warehouseId: input.warehouseId,
+      items: input.items,
+      payments: input.payments,
+      discountUsd: input.discountUsd ?? 0,
+      discountBs: input.discountBs ?? 0,
+      discountReason: input.discountReason,
+      notes: input.notes,
+      supplyAlerts,
+      continueWithShortage: Boolean(input.continueWithShortage),
+      shortageDecision: input.shortageDecision,
+      createdAt: new Date().toISOString(),
+    };
+    state.invoiceDrafts = [draft, ...state.invoiceDrafts];
+    audit(
+      "invoice_preliminar",
+      "invoice_draft",
+      input.cashierName,
+      draft.provisionalNumber,
+      draft.id,
+      {
+        afterValue: JSON.stringify({
+          items: draft.items.length,
+          alerts: supplyAlerts.filter((a) => a.shortfall > 0).length,
+        }),
+      },
+    );
+    emit();
+    return { ok: true, data: draft };
+  },
+
+  confirmInvoiceDraft(input: {
+    draftId: string;
+    userName: string;
+    continueWithShortage?: boolean;
+    shortageDecision?: string;
+  }): AdResult<AdSale> {
+    const draft = state.invoiceDrafts.find((d) => d.id === input.draftId);
+    if (!draft) return { ok: false, error: "Preliminar no encontrado" };
+    if (draft.status !== "PRELIMINAR") {
+      return { ok: false, error: "Este preliminar ya fue confirmado o cancelado" };
+    }
+    const hasShortage = draft.supplyAlerts.some((a) => a.shortfall > 0);
+    const continueShortage =
+      input.continueWithShortage ?? draft.continueWithShortage;
+    if (hasShortage && !continueShortage) {
+      return {
+        ok: false,
+        error:
+          "Hay faltantes. Decida: transferir, crear compra, reducir cantidad, continuar con faltante o cancelar.",
+      };
+    }
+    const sale = this.completeSale({
+      items: draft.items,
+      payments: draft.payments,
+      warehouseId: draft.warehouseId,
+      userName: input.userName,
+      tableId: draft.tableId,
+      mesoneraName: draft.mesoneraName,
+      customerId: draft.customerId,
+      customerName: draft.customerName,
+      customerPhone: draft.customerPhone,
+      discountUsd: draft.discountUsd,
+      discountBs: draft.discountBs,
+      notes: draft.notes,
+      continueWithShortage: continueShortage,
+      shortageDecision:
+        input.shortageDecision ??
+        draft.shortageDecision ??
+        (hasShortage ? "continuar_con_faltante" : undefined),
+    });
+    if (!sale.ok) return sale;
+    state.invoiceDrafts = state.invoiceDrafts.map((d) =>
+      d.id === draft.id
+        ? {
+            ...d,
+            status: "CONFIRMADA" as const,
+            confirmedAt: new Date().toISOString(),
+            receiptNumber: sale.data.receiptNumber,
+            saleId: sale.data.id,
+            continueWithShortage: continueShortage,
+            shortageDecision:
+              input.shortageDecision ?? draft.shortageDecision,
+          }
+        : d,
+    );
+    audit(
+      "invoice_confirm",
+      "invoice_draft",
+      input.userName,
+      `${draft.provisionalNumber} → ${sale.data.receiptNumber}`,
+      draft.id,
+    );
+    emit();
+    return sale;
+  },
+
+  cancelInvoiceDraft(input: {
+    draftId: string;
+    userName: string;
+  }): AdResult<AdInvoiceDraft> {
+    const draft = state.invoiceDrafts.find((d) => d.id === input.draftId);
+    if (!draft) return { ok: false, error: "Preliminar no encontrado" };
+    if (draft.status !== "PRELIMINAR") {
+      return { ok: false, error: "No se puede cancelar" };
+    }
+    const cancelled = { ...draft, status: "CANCELADA" as const };
+    state.invoiceDrafts = state.invoiceDrafts.map((d) =>
+      d.id === draft.id ? cancelled : d,
+    );
+    audit("invoice_cancel", "invoice_draft", input.userName, draft.provisionalNumber, draft.id);
+    emit();
+    return { ok: true, data: cancelled };
+  },
+
+  logDocumentAction(input: {
+    action: "print" | "download";
+    entity: string;
+    entityId: string;
+    userName: string;
+    detail: string;
+  }) {
+    audit(
+      input.action === "print" ? "imprimir" : "descargar",
+      input.entity,
+      input.userName,
+      input.detail,
+      input.entityId,
+    );
+    emit();
+  },
+
+  createTransferDraft(input: {
+    fromWarehouseId: string;
+    toWarehouseId: string;
+    lines: {
+      productId: string;
+      presentationId: string;
+      qty: number;
+      observation?: string;
+    }[];
+    createdBy: string;
+    reason?: string;
+    notes?: string;
+    relatedAccountId?: string;
+    relatedDraftId?: string;
+  }): AdResult<AdStockTransfer> {
+    if (input.fromWarehouseId === input.toWarehouseId) {
+      return { ok: false, error: "Origen y destino deben ser distintos" };
+    }
+    if (!input.lines.length) return { ok: false, error: "Agregue productos" };
+    const lines: AdStockTransferLine[] = [];
+    for (const raw of input.lines) {
+      if (raw.qty <= 0) return { ok: false, error: "Cantidad inválida" };
+      const pres = state.presentations.find((p) => p.id === raw.presentationId);
+      if (!pres) return { ok: false, error: "Presentación no encontrada" };
+      lines.push({
+        id: uid("trl"),
+        productId: raw.productId,
+        presentationId: raw.presentationId,
+        qty: raw.qty,
+        qtyBase: toBaseUnits(pres, raw.qty),
+        observation: raw.observation,
+      });
+    }
+    const transfer: AdStockTransfer = {
+      id: uid("tr"),
+      number: nextProvisionalTransferNumber(state.transferSeq),
+      provisional: true,
+      fromWarehouseId: input.fromWarehouseId,
+      toWarehouseId: input.toWarehouseId,
+      lines,
+      status: "BORRADOR",
+      reason: input.reason,
+      notes: input.notes,
+      createdBy: input.createdBy,
+      relatedAccountId: input.relatedAccountId,
+      relatedDraftId: input.relatedDraftId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    state.transferSeq += 1;
+    state.stockTransfers = [transfer, ...state.stockTransfers];
+    audit("transfer_draft", "transfer", input.createdBy, transfer.number, transfer.id);
+    emit();
+    return { ok: true, data: transfer };
+  },
+
+  updateTransferDraft(input: {
+    transferId: string;
+    userName: string;
+    fromWarehouseId?: string;
+    toWarehouseId?: string;
+    lines?: {
+      productId: string;
+      presentationId: string;
+      qty: number;
+      observation?: string;
+    }[];
+    reason?: string;
+    notes?: string;
+  }): AdResult<AdStockTransfer> {
+    const tr = state.stockTransfers.find((t) => t.id === input.transferId);
+    if (!tr) return { ok: false, error: "Transferencia no encontrada" };
+    if (tr.status !== "BORRADOR") {
+      return { ok: false, error: "Solo se editan borradores" };
+    }
+    let lines = tr.lines;
+    if (input.lines) {
+      lines = [];
+      for (const raw of input.lines) {
+        const pres = state.presentations.find((p) => p.id === raw.presentationId);
+        if (!pres) return { ok: false, error: "Presentación no encontrada" };
+        lines.push({
+          id: uid("trl"),
+          productId: raw.productId,
+          presentationId: raw.presentationId,
+          qty: raw.qty,
+          qtyBase: toBaseUnits(pres, raw.qty),
+          observation: raw.observation,
+        });
+      }
+    }
+    const updated: AdStockTransfer = {
+      ...tr,
+      fromWarehouseId: input.fromWarehouseId ?? tr.fromWarehouseId,
+      toWarehouseId: input.toWarehouseId ?? tr.toWarehouseId,
+      lines,
+      reason: input.reason ?? tr.reason,
+      notes: input.notes ?? tr.notes,
+      updatedAt: new Date().toISOString(),
+    };
+    state.stockTransfers = state.stockTransfers.map((t) =>
+      t.id === tr.id ? updated : t,
+    );
+    audit("transfer_edit", "transfer", input.userName, tr.number, tr.id);
+    emit();
+    return { ok: true, data: updated };
+  },
+
+  /**
+   * Confirma transferencia: BORRADOR → SOLICITADA → AUTORIZADA → ENVIADA → RECIBIDA.
+   * Salida origen en ENVIADA; entrada destino en RECIBIDA.
+   * No duplica si ya confirmada.
+   */
+  confirmTransfer(input: {
+    transferId: string;
+    userName: string;
+  }): AdResult<AdStockTransfer> {
+    const tr = state.stockTransfers.find((t) => t.id === input.transferId);
+    if (!tr) return { ok: false, error: "Transferencia no encontrada" };
+    if (tr.status === "RECIBIDA") {
+      return { ok: false, error: "Transferencia ya confirmada (no duplicar)" };
+    }
+    if (tr.status === "CANCELADA") {
+      return { ok: false, error: "Transferencia cancelada" };
+    }
+    if (tr.status !== "BORRADOR" && tr.status !== "SOLICITADA") {
+      return { ok: false, error: `Estado actual ${tr.status} no permite confirmar` };
+    }
+
+    for (const line of tr.lines) {
+      const stock = getStock(line.productId, tr.fromWarehouseId);
+      if (line.qtyBase > stock) {
+        return {
+          ok: false,
+          error: `Stock insuficiente en origen para ${productName(line.productId)} (hay ${stock}, pide ${line.qtyBase})`,
+        };
+      }
+    }
+
+    const definitive = nextTransferNumber(state.transferSeq++);
+    const now = new Date().toISOString();
+
+    // ENVIADA — salida origen
+    for (const line of tr.lines) {
+      const out = this.registerMovement({
+        type: "TRASLADO_SALIDA",
+        productId: line.productId,
+        presentationId: line.presentationId,
+        qtyPresentation: line.qty,
+        warehouseId: tr.fromWarehouseId,
+        warehouseFromId: tr.fromWarehouseId,
+        warehouseToId: tr.toWarehouseId,
+        userName: input.userName,
+        reason: `Transferencia ${definitive}`,
+        reference: tr.id,
+      });
+      if (!out.ok) return out;
+    }
+    // RECIBIDA — entrada destino
+    for (const line of tr.lines) {
+      const inn = this.registerMovement({
+        type: "TRASLADO_ENTRADA",
+        productId: line.productId,
+        presentationId: line.presentationId,
+        qtyPresentation: line.qty,
+        warehouseId: tr.toWarehouseId,
+        warehouseFromId: tr.fromWarehouseId,
+        warehouseToId: tr.toWarehouseId,
+        userName: input.userName,
+        reason: `Transferencia ${definitive}`,
+        reference: tr.id,
+      });
+      if (!inn.ok) return inn;
+    }
+
+    const confirmed: AdStockTransfer = {
+      ...tr,
+      number: definitive,
+      provisional: false,
+      status: "RECIBIDA",
+      authorizedBy: input.userName,
+      sentBy: input.userName,
+      receivedBy: input.userName,
+      stockOutAt: now,
+      stockInAt: now,
+      confirmedAt: now,
+      updatedAt: now,
+    };
+    state.stockTransfers = state.stockTransfers.map((t) =>
+      t.id === tr.id ? confirmed : t,
+    );
+    audit(
+      "transfer_confirm",
+      "transfer",
+      input.userName,
+      `${tr.number} → ${definitive} (SOLICITADA→AUTORIZADA→ENVIADA→RECIBIDA)`,
+      tr.id,
+      {
+        beforeValue: tr.status,
+        afterValue: "RECIBIDA",
+      },
+    );
+    emit();
+    return { ok: true, data: confirmed };
+  },
+
+  advanceTransferStatus(input: {
+    transferId: string;
+    userName: string;
+    toStatus: AdStockTransferStatus;
+  }): AdResult<AdStockTransfer> {
+    const tr = state.stockTransfers.find((t) => t.id === input.transferId);
+    if (!tr) return { ok: false, error: "Transferencia no encontrada" };
+    const order: AdStockTransferStatus[] = [
+      "BORRADOR",
+      "SOLICITADA",
+      "AUTORIZADA",
+      "ENVIADA",
+      "RECIBIDA",
+    ];
+    if (input.toStatus === "CANCELADA") {
+      if (tr.status === "RECIBIDA" || tr.status === "ENVIADA") {
+        return { ok: false, error: "No se puede cancelar tras envío/recepción" };
+      }
+      const cancelled = {
+        ...tr,
+        status: "CANCELADA" as const,
+        cancelledBy: input.userName,
+        updatedAt: new Date().toISOString(),
+      };
+      state.stockTransfers = state.stockTransfers.map((t) =>
+        t.id === tr.id ? cancelled : t,
+      );
+      audit("transfer_cancel", "transfer", input.userName, tr.number, tr.id);
+      emit();
+      return { ok: true, data: cancelled };
+    }
+
+    const fromIdx = order.indexOf(tr.status);
+    const toIdx = order.indexOf(input.toStatus);
+    if (fromIdx < 0 || toIdx !== fromIdx + 1) {
+      return {
+        ok: false,
+        error: `Transición inválida ${tr.status} → ${input.toStatus}`,
+      };
+    }
+
+    let patch: Partial<AdStockTransfer> = {
+      status: input.toStatus,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (input.toStatus === "SOLICITADA") {
+      /* soft reserve starts */
+    }
+    if (input.toStatus === "AUTORIZADA") {
+      patch.authorizedBy = input.userName;
+    }
+    if (input.toStatus === "ENVIADA") {
+      for (const line of tr.lines) {
+        const out = this.registerMovement({
+          type: "TRASLADO_SALIDA",
+          productId: line.productId,
+          presentationId: line.presentationId,
+          qtyPresentation: line.qty,
+          warehouseId: tr.fromWarehouseId,
+          warehouseFromId: tr.fromWarehouseId,
+          warehouseToId: tr.toWarehouseId,
+          userName: input.userName,
+          reason: `Envío ${tr.number}`,
+          reference: tr.id,
+        });
+        if (!out.ok) return out;
+      }
+      patch.sentBy = input.userName;
+      patch.stockOutAt = new Date().toISOString();
+      if (tr.provisional) {
+        patch.number = nextTransferNumber(state.transferSeq++);
+        patch.provisional = false;
+      }
+    }
+    if (input.toStatus === "RECIBIDA") {
+      if (tr.status !== "ENVIADA") {
+        return { ok: false, error: "Debe enviarse antes de recibir" };
+      }
+      for (const line of tr.lines) {
+        const inn = this.registerMovement({
+          type: "TRASLADO_ENTRADA",
+          productId: line.productId,
+          presentationId: line.presentationId,
+          qtyPresentation: line.qty,
+          warehouseId: tr.toWarehouseId,
+          warehouseFromId: tr.fromWarehouseId,
+          warehouseToId: tr.toWarehouseId,
+          userName: input.userName,
+          reason: `Recepción ${tr.number}`,
+          reference: tr.id,
+        });
+        if (!inn.ok) return inn;
+      }
+      patch.receivedBy = input.userName;
+      patch.stockInAt = new Date().toISOString();
+      patch.confirmedAt = new Date().toISOString();
+    }
+
+    const updated = { ...tr, ...patch };
+    state.stockTransfers = state.stockTransfers.map((t) =>
+      t.id === tr.id ? updated : t,
+    );
+    audit(
+      "transfer_status",
+      "transfer",
+      input.userName,
+      `${tr.status} → ${input.toStatus}`,
+      tr.id,
+    );
+    emit();
+    return { ok: true, data: updated };
+  },
+
+  createPurchaseRequest(input: {
+    productId: string;
+    presentationId: string;
+    qty: number;
+    warehouseId: string;
+    createdBy: string;
+    reason: string;
+    relatedAccountId?: string;
+    relatedDraftId?: string;
+    relatedTransferId?: string;
+    notes?: string;
+  }): AdResult<AdPurchaseRequest> {
+    if (input.qty <= 0) return { ok: false, error: "Cantidad inválida" };
+    const pres = state.presentations.find((p) => p.id === input.presentationId);
+    if (!pres) return { ok: false, error: "Presentación no encontrada" };
+    const req: AdPurchaseRequest = {
+      id: uid("preq"),
+      number: nextPurchaseRequestNumber(state.purchaseRequestSeq++),
+      productId: input.productId,
+      presentationId: input.presentationId,
+      qty: input.qty,
+      qtyBase: toBaseUnits(pres, input.qty),
+      warehouseId: input.warehouseId,
+      status: "SOLICITADA",
+      relatedAccountId: input.relatedAccountId,
+      relatedDraftId: input.relatedDraftId,
+      relatedTransferId: input.relatedTransferId,
+      reason: input.reason,
+      notes: input.notes,
+      createdBy: input.createdBy,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    state.purchaseRequests = [req, ...state.purchaseRequests];
+    audit(
+      "purchase_request",
+      "purchase_request",
+      input.createdBy,
+      `${req.number} ${productName(input.productId)} x${input.qty}`,
+      req.id,
+      {
+        afterValue: JSON.stringify({
+          relatedAccountId: input.relatedAccountId,
+          relatedDraftId: input.relatedDraftId,
+        }),
+      },
+    );
+    emit();
+    return { ok: true, data: req };
+  },
+
+  /**
+   * Convierte solicitud en compra real (mock) e ingresa inventario.
+   * Prepara campos: proveedor, fecha, costo, moneda, depósito, referencia.
+   */
+  fulfillPurchaseRequest(input: {
+    requestId: string;
+    supplierName: string;
+    invoiceNumber: string;
+    date: string;
+    unitCostUsd: number;
+    unitCostBs: number;
+    userName: string;
+    paymentMethod?: AdPaymentMethodCode;
+    reference?: string;
+    notes?: string;
+  }): AdResult<AdPurchase> {
+    const req = state.purchaseRequests.find((r) => r.id === input.requestId);
+    if (!req) return { ok: false, error: "Solicitud no encontrada" };
+    if (req.status === "RECIBIDA" || req.status === "CANCELADA") {
+      return { ok: false, error: "Solicitud no disponible" };
+    }
+    const purchase = this.createPurchase({
+      supplierName: input.supplierName,
+      invoiceNumber: input.invoiceNumber,
+      date: input.date,
+      warehouseId: req.warehouseId,
+      items: [
+        {
+          productId: req.productId,
+          presentationId: req.presentationId,
+          qty: req.qty,
+          unitCostUsd: input.unitCostUsd,
+          unitCostBs: input.unitCostBs,
+        },
+      ],
+      paymentMethod: input.paymentMethod,
+      reference: input.reference ?? req.number,
+      userName: input.userName,
+      notes: input.notes ?? `Desde solicitud ${req.number}: ${req.reason}`,
+    });
+    if (!purchase.ok) return purchase;
+    state.purchaseRequests = state.purchaseRequests.map((r) =>
+      r.id === req.id
+        ? {
+            ...r,
+            status: "RECIBIDA" as const,
+            updatedAt: new Date().toISOString(),
+          }
+        : r,
+    );
+    audit(
+      "purchase_fulfill",
+      "purchase_request",
+      input.userName,
+      `${req.number} → compra ${purchase.data.invoiceNumber}`,
+      req.id,
+    );
+    emit();
+    return purchase;
+  },
+
+  getCopDashboard() {
+    const openAccounts = state.accounts.filter(
+      (a) =>
+        a.status === "ABIERTA" ||
+        a.status === "PREPAGADA" ||
+        a.status === "PARCIALMENTE_PAGADA",
+    );
+    const occupiedTables = state.tables.filter(
+      (t) =>
+        t.status === "ocupada" ||
+        t.status === "cuenta_abierta" ||
+        t.status === "cuenta_prepagada",
+    );
+    const mesoneras = new Set(
+      openAccounts.map((a) => a.mesoneraName).filter(Boolean),
+    );
+    const productIds = state.products.filter((p) => p.active).map((p) => p.id);
+    const critical: {
+      productId: string;
+      name: string;
+      availability: ReturnType<typeof getOperationalAvailability>;
+    }[] = [];
+    for (const pid of productIds) {
+      const av = this.getOperationalAvailability(pid, 0);
+      if (
+        av.availableOperationalTotal <= 10 ||
+        av.customerCommitmentDeficit > 0 ||
+        av.committedActiveTotal > 0
+      ) {
+        critical.push({
+          productId: pid,
+          name: productName(pid),
+          availability: av,
+        });
+      }
+    }
+    const pendingTransfers = state.stockTransfers.filter(
+      (t) => t.status !== "RECIBIDA" && t.status !== "CANCELADA",
+    );
+    const pendingPurchases = state.purchaseRequests.filter(
+      (p) => p.status === "SOLICITADA" || p.status === "APROBADA" || p.status === "ORDENADA",
+    );
+    const preliminars = state.invoiceDrafts.filter(
+      (d) => d.status === "PRELIMINAR",
+    );
+    const deficits = state.customerCommitments.filter((c) => {
+      if (c.status !== "PENDIENTE") return false;
+      const av = this.getOperationalAvailability(c.productId);
+      return av.customerCommitmentDeficit > 0;
+    });
+
+    return {
+      operation: {
+        openAccounts: openAccounts.length,
+        occupiedTables: occupiedTables.length,
+        workingMesoneras: mesoneras.size,
+        completedSalesToday: state.sales.filter(
+          (s) =>
+            s.status === "completed" &&
+            s.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10),
+        ).length,
+      },
+      inventory: {
+        critical,
+        activeCommitments: openAccounts.reduce(
+          (a, acc) =>
+            a +
+            acc.items.reduce(
+              (x, it) => x + Math.max(0, it.qty - it.qtyServed),
+              0,
+            ),
+          0,
+        ),
+        customerCommitments: state.customerCommitments.filter(
+          (c) => c.status === "PENDIENTE",
+        ).length,
+        deficits: deficits.length,
+      },
+      supply: {
+        pendingTransfers,
+        pendingPurchases,
+      },
+      documents: {
+        preliminars,
+        transfers: state.stockTransfers.slice(0, 20),
+        purchases: state.purchases.slice(0, 20),
+        purchaseRequests: state.purchaseRequests.slice(0, 20),
+      },
+    };
+  },
+
+  getCopReports() {
+    const products = state.products.filter((p) => p.active);
+    const faltantes = products
+      .map((p) => {
+        const av = this.getOperationalAvailability(p.id, 20);
+        return { product: p, availability: av };
+      })
+      .filter(
+        (r) =>
+          r.availability.availableOperationalTotal < 20 ||
+          r.availability.customerCommitmentDeficit > 0,
+      );
+
+    const comprometidos = products
+      .map((p) => ({
+        product: p,
+        availability: this.getOperationalAvailability(p.id),
+      }))
+      .filter((r) => r.availability.committedActiveTotal > 0);
+
+    const deficitClientes = state.customerCommitments
+      .filter((c) => c.status === "PENDIENTE")
+      .map((c) => ({
+        commitment: c,
+        deficit: this.getOperationalAvailability(c.productId)
+          .customerCommitmentDeficit,
+      }));
+
+    const salesWithShortage = state.audit.filter(
+      (a) => a.action === "invoice_with_shortage",
+    );
+
+    const movementsByWarehouse = state.warehouses.map((w) => ({
+      warehouse: w,
+      movements: state.movements.filter((m) => m.warehouseId === w.id).length,
+      stockLines: state.inventory.filter((i) => i.warehouseId === w.id),
+    }));
+
+    const supplyByPeriod = (days: number) => {
+      const since = Date.now() - days * 86400000;
+      return {
+        transfers: state.stockTransfers.filter(
+          (t) => new Date(t.createdAt).getTime() >= since,
+        ).length,
+        purchases: state.purchases.filter(
+          (p) => new Date(p.createdAt).getTime() >= since,
+        ).length,
+        requests: state.purchaseRequests.filter(
+          (p) => new Date(p.createdAt).getTime() >= since,
+        ).length,
+      };
+    };
+
+    return {
+      faltantesActuales: faltantes,
+      productosComprometidos: comprometidos,
+      deficitClientes,
+      transferencias: state.stockTransfers,
+      comprasNecesarias: state.purchaseRequests.filter(
+        (p) => p.status === "SOLICITADA" || p.status === "APROBADA",
+      ),
+      ventasConFaltantes: salesWithShortage,
+      movimientosPorDeposito: movementsByWarehouse,
+      abastecimientoDia: supplyByPeriod(1),
+      abastecimientoSemana: supplyByPeriod(7),
+      abastecimientoMes: supplyByPeriod(30),
+      abastecimientoAnio: supplyByPeriod(365),
     };
   },
 };

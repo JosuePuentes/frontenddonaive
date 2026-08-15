@@ -510,3 +510,174 @@ export type AdWhatsAppTemplate = {
 };
 
 export type AdWhatsAppLog = AdWhatsAppMessage;
+
+/* ─── Fase 7: COP / disponibilidad / transferencias / documentos ─── */
+
+export type AdStockTransferStatus =
+  | "BORRADOR"
+  | "SOLICITADA"
+  | "AUTORIZADA"
+  | "ENVIADA"
+  | "RECIBIDA"
+  | "CANCELADA";
+
+export type AdStockTransferLine = {
+  id: string;
+  productId: string;
+  presentationId: string;
+  qty: number;
+  qtyBase: number;
+  observation?: string;
+};
+
+export type AdStockTransfer = {
+  id: string;
+  /** Provisional hasta confirmar; definitivo TR-YYYY-###### */
+  number: string;
+  provisional: boolean;
+  fromWarehouseId: string;
+  toWarehouseId: string;
+  lines: AdStockTransferLine[];
+  status: AdStockTransferStatus;
+  reason?: string;
+  notes?: string;
+  createdBy: string;
+  authorizedBy?: string;
+  sentBy?: string;
+  receivedBy?: string;
+  cancelledBy?: string;
+  /** Salida origen al pasar a ENVIADA */
+  stockOutAt?: string;
+  /** Entrada destino al pasar a RECIBIDA */
+  stockInAt?: string;
+  relatedAccountId?: string;
+  relatedDraftId?: string;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt?: string;
+};
+
+export type AdPurchaseRequestStatus =
+  | "SOLICITADA"
+  | "APROBADA"
+  | "ORDENADA"
+  | "RECIBIDA"
+  | "CANCELADA";
+
+/** Solicitud de compra originada por faltante (pre-compra real). */
+export type AdPurchaseRequest = {
+  id: string;
+  number: string;
+  productId: string;
+  presentationId: string;
+  qty: number;
+  qtyBase: number;
+  warehouseId: string;
+  status: AdPurchaseRequestStatus;
+  /** Operación que originó la necesidad. */
+  relatedAccountId?: string;
+  relatedDraftId?: string;
+  relatedTransferId?: string;
+  reason: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/**
+ * Compromiso / obligación con cliente tras cerrar cuenta con pendiente.
+ * NO bloquea disponibilidad operativa de ventas nuevas.
+ */
+export type AdCustomerCommitment = {
+  id: string;
+  customerId?: string;
+  customerName?: string;
+  customerPhone?: string;
+  accountId: string;
+  accountNumber: string;
+  productId: string;
+  presentationId: string;
+  qtyRemaining: number;
+  qtyBaseRemaining: number;
+  status: "PENDIENTE" | "CUMPLIDO" | "CANCELADO";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdWarehouseAvailability = {
+  warehouseId: string;
+  physical: number;
+  committedActive: number;
+  softReservedOutbound: number;
+  availableOperational: number;
+};
+
+export type AdFulfillmentPlan = {
+  needed: number;
+  fromPreferred: number;
+  transferSuggestion: number;
+  transferFromId?: string;
+  purchaseNeeded: number;
+  shortfall: number;
+  canFulfillFully: boolean;
+};
+
+export type AdOperationalAvailability = {
+  productId: string;
+  requestedBase: number;
+  byWarehouse: AdWarehouseAvailability[];
+  physicalTotal: number;
+  committedActiveTotal: number;
+  availableOperationalTotal: number;
+  customerPendingBase: number;
+  customerCommitmentDeficit: number;
+  pendingTransfers: number;
+  pendingPurchases: number;
+  plan: AdFulfillmentPlan;
+  status:
+    | "OK"
+    | "TRANSFER_NEEDED"
+    | "PURCHASE_NEEDED"
+    | "TRANSFER_AND_PURCHASE"
+    | "COMMITMENT_DEFICIT";
+};
+
+export type AdInvoiceDraftStatus = "PRELIMINAR" | "CONFIRMADA" | "CANCELADA";
+
+export type AdInvoiceDraft = {
+  id: string;
+  provisionalNumber: string;
+  status: AdInvoiceDraftStatus;
+  kind: "pos_sale" | "account_close";
+  customerId?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerDocumentId?: string;
+  tableId?: string;
+  tableNumber?: string;
+  mesoneraName?: string;
+  cashierName: string;
+  warehouseId: string;
+  items: AdSaleItem[];
+  payments: Omit<AdPayment, "id" | "createdAt">[];
+  discountUsd: number;
+  discountBs: number;
+  discountReason?: string;
+  notes?: string;
+  /** Snapshot de alertas de abastecimiento al crear el preliminar. */
+  supplyAlerts: {
+    productId: string;
+    productName: string;
+    requestedBase: number;
+    availableOperational: number;
+    shortfall: number;
+    availability: AdOperationalAvailability;
+  }[];
+  continueWithShortage: boolean;
+  shortageDecision?: string;
+  createdAt: string;
+  confirmedAt?: string;
+  receiptNumber?: string;
+  saleId?: string;
+};
