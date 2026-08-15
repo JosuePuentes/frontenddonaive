@@ -18,6 +18,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+    "seed:ad": "tsx prisma/seed-ad-licoreria.ts",
+    "test:e2e:ad": "vitest run tests/ad-fase4-e2e.test.ts",
     "render:build": "npm run prisma:generate && npm run build",
     "render:start": "npm run prisma:migrate:deploy && npm start"
   },

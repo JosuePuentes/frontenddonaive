@@ -1266,12 +1266,20 @@ model AdTableSpace {
   tenantId    String
   tenant      AdTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
+  /// Número / etiqueta visible (mesa 1, barra A, …)
+  number      String?
   code        String?
+  /// mesa | barra | area | privado | terraza | otro
+  spaceType   String   @default("mesa")
+  capacity    Int      @default(4)
+  /// disponible | ocupada | cuenta_abierta | cuenta_prepagada | reservada | inactiva
+  status      String   @default("disponible")
   active      Boolean  @default(true)
   warehouseId String?
   accounts    AdAccount[]
 
   @@index([tenantId])
+  @@index([warehouseId])
   @@schema("ad_licoreria")
 }
 
@@ -1584,20 +1592,39 @@ model AdInventoryClosureLine {
 }
 
 model AdAuditEvent {
-  id         String      @id @default(uuid())
-  tenantId   String
-  tenant     AdTenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  operatorId String?
-  operator   AdOperator? @relation(fields: [operatorId], references: [id])
-  action     String
-  entity     String
-  entityId   String?
-  detail     String?
-  before     Json?
-  after      Json?
-  createdAt  DateTime    @default(now())
+  id          String      @id @default(uuid())
+  tenantId    String
+  tenant      AdTenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operatorId  String?
+  operator    AdOperator? @relation(fields: [operatorId], references: [id])
+  warehouseId String?
+  action      String
+  entity      String
+  entityId    String?
+  detail      String?
+  before      Json?
+  after       Json?
+  createdAt   DateTime    @default(now())
 
   @@index([tenantId, createdAt])
   @@index([entity, entityId])
+  @@index([warehouseId, createdAt])
+  @@schema("ad_licoreria")
+}
+
+/// Sesiones JWT emitidas (revocación / auditoría de login F4).
+model AdAuthSession {
+  id         String    @id @default(uuid())
+  tenantId   String
+  operatorId String
+  jti        String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime  @default(now())
+
+  @@index([tenantId, operatorId])
+  @@index([expiresAt])
   @@schema("ad_licoreria")
 }
