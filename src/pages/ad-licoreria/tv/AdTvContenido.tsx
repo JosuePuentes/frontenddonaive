@@ -55,11 +55,15 @@ export default function AdTvContenido() {
 
       {canManage ? (
         <section className="ad-panel space-y-3">
-          <h2 className="ad-panel-title">Registrar contenido</h2>
+          <h2 className="ad-panel-title">Agregar contenido</h2>
+          <p className="text-sm text-[var(--ad-muted)]">
+            Pegue una URL pública de imagen o video. Luego vaya a Control →
+            elija el contenido → Reproducir (con la TV vinculada).
+          </p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <input
               className="ad-input"
-              placeholder="Nombre"
+              placeholder="Nombre (ej. Promo viernes)"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -84,7 +88,7 @@ export default function AdTvContenido() {
             />
             <input
               className="ad-input sm:col-span-2 lg:col-span-3"
-              placeholder="URL / ruta"
+              placeholder="URL https://… (imagen o .mp4)"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
             />
@@ -107,13 +111,23 @@ export default function AdTvContenido() {
               }
             }}
           >
-            Guardar
+            Guardar contenido
           </button>
           {msg ? (
             <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p>
           ) : null}
         </section>
-      ) : null}
+      ) : (
+        <section className="ad-panel space-y-2">
+          <h2 className="ad-panel-title">Sin permiso para agregar</h2>
+          <p className="text-sm text-[var(--ad-muted)]">
+            Puede ver el catálogo, pero no crear. Inicie sesión como{" "}
+            <code>admin</code> / <code>AdDemo#2026</code> o{" "}
+            <code>tvadmin</code> / <code>tvadmin</code> (permiso{" "}
+            <code>tv.content.manage</code>).
+          </p>
+        </section>
+      )}
 
       <section className="ad-panel">
         <div className="ad-table-wrap">

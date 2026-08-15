@@ -236,6 +236,20 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       group: "tv",
     },
     {
+      key: "tvContenido",
+      label: "Contenido TV",
+      to: r.tvContenido,
+      anyOf: ["tv.view", "tv.content.manage"],
+      group: "tv",
+    },
+    {
+      key: "tvPantallas",
+      label: "Pantallas",
+      to: r.tvPantallas,
+      anyOf: ["tv.view", "tv.screen.manage"],
+      group: "tv",
+    },
+    {
       key: "tvControl",
       label: "Control TV",
       to: r.tvControl,
@@ -365,7 +379,7 @@ export function mobilePrimaryNavKeys(role: AdRole | null | undefined): string[] 
     case "supervisor":
       return ["inicio", "cop", "ventas", "finanzas"];
     case "tv":
-      return ["tv", "tvControl"];
+      return ["tv", "tvContenido", "tvControl"];
     case "admin":
     default:
       return ["inicio", "ventas", "cop", "finanzas"];

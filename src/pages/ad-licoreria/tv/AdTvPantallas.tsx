@@ -205,11 +205,11 @@ export default function AdTvPantallas() {
                 CONTROLAR
               </Link>
               <Link
-                className="ad-btn"
+                className="ad-btn ad-btn--gold"
                 to={adTvPlayerPath(s.code)}
                 target="_blank"
               >
-                VER
+                Abrir como TV
               </Link>
               {canManage ? (
                 <>

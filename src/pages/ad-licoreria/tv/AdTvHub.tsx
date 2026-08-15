@@ -1,18 +1,24 @@
 import { Link } from "react-router";
-import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import {
+  AD_LICORERIA_ROUTES,
+  adTvPlayerPath,
+} from "@/constants/ad-licoreria-routes";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 
 export default function AdTvHub() {
   const { hasPermission } = useAdLicoreria();
   const { screens, contents, groups, audit } = useAdTv();
+  const canManageContent =
+    hasPermission("tv.content.manage") || hasPermission("tv.manage");
 
   if (!hasPermission("tv.view")) {
     return (
       <div className="ad-panel">
         <h1 className="ad-panel-title">Acceso no autorizado</h1>
         <p className="text-sm text-[var(--ad-muted)]">
-          Se requiere permiso tv.view.
+          Se requiere permiso tv.view. Use admin / AdDemo#2026 o tvadmin /
+          tvadmin.
         </p>
       </div>
     );
@@ -21,6 +27,7 @@ export default function AdTvHub() {
   const online = screens.filter((s) => s.status === "ONLINE").length;
   const offline = screens.filter((s) => s.status === "OFFLINE").length;
   const pairing = screens.filter((s) => s.status === "PAIRING").length;
+  const demoScreen = screens[0];
 
   return (
     <div className="space-y-6">
@@ -31,18 +38,77 @@ export default function AdTvHub() {
             Pantallas TV
           </h1>
           <p className="mt-1 max-w-xl text-sm text-[var(--ad-muted)]">
-            Centro de mando MOCK — preparado para WebSocket backend.
+            Agregue contenido, abra el reproductor en la TV y reproduzca desde
+            Control.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.tvControl}>
-            Control central
+          <Link
+            className="ad-btn ad-btn--gold"
+            to={AD_LICORERIA_ROUTES.tvContenido}
+          >
+            + Contenido
           </Link>
-          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.tvPantallas}>
-            Pantallas
+          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.tvControl}>
+            Control central
           </Link>
         </div>
       </header>
+
+      <section className="ad-panel space-y-3">
+        <h2 className="ad-panel-title">Cómo usarlo (paso a paso)</h2>
+        <ol className="list-decimal space-y-2 pl-5 text-sm text-[var(--ad-muted)]">
+          <li>
+            <strong className="text-[var(--ad-text)]">Contenido</strong> — cree
+            una imagen/video/promo pegando una URL (hace falta permiso de
+            gestión: admin o tvadmin).
+          </li>
+          <li>
+            <strong className="text-[var(--ad-text)]">Entrar como TV</strong> —
+            en el dispositivo/TV abra el reproductor (no es el login admin).
+            Ejemplo:{" "}
+            {demoScreen ? (
+              <Link
+                className="text-[var(--ad-gold-soft)] underline"
+                to={adTvPlayerPath(demoScreen.code)}
+                target="_blank"
+              >
+                Abrir {demoScreen.code}
+              </Link>
+            ) : (
+              "/tv/reproductor/TV-001"
+            )}
+            . Verá un código <code>A&amp;D-####</code>.
+          </li>
+          <li>
+            <strong className="text-[var(--ad-text)]">Vincular</strong> — en{" "}
+            <Link
+              className="text-[var(--ad-gold-soft)] underline"
+              to={AD_LICORERIA_ROUTES.tvPantallas}
+            >
+              Pantallas
+            </Link>{" "}
+            escriba ese código y pulse Vincular.
+          </li>
+          <li>
+            <strong className="text-[var(--ad-text)]">Reproducir</strong> — vaya a{" "}
+            <Link
+              className="text-[var(--ad-gold-soft)] underline"
+              to={AD_LICORERIA_ROUTES.tvControl}
+            >
+              Control
+            </Link>
+            , elija contenido y pulse ▶ Reproducir.
+          </li>
+        </ol>
+        {!canManageContent ? (
+          <p className="text-sm text-[var(--ad-gold-soft)]">
+            Su usuario no puede crear contenido. Entre como{" "}
+            <code>admin</code> / <code>AdDemo#2026</code> o{" "}
+            <code>tvadmin</code> / <code>tvadmin</code>.
+          </p>
+        ) : null}
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="ad-panel">
@@ -80,7 +146,7 @@ export default function AdTvHub() {
             <Link className="ad-btn" to={AD_LICORERIA_ROUTES.tvPantallas}>
               Pantallas ({screens.length})
             </Link>
-            <Link className="ad-btn" to={AD_LICORERIA_ROUTES.tvContenido}>
+            <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.tvContenido}>
               Contenido ({contents.length})
             </Link>
             <Link className="ad-btn" to={AD_LICORERIA_ROUTES.tvGrupos}>
@@ -90,6 +156,18 @@ export default function AdTvHub() {
               Control
             </Link>
           </div>
+          {demoScreen ? (
+            <p className="text-sm text-[var(--ad-muted)]">
+              Abrir como TV (reproductor):{" "}
+              <Link
+                className="text-[var(--ad-gold-soft)] underline"
+                to={adTvPlayerPath(demoScreen.code)}
+                target="_blank"
+              >
+                {demoScreen.code} · {demoScreen.name}
+              </Link>
+            </p>
+          ) : null}
         </div>
         <div className="ad-panel space-y-2">
           <h2 className="ad-panel-title">Actividad reciente</h2>
