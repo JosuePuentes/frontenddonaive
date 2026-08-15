@@ -16,9 +16,10 @@ const ROLES: AdRole[] = [
   "cajero",
   "mesonera",
   "inventario",
+  "tv",
 ];
 
-/** Filas resumidas de la matriz pedida en Fase 8. */
+/** Filas resumidas de la matriz pedida en Fase 8 + TV. */
 const MATRIX_ROWS: { label: string; permissions: AdPermission[] }[] = [
   { label: "POS", permissions: ["pos.sell", "pos.close_account"] },
   { label: "Override faltante", permissions: ["pos.shortage_override"] },
@@ -36,6 +37,17 @@ const MATRIX_ROWS: { label: string; permissions: AdPermission[] }[] = [
   },
   { label: "COP", permissions: ["cop.read"] },
   { label: "Usuarios", permissions: ["users.manage"] },
+  {
+    label: "TV",
+    permissions: [
+      "tv.view",
+      "tv.control",
+      "tv.manage",
+      "tv.content.manage",
+      "tv.groups.manage",
+      "tv.screen.manage",
+    ],
+  },
 ];
 
 export default function AdLicoreriaConfigPermisos() {

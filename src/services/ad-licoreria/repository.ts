@@ -702,6 +702,7 @@ export const adLicoreriaRepository = {
       "cajero",
       "mesonera",
       "inventario",
+      "tv",
     ];
     const out = {} as Record<AdRole, AdPermission[]>;
     for (const role of roles) {
@@ -752,10 +753,17 @@ export const adLicoreriaRepository = {
       ...operator,
       username,
       name: operator.name.trim(),
-      warehouseId: operator.warehouseId ?? null,
+      warehouseId: operator.role === "tv" ? null : (operator.warehouseId ?? null),
       posEnabled:
-        operator.posEnabled ??
-        (operator.role === "cajero" || operator.role === "mesonera"),
+        operator.role === "tv"
+          ? false
+          : (operator.posEnabled ??
+            (operator.role === "cajero" || operator.role === "mesonera")),
+      inventoryAccess:
+        operator.role === "tv" ? false : operator.inventoryAccess,
+      copAccess: operator.role === "tv" ? false : operator.copAccess,
+      purchaseAccess: operator.role === "tv" ? false : operator.purchaseAccess,
+      closuresAccess: operator.role === "tv" ? false : operator.closuresAccess,
       createdAt: operator.createdAt ?? new Date().toISOString(),
     };
     const idx = state.operators.findIndex((o) => o.id === normalized.id);

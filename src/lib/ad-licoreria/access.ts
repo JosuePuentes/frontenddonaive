@@ -29,6 +29,12 @@ export const AD_ALL_PERMISSIONS: AdPermission[] = [
   "tables.manage",
   "clients.read",
   "closures.create",
+  "tv.view",
+  "tv.manage",
+  "tv.control",
+  "tv.content.manage",
+  "tv.groups.manage",
+  "tv.screen.manage",
 ];
 
 export const AD_PERMISSION_LABELS: Record<AdPermission, string> = {
@@ -55,6 +61,12 @@ export const AD_PERMISSION_LABELS: Record<AdPermission, string> = {
   "tables.manage": "Espacios / mesas",
   "clients.read": "Clientes",
   "closures.create": "Cierres de caja",
+  "tv.view": "TV · ver módulo",
+  "tv.manage": "TV · administrar módulo",
+  "tv.control": "TV · controlar reproducción",
+  "tv.content.manage": "TV · gestionar contenido",
+  "tv.groups.manage": "TV · gestionar grupos",
+  "tv.screen.manage": "TV · gestionar pantallas",
 };
 
 /** Permisos por defecto de cada rol (personalizables en mock ADMIN). */
@@ -81,6 +93,11 @@ export const AD_DEFAULT_ROLE_PERMISSIONS: Record<AdRole, AdPermission[]> = {
     "tables.manage",
     "clients.read",
     "closures.create",
+    "tv.view",
+    "tv.control",
+    "tv.content.manage",
+    "tv.groups.manage",
+    "tv.screen.manage",
   ],
   cajero: [
     "pos.sell",
@@ -108,6 +125,8 @@ export const AD_DEFAULT_ROLE_PERMISSIONS: Record<AdRole, AdPermission[]> = {
     "cop.purchase_request",
     "reports.read",
   ],
+  /** Rol TV: solo Digital Signage (sin POS / inventario / COP / admin). */
+  tv: ["tv.view", "tv.control"],
 };
 
 export const AD_ROLE_LABELS: Record<AdRole, string> = {
@@ -116,6 +135,7 @@ export const AD_ROLE_LABELS: Record<AdRole, string> = {
   cajero: "CAJERO",
   mesonera: "MESONERA",
   inventario: "INVENTARIO",
+  tv: "TV",
 };
 
 /**
@@ -270,6 +290,7 @@ export function posWarehouseIdFor(
 
 export function canOperatePos(user: AdOperator | null | undefined): boolean {
   if (!user || !user.active) return false;
+  if (user.role === "tv") return false;
   if (user.posEnabled === false) return false;
   if (!user.warehouseId) return false;
   return hasPermission(user, "pos.sell");

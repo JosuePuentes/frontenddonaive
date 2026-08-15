@@ -15,7 +15,8 @@ export type AdRole =
   | "supervisor"
   | "mesonera"
   | "cajero"
-  | "inventario";
+  | "inventario"
+  | "tv";
 
 /** Permisos granulares (independientes del rol; roles otorgan defaults). */
 export type AdPermission =
@@ -41,7 +42,13 @@ export type AdPermission =
   | "accounts.serve"
   | "tables.manage"
   | "clients.read"
-  | "closures.create";
+  | "closures.create"
+  | "tv.view"
+  | "tv.manage"
+  | "tv.control"
+  | "tv.content.manage"
+  | "tv.groups.manage"
+  | "tv.screen.manage";
 
 /** Motivos de override de faltante operativo/físico. */
 export type AdShortageOverrideReason =
@@ -79,7 +86,8 @@ export type AdModulePermission =
   | "reportes"
   | "configuracion"
   | "anulaciones"
-  | "descuentos";
+  | "descuentos"
+  | "tv";
 
 /** Mapa legado módulo ← rol (nav / compat). */
 export const AD_ROLE_PERMISSIONS: Record<AdRole, AdModulePermission[]> = {
@@ -100,6 +108,7 @@ export const AD_ROLE_PERMISSIONS: Record<AdRole, AdModulePermission[]> = {
     "configuracion",
     "anulaciones",
     "descuentos",
+    "tv",
   ],
   supervisor: [
     "ventas",
@@ -117,6 +126,7 @@ export const AD_ROLE_PERMISSIONS: Record<AdRole, AdModulePermission[]> = {
     "reportes",
     "anulaciones",
     "descuentos",
+    "tv",
   ],
   cajero: [
     "ventas",
@@ -129,6 +139,7 @@ export const AD_ROLE_PERMISSIONS: Record<AdRole, AdModulePermission[]> = {
   ],
   mesonera: ["mesas", "cuentas", "servir"],
   inventario: ["inventario", "depositos", "kardex", "conteos", "productos"],
+  tv: ["tv"],
 };
 
 /**
@@ -158,6 +169,12 @@ export type AdOperator = {
   customPermissions?: AdPermission[];
   /** Permisos denegados explícitamente. */
   deniedPermissions?: AdPermission[];
+  /** Credencial mock (solo UI/demo; sin auth real). */
+  mockCredential?: string;
+  /** Pantalla TV asociada (rol TV). */
+  tvScreenId?: string | null;
+  /** Grupo TV asociado (rol TV). */
+  tvGroupId?: string | null;
   createdAt?: string;
 };
 

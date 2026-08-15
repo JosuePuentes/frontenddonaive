@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
-import { AD_ROLE_LABELS } from "@/lib/ad-licoreria/access";
+import {
+  AD_DEFAULT_ROLE_PERMISSIONS,
+  AD_ROLE_LABELS,
+} from "@/lib/ad-licoreria/access";
 import { uid } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import type { AdOperator, AdRole } from "@/types/ad-licoreria";
 
 const ROLES: AdRole[] = [
@@ -12,11 +16,13 @@ const ROLES: AdRole[] = [
   "cajero",
   "mesonera",
   "inventario",
+  "tv",
 ];
 
 export default function AdLicoreriaConfigUsuarios() {
   const { operators, warehouses, upsertOperator, setCurrentOperator } =
     useAdLicoreria();
+  const { screens, groups } = useAdTv();
 
   const [opId, setOpId] = useState<string | null>(null);
   const [username, setUsername] = useState("");
@@ -30,6 +36,9 @@ export default function AdLicoreriaConfigUsuarios() {
   const [purchase, setPurchase] = useState(false);
   const [closures, setClosures] = useState(true);
   const [active, setActive] = useState(true);
+  const [mockCredential, setMockCredential] = useState("");
+  const [tvScreenId, setTvScreenId] = useState("");
+  const [tvGroupId, setTvGroupId] = useState("");
   const [msg, setMsg] = useState("");
 
   function load(o: AdOperator) {
@@ -39,15 +48,34 @@ export default function AdLicoreriaConfigUsuarios() {
     setPhone(o.phone ?? "");
     setRole(o.role);
     setWarehouseId(o.warehouseId ?? "");
-    setPos(o.posEnabled !== false);
+    setPos(o.role === "tv" ? false : o.posEnabled !== false);
     setInv(o.inventoryAccess === true);
     setCop(o.copAccess === true);
     setPurchase(o.purchaseAccess === true);
     setClosures(o.closuresAccess !== false);
     setActive(o.active);
+    setMockCredential(o.mockCredential ?? "");
+    setTvScreenId(o.tvScreenId ?? "");
+    setTvGroupId(o.tvGroupId ?? "");
+  }
+
+  function onRoleChange(next: AdRole) {
+    setRole(next);
+    if (next === "tv") {
+      setPos(false);
+      setInv(false);
+      setCop(false);
+      setPurchase(false);
+      setClosures(false);
+      setWarehouseId("");
+    }
   }
 
   function save() {
+    const isTv = role === "tv";
+    const existing = opId
+      ? operators.find((o) => o.id === opId)
+      : undefined;
     const operator: AdOperator = {
       id: opId ?? uid("op"),
       username,
@@ -55,13 +83,38 @@ export default function AdLicoreriaConfigUsuarios() {
       phone: phone.trim() || undefined,
       role,
       active,
-      warehouseId: warehouseId || null,
-      posEnabled: pos,
-      inventoryAccess: inv,
-      copAccess: cop,
-      purchaseAccess: purchase,
-      closuresAccess: closures,
+      warehouseId: isTv ? null : warehouseId || null,
+      posEnabled: isTv ? false : pos,
+      inventoryAccess: isTv ? false : inv,
+      copAccess: isTv ? false : cop,
+      purchaseAccess: isTv ? false : purchase,
+      closuresAccess: isTv ? false : closures,
+      mockCredential: mockCredential.trim() || undefined,
+      tvScreenId: isTv ? tvScreenId || null : null,
+      tvGroupId: isTv ? tvGroupId || null : null,
+      customPermissions: isTv
+        ? existing?.customPermissions?.length
+          ? [...existing.customPermissions]
+          : [...AD_DEFAULT_ROLE_PERMISSIONS.tv]
+        : existing?.customPermissions,
+      deniedPermissions: existing?.deniedPermissions,
     };
+    /** Nuevo Administrador TV: permisos amplios del módulo. */
+    if (
+      isTv &&
+      !existing &&
+      (username === "tvadmin" ||
+        name.toLowerCase().includes("administrador tv"))
+    ) {
+      operator.customPermissions = [
+        "tv.view",
+        "tv.manage",
+        "tv.control",
+        "tv.content.manage",
+        "tv.groups.manage",
+        "tv.screen.manage",
+      ];
+    }
     const r = upsertOperator(operator);
     setMsg(r.ok ? `Usuario ${r.data.username} guardado` : r.error);
     if (r.ok) {
@@ -69,6 +122,9 @@ export default function AdLicoreriaConfigUsuarios() {
       setUsername("");
       setName("");
       setPhone("");
+      setMockCredential("");
+      setTvScreenId("");
+      setTvGroupId("");
     }
   }
 
@@ -81,8 +137,7 @@ export default function AdLicoreriaConfigUsuarios() {
             Usuarios
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Sin contraseñas en el mock. El depósito asignado restringe el POS de
-            forma real.
+            Incluye tipo TV (solo Digital Signage). Credencial mock opcional.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -103,10 +158,8 @@ export default function AdLicoreriaConfigUsuarios() {
                 <th>Usuario</th>
                 <th>Nombre</th>
                 <th>Rol</th>
-                <th>Depósito</th>
+                <th>Depósito / TV</th>
                 <th>POS</th>
-                <th>Inv</th>
-                <th>COP</th>
                 <th>Estado</th>
                 <th />
               </tr>
@@ -118,13 +171,22 @@ export default function AdLicoreriaConfigUsuarios() {
                   <td>{o.name}</td>
                   <td>{AD_ROLE_LABELS[o.role]}</td>
                   <td>
-                    {o.warehouseId
-                      ? warehouses.find((w) => w.id === o.warehouseId)?.name
-                      : "Transversal"}
+                    {o.role === "tv"
+                      ? [
+                          o.tvScreenId
+                            ? screens.find((s) => s.id === o.tvScreenId)?.code
+                            : null,
+                          o.tvGroupId
+                            ? groups.find((g) => g.id === o.tvGroupId)?.name
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "TV"
+                      : o.warehouseId
+                        ? warehouses.find((w) => w.id === o.warehouseId)?.name
+                        : "Transversal"}
                   </td>
-                  <td>{o.posEnabled === false ? "No" : "Sí"}</td>
-                  <td>{o.inventoryAccess ? "Sí" : "—"}</td>
-                  <td>{o.copAccess ? "Sí" : "—"}</td>
+                  <td>{o.role === "tv" || o.posEnabled === false ? "No" : "Sí"}</td>
                   <td>{o.active ? "Activo" : "Inactivo"}</td>
                   <td className="space-x-1">
                     <button
@@ -182,7 +244,7 @@ export default function AdLicoreriaConfigUsuarios() {
           <select
             className="ad-select"
             value={role}
-            onChange={(e) => setRole(e.target.value as AdRole)}
+            onChange={(e) => onRoleChange(e.target.value as AdRole)}
           >
             {ROLES.map((r) => (
               <option key={r} value={r}>
@@ -190,18 +252,53 @@ export default function AdLicoreriaConfigUsuarios() {
               </option>
             ))}
           </select>
-          <select
-            className="ad-select"
-            value={warehouseId}
-            onChange={(e) => setWarehouseId(e.target.value)}
-          >
-            <option value="">Transversal</option>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name} ({w.code})
-              </option>
-            ))}
-          </select>
+          {role === "tv" ? (
+            <>
+              <input
+                className="ad-input"
+                placeholder="Credencial mock"
+                value={mockCredential}
+                onChange={(e) => setMockCredential(e.target.value)}
+              />
+              <select
+                className="ad-select"
+                value={tvScreenId}
+                onChange={(e) => setTvScreenId(e.target.value)}
+              >
+                <option value="">Sin pantalla asignada</option>
+                {screens.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.code} · {s.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="ad-select"
+                value={tvGroupId}
+                onChange={(e) => setTvGroupId(e.target.value)}
+              >
+                <option value="">Sin grupo asignado</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <select
+              className="ad-select"
+              value={warehouseId}
+              onChange={(e) => setWarehouseId(e.target.value)}
+            >
+              <option value="">Transversal</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name} ({w.code})
+                </option>
+              ))}
+            </select>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -210,46 +307,54 @@ export default function AdLicoreriaConfigUsuarios() {
             />
             Activo
           </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={pos}
-              onChange={(e) => setPos(e.target.checked)}
-            />
-            Acceso POS
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={inv}
-              onChange={(e) => setInv(e.target.checked)}
-            />
-            Acceso inventario
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={cop}
-              onChange={(e) => setCop(e.target.checked)}
-            />
-            Acceso COP
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={purchase}
-              onChange={(e) => setPurchase(e.target.checked)}
-            />
-            Acceso compras
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={closures}
-              onChange={(e) => setClosures(e.target.checked)}
-            />
-            Acceso cierres
-          </label>
+          {role !== "tv" ? (
+            <>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={pos}
+                  onChange={(e) => setPos(e.target.checked)}
+                />
+                Acceso POS
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={inv}
+                  onChange={(e) => setInv(e.target.checked)}
+                />
+                Acceso inventario
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={cop}
+                  onChange={(e) => setCop(e.target.checked)}
+                />
+                Acceso COP
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={purchase}
+                  onChange={(e) => setPurchase(e.target.checked)}
+                />
+                Acceso compras
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={closures}
+                  onChange={(e) => setClosures(e.target.checked)}
+                />
+                Acceso cierres
+              </label>
+            </>
+          ) : (
+            <p className="text-sm text-[var(--ad-muted)] sm:col-span-2">
+              Usuario TV: sin POS, inventario, COP, compras ni cierres.
+            </p>
+          )}
         </div>
         <button type="button" className="ad-btn ad-btn--gold" onClick={save}>
           Guardar

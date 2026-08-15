@@ -89,6 +89,18 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       anyOf: ["inventory.read", "settings.manage"],
     },
     {
+      key: "tv",
+      label: "TV",
+      to: r.tv,
+      anyOf: ["tv.view"],
+    },
+    {
+      key: "tvControl",
+      label: "Control TV",
+      to: r.tvControl,
+      anyOf: ["tv.control"],
+    },
+    {
       key: "reportes",
       label: "Reportes",
       to: r.reportes,
@@ -137,6 +149,15 @@ export function filterNavForUser(
   if (!user || !user.active) {
     return catalog.filter((i) => i.key === "inicio");
   }
+  /** Usuario TV: solo módulos TV (sin POS / COP / inventario / admin). */
+  if (user.role === "tv") {
+    return catalog.filter((item) => {
+      if (!item.anyOf?.length) return item.key === "inicio" ? false : false;
+      return item.anyOf.some(
+        (p) => p.startsWith("tv.") && can(user, p, roleOverrides),
+      );
+    });
+  }
   return catalog.filter((item) => {
     if (item.roles && !item.roles.includes(user.role) && user.role !== "admin") {
       /* roles hint: admin siempre pasa si tiene permiso */
@@ -167,6 +188,8 @@ export function roleHomePath(
       return r.cop;
     case "supervisor":
       return r.cop;
+    case "tv":
+      return r.tv;
     case "admin":
     default:
       return r.inicio;

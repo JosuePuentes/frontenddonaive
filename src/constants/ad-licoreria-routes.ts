@@ -29,6 +29,12 @@ const AD_SEGMENTS = {
   configUsuarios: "/configuracion/usuarios",
   configPermisos: "/configuracion/permisos",
   configDiseno: "/configuracion/diseno",
+  /** Fase 10.2 — TV / Digital Signage */
+  tv: "/tv",
+  tvPantallas: "/tv/pantallas",
+  tvContenido: "/tv/contenido",
+  tvGrupos: "/tv/grupos",
+  tvControl: "/tv/control",
 } as const;
 
 export type AdLicoreriaRoutes = {
@@ -54,6 +60,11 @@ export type AdLicoreriaRoutes = {
   configUsuarios: string;
   configPermisos: string;
   configDiseno: string;
+  tv: string;
+  tvPantallas: string;
+  tvContenido: string;
+  tvGrupos: string;
+  tvControl: string;
 };
 
 function joinPath(base: "" | "/licoreria", segment: string): string {
@@ -87,10 +98,23 @@ export function getAdLicoreriaRoutes(
     configUsuarios: joinPath(base, AD_SEGMENTS.configUsuarios),
     configPermisos: joinPath(base, AD_SEGMENTS.configPermisos),
     configDiseno: joinPath(base, AD_SEGMENTS.configDiseno),
+    tv: joinPath(base, AD_SEGMENTS.tv),
+    tvPantallas: joinPath(base, AD_SEGMENTS.tvPantallas),
+    tvContenido: joinPath(base, AD_SEGMENTS.tvContenido),
+    tvGrupos: joinPath(base, AD_SEGMENTS.tvGrupos),
+    tvControl: joinPath(base, AD_SEGMENTS.tvControl),
   };
 }
 
 export const AD_LICORERIA_ROUTES = getAdLicoreriaRoutes();
+
+/** URL del reproductor de una pantalla (por código TV-001 o id). */
+export function adTvPlayerPath(
+  screenIdOrCode: string,
+  base = getAdLicoreriaBasePath(),
+): string {
+  return joinPath(base, `/tv/pantalla/${encodeURIComponent(screenIdOrCode)}`);
+}
 
 export function getAdLicoreriaNavItems(base = getAdLicoreriaBasePath()) {
   const r = getAdLicoreriaRoutes(base);
@@ -105,6 +129,7 @@ export function getAdLicoreriaNavItems(base = getAdLicoreriaBasePath()) {
     { key: "cierres", label: "Cierres", to: r.cierres },
     { key: "clientes", label: "Clientes", to: r.clientes },
     { key: "reportes", label: "Reportes", to: r.reportes },
+    { key: "tv", label: "TV / Pantallas", to: r.tv },
     { key: "configuracion", label: "Configuración", to: r.configuracion },
   ] as const;
 }

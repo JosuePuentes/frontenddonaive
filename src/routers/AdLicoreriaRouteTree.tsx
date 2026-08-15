@@ -66,12 +66,27 @@ const AdLicoreriaConfigPermisos = lazy(
 const AdLicoreriaConfigDiseno = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaConfigDiseno"),
 );
+const AdTvHub = lazy(() => import("@/pages/ad-licoreria/tv/AdTvHub"));
+const AdTvPantallas = lazy(
+  () => import("@/pages/ad-licoreria/tv/AdTvPantallas"),
+);
+const AdTvContenido = lazy(
+  () => import("@/pages/ad-licoreria/tv/AdTvContenido"),
+);
+const AdTvGrupos = lazy(() => import("@/pages/ad-licoreria/tv/AdTvGrupos"));
+const AdTvControl = lazy(() => import("@/pages/ad-licoreria/tv/AdTvControl"));
+const AdTvPlayer = lazy(() => import("@/pages/ad-licoreria/tv/AdTvPlayer"));
 
 /**
  * Árbol de rutas A&D. Invocar como función:
  * `{adLicoreriaRouteTree("/licoreria")}` — no como componente.
  */
 function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
+  const tvPlayer =
+    prefix === ""
+      ? "/tv/pantalla/:id"
+      : `${prefix}/tv/pantalla/:id`;
+
   return (
     <>
       <Route
@@ -146,6 +161,27 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
         path={adLicoreriaRouterPath(prefix, "configDiseno")}
         element={<AdLicoreriaConfigDiseno />}
       />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "tv")}
+        element={<AdTvHub />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "tvPantallas")}
+        element={<AdTvPantallas />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "tvContenido")}
+        element={<AdTvContenido />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "tvGrupos")}
+        element={<AdTvGrupos />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "tvControl")}
+        element={<AdTvControl />}
+      />
+      <Route path={tvPlayer} element={<AdTvPlayer />} />
       <Route
         path={adLicoreriaRouterPath(prefix, "mesonera")}
         element={<AdLicoreriaMesonera />}
