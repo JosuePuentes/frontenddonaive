@@ -51,7 +51,7 @@ export const AD_NAV_GROUP_ORDER: AdNavGroupId[] = [
 
 
 function routes(base?: "" | "/licoreria"): AdLicoreriaRoutes {
-  return getAdLicoreriaRoutes(base);
+  return getAdLicoreriaRoutes(base ?? undefined);
 }
 
 /** Catálogo de ítems operativos + admin. */

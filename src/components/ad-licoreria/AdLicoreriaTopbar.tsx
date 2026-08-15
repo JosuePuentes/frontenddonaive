@@ -1,5 +1,5 @@
-import { Link, useLocation, useNavigate } from "react-router";
-import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import { useLocation, useNavigate } from "react-router";
+import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import { AD_ROLE_LABELS } from "@/lib/ad-licoreria/access";
 import { normalizeAdLicoreriaPathname } from "@/lib/ad-licoreria-host";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
@@ -28,6 +28,10 @@ const titles: Record<string, string> = {
   "/configuracion": "Configuración",
   "/configuracion/usuarios": "Usuarios",
   "/configuracion/permisos": "Permisos",
+  "/tv": "TV",
+  "/tv/contenido": "Contenido TV",
+  "/tv/pantallas": "Pantallas",
+  "/tv/control": "Control TV",
   "/mesonera": "Interfaz mesonera",
 };
 
@@ -38,6 +42,7 @@ type Props = {
 function AdLicoreriaTopbar({ onOpenMenu }: Props) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const routes = getAdLicoreriaRoutes();
   const path = normalizeAdLicoreriaPathname(pathname);
   const title = titles[path] ?? "A&D";
   const { getCurrentOperator, warehouses, setCurrentOperator, operators } =
@@ -45,6 +50,8 @@ function AdLicoreriaTopbar({ onOpenMenu }: Props) {
   const session = getCurrentOperator();
   const mode = getAdDataSourceMode();
   const warehouseLocked = Boolean(session?.warehouseId);
+  /** Con sesión: inicio operativo. Sin sesión: home público. */
+  const homeTo = session ? routes.inicio : routes.home;
 
   return (
     <header className="ad-topbar">
@@ -74,16 +81,20 @@ function AdLicoreriaTopbar({ onOpenMenu }: Props) {
         </div>
       </div>
       <div className="ad-topbar__actions">
-        <Link to={AD_LICORERIA_ROUTES.home} className="ad-btn ad-topbar__desktop-only">
-          Home
-        </Link>
+        <button
+          type="button"
+          className="ad-btn ad-btn--gold"
+          onClick={() => navigate(homeTo)}
+        >
+          {session ? "Inicio" : "Home"}
+        </button>
         {mode === "api" ? (
           <button
             type="button"
             className="ad-btn"
             onClick={() => {
               void adLogoutRequest().then(() => {
-                navigate(AD_LICORERIA_ROUTES.login, { replace: true });
+                navigate(routes.login, { replace: true });
               });
             }}
           >

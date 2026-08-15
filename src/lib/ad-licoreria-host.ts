@@ -38,3 +38,27 @@ export function normalizeAdLicoreriaPathname(pathname: string): string {
   }
   return pathname;
 }
+
+/**
+ * Resuelve hrefs del diseño (pueden venir con `/licoreria/...` o `/inicio`)
+ * al prefijo activo del host.
+ */
+export function resolveAdHref(href: string | null | undefined): string {
+  const base = getAdLicoreriaBasePath();
+  const raw = (href ?? "").trim();
+  if (!raw || raw === "/") {
+    return base || "/";
+  }
+  if (/^https?:\/\//i.test(raw) || raw.startsWith("mailto:") || raw.startsWith("tel:")) {
+    return raw;
+  }
+  let path = raw.startsWith("/") ? raw : `/${raw}`;
+  if (path === "/licoreria" || path.startsWith("/licoreria/")) {
+    path = normalizeAdLicoreriaPathname(path);
+  }
+  if (!base) {
+    return path || "/";
+  }
+  if (path === "/") return base;
+  return `${base}${path}`;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router";
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router";
 import { AdLicoreriaSidebar } from "@/components/ad-licoreria/AdLicoreriaSidebar";
 import { AdLicoreriaTopbar } from "@/components/ad-licoreria/AdLicoreriaTopbar";
 import {
@@ -96,6 +96,8 @@ function AdRouteGate({ children }: { children: ReactNode }) {
 }
 
 function AdMobileBottomNav({ onOpenMore }: { onOpenMore: () => void }) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { getCurrentOperator, getRolePermissionMatrix } = useAdLicoreria();
   const session = getCurrentOperator();
   const matrix = getRolePermissionMatrix();
@@ -112,17 +114,21 @@ function AdMobileBottomNav({ onOpenMore }: { onOpenMore: () => void }) {
 
   return (
     <nav className="ad-mobile-tabbar" aria-label="Atajos móviles">
-      {primary.map((item) => (
-        <NavLink
-          key={item.key}
-          to={item.to}
-          className={({ isActive }) =>
-            ["ad-mobile-tab", isActive ? "is-active" : ""].join(" ")
-          }
-        >
-          {item.label}
-        </NavLink>
-      ))}
+      {primary.map((item) => {
+        const active =
+          pathname === item.to ||
+          (item.to !== "/" && pathname.startsWith(`${item.to}/`));
+        return (
+          <button
+            key={item.key}
+            type="button"
+            className={["ad-mobile-tab", active ? "is-active" : ""].join(" ")}
+            onClick={() => navigate(item.to)}
+          >
+            {item.label}
+          </button>
+        );
+      })}
       <button type="button" className="ad-mobile-tab" onClick={onOpenMore}>
         Más
       </button>

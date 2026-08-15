@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router";
 import { AdLicoreriaBrandMark } from "@/components/ad-licoreria/AdLicoreriaBrandMark";
-import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import {
   filterNavForUser,
   groupNavItems,
@@ -29,6 +29,7 @@ const GROUP_HUB_KEY: Partial<Record<AdNavGroupId, string>> = {
 function AdLicoreriaSidebar({ open, onClose }: Props) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const routes = getAdLicoreriaRoutes();
   const path = normalizeAdLicoreriaPathname(pathname);
   const { getCurrentOperator, getRolePermissionMatrix } = useAdLicoreria();
   const session = getCurrentOperator();
@@ -36,6 +37,7 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
   const items = filterNavForUser(session, matrix);
   const groups = useMemo(() => groupNavItems(items), [items]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const brandTo = session ? routes.inicio : routes.home;
 
   useEffect(() => {
     setExpanded((prev) => {
@@ -48,7 +50,6 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
             (normalized !== "/" && path.startsWith(`${normalized}/`))
           );
         });
-        /** En móvil el menú debe mostrar todo: expandir al abrir. */
         if (open) {
           next[group.id] = true;
           continue;
@@ -90,9 +91,17 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
       />
       <aside className={`ad-sidebar ${open ? "is-open" : ""}`}>
         <div className="ad-sidebar__head">
-          <NavLink to={AD_LICORERIA_ROUTES.home} end onClick={onClose}>
+          <button
+            type="button"
+            className="ad-sidebar__brand"
+            aria-label="Ir al inicio"
+            onClick={() => {
+              navigate(brandTo);
+              onClose();
+            }}
+          >
             <AdLicoreriaBrandMark size="md" />
-          </NavLink>
+          </button>
           <button
             type="button"
             className="ad-btn ad-sidebar__close"
@@ -125,7 +134,11 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
                       <NavLink
                         key={item.key}
                         to={item.to}
-                        onClick={onClose}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigate(item.to);
+                          onClose();
+                        }}
                         className={({ isActive }) =>
                           ["ad-nav-link", isActive ? "is-active" : ""].join(" ")
                         }

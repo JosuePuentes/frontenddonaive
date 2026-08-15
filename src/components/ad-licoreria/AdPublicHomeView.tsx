@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdLicoreriaBrandMark } from "@/components/ad-licoreria/AdLicoreriaBrandMark";
+import { resolveAdHref } from "@/lib/ad-licoreria-host";
 import { adDesignRepository } from "@/services/ad-licoreria/design/repository";
 import { applySiteDesignToDom } from "@/services/ad-licoreria/design/apply";
 import type { AdSiteDesign } from "@/types/ad-licoreria-design";
@@ -169,7 +170,7 @@ export function AdPublicHomeView({
                 <div className="ad-public-hero__actions">
                   {hero.primaryVisible ? (
                     <Link
-                      to={hero.primaryHref || "/licoreria/inicio"}
+                      to={resolveAdHref(hero.primaryHref || "/inicio")}
                       className="ad-btn ad-btn--gold"
                     >
                       {hero.primaryLabel}
@@ -177,7 +178,7 @@ export function AdPublicHomeView({
                   ) : null}
                   {hero.secondaryVisible ? (
                     <Link
-                      to={hero.secondaryHref || "/licoreria/ventas"}
+                      to={resolveAdHref(hero.secondaryHref || "/ventas")}
                       className="ad-btn ad-btn--primary"
                     >
                       {hero.secondaryLabel}
@@ -233,7 +234,7 @@ export function AdPublicHomeView({
                       {design.featuredProducts.showButton ? (
                         <Link
                           className="ad-btn mt-2 inline-flex"
-                          to={design.featuredProducts.linkHref}
+                          to={resolveAdHref(design.featuredProducts.linkHref)}
                         >
                           {design.featuredProducts.buttonLabel}
                         </Link>
@@ -298,7 +299,7 @@ export function AdPublicHomeView({
                       <p className="ad-public-muted">{b.subtitle}</p>
                     ) : null}
                     {b.ctaLabel && b.ctaHref ? (
-                      <Link className="ad-btn ad-btn--gold mt-2 inline-flex" to={b.ctaHref}>
+                      <Link className="ad-btn ad-btn--gold mt-2 inline-flex" to={resolveAdHref(b.ctaHref)}>
                         {b.ctaLabel}
                       </Link>
                     ) : null}
@@ -444,7 +445,7 @@ export function AdPublicHomeView({
                 <div className="text-sm space-y-1">
                   {f.links.map((l) => (
                     <div key={l.id}>
-                      <Link to={l.href}>{l.label}</Link>
+                      <Link to={resolveAdHref(l.href)}>{l.label}</Link>
                     </div>
                   ))}
                 </div>
@@ -474,7 +475,7 @@ export function AdPublicHomeView({
               {design.popup.buttonHref ? (
                 <Link
                   className="ad-btn ad-btn--gold"
-                  to={design.popup.buttonHref}
+                  to={resolveAdHref(design.popup.buttonHref)}
                   onClick={closePopup}
                 >
                   {design.popup.buttonLabel}
