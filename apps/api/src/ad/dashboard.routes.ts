@@ -24,6 +24,9 @@ export const dashboardQuerySchema = z.object({
   displayCurrency: z.enum(["USD", "BS"]).optional(),
   currency: z.enum(["USD", "BS"]).optional(),
   warehouseId: z.string().uuid().optional(),
+  productId: z.string().uuid().optional(),
+  paymentMethod: z.string().max(120).optional(),
+  supplierId: z.string().uuid().optional(),
 });
 
 export const dashboardDrillQuerySchema = z.object({

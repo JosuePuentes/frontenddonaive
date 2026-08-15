@@ -173,6 +173,36 @@ export const updatePurchaseOrderSchema = z.object({
     .optional(),
 });
 
+export const convertPurchaseOrderSchema = z.object({
+  invoiceNumber: z.string().min(1).max(80),
+  currency: z.enum(["USD", "BS"]).optional(),
+  paymentCondition: z.enum(["CONTADO", "CREDITO"]).optional(),
+  paymentMethodId: z.string().uuid().optional(),
+  creditDays: z.number().int().min(0).max(3650).optional(),
+  dueDate: z.string().datetime().optional(),
+  useProtectedRateRef: z.boolean().optional(),
+  confirm: z.boolean().optional(),
+  notes: z.string().max(1000).optional(),
+  lines: z
+    .array(
+      z.object({
+        productId: z.string().uuid(),
+        presentationId: z.string().uuid(),
+        qty: z.number().positive(),
+        qtyBonus: z.number().nonnegative().optional(),
+        costMode: z.enum(["UNIT", "PRESENTATION", "TOTAL"]).optional(),
+        unitCostUsd: z.number().nonnegative().optional(),
+        unitCostBs: z.number().nonnegative().optional(),
+        presentationCostUsd: z.number().nonnegative().optional(),
+        presentationCostBs: z.number().nonnegative().optional(),
+        lineTotalUsd: z.number().nonnegative().optional(),
+        lineTotalBs: z.number().nonnegative().optional(),
+        taxable: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+});
+
 export const createComboSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),

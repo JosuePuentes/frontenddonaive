@@ -85,15 +85,31 @@ export const adFinanceService = {
     });
     if (!row) {
       row = await prisma.adFinanceSettings.create({
-        data: { tenantId: ctx.tenantId, parallelRateHotkey: "Control+x" },
+        data: {
+          tenantId: ctx.tenantId,
+          parallelRateHotkey: "Control+x",
+          pricingCriticalUtilityPercent: dec(5),
+          inventoryCriticalCoverageDays: 3,
+          inventoryWarnCoverageDays: 7,
+        },
       });
     }
-    return row;
+    return {
+      ...row,
+      pricingCriticalUtilityPercent: num(row.pricingCriticalUtilityPercent),
+      inventoryCriticalCoverageDays: row.inventoryCriticalCoverageDays,
+      inventoryWarnCoverageDays: row.inventoryWarnCoverageDays,
+    };
   },
 
   async updateSettings(
     ctx: AdRequestContext,
-    input: { parallelRateHotkey?: string },
+    input: {
+      parallelRateHotkey?: string;
+      pricingCriticalUtilityPercent?: number;
+      inventoryCriticalCoverageDays?: number;
+      inventoryWarnCoverageDays?: number;
+    },
   ) {
     requireAdPermission(ctx, "finance.manage");
     const prisma = getPrisma();
@@ -103,10 +119,24 @@ export const adFinanceService = {
       create: {
         tenantId: ctx.tenantId,
         parallelRateHotkey: input.parallelRateHotkey ?? "Control+x",
+        pricingCriticalUtilityPercent: dec(
+          input.pricingCriticalUtilityPercent ?? 5,
+        ),
+        inventoryCriticalCoverageDays:
+          input.inventoryCriticalCoverageDays ?? 3,
+        inventoryWarnCoverageDays: input.inventoryWarnCoverageDays ?? 7,
       },
       update: {
         parallelRateHotkey:
           input.parallelRateHotkey ?? before.parallelRateHotkey,
+        pricingCriticalUtilityPercent:
+          input.pricingCriticalUtilityPercent !== undefined
+            ? dec(input.pricingCriticalUtilityPercent)
+            : undefined,
+        inventoryCriticalCoverageDays:
+          input.inventoryCriticalCoverageDays ?? undefined,
+        inventoryWarnCoverageDays:
+          input.inventoryWarnCoverageDays ?? undefined,
       },
     });
     await writeAdAudit({
@@ -116,9 +146,17 @@ export const adFinanceService = {
       entity: "finance_settings",
       entityId: after.id,
       before,
-      after,
+      after: {
+        ...after,
+        pricingCriticalUtilityPercent: num(
+          after.pricingCriticalUtilityPercent,
+        ),
+      },
     });
-    return after;
+    return {
+      ...after,
+      pricingCriticalUtilityPercent: num(after.pricingCriticalUtilityPercent),
+    };
   },
 
   async listAccounts(ctx: AdRequestContext) {

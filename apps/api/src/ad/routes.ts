@@ -17,6 +17,7 @@ import { adPortalRouter } from "./portal.routes.js";
 import { adCommerceRouter } from "./commerce.routes.js";
 import { adFinanceRouter } from "./finance.routes.js";
 import { adDashboardRouter } from "./dashboard.routes.js";
+import { adPdfRouter } from "./pdf.routes.js";
 
 export const adRouter = Router();
 
@@ -39,10 +40,12 @@ adRouter.use(adOpsRouter);
 adRouter.use(adPortalRouter);
 /** Comercio Fase 5 — proveedores, compras, tasas, precios, OC */
 adRouter.use(adCommerceRouter);
-/** Finanzas Fase 7 — bancos, movimientos, casa de cambio */
+/** Finanzas Fase 7 */
 adRouter.use(adFinanceRouter);
 /** Dashboard Fase 8 */
 adRouter.use(adDashboardRouter);
+/** Documentos PDF (cierre) */
+adRouter.use(adPdfRouter);
 
 adRouter.get("/context", async (req, res, next) => {
   try {

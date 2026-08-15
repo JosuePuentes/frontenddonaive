@@ -87,10 +87,12 @@ export const adFinanceClient = {
   confirm: (id: string) =>
     financeFetch("POST", `/api/v1/ad/finance/movements/${id}/confirm`, {}),
   getSettings: () =>
-    financeFetch<{ parallelRateHotkey: string }>(
-      "GET",
-      "/api/v1/ad/finance/settings",
-    ),
+    financeFetch<{
+      parallelRateHotkey: string;
+      pricingCriticalUtilityPercent?: number;
+      inventoryCriticalCoverageDays?: number;
+      inventoryWarnCoverageDays?: number;
+    }>("GET", "/api/v1/ad/finance/settings"),
   updateSettings: (body: Record<string, unknown>) =>
     financeFetch("PUT", "/api/v1/ad/finance/settings", body),
   reconciliationPreview: (q: {

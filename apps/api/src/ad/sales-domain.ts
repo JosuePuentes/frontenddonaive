@@ -7,6 +7,9 @@ export type PresentationPrice = {
   priceUsd: number;
   priceBs: number;
   active: boolean;
+  /** CPP actual del producto (solo para snapshot al vender). */
+  avgCostUsd?: number;
+  avgCostBs?: number;
 };
 
 export type SaleLineInput = {
@@ -26,11 +29,20 @@ export type SaleLineSnapshot = {
   unitPriceBs: number;
   lineTotalUsd: number;
   lineTotalBs: number;
+  /** Costo unitario histórico (por unidad base) al confirmar. */
+  unitCostUsdSnapshot: number;
+  unitCostBsSnapshot: number;
+  lineCostUsdSnapshot: number;
+  lineCostBsSnapshot: number;
+  cppUsdSnapshot: number;
+  cppBsSnapshot: number;
+  costSource: string;
 };
 
 /**
- * Construye líneas de venta con SNAPSHOT de precio.
+ * Construye líneas de venta con SNAPSHOT de precio y costo.
  * USD y Bs son independientes — no hay conversión automática.
+ * El costo snapshot NO se recalcula después; es el CPP del instante.
  */
 export function buildSaleLineSnapshots(
   lines: SaleLineInput[],
@@ -65,6 +77,8 @@ export function buildSaleLineSnapshots(
     }
 
     const qtyBase = line.qty * presentation.unitsPerPresentation;
+    const cppUsd = Number(presentation.avgCostUsd ?? 0);
+    const cppBs = Number(presentation.avgCostBs ?? 0);
 
     return {
       productId: presentation.productId,
@@ -75,6 +89,13 @@ export function buildSaleLineSnapshots(
       unitPriceBs,
       lineTotalUsd: unitPriceUsd * line.qty,
       lineTotalBs: unitPriceBs * line.qty,
+      unitCostUsdSnapshot: cppUsd,
+      unitCostBsSnapshot: cppBs,
+      lineCostUsdSnapshot: cppUsd * qtyBase,
+      lineCostBsSnapshot: cppBs * qtyBase,
+      cppUsdSnapshot: cppUsd,
+      cppBsSnapshot: cppBs,
+      costSource: "avg_cost",
     };
   });
 }

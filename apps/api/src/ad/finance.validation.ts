@@ -79,6 +79,9 @@ export const listMovementsQuerySchema = z.object({
 
 export const updateFinanceSettingsSchema = z.object({
   parallelRateHotkey: z.string().min(1).max(64).optional(),
+  pricingCriticalUtilityPercent: z.number().min(0).max(100).optional(),
+  inventoryCriticalCoverageDays: z.number().int().min(0).max(365).optional(),
+  inventoryWarnCoverageDays: z.number().int().min(0).max(365).optional(),
 });
 
 export const payablePaymentWithAccountSchema = z.object({

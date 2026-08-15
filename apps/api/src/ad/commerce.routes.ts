@@ -23,6 +23,7 @@ import {
   updateCommercePurchaseSchema,
   updatePromotionSchema,
   updatePurchaseOrderSchema,
+  convertPurchaseOrderSchema,
   updateSupplierSchema,
   upsertPaymentMethodSchema,
 } from "./commerce.validation.js";
@@ -453,6 +454,24 @@ adCommerceRouter.patch("/commerce/purchase-orders/:id", async (req, res, next) =
     next(err);
   }
 });
+
+adCommerceRouter.post(
+  "/commerce/purchase-orders/:id/convert",
+  async (req, res, next) => {
+    try {
+      const ctx = getAdContext(req);
+      const body = parseBody(convertPurchaseOrderSchema, req.body);
+      const data = await adCommerceService.convertPurchaseOrderToPurchase(
+        ctx,
+        req.params.id,
+        body,
+      );
+      res.status(201).json({ data });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /** Importación Excel (JSON rows — contrato preview→confirm). */
 adCommerceRouter.post("/imports/preview", async (req, res, next) => {

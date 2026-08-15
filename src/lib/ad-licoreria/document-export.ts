@@ -1,7 +1,7 @@
 /**
  * Exportación documental A&D.
- * PDF tipográfico real NO está empaquetado (sin jspdf/pdfkit).
- * Fallback oficial: HTML + window.print() (el usuario puede “Guardar como PDF”).
+ * PDF tipográfico real vía API (`GET /documents/.../pdf` con pdfkit).
+ * Fallback FE: HTML + window.print() / Guardar como PDF.
  */
 export function printDocumentElement(elementId: string, title = "Documento A&D") {
   const node = document.getElementById(elementId);
@@ -24,14 +24,34 @@ export function printDocumentElement(elementId: string, title = "Documento A&D")
       .right{text-align:right}
       @media print{button{display:none}}
     </style></head><body>${node.innerHTML}
-    <p class="muted">A&D Licorería · impresión / Guardar como PDF (fallback sin motor PDF embebido)</p>
+    <p class="muted">A&D Licorería · impresión / Guardar como PDF</p>
     <script>window.onload=()=>window.print()</script></body></html>`);
   w.document.close();
   return { ok: true as const, mode: "print-html" as const };
 }
 
+export async function downloadPurchasePdf(purchaseId: string, token: string, apiBase: string) {
+  const res = await fetch(
+    `${apiBase.replace(/\/+$/, "")}/api/v1/ad/documents/purchases/${purchaseId}/pdf`,
+    { headers: { Authorization: `Bearer ${token}`, Accept: "application/pdf" } },
+  );
+  if (!res.ok) throw new Error(`PDF HTTP ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `compra-${purchaseId}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+  return { ok: true as const, mode: "api-pdf" as const };
+}
+
 export const AD_PDF_EXPORT_STATUS = {
-  available: false,
+  available: true,
+  apiPaths: [
+    "/api/v1/ad/documents/purchases/:id/pdf",
+    "/api/v1/ad/documents/purchase-orders/:id/pdf",
+  ],
   fallback: "print-html",
-  note: "Sin dependencia PDF en package.json. Usar impresión del navegador / Guardar como PDF.",
+  note: "PDF real vía pdfkit en API; FE puede descargar o usar print-HTML.",
 } as const;

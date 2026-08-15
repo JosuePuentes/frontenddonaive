@@ -48,6 +48,9 @@ export const adDashboardService = {
       to?: string;
       displayCurrency?: "USD" | "BS";
       warehouseId?: string;
+      productId?: string;
+      paymentMethod?: string;
+      supplierId?: string;
     },
   ) {
     requireDashboard(ctx);
@@ -74,6 +77,15 @@ export const adDashboardService = {
     const bcvRate = await latestBcv(ctx.tenantId);
     const whFilter = query.warehouseId
       ? { warehouseId: query.warehouseId }
+      : {};
+    const productLineFilter = query.productId
+      ? { lines: { some: { productId: query.productId } } }
+      : {};
+    const paymentFilter = query.paymentMethod
+      ? { payments: { some: { method: query.paymentMethod } } }
+      : {};
+    const supplierPurchaseFilter = query.supplierId
+      ? { supplierId: query.supplierId }
       : {};
 
     const [
@@ -102,6 +114,8 @@ export const adDashboardService = {
           status: "completed",
           createdAt: { gte: period.from, lt: period.to },
           ...whFilter,
+          ...productLineFilter,
+          ...paymentFilter,
         },
         include: {
           payments: true,
@@ -116,6 +130,8 @@ export const adDashboardService = {
           status: "completed",
           createdAt: { gte: period.previousFrom, lt: period.previousTo },
           ...whFilter,
+          ...productLineFilter,
+          ...paymentFilter,
         },
         include: {
           payments: true,
@@ -134,6 +150,7 @@ export const adDashboardService = {
             },
           ],
           ...whFilter,
+          ...supplierPurchaseFilter,
         },
         include: {
           lines: { include: { product: true } },
@@ -161,6 +178,7 @@ export const adDashboardService = {
             },
           ],
           ...whFilter,
+          ...supplierPurchaseFilter,
         },
       }),
       prisma.adPayable.findMany({
@@ -275,6 +293,18 @@ export const adDashboardService = {
         profitUsd: number;
       }
     > = {};
+    const byPresentation: Record<
+      string,
+      {
+        presentationId: string;
+        name: string;
+        productId: string;
+        units: number;
+        revenueUsd: number;
+        costUsd: number;
+        profitUsd: number;
+      }
+    > = {};
     const byDay: Record<string, { usd: number; bs: number; count: number }> =
       {};
     const belowCost: {
@@ -333,8 +363,21 @@ export const adDashboardService = {
         unitsSold += qtyBase;
         wh.units += qtyBase;
         const prod = line.product ?? productById.get(line.productId);
-        const cpp = prod ? num(prod.avgCostUsd) : 0;
-        const lineCost = cpp * qtyBase;
+        /** Rentabilidad histórica: SOLO snapshot de costo al vender (nunca CPP actual). */
+        const snapCost = num(
+          (line as { lineCostUsdSnapshot?: Prisma.Decimal | number | null })
+            .lineCostUsdSnapshot,
+        );
+        const snapUnit = num(
+          (line as { unitCostUsdSnapshot?: Prisma.Decimal | number | null })
+            .unitCostUsdSnapshot,
+        );
+        const lineCost =
+          snapCost > 0
+            ? snapCost
+            : snapUnit > 0
+              ? snapUnit * qtyBase
+              : 0;
         costHistoricalUsd += lineCost;
         const rev = num(line.lineTotalUsd);
         const pid = line.productId;
@@ -354,6 +397,25 @@ export const adDashboardService = {
         row.costUsd += lineCost;
         row.profitUsd = row.revenueUsd - row.costUsd;
         byProduct[pid] = row;
+
+        const presId = line.presentationId;
+        const presRow =
+          byPresentation[presId] ??
+          {
+            presentationId: presId,
+            name: line.presentation?.name ?? presId,
+            productId: pid,
+            units: 0,
+            revenueUsd: 0,
+            costUsd: 0,
+            profitUsd: 0,
+          };
+        presRow.units += qtyBase;
+        presRow.revenueUsd += rev;
+        presRow.costUsd += lineCost;
+        presRow.profitUsd = presRow.revenueUsd - presRow.costUsd;
+        byPresentation[presId] = presRow;
+
         if (rev + 1e-9 < lineCost) {
           belowCost.push({
             productId: pid,
@@ -795,11 +857,19 @@ export const adDashboardService = {
         grossProfitUsd: grossProfit,
         marginPct,
         byProduct: productList.slice(0, 40),
+        byPresentation: Object.values(byPresentation)
+          .sort((a, b) => b.profitUsd - a.profitUsd)
+          .slice(0, 40),
+        byPaymentMethod: Object.entries(byMethod).map(([method, v]) => ({
+          method,
+          ...v,
+          note: "Utilidad por método usa ingreso del método; costo histórico es por línea de venta (snapshot).",
+        })),
         belowCost: belowCost.slice(0, 30),
         critical: critical.slice(0, 30),
         distinction: {
           cppHistorico:
-            "avgCostUsd del producto (ponderado en compras confirmadas). Usado en utilidad.",
+            "unitCostUsdSnapshot / lineCostUsdSnapshot de AdSaleLine al confirmar la venta. Inmutable.",
           costoReposicion:
             "Se recalcula con tasas actuales; no altera utilidad histórica del dashboard.",
         },

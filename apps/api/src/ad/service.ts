@@ -431,12 +431,20 @@ export const adService = {
           priceUsd: toNum(p.priceUsd),
           priceBs: toNum(p.priceBs),
           active: p.active,
+          avgCostUsd: toNum(p.product.avgCostUsd),
+          avgCostBs: toNum(p.product.avgCostBs),
         },
       ]),
     );
 
     const lineSnapshots = buildSaleLineSnapshots(input.lines, presentationMap);
     const totals = sumSaleTotals(lineSnapshots);
+
+    const bcvAtSale = await prisma.adExchangeRate.findFirst({
+      where: { tenantId: ctx.tenantId, kind: "BCV" },
+      orderBy: { effectiveAt: "desc" },
+    });
+    const bcvRateAtSale = bcvAtSale ? toNum(bcvAtSale.rate) : null;
 
     /** Disponibilidad operativa: compromiso activo NO es stock físico. */
     const productIds = [...new Set(lineSnapshots.map((l) => l.productId))];
@@ -617,6 +625,17 @@ export const adService = {
               unitPriceBs: dec(line.unitPriceBs),
               lineTotalUsd: dec(line.lineTotalUsd),
               lineTotalBs: dec(line.lineTotalBs),
+              unitCostUsdSnapshot: dec(line.unitCostUsdSnapshot),
+              unitCostBsSnapshot: dec(line.unitCostBsSnapshot),
+              lineCostUsdSnapshot: dec(line.lineCostUsdSnapshot),
+              lineCostBsSnapshot: dec(line.lineCostBsSnapshot),
+              costCurrency: "USD" as const,
+              cppUsdSnapshot: dec(line.cppUsdSnapshot),
+              cppBsSnapshot: dec(line.cppBsSnapshot),
+              costSource: line.costSource,
+              costSnapshotAt: new Date(),
+              bcvRateAtSale:
+                bcvRateAtSale != null ? dec(bcvRateAtSale) : undefined,
             })),
           },
           payments: input.payments

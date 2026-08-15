@@ -1366,13 +1366,28 @@ model AdSaleLine {
   presentation   AdPresentation @relation(fields: [presentationId], references: [id])
   qty            Decimal        @db.Decimal(18, 4)
   qtyBase        Decimal        @db.Decimal(18, 4)
-  /// Snapshot histórico — no recalcular desde catálogo.
+  /// Snapshot histórico de precio — no recalcular desde catálogo.
   unitPriceUsd   Decimal        @db.Decimal(18, 4)
   unitPriceBs    Decimal        @db.Decimal(18, 4)
   lineTotalUsd   Decimal        @db.Decimal(18, 4)
   lineTotalBs    Decimal        @db.Decimal(18, 4)
+  /// Snapshot histórico de costo (CPP al confirmar venta). Inmutable.
+  unitCostUsdSnapshot Decimal   @default(0) @db.Decimal(18, 6)
+  unitCostBsSnapshot  Decimal   @default(0) @db.Decimal(18, 6)
+  /// Costo total de línea = unitCost × qtyBase (histórico).
+  lineCostUsdSnapshot Decimal   @default(0) @db.Decimal(18, 4)
+  lineCostBsSnapshot  Decimal   @default(0) @db.Decimal(18, 4)
+  costCurrency        AdMoneyCurrency @default(USD)
+  /// CPP del producto al instante de la venta.
+  cppUsdSnapshot      Decimal   @default(0) @db.Decimal(18, 6)
+  cppBsSnapshot       Decimal   @default(0) @db.Decimal(18, 6)
+  costSource          String    @default("avg_cost")
+  costSnapshotAt      DateTime  @default(now())
+  /// BCV vigente al vender (referencia; no se inventa después).
+  bcvRateAtSale       Decimal?  @db.Decimal(18, 6)
 
   @@index([saleId])
+  @@index([productId])
   @@schema("ad_licoreria")
 }
 
@@ -1612,6 +1627,9 @@ model AdPurchase {
   supplierName  String
   supplierId    String?
   supplier      AdSupplier?      @relation(fields: [supplierId], references: [id])
+  /// Trazabilidad OC → compra (idempotente: una OC convierte una sola vez).
+  purchaseOrderId String?        @unique
+  purchaseOrder   AdPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
   invoiceNumber String
   invoiceDate   DateTime?
   status        AdPurchaseStatus @default(DRAFT)
@@ -2075,6 +2093,8 @@ model AdPurchaseOrder {
   updatedAt       DateTime              @updatedAt
 
   lines AdPurchaseOrderLine[]
+  /// Compra generada por conversión (relación 1:1 vía AdPurchase.purchaseOrderId).
+  purchase AdPurchase?
 
   @@unique([tenantId, documentNumber])
   @@index([tenantId, status])
@@ -2134,13 +2154,19 @@ model AdImportRow {
   @@schema("ad_licoreria")
 }
 
-/// Fase 7 — configuración financiera del tenant (atajo tasa paralela, etc.).
+/// Fase 7/9 — configuración financiera del tenant.
 model AdFinanceSettings {
   id                    String   @id @default(uuid())
   tenantId              String   @unique
   tenant                AdTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   /// Atajo teclado para modal de tasa paralela (ej. Control+x). Configurable.
   parallelRateHotkey    String   @default("Control+x")
+  /// Umbral utilidad % bajo el cual un precio se marca "zona crítica" (no hardcode).
+  pricingCriticalUtilityPercent Decimal @default(5) @db.Decimal(8, 4)
+  /// Cobertura estimada (días) por debajo → inventario CRÍTICO.
+  inventoryCriticalCoverageDays Int @default(3)
+  /// Cobertura estimada (días) por debajo → advertencia / comprar.
+  inventoryWarnCoverageDays Int @default(7)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

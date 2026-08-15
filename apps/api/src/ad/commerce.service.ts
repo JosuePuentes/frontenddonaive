@@ -27,9 +27,6 @@ import {
 import { weightedAverageCost, computeOperationalAvailability } from "./availability.js";
 import { writeAdAudit } from "./service.js";
 
-/** Zona crítica provisional: utilidad < 5% sobre costo (documentado en FASE9). */
-export const PRICING_CRITICAL_UTILITY_PCT = 5;
-
 function dec(n: number): Prisma.Decimal {
   return new Prisma.Decimal(n);
 }
@@ -365,6 +362,8 @@ export const adCommerceService = {
       useProtectedRateRef?: boolean;
       /** F6: siempre inicia DRAFT; preliminary solo marca intención documental. */
       preliminary?: boolean;
+      /** Trazabilidad OC → compra (idempotente). */
+      purchaseOrderId?: string;
       lines: (RawPurchaseLineInput & { taxable?: boolean; taxRate?: number })[];
     },
   ) {
@@ -377,6 +376,32 @@ export const adCommerceService = {
     requireWarehouseAccess(ctx, warehouseId);
 
     const prisma = getPrisma();
+
+    if (input.purchaseOrderId) {
+      const existing = await prisma.adPurchase.findFirst({
+        where: {
+          tenantId: ctx.tenantId,
+          purchaseOrderId: input.purchaseOrderId,
+        },
+        include: {
+          lines: { include: { product: true, presentation: true } },
+          supplier: true,
+          paymentMethod: true,
+          warehouse: true,
+          payable: true,
+        },
+      });
+      if (existing) {
+        return {
+          ...sanitizePurchaseForClient(
+            existing as unknown as Record<string, unknown>,
+          ),
+          ...moneyDoc(existing),
+          totals: this.purchaseTotalsPayload(existing),
+          idempotent: true,
+        };
+      }
+    }
     let supplierName = input.supplierName?.trim() ?? "";
     if (input.supplierId) {
       const supplier = await prisma.adSupplier.findFirst({
@@ -447,6 +472,7 @@ export const adCommerceService = {
         warehouseId,
         supplierId: input.supplierId,
         supplierName,
+        purchaseOrderId: input.purchaseOrderId,
         invoiceNumber: input.invoiceNumber,
         invoiceDate,
         status: "DRAFT",
@@ -1805,6 +1831,13 @@ export const adCommerceService = {
       },
     });
 
+    const settings = await prisma.adFinanceSettings.findUnique({
+      where: { tenantId: ctx.tenantId },
+    });
+    const criticalPct = settings
+      ? num(settings.pricingCriticalUtilityPercent)
+      : 5;
+
     return {
       ...row,
       price: num(row.price),
@@ -1813,11 +1846,9 @@ export const adCommerceService = {
       utilityPercent: util.utilityPercent,
       marginPercent: util.marginPercent,
       belowCost: util.belowCost,
-      /** Alerta soft: cerca del costo (umbral provisional documentado). */
-      nearCost:
-        !util.belowCost && util.utilityPercent < PRICING_CRITICAL_UTILITY_PCT,
-      criticalZone:
-        util.belowCost || util.utilityPercent < PRICING_CRITICAL_UTILITY_PCT,
+      nearCost: !util.belowCost && util.utilityPercent < criticalPct,
+      criticalZone: util.belowCost || util.utilityPercent < criticalPct,
+      criticalUtilityThresholdPct: criticalPct,
     };
   },
 
@@ -2314,6 +2345,12 @@ export const adCommerceService = {
       qtyBaseRemaining: num(c.qtyBaseRemaining),
     }));
 
+    const financeSettings = await prisma.adFinanceSettings.findUnique({
+      where: { tenantId: ctx.tenantId },
+    });
+    const criticalDays = financeSettings?.inventoryCriticalCoverageDays ?? 3;
+    const warnDays = financeSettings?.inventoryWarnCoverageDays ?? 7;
+
     const suggestions = products.map((p) => {
       const av = computeOperationalAvailability({
         productId: p.id,
@@ -2338,6 +2375,21 @@ export const adCommerceService = {
         stockAvailable: stockForSuggest,
         coverageDays: input.coverageDays,
       });
+      const coverage =
+        sug.estimatedCoverageDays === Infinity
+          ? Number.POSITIVE_INFINITY
+          : sug.estimatedCoverageDays;
+      let recommendation: "OK" | "TRANSFER" | "BUY" | "CRITICAL" = "OK";
+      if (coverage < criticalDays || !Number.isFinite(coverage)) {
+        if (daily > 0 && coverage < criticalDays) recommendation = "CRITICAL";
+        else if (daily > 0) recommendation = "BUY";
+      } else if (coverage < warnDays) {
+        recommendation = "BUY";
+      } else if (av.status === "TRANSFER_NEEDED") {
+        recommendation = "TRANSFER";
+      }
+      if (sug.suggested > 0 && recommendation === "OK") recommendation = "BUY";
+
       return {
         productId: p.id,
         productName: p.name,
@@ -2350,10 +2402,13 @@ export const adCommerceService = {
         stockPhysical: av.physicalTotal,
         stockCommitted: av.committedActiveTotal,
         stockAvailable: av.availableOperationalTotal,
+        calculatedMinStock: daily * warnDays,
         inTransitQtyBase: inTransit,
         estimatedCoverageDays: sug.estimatedCoverageDays,
         suggestedQtyBase: sug.suggested,
         needQtyBase: sug.need,
+        recommendation,
+        thresholds: { criticalDays, warnDays },
         avgCostUsd: num(p.avgCostUsd),
         replacementHint:
           "Costo de reposición usa tasas actuales (finance); CPP histórico no se altera.",
@@ -2446,6 +2501,200 @@ export const adCommerceService = {
       after: { status: after.status, lines: after.lines.length },
     });
     return after;
+  },
+
+  /**
+   * Convierte OC → compra real (idempotente).
+   * Si ya está CONVERTED, retorna la compra existente sin duplicar inventario/CxP.
+   */
+  async convertPurchaseOrderToPurchase(
+    ctx: AdRequestContext,
+    purchaseOrderId: string,
+    input: {
+      invoiceNumber: string;
+      currency?: "USD" | "BS";
+      paymentCondition?: "CONTADO" | "CREDITO";
+      paymentMethodId?: string;
+      creditDays?: number;
+      dueDate?: string;
+      useProtectedRateRef?: boolean;
+      confirm?: boolean;
+      notes?: string;
+      lines?: {
+        productId: string;
+        presentationId: string;
+        qty: number;
+        qtyBonus?: number;
+        costMode?: "UNIT" | "PRESENTATION" | "TOTAL";
+        unitCostUsd?: number;
+        unitCostBs?: number;
+        presentationCostUsd?: number;
+        presentationCostBs?: number;
+        lineTotalUsd?: number;
+        lineTotalBs?: number;
+        taxable?: boolean;
+      }[];
+    },
+  ) {
+    requireAdPermission(ctx, "purchases.create");
+    const prisma = getPrisma();
+    const po = await prisma.adPurchaseOrder.findFirst({
+      where: { id: purchaseOrderId, tenantId: ctx.tenantId },
+      include: {
+        lines: { include: { product: true, presentation: true } },
+        supplier: true,
+        purchase: {
+          include: {
+            lines: true,
+            payable: true,
+            supplier: true,
+            warehouse: true,
+          },
+        },
+      },
+    });
+    if (!po) throw new NotFoundError("OC no encontrada");
+
+    if (po.status === "CONVERTED" || po.purchase) {
+      const existing =
+        po.purchase ??
+        (await prisma.adPurchase.findFirst({
+          where: { purchaseOrderId: po.id, tenantId: ctx.tenantId },
+          include: {
+            lines: { include: { product: true, presentation: true } },
+            supplier: true,
+            paymentMethod: true,
+            warehouse: true,
+            payable: true,
+          },
+        }));
+      if (!existing) {
+        throw new ValidationError("OC convertida sin compra asociada");
+      }
+      return {
+        idempotent: true,
+        purchaseOrder: { id: po.id, status: "CONVERTED", documentNumber: po.documentNumber },
+        purchase: {
+          ...sanitizePurchaseForClient(
+            existing as unknown as Record<string, unknown>,
+          ),
+          ...moneyDoc(existing),
+        },
+      };
+    }
+
+    if (po.status === "CANCELLED") {
+      throw new ValidationError("OC cancelada no convertible");
+    }
+
+    const warehouseId = po.warehouseId;
+    if (!warehouseId) throw new ValidationError("OC sin depósito destino");
+    requireWarehouseAccess(ctx, warehouseId);
+
+    let lineInputs = input.lines?.map((l) => ({
+      ...l,
+      costMode: (l.costMode ?? "UNIT") as "UNIT" | "PRESENTATION" | "TOTAL",
+    }));
+    if (!lineInputs?.length) {
+      lineInputs = [];
+      for (const l of po.lines) {
+        const presentation =
+          l.presentation ??
+          (await prisma.adPresentation.findFirst({
+            where: { productId: l.productId, active: true },
+            orderBy: { unitsPerPresentation: "asc" },
+          }));
+        if (!presentation) {
+          throw new ValidationError(
+            `Sin presentación para producto ${l.productId}`,
+          );
+        }
+        const upp = num(presentation.unitsPerPresentation) || 1;
+        const qty = Math.max(1, Math.ceil(num(l.qtyBase) / upp));
+        const unitCost = num(l.product.avgCostUsd);
+        lineInputs.push({
+          productId: l.productId,
+          presentationId: presentation.id,
+          qty,
+          qtyBonus: 0,
+          costMode: "UNIT",
+          unitCostUsd: unitCost,
+          unitCostBs: num(l.product.avgCostBs),
+          taxable: l.product.taxable,
+        });
+      }
+    }
+
+    const purchase = await this.createPurchase(ctx, {
+      warehouseId,
+      supplierId: po.supplierId ?? undefined,
+      supplierName: po.supplier?.name,
+      invoiceNumber: input.invoiceNumber,
+      currency: input.currency ?? "USD",
+      paymentCondition: input.paymentCondition ?? "CONTADO",
+      paymentMethodId: input.paymentMethodId,
+      creditDays: input.creditDays ?? po.supplier?.creditDays,
+      dueDate: input.dueDate,
+      useProtectedRateRef: input.useProtectedRateRef,
+      notes: input.notes ?? `Convertido desde ${po.documentNumber}`,
+      purchaseOrderId: po.id,
+      lines: lineInputs,
+    });
+
+    if ((purchase as { idempotent?: boolean }).idempotent) {
+      await prisma.adPurchaseOrder.updateMany({
+        where: { id: po.id, status: { not: "CONVERTED" } },
+        data: { status: "CONVERTED" },
+      });
+      return {
+        idempotent: true,
+        purchaseOrder: {
+          id: po.id,
+          status: "CONVERTED",
+          documentNumber: po.documentNumber,
+        },
+        purchase,
+      };
+    }
+
+    const purchaseId = (purchase as { id: string }).id;
+
+    await prisma.adPurchaseOrder.update({
+      where: { id: po.id },
+      data: { status: "CONVERTED" },
+    });
+
+    let finalPurchase: unknown = purchase;
+    if (input.confirm) {
+      await this.totalizePurchase(ctx, purchaseId);
+      finalPurchase = await this.confirmPurchase(ctx, purchaseId, {});
+    }
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      warehouseId,
+      action: "convert",
+      entity: "purchase_order",
+      entityId: po.id,
+      before: { status: po.status },
+      after: {
+        status: "CONVERTED",
+        purchaseId,
+        invoiceNumber: input.invoiceNumber,
+        confirmed: Boolean(input.confirm),
+      },
+    });
+
+    return {
+      idempotent: false,
+      purchaseOrder: {
+        id: po.id,
+        status: "CONVERTED",
+        documentNumber: po.documentNumber,
+      },
+      purchase: finalPurchase,
+    };
   },
 
   async createPurchaseOrder(

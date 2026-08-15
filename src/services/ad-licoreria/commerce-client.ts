@@ -160,6 +160,12 @@ export const adCommerceClient = {
       `/api/v1/ad/commerce/purchase-orders/${id}`,
       body,
     ),
+  convertPurchaseOrder: (id: string, body: Record<string, unknown>) =>
+    commerceFetch(
+      "POST",
+      `/api/v1/ad/commerce/purchase-orders/${id}/convert`,
+      body,
+    ),
   setPresentationPrice: (body: Record<string, unknown>) =>
     commerceFetch("POST", "/api/v1/ad/pricing/presentation", body),
   importPreview: (rows: unknown[]) =>
