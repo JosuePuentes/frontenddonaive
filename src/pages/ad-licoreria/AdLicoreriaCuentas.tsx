@@ -8,6 +8,7 @@ import {
   multiplyPrice,
 } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import type { AdPaymentMethodCode } from "@/types/ad-licoreria";
 
 export default function AdLicoreriaCuentas() {
@@ -130,17 +131,19 @@ export default function AdLicoreriaCuentas() {
         <button
           type="button"
           className="ad-btn"
-          onClick={() => {
+          onClick={async () => {
             if (!payAccountId) return;
-            const r = addAccountPayment({
-              accountId: payAccountId,
-              method: payMethod,
-              currency: methodCfg?.currency ?? "USD",
-              amount: Number(payAmount),
-              userName: "Cajero",
-              bank: payBank || undefined,
-              reference: payRef || undefined,
-            });
+            const r = await resolveAdResult(
+              addAccountPayment({
+                accountId: payAccountId,
+                method: payMethod,
+                currency: methodCfg?.currency ?? "USD",
+                amount: Number(payAmount),
+                userName: "Cajero",
+                bank: payBank || undefined,
+                reference: payRef || undefined,
+              }),
+            );
             setMsg(r.ok ? "Pago registrado" : r.error);
             if (r.ok) {
               setPayAmount("");
@@ -219,13 +222,15 @@ export default function AdLicoreriaCuentas() {
                             <button
                               type="button"
                               className="ad-btn ml-1"
-                              onClick={() => {
-                                const r = serveAccountItem({
-                                  accountId: a.id,
-                                  itemId: l.id,
-                                  qty: Math.min(1, pending),
-                                  mesoneraName: a.mesoneraName ?? "Mesonera",
-                                });
+                              onClick={async () => {
+                                const r = await resolveAdResult(
+                                  serveAccountItem({
+                                    accountId: a.id,
+                                    itemId: l.id,
+                                    qty: Math.min(1, pending),
+                                    mesoneraName: a.mesoneraName ?? "Mesonera",
+                                  }),
+                                );
                                 setMsg(
                                   r.ok
                                     ? `Servido 1 en #${a.number}`
@@ -266,11 +271,13 @@ export default function AdLicoreriaCuentas() {
                         <button
                           type="button"
                           className="ad-btn"
-                          onClick={() => {
-                            const r = closeAccount({
-                              accountId: a.id,
-                              userName: "Admin A&D",
-                            });
+                          onClick={async () => {
+                            const r = await resolveAdResult(
+                              closeAccount({
+                                accountId: a.id,
+                                userName: "Admin A&D",
+                              }),
+                            );
                             setMsg(
                               r.ok
                                 ? `Cerrada · ${r.data.receiptNumber}`
@@ -283,15 +290,17 @@ export default function AdLicoreriaCuentas() {
                         <button
                           type="button"
                           className="ad-btn"
-                          onClick={() => {
-                            const r = applyDiscount({
-                              accountId: a.id,
-                              discountUsd,
-                              discountBs: 0,
-                              reason,
-                              userName: "Admin A&D",
-                              authorizedBy: auth,
-                            });
+                          onClick={async () => {
+                            const r = await resolveAdResult(
+                              applyDiscount({
+                                accountId: a.id,
+                                discountUsd,
+                                discountBs: 0,
+                                reason,
+                                userName: "Admin A&D",
+                                authorizedBy: auth,
+                              }),
+                            );
                             setMsg(r.ok ? "Descuento aplicado" : r.error);
                           }}
                         >
@@ -300,13 +309,15 @@ export default function AdLicoreriaCuentas() {
                         <button
                           type="button"
                           className="ad-btn"
-                          onClick={() => {
-                            const r = voidAccount({
-                              accountId: a.id,
-                              userName: "Admin A&D",
-                              reason,
-                              authorizedBy: auth,
-                            });
+                          onClick={async () => {
+                            const r = await resolveAdResult(
+                              voidAccount({
+                                accountId: a.id,
+                                userName: "Admin A&D",
+                                reason,
+                                authorizedBy: auth,
+                              }),
+                            );
                             setMsg(r.ok ? "Cuenta anulada" : r.error);
                           }}
                         >
@@ -318,12 +329,14 @@ export default function AdLicoreriaCuentas() {
                       <button
                         type="button"
                         className="ad-btn"
-                        onClick={() => {
-                          const r = reopenAccount({
-                            accountId: a.id,
-                            userName: "Admin A&D",
-                            reason,
-                          });
+                        onClick={async () => {
+                          const r = await resolveAdResult(
+                            reopenAccount({
+                              accountId: a.id,
+                              userName: "Admin A&D",
+                              reason,
+                            }),
+                          );
                           setMsg(r.ok ? "Cuenta reabierta" : r.error);
                         }}
                       >

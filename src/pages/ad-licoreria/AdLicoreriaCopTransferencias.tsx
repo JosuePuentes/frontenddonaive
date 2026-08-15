@@ -7,6 +7,7 @@ import {
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 
 type DraftLine = {
   productId: string;
@@ -71,15 +72,17 @@ export default function AdLicoreriaCopTransferencias() {
     });
   }
 
-  function createDraft() {
-    const r = createTransferDraft({
-      fromWarehouseId: fromId,
-      toWarehouseId: toId,
-      lines,
-      createdBy: "COP A&D",
-      reason,
-      notes: notes.trim() || undefined,
-    });
+  async function createDraft() {
+    const r = await resolveAdResult(
+      createTransferDraft({
+        fromWarehouseId: fromId,
+        toWarehouseId: toId,
+        lines,
+        createdBy: "COP A&D",
+        reason,
+        notes: notes.trim() || undefined,
+      }),
+    );
     if (!r.ok) {
       setMsg(r.error);
       return;
@@ -89,9 +92,11 @@ export default function AdLicoreriaCopTransferencias() {
     setMsg(`Preliminar ${r.data.number}`);
   }
 
-  function doConfirm() {
+  async function doConfirm() {
     if (!previewId) return;
-    const r = confirmTransfer({ transferId: previewId, userName: "COP A&D" });
+    const r = await resolveAdResult(
+      confirmTransfer({ transferId: previewId, userName: "COP A&D" }),
+    );
     setMsg(r.ok ? `Confirmada ${r.data.number}` : r.error);
   }
 

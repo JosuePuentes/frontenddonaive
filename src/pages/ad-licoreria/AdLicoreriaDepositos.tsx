@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import type { AdInventoryMovementType } from "@/types/ad-licoreria";
 
 const ADJUST_TYPES: AdInventoryMovementType[] = [
@@ -52,7 +53,7 @@ export default function AdLicoreriaDepositos() {
   const buyPres =
     buyPresentations.find((p) => p.id === buyPresId) ?? buyPresentations[0];
 
-  function transfer() {
+  async function transfer() {
     if (
       !hasPermission("inventory.transfer") &&
       !hasPermission("cop.transfer")
@@ -61,19 +62,21 @@ export default function AdLicoreriaDepositos() {
       return;
     }
     if (!pres) return;
-    const result = transferStock({
-      productId,
-      presentationId: pres.id,
-      qtyPresentation: qty,
-      fromId,
-      toId,
-      userName: session?.name ?? "Admin A&D",
-      reason: "Traslado entre depósitos",
-    });
+    const result = await resolveAdResult(
+      transferStock({
+        productId,
+        presentationId: pres.id,
+        qtyPresentation: qty,
+        fromId,
+        toId,
+        userName: session?.name ?? "Admin A&D",
+        reason: "Traslado entre depósitos",
+      }),
+    );
     setMsg(result.ok ? "Transferencia registrada" : result.error);
   }
 
-  function adjust() {
+  async function adjust() {
     if (!hasPermission("inventory.adjust")) {
       setMsg("Sin permiso para ajustar inventario");
       return;
@@ -82,19 +85,21 @@ export default function AdLicoreriaDepositos() {
       setMsg("No puede ajustar inventario de otro depósito");
       return;
     }
-    const result = registerMovement({
-      type: adjustType,
-      productId,
-      presentationId: pres?.id,
-      qtyPresentation: qty,
-      warehouseId: adjustWh,
-      userName: session?.name ?? "Inventario",
-      reason: `Movimiento ${adjustType}`,
-    });
+    const result = await resolveAdResult(
+      registerMovement({
+        type: adjustType,
+        productId,
+        presentationId: pres?.id,
+        qtyPresentation: qty,
+        warehouseId: adjustWh,
+        userName: session?.name ?? "Inventario",
+        reason: `Movimiento ${adjustType}`,
+      }),
+    );
     setMsg(result.ok ? "Movimiento registrado" : result.error);
   }
 
-  function registerPurchase() {
+  async function registerPurchase() {
     if (!hasPermission("purchase.create")) {
       setMsg("Sin permiso para crear compras");
       return;
@@ -111,23 +116,25 @@ export default function AdLicoreriaDepositos() {
       setMsg("Proveedor y referencia de compra obligatorios");
       return;
     }
-    const result = createPurchase({
-      supplierName: supplier.trim(),
-      invoiceNumber: invoiceNumber.trim(),
-      date: new Date().toISOString().slice(0, 10),
-      warehouseId: buyWh,
-      items: [
-        {
-          productId: buyProductId,
-          presentationId: buyPres.id,
-          qty: buyQty,
-          unitCostUsd: buyCostUsd,
-          unitCostBs: buyCostBs,
-        },
-      ],
-      userName: session?.name ?? "Inventario",
-      notes: `Entrada a ${warehouses.find((w) => w.id === buyWh)?.name ?? buyWh}`,
-    });
+    const result = await resolveAdResult(
+      createPurchase({
+        supplierName: supplier.trim(),
+        invoiceNumber: invoiceNumber.trim(),
+        date: new Date().toISOString().slice(0, 10),
+        warehouseId: buyWh,
+        items: [
+          {
+            productId: buyProductId,
+            presentationId: buyPres.id,
+            qty: buyQty,
+            unitCostUsd: buyCostUsd,
+            unitCostBs: buyCostBs,
+          },
+        ],
+        userName: session?.name ?? "Inventario",
+        notes: `Entrada a ${warehouses.find((w) => w.id === buyWh)?.name ?? buyWh}`,
+      }),
+    );
     setMsg(
       result.ok
         ? `Compra registrada → ${warehouses.find((w) => w.id === buyWh)?.name}`

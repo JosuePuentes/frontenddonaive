@@ -5,6 +5,7 @@ import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { AD_ROLE_LABELS } from "@/lib/ad-licoreria/access";
 import { uid } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import type {
   AdPaymentMethodCode,
   AdPaymentMethodConfig,
@@ -117,7 +118,7 @@ export default function AdLicoreriaConfiguracion() {
     setWhResponsible(w.responsibleUserId ?? "");
   }
 
-  function saveWarehouse() {
+  async function saveWarehouse() {
     const current = warehouses.find((w) => w.id === whId);
     if (!current) {
       setMsg("Seleccione un depósito");
@@ -129,16 +130,18 @@ export default function AdLicoreriaConfiguracion() {
       code: whCode.trim().toUpperCase() || current.code,
       responsibleUserId: whResponsible || null,
     };
-    const r = upsertWarehouse(patch);
+    const r = await resolveAdResult(upsertWarehouse(patch));
     setMsg(r.ok ? `Depósito «${r.data.name}» actualizado` : r.error);
   }
 
-  function createNewWarehouse() {
-    const r = createWarehouse({
-      name: newWhName,
-      code: newWhCode || undefined,
-      userName: "Admin A&D",
-    });
+  async function createNewWarehouse() {
+    const r = await resolveAdResult(
+      createWarehouse({
+        name: newWhName,
+        code: newWhCode || undefined,
+        userName: "Admin A&D",
+      }),
+    );
     setMsg(r.ok ? `Depósito creado: ${r.data.code} · ${r.data.name}` : r.error);
     if (r.ok) {
       setNewWhName("");
@@ -147,17 +150,19 @@ export default function AdLicoreriaConfiguracion() {
     }
   }
 
-  function toggleWarehouseActive() {
+  async function toggleWarehouseActive() {
     const current = warehouses.find((w) => w.id === whId);
     if (!current) return;
-    const r = setWarehouseActive({
-      warehouseId: current.id,
-      active: !current.active,
-      userName: "Admin A&D",
-    });
+    const r = await resolveAdResult(
+      setWarehouseActive({
+        warehouseId: current.id,
+        active: !current.active,
+        userName: "Admin A&D",
+      }),
+    );
     setMsg(
       r.ok
-        ? `Depósito ${r.data.name}: ${r.data.active ? "activo" : "inactivo"}`
+        ? `Depósito ${current.name}: ${!current.active ? "activo" : "inactivo"}`
         : r.error,
     );
   }

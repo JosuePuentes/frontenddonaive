@@ -5,6 +5,7 @@ import {
   uid,
 } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import type { AdCustomer } from "@/types/ad-licoreria";
 
 export default function AdLicoreriaClientes() {
@@ -68,7 +69,7 @@ export default function AdLicoreriaClientes() {
     setSelectedId(c.id);
   }
 
-  function save() {
+  async function save() {
     if (!phone.trim()) {
       setMsg("Teléfono obligatorio");
       return;
@@ -92,7 +93,7 @@ export default function AdLicoreriaClientes() {
         customers.find((c) => c.id === editingId)?.createdAt ??
         new Date().toISOString(),
     };
-    const r = upsertCustomer(customer);
+    const r = await resolveAdResult(upsertCustomer(customer));
     setMsg(r.ok ? `Cliente ${customer.name} guardado` : r.error);
     if (r.ok) {
       setSelectedId(customer.id);

@@ -10,6 +10,7 @@ import {
   multiplyPrice,
 } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 
 const QUICK = [1, 2, 3, 4, 5, 6];
 
@@ -119,14 +120,16 @@ export default function AdLicoreriaMesonera() {
     setPanel(next);
   }
 
-  function doOpen() {
+  async function doOpen() {
     if (!mesonera) return;
-    const r = openAccount({
-      tableId: tableId || undefined,
-      mesoneraId: mesonera.id,
-      mesoneraName: mesonera.name,
-      warehouseId: mesonera.warehouseId ?? undefined,
-    });
+    const r = await resolveAdResult(
+      openAccount({
+        tableId: tableId || undefined,
+        mesoneraId: mesonera.id,
+        mesoneraName: mesonera.name,
+        warehouseId: mesonera.warehouseId ?? undefined,
+      }),
+    );
     if (!r.ok) {
       setMsg(r.error);
       return;
@@ -136,34 +139,38 @@ export default function AdLicoreriaMesonera() {
     setMsg(`Cuenta #${r.data.number} abierta`);
   }
 
-  function addToAccount() {
+  async function addToAccount() {
     if (!account || !pres || !mesonera) return;
-    const r = addAccountItem({
-      accountId: account.id,
-      productId,
-      presentationId: pres.id,
-      qty,
-      userName: mesonera.name,
-      deductStock: false,
-      warehouseId: mesonera.warehouseId ?? undefined,
-    });
+    const r = await resolveAdResult(
+      addAccountItem({
+        accountId: account.id,
+        productId,
+        presentationId: pres.id,
+        qty,
+        userName: mesonera.name,
+        deductStock: false,
+        warehouseId: mesonera.warehouseId ?? undefined,
+      }),
+    );
     setMsg(r.ok ? `+${qty} a #${account.number}` : r.error);
     if (r.ok) setPanel("detalle");
   }
 
-  function serve(n: number, itemId: string) {
+  async function serve(n: number, itemId: string) {
     if (!account || !mesonera) return;
-    const r = serveAccountItem({
-      accountId: account.id,
-      itemId,
-      qty: n,
-      mesoneraName: mesonera.name,
-      warehouseId: mesonera.warehouseId ?? undefined,
-    });
+    const r = await resolveAdResult(
+      serveAccountItem({
+        accountId: account.id,
+        itemId,
+        qty: n,
+        mesoneraName: mesonera.name,
+        warehouseId: mesonera.warehouseId ?? undefined,
+      }),
+    );
     setMsg(r.ok ? `Servidas +${n}` : r.error);
   }
 
-  function consumePp(n: number) {
+  async function consumePp(n: number) {
     if (!prepaid || !mesonera) return;
     if (!verifyPhone.trim() || !verifyDoc.trim()) {
       setMsg("Teléfono y cédula obligatorios para consumir");
@@ -177,15 +184,17 @@ export default function AdLicoreriaMesonera() {
       setMsg("Sin saldo");
       return;
     }
-    const r = consumePrepaid({
-      prepaidId: prepaid.id,
-      productId: line.productId,
-      presentationId: line.presentationId,
-      qty: n,
-      mesoneraName: mesonera.name,
-      verifyPhone: verifyPhone.trim(),
-      verifyDocumentId: verifyDoc.trim(),
-    });
+    const r = await resolveAdResult(
+      consumePrepaid({
+        prepaidId: prepaid.id,
+        productId: line.productId,
+        presentationId: line.presentationId,
+        qty: n,
+        mesoneraName: mesonera.name,
+        verifyPhone: verifyPhone.trim(),
+        verifyDocumentId: verifyDoc.trim(),
+      }),
+    );
     setMsg(r.ok ? `Prepago −${n}` : r.error);
   }
 

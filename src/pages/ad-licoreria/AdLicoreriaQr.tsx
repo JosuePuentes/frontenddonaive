@@ -3,6 +3,7 @@ import { AdLicoreriaBrandMark } from "@/components/ad-licoreria/AdLicoreriaBrand
 import { maskDocument } from "@/components/ad-licoreria/AdDocumentViews";
 import { prepaidAvailable } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 
 const QUICK = [1, 2, 3, 4, 5];
 
@@ -38,21 +39,23 @@ export default function AdLicoreriaQr() {
       (i) => `${i.productId}:${i.presentationId}` === lineKey,
     ) ?? account?.items[0];
 
-  function consume(n: number) {
+  async function consume(n: number) {
     if (!account || !activeLine) return;
     if (!verifyPhone.trim() || !verifyDoc.trim()) {
       setMsg("Teléfono y cédula obligatorios");
       return;
     }
-    const result = consumePrepaid({
-      prepaidId: account.id,
-      productId: activeLine.productId,
-      presentationId: activeLine.presentationId,
-      qty: n,
-      mesoneraName: session?.name ?? "Operador",
-      verifyPhone: verifyPhone.trim(),
-      verifyDocumentId: verifyDoc.trim(),
-    });
+    const result = await resolveAdResult(
+      consumePrepaid({
+        prepaidId: account.id,
+        productId: activeLine.productId,
+        presentationId: activeLine.presentationId,
+        qty: n,
+        mesoneraName: session?.name ?? "Operador",
+        verifyPhone: verifyPhone.trim(),
+        verifyDocumentId: verifyDoc.trim(),
+      }),
+    );
     setMsg(result.ok ? `Consumo +${n} registrado` : result.error);
   }
 

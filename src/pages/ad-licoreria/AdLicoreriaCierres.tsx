@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { AD_ROLE_LABELS } from "@/lib/ad-licoreria/access";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 
 export default function AdLicoreriaCierres() {
   const {
@@ -96,19 +97,21 @@ export default function AdLicoreriaCierres() {
     return { usd, bs };
   }, [scopedSales]);
 
-  function runDaily() {
+  async function runDaily() {
     if (!canClose) {
       setMsg("Sin permiso para cierres de caja");
       return;
     }
-    const r = createDailyClosure({
-      userName: session?.name ?? "Cajero",
-      operatorId: session?.id,
-      warehouseId: closureWarehouseId,
-      countedCashUsd: countedUsd,
-      countedCashBs: countedBs,
-      notes: notes.trim() || undefined,
-    });
+    const r = await resolveAdResult(
+      createDailyClosure({
+        userName: session?.name ?? "Cajero",
+        operatorId: session?.id,
+        warehouseId: closureWarehouseId,
+        countedCashUsd: countedUsd,
+        countedCashBs: countedBs,
+        notes: notes.trim() || undefined,
+      }),
+    );
     setMsg(
       r.ok
         ? `Cierre ${r.data.date} · ${warehouseLabel(closureWarehouseId, warehouses)} · dif USD ${r.data.cashDifferenceUsd} · dif Bs ${r.data.cashDifferenceBs}`
@@ -116,7 +119,7 @@ export default function AdLicoreriaCierres() {
     );
   }
 
-  function runInventory() {
+  async function runInventory() {
     if (!hasPermission("inventory.adjust") && !hasPermission("inventory.read")) {
       setMsg("Sin permiso de inventario");
       return;
@@ -136,13 +139,15 @@ export default function AdLicoreriaCierres() {
         differenceBase: phys - theoretical,
       };
     });
-    const r = createInventoryClosure({
-      lines,
-      createdBy: session?.name ?? "Inventario",
-      warehouseId,
-      applyAdjustments: hasPermission("inventory.adjust"),
-      notes: "Conteo físico",
-    });
+    const r = await resolveAdResult(
+      createInventoryClosure({
+        lines,
+        createdBy: session?.name ?? "Inventario",
+        warehouseId,
+        applyAdjustments: hasPermission("inventory.adjust"),
+        notes: "Conteo físico",
+      }),
+    );
     setMsg(
       r.ok
         ? `Cierre inventario: ${lines.filter((l) => l.differenceBase !== 0).length} diferencias`

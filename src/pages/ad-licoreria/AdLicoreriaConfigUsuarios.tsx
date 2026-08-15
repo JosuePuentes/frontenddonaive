@@ -7,6 +7,7 @@ import {
 } from "@/lib/ad-licoreria/access";
 import { uid } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import type { AdOperator, AdRole } from "@/types/ad-licoreria";
 
@@ -71,7 +72,7 @@ export default function AdLicoreriaConfigUsuarios() {
     }
   }
 
-  function save() {
+  async function save() {
     const isTv = role === "tv";
     const existing = opId
       ? operators.find((o) => o.id === opId)
@@ -115,7 +116,7 @@ export default function AdLicoreriaConfigUsuarios() {
         "tv.screen.manage",
       ];
     }
-    const r = upsertOperator(operator);
+    const r = await resolveAdResult(upsertOperator(operator));
     setMsg(r.ok ? `Usuario ${r.data.username} guardado` : r.error);
     if (r.ok) {
       setOpId(null);
@@ -199,8 +200,10 @@ export default function AdLicoreriaConfigUsuarios() {
                     <button
                       type="button"
                       className="ad-btn ad-btn--gold"
-                      onClick={() => {
-                        const r = setCurrentOperator(o.id);
+                      onClick={async () => {
+                        const r = await resolveAdResult(
+                          setCurrentOperator(o.id),
+                        );
                         setMsg(
                           r.ok
                             ? `Sesión: ${o.name} · ${AD_ROLE_LABELS[o.role]}`

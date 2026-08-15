@@ -5,6 +5,7 @@ import {
   uid,
 } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import type { AdPresentation } from "@/types/ad-licoreria";
 
 export default function AdLicoreriaPresentaciones() {
@@ -24,7 +25,7 @@ export default function AdLicoreriaPresentaciones() {
     }
   }
 
-  function create() {
+  async function create() {
     if (!name.trim() || units <= 0) {
       setMsg("Nombre y conversión > 0");
       return;
@@ -37,7 +38,7 @@ export default function AdLicoreriaPresentaciones() {
       price: { usd, bs },
       active: true,
     };
-    const r = upsertPresentation(pres);
+    const r = await resolveAdResult(upsertPresentation(pres));
     setMsg(
       r.ok
         ? `${pres.name}: ${units} u. base · ${formatAdPrice(pres.price)}`

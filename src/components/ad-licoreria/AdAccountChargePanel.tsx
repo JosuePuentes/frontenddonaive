@@ -6,6 +6,7 @@ import {
 } from "@/lib/ad-licoreria/conversions";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import type {
   AdAccount,
   AdPaymentMethodCode,
@@ -97,21 +98,23 @@ export function AdAccountChargePanel({
     ? findReceipt(receiptNumber)
     : undefined;
 
-  function addPay() {
+  async function addPay() {
     const amount = Number(payAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       setMsg("Monto inválido");
       return;
     }
-    const r = addAccountPayment({
-      accountId: live.id,
-      method: payMethod,
-      currency: methodCfg?.currency ?? "USD",
-      amount,
-      userName: operatorName,
-      bank: payBank || undefined,
-      reference: payRef || undefined,
-    });
+    const r = await resolveAdResult(
+      addAccountPayment({
+        accountId: live.id,
+        method: payMethod,
+        currency: methodCfg?.currency ?? "USD",
+        amount,
+        userName: operatorName,
+        bank: payBank || undefined,
+        reference: payRef || undefined,
+      }),
+    );
     setMsg(r.ok ? "Pago registrado" : r.error);
     if (r.ok) {
       setPayAmount("");
@@ -120,18 +123,20 @@ export function AdAccountChargePanel({
     }
   }
 
-  function doClose() {
+  async function doClose() {
     if (!confirmClose) {
       setConfirmClose(true);
       setMsg("Confirme el cierre de la cuenta");
       return;
     }
-    const r = closeAccount({
-      accountId: live.id,
-      userName: operatorName,
-      settlePendingAs: totals.pending > 0 ? settleAs : "commitment",
-      notes: `Cobro piso · ${operatorName}`,
-    });
+    const r = await resolveAdResult(
+      closeAccount({
+        accountId: live.id,
+        userName: operatorName,
+        settlePendingAs: totals.pending > 0 ? settleAs : "commitment",
+        notes: `Cobro piso · ${operatorName}`,
+      }),
+    );
     if (!r.ok) {
       setMsg(r.error);
       return;

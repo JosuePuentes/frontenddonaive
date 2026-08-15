@@ -7,6 +7,7 @@ import {
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 
 export default function AdLicoreriaCop() {
   const {
@@ -78,7 +79,7 @@ export default function AdLicoreriaCop() {
             ? "DÉFICIT COMPROMISO CLIENTE"
             : "COMPRA NECESARIA";
 
-  function prepareTransfer() {
+  async function prepareTransfer() {
     if (!canTransfer) {
       setMsg("Sin permiso para transferencias");
       return;
@@ -91,13 +92,15 @@ export default function AdLicoreriaCop() {
     /** Sugerencia COP está en u. base → convertir a qty de presentación. */
     const units = Math.max(1, defaultPres.unitsPerPresentation || 1);
     const qty = Math.ceil(qtyBase / units);
-    const result = createTransferDraft({
-      fromWarehouseId: av.plan.transferFromId,
-      toWarehouseId: warehouseId,
-      lines: [{ productId, presentationId: defaultPres.id, qty }],
-      createdBy: "COP A&D",
-      reason: `COP · cubrir pedido de ${requestQty} u. base (${qtyBase} base → ${qty} × ${defaultPres.name})`,
-    });
+    const result = await resolveAdResult(
+      createTransferDraft({
+        fromWarehouseId: av.plan.transferFromId,
+        toWarehouseId: warehouseId,
+        lines: [{ productId, presentationId: defaultPres.id, qty }],
+        createdBy: "COP A&D",
+        reason: `COP · cubrir pedido de ${requestQty} u. base (${qtyBase} base → ${qty} × ${defaultPres.name})`,
+      }),
+    );
     if (!result.ok) {
       setMsg(result.error);
       return;
@@ -107,20 +110,22 @@ export default function AdLicoreriaCop() {
     );
   }
 
-  function confirmSuggestedTransfer() {
+  async function confirmSuggestedTransfer() {
     const pending = stockTransfers.find(
       (t) =>
         t.status === "BORRADOR" &&
         t.lines.some((l) => l.productId === productId),
     );
     if (!pending) {
-      prepareTransfer();
+      await prepareTransfer();
       return;
     }
-    const conf = confirmTransfer({
-      transferId: pending.id,
-      userName: "COP A&D",
-    });
+    const conf = await resolveAdResult(
+      confirmTransfer({
+        transferId: pending.id,
+        userName: "COP A&D",
+      }),
+    );
     setMsg(
       conf.ok
         ? `Transferencia confirmada ${conf.data.number}`
@@ -128,7 +133,7 @@ export default function AdLicoreriaCop() {
     );
   }
 
-  function createBuy() {
+  async function createBuy() {
     if (!canPurchaseReq) {
       setMsg("Sin permiso para solicitar compras");
       return;
@@ -142,14 +147,16 @@ export default function AdLicoreriaCop() {
     }
     const units = Math.max(1, defaultPres.unitsPerPresentation || 1);
     const qty = Math.ceil(needBase / units);
-    const r = createPurchaseRequest({
-      productId,
-      presentationId: defaultPres.id,
-      qty,
-      warehouseId,
-      createdBy: "COP A&D",
-      reason: `Faltante operativo pedido ${requestQty} (${needBase} u. base → ${qty} × ${defaultPres.name})`,
-    });
+    const r = await resolveAdResult(
+      createPurchaseRequest({
+        productId,
+        presentationId: defaultPres.id,
+        qty,
+        warehouseId,
+        createdBy: "COP A&D",
+        reason: `Faltante operativo pedido ${requestQty} (${needBase} u. base → ${qty} × ${defaultPres.name})`,
+      }),
+    );
     setMsg(r.ok ? `Solicitud ${r.data.number} · ${qty} × ${defaultPres.name}` : r.error);
   }
 

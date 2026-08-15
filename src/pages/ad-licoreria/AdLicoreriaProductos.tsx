@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { formatAdPrice, uid } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import type { AdProduct } from "@/types/ad-licoreria";
 
 export default function AdLicoreriaProductos() {
@@ -16,7 +17,7 @@ export default function AdLicoreriaProductos() {
   const [minStock, setMinStock] = useState(12);
   const [msg, setMsg] = useState("");
 
-  function create() {
+  async function create() {
     if (!name.trim() || !sku.trim()) {
       setMsg("Nombre y SKU son obligatorios");
       return;
@@ -33,7 +34,7 @@ export default function AdLicoreriaProductos() {
       active: true,
       createdAt: new Date().toISOString(),
     };
-    const r = upsertProduct(product);
+    const r = await resolveAdResult(upsertProduct(product));
     setMsg(r.ok ? `Producto ${product.name} creado` : r.error);
     if (r.ok) {
       setName("");

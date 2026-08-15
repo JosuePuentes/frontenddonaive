@@ -8,6 +8,7 @@ import {
 } from "@/lib/ad-licoreria/warehouses";
 import { AD_SHORTAGE_REASON_LABELS } from "@/types/ad-licoreria";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import {
   AdPreliminarDocument,
   AdSaleReceiptFallback,
@@ -354,7 +355,7 @@ export default function AdLicoreriaVentas() {
     setMsg(`Factura confirmada ${result.data.receiptNumber}`);
   }
 
-  function leaveOpen() {
+  async function leaveOpen() {
     if (!cart.length) {
       setMsg("Agregue productos");
       return;
@@ -363,29 +364,33 @@ export default function AdLicoreriaVentas() {
       setMsg("Seleccione usuario del depósito");
       return;
     }
-    const opened = openAccount({
-      tableId: tableId || undefined,
-      mesoneraId: mesonera?.id ?? cashier?.id,
-      mesoneraName: mesonera?.name ?? cashier?.name ?? "Mesonera",
-      customerId: customer?.id,
-      customerName: customer?.name,
-      customerPhone: customer?.phone,
-      notes: notes.trim() || undefined,
-    });
+    const opened = await resolveAdResult(
+      openAccount({
+        tableId: tableId || undefined,
+        mesoneraId: mesonera?.id ?? cashier?.id,
+        mesoneraName: mesonera?.name ?? cashier?.name ?? "Mesonera",
+        customerId: customer?.id,
+        customerName: customer?.name,
+        customerPhone: customer?.phone,
+        notes: notes.trim() || undefined,
+      }),
+    );
     if (!opened.ok) {
       setMsg(opened.error);
       return;
     }
     for (const line of cart) {
-      const r = addAccountItem({
-        accountId: opened.data.id,
-        productId: line.productId,
-        presentationId: line.presentationId,
-        qty: line.qty,
-        userName: mesonera?.name ?? cashier?.name ?? "Mesonera",
-        deductStock: false,
-        warehouseId: posWarehouseId,
-      });
+      const r = await resolveAdResult(
+        addAccountItem({
+          accountId: opened.data.id,
+          productId: line.productId,
+          presentationId: line.presentationId,
+          qty: line.qty,
+          userName: mesonera?.name ?? cashier?.name ?? "Mesonera",
+          deductStock: false,
+          warehouseId: posWarehouseId,
+        }),
+      );
       if (!r.ok) {
         setMsg(r.error);
         return;
@@ -399,7 +404,7 @@ export default function AdLicoreriaVentas() {
     );
   }
 
-  function toPrepaid() {
+  async function toPrepaid() {
     if (!cart.length) {
       setMsg("Agregue productos");
       return;
@@ -412,18 +417,20 @@ export default function AdLicoreriaVentas() {
       setMsg("Seleccione un cliente con teléfono para prepago");
       return;
     }
-    const result = createPrepaid({
-      customerId: customer.id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      items: cart.map((c) => ({
-        productId: c.productId,
-        presentationId: c.presentationId,
-        qty: c.qty,
-      })),
-      payments,
-      userName: cashier?.name ?? "Cajero",
-    });
+    const result = await resolveAdResult(
+      createPrepaid({
+        customerId: customer.id,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        items: cart.map((c) => ({
+          productId: c.productId,
+          presentationId: c.presentationId,
+          qty: c.qty,
+        })),
+        payments,
+        userName: cashier?.name ?? "Cajero",
+      }),
+    );
     if (!result.ok) {
       setMsg(result.error);
       return;
