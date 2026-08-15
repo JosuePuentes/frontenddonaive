@@ -1,38 +1,47 @@
 /**
- * Adapter de repository A&D.
- *
- * - `mock` (default): UI usa repository.ts
- * - `api`: bridge HTTP para módulos F1/F2 ya preparados (pantallas aún no migradas en bloque)
+ * Adapter de repository A&D — Fase 3.
+ * `mock` → repository.ts | `api` → api-backed-repository (+ sesión)
  */
 
 import { adLicoreriaRepository } from "./repository";
+import { adApiBackedRepository } from "./api-backed-repository";
 import { getAdDataSource, type AdDataSource } from "./data-source";
 import { adApiClient, type AdApiAuthHeaders } from "./api-client";
+import { loadAdSession } from "./session";
 
-export type AdRepositoryPort = typeof adLicoreriaRepository;
+export type AdRepositoryPort =
+  | typeof adLicoreriaRepository
+  | typeof adApiBackedRepository;
 
-/** Módulos con cliente API listo (Fase 2). La UI sigue en MOCK hasta Fase 3. */
 export const AD_API_READY_MODULES = [
-  "accounts",
+  "auth",
+  "context",
+  "users",
+  "warehouses",
+  "products",
+  "presentations",
   "inventory",
-  "purchases",
-  "transfers",
+  "customers",
+  "sales",
+  "accounts",
+  "mesonera",
+  "payments",
   "prepaids",
   "qr",
+  "purchases",
   "cop",
+  "transfers",
   "closures",
   "audit",
-  "catalog",
-  "sales",
+  "reports",
 ] as const;
 
 export type AdApiReadyModule = (typeof AD_API_READY_MODULES)[number];
 
-/**
- * Repository activo para la UI.
- * Fase 2: sigue retornando MOCK — no migrar pantallas todavía.
- */
 export function getAdRepository(): AdRepositoryPort {
+  if (getAdDataSource() === "api") {
+    return adApiBackedRepository;
+  }
   return adLicoreriaRepository;
 }
 
@@ -42,22 +51,13 @@ export function getAdDataSourceMode(): AdDataSource {
 
 export function isAdApiModuleReady(module: AdApiReadyModule): boolean {
   if (getAdDataSource() !== "api") return false;
+  if (!loadAdSession()) return false;
   return (AD_API_READY_MODULES as readonly string[]).includes(module);
 }
 
-/**
- * Bridge API cuando `VITE_AD_DATA_SOURCE=api`.
- * No sustituye al repository MOCK de las pantallas en F2.
- */
 export function getAdApiBridge(auth: AdApiAuthHeaders) {
-  if (getAdDataSource() !== "api") {
-    return null;
-  }
-  return {
-    client: adApiClient,
-    auth,
-    readyModules: AD_API_READY_MODULES,
-  };
+  if (getAdDataSource() !== "api") return null;
+  return { client: adApiClient, auth, readyModules: AD_API_READY_MODULES };
 }
 
-export { adLicoreriaRepository, adApiClient };
+export { adLicoreriaRepository, adApiClient, adApiBackedRepository };

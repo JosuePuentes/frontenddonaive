@@ -1,15 +1,20 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
 import {
-  adLicoreriaRepository,
-  type AdRepositoryState,
-  type AdResult,
-} from "@/services/ad-licoreria/repository";
+  getAdRepository,
+  getAdDataSourceMode,
+} from "@/services/ad-licoreria/repository-adapter";
+import type { AdResult } from "@/services/ad-licoreria/repository";
+import {
+  loadAdSession,
+  subscribeAdSession,
+} from "@/services/ad-licoreria/session";
 import type {
   AdAccount,
   AdAppSettings,
@@ -37,8 +42,12 @@ import type {
   AdStockTransferStatus,
   AdWarehouse,
 } from "@/types/ad-licoreria";
+import type { AdRepositoryState } from "@/services/ad-licoreria/repository";
 
 type AdStore = AdRepositoryState & {
+  dataSource: "mock" | "api";
+  apiSessionReady: boolean;
+  hydrateApi: () => Promise<AdResult>;
   getStock: (productId: string, warehouseId: string) => number;
   getPresentationsFor: (productId: string) => AdPresentation[];
   getPaymentMethods: (activeOnly?: boolean) => AdPaymentMethodConfig[];
@@ -58,12 +67,20 @@ type AdStore = AdRepositoryState & {
   upsertPaymentMethod: (
     method: AdPaymentMethodConfig,
   ) => AdResult<AdPaymentMethodConfig>;
-  upsertWarehouse: (warehouse: AdWarehouse) => AdResult<AdWarehouse>;
-  upsertOperator: (operator: AdOperator) => AdResult<AdOperator>;
+  upsertWarehouse: (
+    warehouse: AdWarehouse,
+  ) => AdResult<AdWarehouse> | Promise<AdResult<AdWarehouse>>;
+  upsertOperator: (
+    operator: AdOperator,
+  ) => AdResult<AdOperator> | Promise<AdResult<AdOperator>>;
   getPosOperatorsForWarehouse: (warehouseId: string) => AdOperator[];
   getFloorOperatorsForWarehouse: (warehouseId: string) => AdOperator[];
-  upsertProduct: (product: AdProduct) => AdResult<AdProduct>;
-  upsertPresentation: (pres: AdPresentation) => AdResult<AdPresentation>;
+  upsertProduct: (
+    product: AdProduct,
+  ) => AdResult<AdProduct> | Promise<AdResult<AdProduct>>;
+  upsertPresentation: (
+    pres: AdPresentation,
+  ) => AdResult<AdPresentation> | Promise<AdResult<AdPresentation>>;
   registerMovement: (input: {
     type: AdInventoryMovementType;
     productId: string;
@@ -95,7 +112,7 @@ type AdStore = AdRepositoryState & {
     warehouseId?: string;
     prepaid?: boolean;
     notes?: string;
-  }) => AdResult<AdAccount>;
+  }) => AdResult<AdAccount> | Promise<AdResult<AdAccount>>;
   addAccountItem: (input: {
     accountId: string;
     productId: string;
@@ -104,7 +121,7 @@ type AdStore = AdRepositoryState & {
     userName: string;
     deductStock?: boolean;
     warehouseId?: string;
-  }) => AdResult<AdAccount>;
+  }) => AdResult<AdAccount> | Promise<AdResult<AdAccount>>;
   updateAccountItemQty: (input: {
     accountId: string;
     itemId: string;
@@ -122,7 +139,7 @@ type AdStore = AdRepositoryState & {
     qty: number;
     mesoneraName: string;
     warehouseId?: string;
-  }) => AdResult;
+  }) => AdResult | Promise<AdResult>;
   addAccountPayment: (input: {
     accountId: string;
     method: AdPaymentMethodCode;
@@ -133,7 +150,7 @@ type AdStore = AdRepositoryState & {
     reference?: string;
     originPhone?: string;
     voucherNote?: string;
-  }) => AdResult;
+  }) => AdResult | Promise<AdResult>;
   applyDiscount: (input: {
     accountId: string;
     discountUsd: number;
@@ -153,33 +170,31 @@ type AdStore = AdRepositoryState & {
     reason: string;
     authorizedBy: string;
     warehouseId?: string;
-  }) => AdResult<AdAccount>;
+  }) => AdResult<AdAccount> | Promise<AdResult<AdAccount>>;
   closeAccount: (input: {
     accountId: string;
     userName: string;
     notes?: string;
     settlePendingAs?: "commitment" | "prepaid";
-  }) => AdResult<AdAccount>;
-  getCustomerSummary: (customerId: string) =>
-    | ReturnType<typeof adLicoreriaRepository.getCustomerSummary>
-    | undefined;
+  }) => AdResult<AdAccount> | Promise<AdResult<AdAccount>>;
+  getCustomerSummary: ReturnType<
+    typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.getCustomerSummary
+  > extends infer R
+    ? (customerId: string) => R
+    : never;
   createPrepaid: (input: {
     customerId?: string;
     customerName?: string;
     customerPhone?: string;
     customerDocumentId?: string;
     warehouseId?: string;
-    skipStockDeduction?: boolean;
-    linkedAccountId?: string;
-    linkedReceiptNumber?: string;
-    items: {
-      productId: string;
-      presentationId: string;
-      qty: number;
-    }[];
+    items: { productId: string; presentationId: string; qty: number }[];
     payments?: Omit<AdPayment, "id" | "createdAt">[];
     userName: string;
-  }) => AdResult<AdPrepaidAccount>;
+    linkedAccountId?: string;
+    linkedReceiptNumber?: string;
+    skipStockDeduction?: boolean;
+  }) => AdResult<AdPrepaidAccount> | Promise<AdResult>;
   consumePrepaid: (input: {
     prepaidId: string;
     productId: string;
@@ -188,7 +203,7 @@ type AdStore = AdRepositoryState & {
     mesoneraName: string;
     verifyPhone?: string;
     verifyDocumentId?: string;
-  }) => AdResult;
+  }) => AdResult | Promise<AdResult>;
   findPrepaidByQr: (tokenOrCode: string) => AdPrepaidAccount | undefined;
   findReceipt: (numberOrId: string) => AdReceipt | undefined;
   completeSale: (input: {
@@ -210,14 +225,16 @@ type AdStore = AdRepositoryState & {
     shortageDecision?: string;
     shortageReasonCode?: string;
     shortageReasonNote?: string;
-  }) => AdResult<AdSale>;
+  }) => AdResult<AdSale> | Promise<AdResult>;
   voidSale: (input: {
     saleId: string;
     userName: string;
     reason: string;
     authorizedBy: string;
-  }) => AdResult<AdSale>;
-  upsertCustomer: (customer: AdCustomer) => AdResult<AdCustomer>;
+  }) => AdResult<AdSale> | Promise<AdResult<AdSale>>;
+  upsertCustomer: (
+    customer: AdCustomer,
+  ) => AdResult<AdCustomer> | Promise<AdResult<AdCustomer>>;
   createPurchase: (input: {
     supplierName: string;
     invoiceNumber: string;
@@ -234,7 +251,7 @@ type AdStore = AdRepositoryState & {
     reference?: string;
     userName: string;
     notes?: string;
-  }) => AdResult<AdPurchase>;
+  }) => AdResult<AdPurchase> | Promise<AdResult>;
   createDailyClosure: (input: {
     userName: string;
     countedCashUsd: number;
@@ -242,165 +259,219 @@ type AdStore = AdRepositoryState & {
     notes?: string;
     operatorId?: string;
     warehouseId?: string;
-  }) => AdResult<AdDailyClosure>;
+  }) => AdResult<AdDailyClosure> | Promise<AdResult>;
   createInventoryClosure: (input: {
     lines: AdInventoryClosureLine[];
     createdBy: string;
     warehouseId?: string;
     notes?: string;
     applyAdjustments?: boolean;
-  }) => AdResult<AdInventoryClosure>;
-  getOperationalAvailability: typeof adLicoreriaRepository.getOperationalAvailability;
-  getAvailabilityMessage: typeof adLicoreriaRepository.getAvailabilityMessage;
-  createInvoiceDraft: typeof adLicoreriaRepository.createInvoiceDraft;
-  confirmInvoiceDraft: typeof adLicoreriaRepository.confirmInvoiceDraft;
-  cancelInvoiceDraft: typeof adLicoreriaRepository.cancelInvoiceDraft;
-  createTransferDraft: typeof adLicoreriaRepository.createTransferDraft;
-  updateTransferDraft: typeof adLicoreriaRepository.updateTransferDraft;
-  confirmTransfer: typeof adLicoreriaRepository.confirmTransfer;
-  advanceTransferStatus: typeof adLicoreriaRepository.advanceTransferStatus;
-  createPurchaseRequest: typeof adLicoreriaRepository.createPurchaseRequest;
-  fulfillPurchaseRequest: typeof adLicoreriaRepository.fulfillPurchaseRequest;
-  getCopDashboard: typeof adLicoreriaRepository.getCopDashboard;
-  getCopReports: typeof adLicoreriaRepository.getCopReports;
-  logDocumentAction: typeof adLicoreriaRepository.logDocumentAction;
-  setInventoryQty: typeof adLicoreriaRepository.setInventoryQty;
-  getCurrentOperator: typeof adLicoreriaRepository.getCurrentOperator;
-  setCurrentOperator: typeof adLicoreriaRepository.setCurrentOperator;
-  canAccessWarehouse: typeof adLicoreriaRepository.canAccessWarehouse;
-  hasPermission: typeof adLicoreriaRepository.hasPermission;
-  setRolePermissions: typeof adLicoreriaRepository.setRolePermissions;
-  getRolePermissionMatrix: typeof adLicoreriaRepository.getRolePermissionMatrix;
-  createWarehouse: typeof adLicoreriaRepository.createWarehouse;
-  setWarehouseActive: typeof adLicoreriaRepository.setWarehouseActive;
-  reassignMesonera: typeof adLicoreriaRepository.reassignMesonera;
-  upsertTable: typeof adLicoreriaRepository.upsertTable;
-  getAccountsForMesonera: typeof adLicoreriaRepository.getAccountsForMesonera;
+  }) => AdResult<AdInventoryClosure> | Promise<AdResult>;
+  getOperationalAvailability: (
+    productId: string,
+    requestedBase?: number,
+    preferredWarehouseId?: string,
+  ) => ReturnType<
+    typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.getOperationalAvailability
+  >;
+  getAvailabilityMessage: (
+    productId: string,
+    requestedBase?: number,
+    preferredWarehouseId?: string,
+  ) => string;
+  createInvoiceDraft: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.createInvoiceDraft;
+  confirmInvoiceDraft: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.confirmInvoiceDraft;
+  cancelInvoiceDraft: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.cancelInvoiceDraft;
+  createTransferDraft: (
+    input: Parameters<
+      typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.createTransferDraft
+    >[0],
+  ) => AdResult<AdStockTransfer> | Promise<AdResult>;
+  updateTransferDraft: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.updateTransferDraft;
+  confirmTransfer: (
+    input: Parameters<
+      typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.confirmTransfer
+    >[0],
+  ) => AdResult<AdStockTransfer> | Promise<AdResult>;
+  advanceTransferStatus: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.advanceTransferStatus;
+  createPurchaseRequest: (
+    input: Parameters<
+      typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.createPurchaseRequest
+    >[0],
+  ) => AdResult<AdPurchaseRequest> | Promise<AdResult>;
+  fulfillPurchaseRequest: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.fulfillPurchaseRequest;
+  getCopDashboard: () => ReturnType<
+    typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.getCopDashboard
+  >;
+  getCopReports: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.getCopReports;
+  logDocumentAction: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.logDocumentAction;
+  setInventoryQty: (
+    productId: string,
+    warehouseId: string,
+    qtyBase: number,
+  ) => AdResult | Promise<AdResult>;
+  getCurrentOperator: () => AdOperator | null;
+  setCurrentOperator: (
+    operatorId: string | null,
+  ) => AdResult<AdOperator | null>;
+  canAccessWarehouse: (warehouseId: string, operatorId?: string) => boolean;
+  hasPermission: (
+    permission: import("@/types/ad-licoreria").AdPermission,
+    operatorId?: string,
+  ) => boolean;
+  setRolePermissions: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.setRolePermissions;
+  getRolePermissionMatrix: () => ReturnType<
+    typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.getRolePermissionMatrix
+  >;
+  createWarehouse: (
+    input: Parameters<
+      typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.createWarehouse
+    >[0],
+  ) => AdResult<AdWarehouse> | Promise<AdResult<AdWarehouse>>;
+  setWarehouseActive: (
+    input: Parameters<
+      typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.setWarehouseActive
+    >[0],
+  ) => AdResult | Promise<AdResult>;
+  reassignMesonera: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.reassignMesonera;
+  upsertTable: typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository.upsertTable;
+  getAccountsForMesonera: (mesoneraId: string) => AdAccount[];
 };
 
 const AdLicoreriaContext = createContext<AdStore | null>(null);
 
-function getSnapshot() {
-  return adLicoreriaRepository.getState();
+function bindRepo() {
+  return getAdRepository();
 }
 
 export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
-  const snap = useSyncExternalStore(
-    adLicoreriaRepository.subscribe,
-    getSnapshot,
-    getSnapshot,
+  const mode = getAdDataSourceMode();
+  const sessionVersion = useSyncExternalStore(
+    subscribeAdSession,
+    () => (loadAdSession()?.operatorId ?? "none"),
+    () => "none",
   );
 
-  const value = useMemo<AdStore>(
-    () => ({
-      ...snap,
-      getStock: adLicoreriaRepository.getStock,
-      getPresentationsFor: (productId) =>
-        adLicoreriaRepository.getPresentationsFor(productId),
-      getPaymentMethods: (activeOnly) =>
-        adLicoreriaRepository.getPaymentMethods(activeOnly),
-      updateSettings: (patch) => adLicoreriaRepository.updateSettings(patch),
-      updateSiteDesign: (patch, userName) =>
-        adLicoreriaRepository.updateSiteDesign(patch, userName),
-      saveSiteDesignDraft: (patch, userName) =>
-        adLicoreriaRepository.saveSiteDesignDraft(patch, userName),
-      publishSiteDesign: (userName) =>
-        adLicoreriaRepository.publishSiteDesign(userName),
-      discardSiteDesignDraft: () =>
-        adLicoreriaRepository.discardSiteDesignDraft(),
-      getSiteDesignDraft: () => adLicoreriaRepository.getSiteDesignDraft(),
-      resetSiteDesign: (userName) =>
-        adLicoreriaRepository.resetSiteDesign(userName),
-      upsertPaymentMethod: (m) => adLicoreriaRepository.upsertPaymentMethod(m),
-      upsertWarehouse: (w) => adLicoreriaRepository.upsertWarehouse(w),
-      upsertOperator: (o) => adLicoreriaRepository.upsertOperator(o),
-      getPosOperatorsForWarehouse: (warehouseId) =>
-        adLicoreriaRepository.getPosOperatorsForWarehouse(warehouseId),
-      getFloorOperatorsForWarehouse: (warehouseId) =>
-        adLicoreriaRepository.getFloorOperatorsForWarehouse(warehouseId),
-      upsertProduct: (p) => adLicoreriaRepository.upsertProduct(p),
-      upsertPresentation: (p) => adLicoreriaRepository.upsertPresentation(p),
-      registerMovement: (input) =>
-        adLicoreriaRepository.registerMovement(input),
-      transferStock: (input) => adLicoreriaRepository.transfer(input),
-      openAccount: (input) => adLicoreriaRepository.openAccount(input),
-      addAccountItem: (input) => adLicoreriaRepository.addAccountItem(input),
-      updateAccountItemQty: (input) =>
-        adLicoreriaRepository.updateAccountItemQty(input),
-      removeAccountItem: (input) =>
-        adLicoreriaRepository.removeAccountItem(input),
-      serveAccountItem: (input) =>
-        adLicoreriaRepository.serveAccountItem(input),
-      addAccountPayment: (input) =>
-        adLicoreriaRepository.addAccountPayment(input),
-      applyDiscount: (input) => adLicoreriaRepository.applyDiscount(input),
-      reopenAccount: (input) => adLicoreriaRepository.reopenAccount(input),
-      voidAccount: (input) => adLicoreriaRepository.voidAccount(input),
-      closeAccount: (input) => adLicoreriaRepository.closeAccount(input),
-      getCustomerSummary: (id) => adLicoreriaRepository.getCustomerSummary(id),
-      createPrepaid: (input) => adLicoreriaRepository.createPrepaid(input),
-      consumePrepaid: (input) => adLicoreriaRepository.consumePrepaid(input),
-      findPrepaidByQr: (q) => adLicoreriaRepository.findPrepaidByQr(q),
-      findReceipt: (q) => adLicoreriaRepository.findReceipt(q),
-      completeSale: (input) => adLicoreriaRepository.completeSale(input),
-      voidSale: (input) => adLicoreriaRepository.voidSale(input),
-      upsertCustomer: (c) => adLicoreriaRepository.upsertCustomer(c),
-      createPurchase: (input) => adLicoreriaRepository.createPurchase(input),
-      createDailyClosure: (input) =>
-        adLicoreriaRepository.createDailyClosure(input),
-      createInventoryClosure: (input) =>
-        adLicoreriaRepository.createInventoryClosure(input),
-      getOperationalAvailability: (...args) =>
-        adLicoreriaRepository.getOperationalAvailability(...args),
-      getAvailabilityMessage: (...args) =>
-        adLicoreriaRepository.getAvailabilityMessage(...args),
-      createInvoiceDraft: (input) =>
-        adLicoreriaRepository.createInvoiceDraft(input),
-      confirmInvoiceDraft: (input) =>
-        adLicoreriaRepository.confirmInvoiceDraft(input),
-      cancelInvoiceDraft: (input) =>
-        adLicoreriaRepository.cancelInvoiceDraft(input),
-      createTransferDraft: (input) =>
-        adLicoreriaRepository.createTransferDraft(input),
-      updateTransferDraft: (input) =>
-        adLicoreriaRepository.updateTransferDraft(input),
-      confirmTransfer: (input) =>
-        adLicoreriaRepository.confirmTransfer(input),
-      advanceTransferStatus: (input) =>
-        adLicoreriaRepository.advanceTransferStatus(input),
-      createPurchaseRequest: (input) =>
-        adLicoreriaRepository.createPurchaseRequest(input),
-      fulfillPurchaseRequest: (input) =>
-        adLicoreriaRepository.fulfillPurchaseRequest(input),
-      getCopDashboard: () => adLicoreriaRepository.getCopDashboard(),
-      getCopReports: () => adLicoreriaRepository.getCopReports(),
-      logDocumentAction: (input) =>
-        adLicoreriaRepository.logDocumentAction(input),
-      setInventoryQty: (productId, warehouseId, qtyBase) =>
-        adLicoreriaRepository.setInventoryQty(productId, warehouseId, qtyBase),
-      getCurrentOperator: () => adLicoreriaRepository.getCurrentOperator(),
-      setCurrentOperator: (id) =>
-        adLicoreriaRepository.setCurrentOperator(id),
-      canAccessWarehouse: (warehouseId, operatorId) =>
-        adLicoreriaRepository.canAccessWarehouse(warehouseId, operatorId),
-      hasPermission: (permission, operatorId) =>
-        adLicoreriaRepository.hasPermission(permission, operatorId),
-      setRolePermissions: (input) =>
-        adLicoreriaRepository.setRolePermissions(input),
-      getRolePermissionMatrix: () =>
-        adLicoreriaRepository.getRolePermissionMatrix(),
-      createWarehouse: (input) =>
-        adLicoreriaRepository.createWarehouse(input),
-      setWarehouseActive: (input) =>
-        adLicoreriaRepository.setWarehouseActive(input),
-      reassignMesonera: (input) =>
-        adLicoreriaRepository.reassignMesonera(input),
-      upsertTable: (table) => adLicoreriaRepository.upsertTable(table),
-      getAccountsForMesonera: (id) =>
-        adLicoreriaRepository.getAccountsForMesonera(id),
-    }),
-    [snap],
+  const repo = bindRepo();
+
+  const snap = useSyncExternalStore(
+    (onStoreChange) => repo.subscribe(onStoreChange),
+    () => repo.getState(),
+    () => repo.getState(),
   );
+
+  useEffect(() => {
+    if (mode !== "api") return;
+    if (!loadAdSession()) return;
+    const apiRepo = repo as typeof import("@/services/ad-licoreria/api-backed-repository").adApiBackedRepository;
+    if (typeof apiRepo.hydrateFromApi === "function") {
+      void apiRepo.hydrateFromApi();
+    }
+  }, [mode, sessionVersion, repo]);
+
+  const value = useMemo<AdStore>(() => {
+    const r = bindRepo();
+    return {
+      ...snap,
+      dataSource: mode,
+      apiSessionReady: mode === "mock" || Boolean(loadAdSession()),
+      hydrateApi: async () => {
+        if (mode !== "api") return { ok: true, data: undefined };
+        const api = r as typeof import("@/services/ad-licoreria/api-backed-repository").adApiBackedRepository;
+        return api.hydrateFromApi();
+      },
+      getStock: (productId, warehouseId) => r.getStock(productId, warehouseId),
+      getPresentationsFor: (productId) => r.getPresentationsFor(productId),
+      getPaymentMethods: (activeOnly) => r.getPaymentMethods(activeOnly),
+      updateSettings: (patch) => r.updateSettings(patch),
+      updateSiteDesign: (patch, userName) =>
+        r.updateSiteDesign(patch, userName),
+      saveSiteDesignDraft: (patch, userName) =>
+        r.saveSiteDesignDraft(patch, userName),
+      publishSiteDesign: (userName) => r.publishSiteDesign(userName),
+      discardSiteDesignDraft: () => r.discardSiteDesignDraft(),
+      getSiteDesignDraft: () => r.getSiteDesignDraft(),
+      resetSiteDesign: (userName) => r.resetSiteDesign(userName),
+      upsertPaymentMethod: (m) => r.upsertPaymentMethod(m),
+      upsertWarehouse: (w) => r.upsertWarehouse(w),
+      upsertOperator: (o) => r.upsertOperator(o),
+      getPosOperatorsForWarehouse: (warehouseId) =>
+        r.getPosOperatorsForWarehouse(warehouseId),
+      getFloorOperatorsForWarehouse: (warehouseId) =>
+        r.getFloorOperatorsForWarehouse(warehouseId),
+      upsertProduct: (p) => r.upsertProduct(p),
+      upsertPresentation: (p) => r.upsertPresentation(p),
+      registerMovement: (input) => r.registerMovement(input),
+      transferStock: (input) =>
+        (
+          r as typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository
+        ).transfer
+          ? (
+              r as typeof import("@/services/ad-licoreria/repository").adLicoreriaRepository
+            ).transfer(input)
+          : { ok: false, error: "transfer no disponible" },
+      openAccount: (input) => r.openAccount(input),
+      addAccountItem: (input) => r.addAccountItem(input),
+      updateAccountItemQty: (input) => r.updateAccountItemQty(input),
+      removeAccountItem: (input) => r.removeAccountItem(input),
+      serveAccountItem: (input) => r.serveAccountItem(input),
+      addAccountPayment: (input) => r.addAccountPayment(input),
+      applyDiscount: (input) => r.applyDiscount(input),
+      reopenAccount: (input) => r.reopenAccount(input),
+      voidAccount: (input) => r.voidAccount(input),
+      closeAccount: (input) => r.closeAccount(input),
+      getCustomerSummary: (id) => r.getCustomerSummary(id) as AdStore["getCustomerSummary"] extends (id: string) => infer R ? R : never,
+      createPrepaid: (input) => r.createPrepaid(input),
+      consumePrepaid: (input) => r.consumePrepaid(input),
+      findPrepaidByQr: (q) => r.findPrepaidByQr(q),
+      findReceipt: (q) => r.findReceipt(q),
+      completeSale: (input) => r.completeSale(input),
+      voidSale: (input) => r.voidSale(input),
+      upsertCustomer: (c) => r.upsertCustomer(c),
+      createPurchase: (input) => r.createPurchase(input),
+      createDailyClosure: (input) => r.createDailyClosure(input),
+      createInventoryClosure: (input) => r.createInventoryClosure(input),
+      getOperationalAvailability: (productId, requestedBase, preferredWarehouseId) =>
+        r.getOperationalAvailability(
+          productId,
+          requestedBase ?? 0,
+          preferredWarehouseId,
+        ),
+      getAvailabilityMessage: (productId, requestedBase, preferredWarehouseId) =>
+        r.getAvailabilityMessage(
+          productId,
+          requestedBase ?? 0,
+          preferredWarehouseId,
+        ),
+      createInvoiceDraft: (input) => r.createInvoiceDraft(input),
+      confirmInvoiceDraft: (input) => r.confirmInvoiceDraft(input),
+      cancelInvoiceDraft: (input) => r.cancelInvoiceDraft(input),
+      createTransferDraft: (input) => r.createTransferDraft(input),
+      updateTransferDraft: (input) => r.updateTransferDraft(input),
+      confirmTransfer: (input) => r.confirmTransfer(input),
+      advanceTransferStatus: (input) => r.advanceTransferStatus(input),
+      createPurchaseRequest: (input) => r.createPurchaseRequest(input),
+      fulfillPurchaseRequest: (input) => r.fulfillPurchaseRequest(input),
+      getCopDashboard: () => r.getCopDashboard(),
+      getCopReports: () => r.getCopReports(),
+      logDocumentAction: (input) => r.logDocumentAction(input),
+      setInventoryQty: (productId, warehouseId, qtyBase) =>
+        r.setInventoryQty(productId, warehouseId, qtyBase),
+      getCurrentOperator: () => r.getCurrentOperator(),
+      setCurrentOperator: (id) => r.setCurrentOperator(id),
+      canAccessWarehouse: (warehouseId, operatorId) =>
+        r.canAccessWarehouse(warehouseId, operatorId),
+      hasPermission: (permission, operatorId) =>
+        r.hasPermission(permission, operatorId),
+      setRolePermissions: (input) => r.setRolePermissions(input),
+      getRolePermissionMatrix: () => r.getRolePermissionMatrix(),
+      createWarehouse: (input) => r.createWarehouse(input),
+      setWarehouseActive: (input) => r.setWarehouseActive(input),
+      reassignMesonera: (input) => r.reassignMesonera(input),
+      upsertTable: (table) => r.upsertTable(table),
+      getAccountsForMesonera: (id) => r.getAccountsForMesonera(id),
+    } as AdStore;
+  }, [snap, mode, sessionVersion]);
 
   return (
     <AdLicoreriaContext.Provider value={value}>
@@ -417,4 +488,9 @@ export function useAdLicoreria() {
   return ctx;
 }
 
-export type { AdInvoiceDraft, AdStockTransfer, AdPurchaseRequest, AdStockTransferStatus };
+export type {
+  AdInvoiceDraft,
+  AdStockTransfer,
+  AdPurchaseRequest,
+  AdStockTransferStatus,
+};

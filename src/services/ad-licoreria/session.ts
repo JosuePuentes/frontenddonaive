@@ -1,0 +1,182 @@
+/**
+ * Sesión A&D (modo API).
+ * JWT pendiente — headers de desarrollo acordados en F1/F2.
+ */
+import { API_BASE_URL } from "@/config/api";
+
+const STORAGE_KEY = "ad_licoreria_api_session_v1";
+
+export type AdApiSession = {
+  tenantId: string;
+  tenantSlug: string;
+  tenantName: string;
+  timezone: string;
+  projectId: string;
+  operatorId: string;
+  userId: string;
+  username: string;
+  name: string;
+  role: string;
+  warehouseId: string | null;
+  permissions: string[];
+  headers: Record<string, string>;
+};
+
+let memorySession: AdApiSession | null = null;
+const listeners = new Set<() => void>();
+
+function emit() {
+  for (const l of listeners) l();
+}
+
+export function subscribeAdSession(cb: () => void) {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+}
+
+export function loadAdSession(): AdApiSession | null {
+  if (memorySession) return memorySession;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    memorySession = JSON.parse(raw) as AdApiSession;
+    return memorySession;
+  } catch {
+    return null;
+  }
+}
+
+export function saveAdSession(session: AdApiSession) {
+  memorySession = session;
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  emit();
+}
+
+export function clearAdSession() {
+  memorySession = null;
+  sessionStorage.removeItem(STORAGE_KEY);
+  emit();
+}
+
+export function getAdSessionHeaders(): Record<string, string> {
+  const s = loadAdSession();
+  if (!s) return {};
+  return { ...s.headers };
+}
+
+export async function adLoginRequest(input: {
+  tenantSlug: string;
+  username: string;
+  password: string;
+}): Promise<{ ok: true; session: AdApiSession } | { ok: false; error: string }> {
+  if (!API_BASE_URL) {
+    return {
+      ok: false,
+      error: "VITE_API_BASE_URL no configurada",
+    };
+  }
+  try {
+    const res = await fetch(
+      `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/ad/auth/login`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenantSlug: input.tenantSlug,
+          username: input.username,
+          password: input.password,
+        }),
+      },
+    );
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        ok: false,
+        error:
+          (payload as { error?: { message?: string } })?.error?.message ??
+          `HTTP ${res.status}`,
+      };
+    }
+    const data = (payload as { data: Record<string, unknown> }).data;
+    const tenant = data.tenant as {
+      id: string;
+      slug: string;
+      name: string;
+      timezone: string;
+      projectId: string;
+    };
+    const operator = data.operator as {
+      id: string;
+      userId: string | null;
+      username: string;
+      name: string;
+      role: string;
+      warehouseId: string | null;
+    };
+    const sessionHeaders = data.sessionHeaders as Record<string, string>;
+    const session: AdApiSession = {
+      tenantId: tenant.id,
+      tenantSlug: tenant.slug,
+      tenantName: tenant.name,
+      timezone: tenant.timezone,
+      projectId: tenant.projectId,
+      operatorId: operator.id,
+      userId: operator.userId ?? operator.id,
+      username: operator.username,
+      name: operator.name,
+      role: operator.role,
+      warehouseId: operator.warehouseId,
+      permissions: (data.permissions as string[]) ?? [],
+      headers: sessionHeaders,
+    };
+    saveAdSession(session);
+    return { ok: true, session };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Error de red",
+    };
+  }
+}
+
+export async function adBootstrapRequest(input: {
+  slug?: string;
+  name?: string;
+  adminPassword: string;
+  adminUsername?: string;
+}): Promise<{ ok: true; data: unknown } | { ok: false; error: string }> {
+  if (!API_BASE_URL) {
+    return { ok: false, error: "VITE_API_BASE_URL no configurada" };
+  }
+  try {
+    const res = await fetch(
+      `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/ad/bootstrap`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input),
+      },
+    );
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        ok: false,
+        error:
+          (payload as { error?: { message?: string } })?.error?.message ??
+          `HTTP ${res.status}`,
+      };
+    }
+    return { ok: true, data: (payload as { data: unknown }).data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Error de red",
+    };
+  }
+}

@@ -822,12 +822,13 @@ export const adOpsService = {
       const count = await tx.adStockTransfer.count({
         where: { tenantId: ctx.tenantId, stockMoved: true },
       });
+      const year = new Date().getFullYear();
       const updated = await tx.adStockTransfer.updateMany({
         where: { id: transferId, stockMoved: false },
         data: {
           stockMoved: true,
           status: "RECEIVED",
-          documentNumber: `TR-2026-${String(count + 1).padStart(4, "0")}`,
+          documentNumber: `TR-${year}-${String(count + 1).padStart(6, "0")}`,
           receivedById: ctx.operator.id,
           receivedAt: new Date(),
           confirmedAt: new Date(),

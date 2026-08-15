@@ -9,6 +9,7 @@ import {
   databaseGuard,
   errorHandler,
 } from "./middleware/error.middleware.js";
+import { adPublicAuthRouter } from "./ad/public-auth.routes.js";
 
 export function createApp() {
   const app = express();
@@ -19,6 +20,8 @@ export function createApp() {
   app.use(express.json({ limit: "1mb" }));
 
   app.use(healthRouter);
+  /** Login/bootstrap A&D sin X-User-Id de Core (JWT pendiente). */
+  app.use("/api/v1/ad", databaseGuard, adPublicAuthRouter);
   app.use("/api/v1", databaseGuard, authMiddleware, v1Router);
 
   app.use(errorHandler);

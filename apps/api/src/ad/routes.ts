@@ -13,6 +13,7 @@ import {
 } from "./validation.js";
 
 import { adOpsRouter } from "./ops.routes.js";
+import { adPortalRouter } from "./portal.routes.js";
 
 export const adRouter = Router();
 
@@ -41,6 +42,8 @@ adRouter.use(adContextMiddleware);
 
 /** Núcleo operativo Fase 2 */
 adRouter.use(adOpsRouter);
+/** Portal Fase 3 — operadores, snapshot, reportes */
+adRouter.use(adPortalRouter);
 
 adRouter.get("/context", async (req, res, next) => {
   try {

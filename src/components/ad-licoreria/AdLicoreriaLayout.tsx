@@ -14,6 +14,7 @@ import {
   isTvPlayerPath,
 } from "@/lib/ad-licoreria/route-access";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import { AdApiLoginPanel } from "@/components/ad-licoreria/AdApiLoginPanel";
 import "@/components/ad-licoreria/ad-licoreria.css";
 
 const FONT_HREF =
@@ -80,6 +81,7 @@ function AdLicoreriaLayout() {
       <AdTvProvider>
         <AdDesignApplier>
           <div className="ad-shell">
+            <AdApiLoginPanel />
             {isLanding || isMesonera || isTvPlayer || isDesignPreview ? (
               <Outlet />
             ) : (

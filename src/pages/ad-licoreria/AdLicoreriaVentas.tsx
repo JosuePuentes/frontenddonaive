@@ -278,28 +278,32 @@ export default function AdLicoreriaVentas() {
       setMsg("Descuento requiere autorización");
       return;
     }
-    const result = createInvoiceDraft({
-      items: cart,
-      payments,
-      warehouseId: posWarehouseId,
-      operatorId: cashierId,
-      cashierName: cashier?.name ?? "Cajero",
-      tableId: tableId || undefined,
-      mesoneraName: mesonera?.name,
-      customerId: customer?.id,
-      customerName: customer?.name,
-      customerPhone: customer?.phone,
-      customerDocumentId: customer?.documentId,
-      discountUsd,
-      notes: notes.trim() || undefined,
-    });
-    if (!result.ok) {
-      setMsg(result.error);
-      return;
-    }
-    setDraft(result.data);
-    setConfirmedReceipt(null);
-    setMsg(`Preliminar ${result.data.provisionalNumber}`);
+    void (async () => {
+      const result = await resolveAdResult(
+        createInvoiceDraft({
+          items: cart,
+          payments,
+          warehouseId: posWarehouseId,
+          operatorId: cashierId,
+          cashierName: cashier?.name ?? "Cajero",
+          tableId: tableId || undefined,
+          mesoneraName: mesonera?.name,
+          customerId: customer?.id,
+          customerName: customer?.name,
+          customerPhone: customer?.phone,
+          customerDocumentId: customer?.documentId,
+          discountUsd,
+          notes: notes.trim() || undefined,
+        }),
+      );
+      if (!result.ok) {
+        setMsg(result.error);
+        return;
+      }
+      setDraft(result.data);
+      setConfirmedReceipt(null);
+      setMsg(`Preliminar ${result.data.provisionalNumber}`);
+    })();
   }
 
   const canShortageOverride =
@@ -324,35 +328,39 @@ export default function AdLicoreriaVentas() {
         return;
       }
     }
-    const result = confirmInvoiceDraft({
-      draftId: draft.id,
-      userName: cashier?.name ?? mesonera?.name ?? "Cajero",
-      continueWithShortage,
-      shortageDecision: continueWithShortage ? shortageReason : undefined,
-      shortageReasonCode: continueWithShortage ? shortageReason : undefined,
-      shortageReasonNote:
-        continueWithShortage && shortageReason === "otro"
-          ? shortageNote.trim()
-          : continueWithShortage
-            ? shortageNote.trim() || undefined
-            : undefined,
-    });
-    if (!result.ok) {
-      setMsg(result.error);
-      return;
-    }
-    setConfirmedReceipt(result.data.receiptNumber);
-    setConfirmedSale(result.data);
-    setCart([]);
-    setPayments([]);
-    setNotes("");
-    setDiscountUsd(0);
-    setDiscountAuth("");
-    setShortageReason("");
-    setShortageNote("");
-    setDraft(null);
-    setPosStep("productos");
-    setMsg(`Factura confirmada ${result.data.receiptNumber}`);
+    void (async () => {
+      const result = await resolveAdResult(
+        confirmInvoiceDraft({
+          draftId: draft.id,
+          userName: cashier?.name ?? mesonera?.name ?? "Cajero",
+          continueWithShortage,
+          shortageDecision: continueWithShortage ? shortageReason : undefined,
+          shortageReasonCode: continueWithShortage ? shortageReason : undefined,
+          shortageReasonNote:
+            continueWithShortage && shortageReason === "otro"
+              ? shortageNote.trim()
+              : continueWithShortage
+                ? shortageNote.trim() || undefined
+                : undefined,
+        }),
+      );
+      if (!result.ok) {
+        setMsg(result.error);
+        return;
+      }
+      setConfirmedReceipt(result.data.receiptNumber);
+      setConfirmedSale(result.data);
+      setCart([]);
+      setPayments([]);
+      setNotes("");
+      setDiscountUsd(0);
+      setDiscountAuth("");
+      setShortageReason("");
+      setShortageNote("");
+      setDraft(null);
+      setPosStep("productos");
+      setMsg(`Factura confirmada ${result.data.receiptNumber}`);
+    })();
   }
 
   async function leaveOpen() {

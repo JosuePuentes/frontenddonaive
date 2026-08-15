@@ -474,7 +474,8 @@ export const adService = {
       }
 
       const count = await tx.adSale.count({ where: { tenantId: ctx.tenantId } });
-      const receiptNumber = `AD-${String(count + 1).padStart(6, "0")}`;
+      const year = new Date().getFullYear();
+      const receiptNumber = `AD-${year}-${String(count + 1).padStart(6, "0")}`;
 
       return tx.adSale.create({
         data: {
