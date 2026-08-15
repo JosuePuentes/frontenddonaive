@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, useLocation } from "react-router";
+import { NavLink, useLocation, useNavigate } from "react-router";
 import { AdLicoreriaBrandMark } from "@/components/ad-licoreria/AdLicoreriaBrandMark";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import {
@@ -15,8 +15,20 @@ type Props = {
   onClose: () => void;
 };
 
+/** Primera ruta “hub” de cada grupo (tap en el título = ir al módulo). */
+const GROUP_HUB_KEY: Partial<Record<AdNavGroupId, string>> = {
+  principal: "inicio",
+  operacion: "ventas",
+  inventario: "cop",
+  compras: "compras",
+  finanzas: "finanzas",
+  tv: "tv",
+  admin: "configuracion",
+};
+
 function AdLicoreriaSidebar({ open, onClose }: Props) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const path = normalizeAdLicoreriaPathname(pathname);
   const { getCurrentOperator, getRolePermissionMatrix } = useAdLicoreria();
   const session = getCurrentOperator();
@@ -29,7 +41,6 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
     setExpanded((prev) => {
       const next = { ...prev };
       for (const group of groups) {
-        if (next[group.id] != null) continue;
         const hasActive = group.items.some((item) => {
           const normalized = normalizeAdLicoreriaPathname(item.to);
           return (
@@ -37,17 +48,35 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
             (normalized !== "/" && path.startsWith(`${normalized}/`))
           );
         });
+        /** En móvil el menú debe mostrar todo: expandir al abrir. */
+        if (open) {
+          next[group.id] = true;
+          continue;
+        }
+        if (next[group.id] != null && !hasActive) continue;
         next[group.id] =
           group.id === "principal" ||
           group.id === "operacion" ||
+          group.id === "tv" ||
           hasActive;
       }
       return next;
     });
-  }, [groups, path]);
+  }, [groups, path, open]);
 
-  function toggleGroup(id: AdNavGroupId) {
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  function onGroupTitle(id: AdNavGroupId) {
+    const group = groups.find((g) => g.id === id);
+    const hubKey = GROUP_HUB_KEY[id];
+    const hub = hubKey
+      ? group?.items.find((i) => i.key === hubKey) ?? group?.items[0]
+      : group?.items[0];
+
+    setExpanded((prev) => ({ ...prev, [id]: true }));
+
+    if (hub) {
+      navigate(hub.to);
+      onClose();
+    }
   }
 
   return (
@@ -85,9 +114,10 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
                   type="button"
                   className="ad-nav-group__title"
                   aria-expanded={isOpen}
-                  onClick={() => toggleGroup(group.id)}
+                  onClick={() => onGroupTitle(group.id)}
                 >
-                  {group.label}
+                  <span>{group.label}</span>
+                  <span className="ad-nav-group__hint">Abrir</span>
                 </button>
                 {isOpen ? (
                   <div className="ad-nav-group__items">
@@ -109,9 +139,6 @@ function AdLicoreriaSidebar({ open, onClose }: Props) {
             );
           })}
         </nav>
-        <p className="mt-auto px-2 text-[0.65rem] leading-relaxed text-[var(--ad-muted)]">
-          Menú por permisos · grupos colapsables
-        </p>
       </aside>
     </>
   );

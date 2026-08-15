@@ -382,7 +382,7 @@ export function mobilePrimaryNavKeys(role: AdRole | null | undefined): string[] 
       return ["tv", "tvContenido", "tvControl"];
     case "admin":
     default:
-      return ["inicio", "ventas", "cop", "finanzas"];
+      return ["inicio", "ventas", "tv", "cop"];
   }
 }
 
