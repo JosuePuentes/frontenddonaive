@@ -324,6 +324,8 @@ export type AdAccount = {
   customerId?: string;
   customerName?: string;
   customerPhone?: string;
+  /** Depósito operativo de la cuenta (mesa / cajero). */
+  warehouseId?: string | null;
   status: AdAccountStatus;
   prepaid: boolean;
   items: AdAccountItem[];
@@ -356,11 +358,14 @@ export type AdPrepaidStatus = "ACTIVO" | "AGOTADO" | "CERRADO" | "VENCIDO";
 export type AdPrepaidAccount = {
   id: string;
   code: string;
+  /** Token opaco del QR (sin datos sensibles). */
   qrToken: string;
   receiptNumber?: string;
   customerId?: string;
   customerName?: string;
   customerPhone?: string;
+  customerDocumentId?: string;
+  warehouseId?: string;
   status: AdPrepaidStatus;
   items: AdPrepaidItem[];
   createdAt: string;
@@ -446,9 +451,12 @@ export type AdReceipt = {
   customerId?: string;
   customerName?: string;
   customerPhone?: string;
+  customerDocumentId?: string;
   mesoneraName?: string;
   cashierName?: string;
   tableNumber?: string;
+  warehouseId?: string;
+  status?: "emitido" | "anulado" | "pendiente";
   items: {
     productName: string;
     presentationName: string;
@@ -520,6 +528,11 @@ export type AdDailyClosure = {
     Record<AdPaymentMethodCode, { usd: number; bs: number }>
   >;
   byMesonera: { name: string; salesCount: number; totalUsd: number }[];
+  /** Snapshot al cierre */
+  customerCommitmentsPending?: number;
+  pendingMerchandiseUnits?: number;
+  electronicPaymentsUsd?: number;
+  transferPaymentsUsd?: number;
   createdAt: string;
   createdBy: string;
   notes?: string;

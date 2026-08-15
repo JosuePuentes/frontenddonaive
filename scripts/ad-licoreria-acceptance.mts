@@ -357,6 +357,7 @@ run("H/I", "Prepago + QR + consumo parcial", () => {
       presentationId: "pres-reg-1",
       qty: 8,
       mesoneraName: "María",
+      verifyPhone: "0414-0000000",
     }).ok,
     "consume",
   );

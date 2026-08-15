@@ -53,6 +53,7 @@ export default function AdLicoreriaMesonera() {
   const [tableId, setTableId] = useState("");
   const [accountId, setAccountId] = useState(myAccounts[0]?.id ?? "");
   const [qr, setQr] = useState(prepaids[0]?.code ?? "");
+  const [verifyPhone, setVerifyPhone] = useState("");
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [presentationId, setPresentationId] = useState("");
   const [qty, setQty] = useState(1);
@@ -141,6 +142,7 @@ export default function AdLicoreriaMesonera() {
       presentationId: line.presentationId,
       qty: n,
       mesoneraName: mesonera.name,
+      verifyPhone: verifyPhone || prepaid.customerPhone,
     });
     setMsg(r.ok ? `Prepago −${n}` : r.error);
   }
@@ -198,24 +200,64 @@ export default function AdLicoreriaMesonera() {
                   (s, it) => s + accountAvailable(it.qty, it.qtyServed),
                   0,
                 );
+                const mins = Math.max(
+                  0,
+                  Math.round(
+                    (Date.now() - new Date(a.openedAt).getTime()) / 60000,
+                  ),
+                );
                 return (
                   <article
                     key={a.id}
-                    className={`ad-panel cursor-pointer ${accountId === a.id ? "ring-1 ring-[var(--ad-gold)]" : ""}`}
-                    onClick={() => setAccountId(a.id)}
+                    className={`ad-panel ${accountId === a.id ? "ring-1 ring-[var(--ad-gold)]" : ""}`}
                   >
                     <p className="ad-eyebrow">
-                      {table?.code ?? table?.number ?? "Sin espacio"}
+                      {table?.code ?? table?.number ?? "Sin espacio"} · {a.status}
                     </p>
                     <p className="text-sm">{a.customerName ?? "Cliente"}</p>
                     <p className="ad-display text-3xl text-[var(--ad-gold-soft)]">
                       ${total.toFixed(0)}
                     </p>
                     <p className="mt-1 text-sm text-[var(--ad-muted)]">
-                      Servido: {served} · Pendiente: {pending}
+                      Servido: {served} · Pendiente: {pending} · {mins} min
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="ad-badge">Ver cuenta</span>
+                      <button
+                        type="button"
+                        className="ad-btn ad-btn--gold"
+                        onClick={() => {
+                          setAccountId(a.id);
+                          setMode("cuenta");
+                        }}
+                      >
+                        Agregar
+                      </button>
+                      <button
+                        type="button"
+                        className="ad-btn"
+                        onClick={() => {
+                          setAccountId(a.id);
+                          const first = a.items.find(
+                            (i) => accountAvailable(i.qty, i.qtyServed) > 0,
+                          );
+                          if (first) serve(1, first.id);
+                        }}
+                      >
+                        Servir
+                      </button>
+                      <button
+                        type="button"
+                        className="ad-btn"
+                        onClick={() => setAccountId(a.id)}
+                      >
+                        Ver
+                      </button>
+                      <Link
+                        className="ad-btn"
+                        to={AD_LICORERIA_ROUTES.ventas}
+                      >
+                        Cobrar
+                      </Link>
                     </div>
                   </article>
                 );
@@ -354,10 +396,17 @@ export default function AdLicoreriaMesonera() {
             onChange={(e) => setQr(e.target.value)}
             placeholder="Código o token"
           />
+          <input
+            className="ad-input"
+            value={verifyPhone}
+            onChange={(e) => setVerifyPhone(e.target.value)}
+            placeholder="Teléfono del titular (verificación)"
+          />
           {prepaid ? (
             <>
               <p className="text-sm">
                 {prepaid.code} · {prepaid.customerName}
+                {prepaid.customerPhone ? ` · ${prepaid.customerPhone}` : ""}
               </p>
               <div className="ad-mesonera-pad">
                 {QUICK.map((n) => (

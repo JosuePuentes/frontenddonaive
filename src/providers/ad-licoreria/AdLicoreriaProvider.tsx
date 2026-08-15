@@ -144,6 +144,7 @@ type AdStore = AdRepositoryState & {
     accountId: string;
     userName: string;
     notes?: string;
+    settlePendingAs?: "commitment" | "prepaid";
   }) => AdResult<AdAccount>;
   getCustomerSummary: (customerId: string) =>
     | ReturnType<typeof adLicoreriaRepository.getCustomerSummary>
@@ -152,6 +153,11 @@ type AdStore = AdRepositoryState & {
     customerId?: string;
     customerName?: string;
     customerPhone?: string;
+    customerDocumentId?: string;
+    warehouseId?: string;
+    skipStockDeduction?: boolean;
+    linkedAccountId?: string;
+    linkedReceiptNumber?: string;
     items: {
       productId: string;
       presentationId: string;
@@ -166,6 +172,8 @@ type AdStore = AdRepositoryState & {
     presentationId: string;
     qty: number;
     mesoneraName: string;
+    verifyPhone?: string;
+    verifyDocumentId?: string;
   }) => AdResult;
   findPrepaidByQr: (tokenOrCode: string) => AdPrepaidAccount | undefined;
   findReceipt: (numberOrId: string) => AdReceipt | undefined;

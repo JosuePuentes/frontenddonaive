@@ -285,7 +285,14 @@ function tableNumber(id?: string) {
   return state.tables.find((t) => t.id === id)?.number;
 }
 
+function normalizePhone(value: string) {
+  return value.replace(/\D/g, "");
+}
+
 function buildReceiptFromSale(sale: AdSale): AdReceipt {
+  const customer = sale.customerId
+    ? state.customers.find((c) => c.id === sale.customerId)
+    : undefined;
   return {
     id: uid("rcpt"),
     number: sale.receiptNumber,
@@ -295,9 +302,12 @@ function buildReceiptFromSale(sale: AdSale): AdReceipt {
     customerId: sale.customerId,
     customerName: sale.customerName,
     customerPhone: sale.customerPhone,
+    customerDocumentId: customer?.documentId,
     mesoneraName: sale.mesoneraName,
     cashierName: sale.cashierName ?? sale.userName,
     tableNumber: tableNumber(sale.tableId),
+    warehouseId: sale.warehouseId,
+    status: sale.status === "voided" ? "anulado" : "emitido",
     items: sale.items.map((it) => ({
       productName: productName(it.productId),
       presentationName: presentationName(it.presentationId),
@@ -323,6 +333,9 @@ function buildReceiptFromSale(sale: AdSale): AdReceipt {
 function buildReceiptFromAccount(account: AdAccount): AdReceipt {
   const { subtotal, total } = accountTotals(account);
   const paid = paidByCurrency(account.payments);
+  const customer = account.customerId
+    ? state.customers.find((c) => c.id === account.customerId)
+    : undefined;
   return {
     id: uid("rcpt"),
     number: account.receiptNumber ?? nextReceiptNumber(state.receiptSeq++),
@@ -331,9 +344,12 @@ function buildReceiptFromAccount(account: AdAccount): AdReceipt {
     customerId: account.customerId,
     customerName: account.customerName,
     customerPhone: account.customerPhone,
+    customerDocumentId: customer?.documentId,
     mesoneraName: account.mesoneraName,
     cashierName: account.cashierName,
     tableNumber: tableNumber(account.tableId),
+    warehouseId: account.warehouseId ?? undefined,
+    status: "emitido",
     items: account.items.map((it) => ({
       productName: productName(it.productId),
       presentationName: presentationName(it.presentationId),
@@ -885,6 +901,7 @@ export const adLicoreriaRepository = {
     customerId?: string;
     customerName?: string;
     customerPhone?: string;
+    warehouseId?: string;
     prepaid?: boolean;
     notes?: string;
   }): AdResult<AdAccount> {
@@ -892,6 +909,11 @@ export const adLicoreriaRepository = {
     const customer = input.customerId
       ? state.customers.find((c) => c.id === input.customerId)
       : undefined;
+    const table = input.tableId
+      ? state.tables.find((t) => t.id === input.tableId)
+      : undefined;
+    const warehouseId =
+      input.warehouseId ?? table?.warehouseId ?? undefined;
     const account: AdAccount = {
       id: uid("acc"),
       number,
@@ -901,6 +923,7 @@ export const adLicoreriaRepository = {
       customerId: input.customerId,
       customerName: input.customerName ?? customer?.name,
       customerPhone: input.customerPhone ?? customer?.phone,
+      warehouseId: warehouseId ?? null,
       status: input.prepaid ? "PREPAGADA" : "ABIERTA",
       prepaid: Boolean(input.prepaid),
       items: [],
@@ -1025,7 +1048,8 @@ export const adLicoreriaRepository = {
     const pres = state.presentations.find((p) => p.id === input.presentationId);
     if (!pres) return { ok: false, error: "Presentación no encontrada" };
     const qtyBase = toBaseUnits(pres, input.qty);
-    const warehouseId = input.warehouseId ?? "wh-2";
+    const warehouseId =
+      input.warehouseId ?? account.warehouseId ?? "wh-2";
     const deduct = input.deductStock === true;
 
     if (deduct) {
@@ -1087,7 +1111,8 @@ export const adLicoreriaRepository = {
     const pres = state.presentations.find((p) => p.id === item.presentationId);
     if (!pres) return { ok: false, error: "Presentación no encontrada" };
     const qtyBase = toBaseUnits(pres, input.qty);
-    const warehouseId = input.warehouseId ?? "wh-2";
+    const warehouseId =
+      input.warehouseId ?? account.warehouseId ?? "wh-2";
 
     const mov = this.registerMovement({
       type: "CONSUMO_CUENTA",
@@ -1400,12 +1425,26 @@ export const adLicoreriaRepository = {
     accountId: string;
     userName: string;
     notes?: string;
+    /**
+     * Pendiente al cerrar:
+     * - commitment (default): obligación cliente (no bloquea ventas)
+     * - prepaid: genera prepago/QR (sin re-descontar lo ya servido; descuenta solo pendiente)
+     */
+    settlePendingAs?: "commitment" | "prepaid";
   }): AdResult<AdAccount> {
     const account = state.accounts.find((a) => a.id === input.accountId);
     if (!account) return { ok: false, error: "Cuenta no encontrada" };
     const receiptNumber = nextReceiptNumber(state.receiptSeq++);
+    const warehouseId =
+      account.warehouseId ??
+      (account.tableId
+        ? state.tables.find((t) => t.id === account.tableId)?.warehouseId
+        : undefined) ??
+      AD_WH_LICORERIA;
+    const settleAs = input.settlePendingAs ?? "commitment";
     const closed: AdAccount = {
       ...account,
+      warehouseId,
       status: "CERRADA",
       receiptNumber,
       cashierName: input.userName,
@@ -1423,41 +1462,70 @@ export const adLicoreriaRepository = {
       );
     }
 
-    /** Pendientes al cerrar → obligación con cliente (NO bloquean ventas). */
-    for (const it of closed.items) {
-      const remaining = Math.max(0, it.qty - it.qtyServed);
-      if (remaining <= 0) continue;
-      const pres = state.presentations.find((p) => p.id === it.presentationId);
-      const commitment: AdCustomerCommitment = {
-        id: uid("ccom"),
+    const pendingLines = closed.items
+      .map((it) => {
+        const remaining = Math.max(0, it.qty - it.qtyServed);
+        return remaining > 0 ? { it, remaining } : null;
+      })
+      .filter(Boolean) as { it: (typeof closed.items)[0]; remaining: number }[];
+
+    if (settleAs === "prepaid" && pendingLines.length) {
+      const prepaidResult = this.createPrepaid({
         customerId: closed.customerId,
         customerName: closed.customerName,
         customerPhone: closed.customerPhone,
-        accountId: closed.id,
-        accountNumber: closed.number,
-        productId: it.productId,
-        presentationId: it.presentationId,
-        qtyRemaining: remaining,
-        qtyBaseRemaining: remaining * (pres?.unitsPerPresentation ?? 1),
-        status: "PENDIENTE",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      state.customerCommitments = [commitment, ...state.customerCommitments];
+        warehouseId,
+        items: pendingLines.map(({ it, remaining }) => ({
+          productId: it.productId,
+          presentationId: it.presentationId,
+          qty: remaining,
+        })),
+        userName: input.userName,
+        linkedAccountId: closed.id,
+        linkedReceiptNumber: receiptNumber,
+      });
+      if (!prepaidResult.ok) return prepaidResult;
       audit(
-        "customer_commitment",
-        "commitment",
+        "prepaid_from_close",
+        "prepaid",
         input.userName,
-        `Obligación cliente cuenta #${closed.number}: ${productName(it.productId)} x${remaining}`,
-        commitment.id,
-        {
-          afterValue: JSON.stringify({
-            productId: it.productId,
-            qtyRemaining: remaining,
-            blocksSales: false,
-          }),
-        },
+        `Cierre #${closed.number} → ${prepaidResult.data.code}`,
+        prepaidResult.data.id,
       );
+    } else {
+      for (const { it, remaining } of pendingLines) {
+        const pres = state.presentations.find((p) => p.id === it.presentationId);
+        const commitment: AdCustomerCommitment = {
+          id: uid("ccom"),
+          customerId: closed.customerId,
+          customerName: closed.customerName,
+          customerPhone: closed.customerPhone,
+          accountId: closed.id,
+          accountNumber: closed.number,
+          productId: it.productId,
+          presentationId: it.presentationId,
+          qtyRemaining: remaining,
+          qtyBaseRemaining: remaining * (pres?.unitsPerPresentation ?? 1),
+          status: "PENDIENTE",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        state.customerCommitments = [commitment, ...state.customerCommitments];
+        audit(
+          "customer_commitment",
+          "commitment",
+          input.userName,
+          `Obligación cliente cuenta #${closed.number}: ${productName(it.productId)} x${remaining}`,
+          commitment.id,
+          {
+            afterValue: JSON.stringify({
+              productId: it.productId,
+              qtyRemaining: remaining,
+              blocksSales: false,
+            }),
+          },
+        );
+      }
     }
 
     const { subtotal, total } = accountTotals(closed);
@@ -1483,7 +1551,7 @@ export const adLicoreriaRepository = {
       discountUsd: closed.discountUsd,
       discountBs: closed.discountBs,
       total,
-      warehouseId: AD_WH_LICORERIA,
+      warehouseId,
       userName: input.userName,
       status: "completed",
       notes: closed.notes,
@@ -1493,6 +1561,7 @@ export const adLicoreriaRepository = {
     const receipt = buildReceiptFromAccount(closed);
     receipt.number = receiptNumber;
     receipt.saleId = sale.id;
+    receipt.warehouseId = warehouseId;
     state.receipts = [receipt, ...state.receipts];
 
     if (closed.customerPhone) {
@@ -1513,7 +1582,7 @@ export const adLicoreriaRepository = {
 
     audit("close", "account", input.userName, `Cerró #${account.number} → ${receiptNumber}`, account.id, {
       beforeValue: account.status,
-      afterValue: `CERRADA|${receiptNumber}|totalUsd=${total.usd}`,
+      afterValue: `CERRADA|${receiptNumber}|totalUsd=${total.usd}|settle=${settleAs}`,
     });
     audit("venta", "pos", input.userName, `${receiptNumber} $${sale.total.usd}`, sale.id, {
       beforeValue: undefined,
@@ -1521,6 +1590,7 @@ export const adLicoreriaRepository = {
         receiptNumber,
         total: sale.total,
         payments: sale.payments.length,
+        warehouseId,
       }),
     });
     emit();
@@ -1531,6 +1601,11 @@ export const adLicoreriaRepository = {
     customerId?: string;
     customerName?: string;
     customerPhone?: string;
+    customerDocumentId?: string;
+    warehouseId?: string;
+    skipStockDeduction?: boolean;
+    linkedAccountId?: string;
+    linkedReceiptNumber?: string;
     items: {
       productId: string;
       presentationId: string;
@@ -1547,9 +1622,14 @@ export const adLicoreriaRepository = {
     if (!phone?.trim()) {
       return { ok: false, error: "Teléfono del cliente obligatorio" };
     }
+    const warehouseId =
+      input.warehouseId ??
+      this.getCurrentOperator()?.warehouseId ??
+      AD_WH_LICORERIA;
     const code = nextPrepaidCode(state.prepaidSeq++);
     const token = `ad_qr_${code.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()}_${uid("t").slice(-4)}`;
-    const receiptNumber = nextReceiptNumber(state.receiptSeq++);
+    const receiptNumber =
+      input.linkedReceiptNumber ?? nextReceiptNumber(state.receiptSeq++);
     const items = input.items.map((it) => {
       const pres = state.presentations.find((p) => p.id === it.presentationId)!;
       return {
@@ -1563,18 +1643,20 @@ export const adLicoreriaRepository = {
       };
     });
 
-    for (const it of items) {
-      const mov = this.registerMovement({
-        type: "VENTA",
-        productId: it.productId,
-        presentationId: it.presentationId,
-        qtyPresentation: it.qtyPurchased,
-        warehouseId: "wh-2",
-        userName: input.userName,
-        reason: `Prepago ${code}`,
-        reference: code,
-      });
-      if (!mov.ok) return mov;
+    if (!input.skipStockDeduction) {
+      for (const it of items) {
+        const mov = this.registerMovement({
+          type: "VENTA",
+          productId: it.productId,
+          presentationId: it.presentationId,
+          qtyPresentation: it.qtyPurchased,
+          warehouseId,
+          userName: input.userName,
+          reason: `Prepago ${code}`,
+          reference: code,
+        });
+        if (!mov.ok) return mov;
+      }
     }
 
     const prepaid: AdPrepaidAccount = {
@@ -1585,6 +1667,9 @@ export const adLicoreriaRepository = {
       customerId: input.customerId,
       customerName: input.customerName ?? customer?.name,
       customerPhone: phone,
+      customerDocumentId:
+        input.customerDocumentId ?? customer?.documentId,
+      warehouseId,
       status: "ACTIVO",
       items,
       createdAt: new Date().toISOString(),
@@ -1606,10 +1691,14 @@ export const adLicoreriaRepository = {
       number: receiptNumber,
       kind: "prepaid",
       prepaidId: prepaid.id,
+      accountId: input.linkedAccountId,
       customerId: prepaid.customerId,
       customerName: prepaid.customerName,
       customerPhone: prepaid.customerPhone,
+      customerDocumentId: prepaid.customerDocumentId,
       cashierName: input.userName,
+      warehouseId,
+      status: "emitido",
       items: items.map((it) => ({
         productName: productName(it.productId),
         presentationName: presentationName(it.presentationId),
@@ -1649,7 +1738,9 @@ export const adLicoreriaRepository = {
       }),
     );
 
-    audit("create", "prepaid", input.userName, code, prepaid.id);
+    audit("create", "prepaid", input.userName, code, prepaid.id, {
+      afterValue: JSON.stringify({ warehouseId, qrOpaque: true }),
+    });
     emit();
     return { ok: true, data: prepaid };
   },
@@ -1660,11 +1751,31 @@ export const adLicoreriaRepository = {
     presentationId: string;
     qty: number;
     mesoneraName: string;
+    /** Verificación obligatoria: teléfono o cédula del titular. */
+    verifyPhone?: string;
+    verifyDocumentId?: string;
   }): AdResult {
     const prepaid = state.prepaids.find((p) => p.id === input.prepaidId);
     if (!prepaid) return { ok: false, error: "Prepago no encontrado" };
     if (prepaid.status !== "ACTIVO") {
       return { ok: false, error: "Prepago no activo" };
+    }
+    const phoneOk =
+      input.verifyPhone &&
+      prepaid.customerPhone &&
+      normalizePhone(input.verifyPhone) ===
+        normalizePhone(prepaid.customerPhone);
+    const docOk =
+      input.verifyDocumentId &&
+      prepaid.customerDocumentId &&
+      input.verifyDocumentId.trim().toLowerCase() ===
+        prepaid.customerDocumentId.trim().toLowerCase();
+    if (!phoneOk && !docOk) {
+      return {
+        ok: false,
+        error:
+          "Verificación de cliente requerida (teléfono o cédula). El QR solo es un token opaco.",
+      };
     }
     const item = prepaid.items.find(
       (i) =>
@@ -1750,6 +1861,7 @@ export const adLicoreriaRepository = {
       {
         beforeValue: String(before),
         afterValue: String(before - input.qty),
+        reason: phoneOk ? "verify_phone" : "verify_document",
       },
     );
     emit();
@@ -2307,6 +2419,22 @@ export const adLicoreriaRepository = {
         .length,
       byMethod,
       byMesonera: [...byMesoneraMap.values()],
+      customerCommitmentsPending: state.customerCommitments.filter(
+        (c) => c.status === "PENDIENTE",
+      ).length,
+      pendingMerchandiseUnits: openAccounts.reduce(
+        (a, acc) =>
+          a +
+          acc.items.reduce(
+            (x, i) => x + Math.max(0, i.qty - i.qtyServed),
+            0,
+          ),
+        0,
+      ),
+      electronicPaymentsUsd: Object.entries(byMethod)
+        .filter(([m]) => m !== "efectivo_usd" && m !== "efectivo_bs")
+        .reduce((a, [, v]) => a + v.usd, 0),
+      transferPaymentsUsd: byMethod.transferencia?.usd ?? 0,
       createdAt: new Date().toISOString(),
       createdBy: input.userName,
       notes: input.notes,
@@ -2317,6 +2445,9 @@ export const adLicoreriaRepository = {
         expectedCashUsd,
         countedCashUsd: input.countedCashUsd,
         diff: closure.cashDifferenceUsd,
+        warehouseId,
+        operatorId: opId,
+        commitments: closure.customerCommitmentsPending,
       }),
     });
     emit();

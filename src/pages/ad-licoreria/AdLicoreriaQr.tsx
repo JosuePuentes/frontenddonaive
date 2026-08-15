@@ -17,6 +17,7 @@ export default function AdLicoreriaQr() {
   const [token, setToken] = useState(prepaids[0]?.qrToken ?? "");
   const [qty, setQty] = useState(1);
   const [lineKey, setLineKey] = useState("");
+  const [verifyPhone, setVerifyPhone] = useState("");
   const [msg, setMsg] = useState("");
 
   const account = useMemo(
@@ -36,7 +37,9 @@ export default function AdLicoreriaQr() {
       productId: activeLine.productId,
       presentationId: activeLine.presentationId,
       qty: n,
-      mesoneraName: "María",
+      mesoneraName: "Ana",
+      verifyPhone: verifyPhone || undefined,
+      verifyDocumentId: undefined,
     });
     setMsg(result.ok ? `Consumo +${n} registrado` : result.error);
   }
@@ -55,6 +58,16 @@ export default function AdLicoreriaQr() {
           onChange={(e) => setToken(e.target.value)}
           placeholder="PRE-2026-000125 o ad_qr_…"
         />
+        <input
+          className="ad-input"
+          value={verifyPhone}
+          onChange={(e) => setVerifyPhone(e.target.value)}
+          placeholder="Verificar teléfono del titular"
+        />
+        <p className="text-xs text-[var(--ad-muted)]">
+          El consumo exige verificación de identidad (teléfono o cédula). Una
+          captura del QR no basta.
+        </p>
         {account ? (
           <div className="rounded-[2px] border border-dashed border-[var(--ad-line-strong)] p-4 text-center">
             <div className="mx-auto mb-3 inline-grid h-36 w-36 place-items-center bg-[repeating-linear-gradient(45deg,#d4af6a_0_2px,transparent_2px_8px)] opacity-80">
@@ -83,7 +96,13 @@ export default function AdLicoreriaQr() {
               {account.code}
             </p>
             <p className="text-center text-sm text-[var(--ad-muted)]">
-              {account.customerName ?? "Cliente"} · {account.status} ·{" "}
+              {account.customerName ?? "Cliente"}
+              {account.customerPhone ? ` · ${account.customerPhone}` : ""}
+              {account.customerDocumentId
+                ? ` · ${account.customerDocumentId}`
+                : ""}
+              <br />
+              {account.status} · Recibo {account.receiptNumber ?? "—"} ·{" "}
               {new Date(account.createdAt).toLocaleDateString("es-VE")}
             </p>
 
