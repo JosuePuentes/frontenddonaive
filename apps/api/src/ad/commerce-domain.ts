@@ -156,6 +156,65 @@ export function equivalentUsdFromProtected(
   return bs / bcvRate;
 }
 
+/**
+ * Costo de reposición/referencia con tasas actuales.
+ * NO altera costo histórico ni CPP.
+ * Fórmula: costoUsdHistórico * paralelaActual / bcvActual
+ * (si la compra usó referencia paralela).
+ */
+export function replacementCostFromRates(input: {
+  historicalCostUsd: number;
+  useParallelRef: boolean;
+  currentProtectedRate: number | null;
+  currentBcvRate: number | null;
+}): number {
+  const cost = Number(input.historicalCostUsd);
+  if (!(cost >= 0)) throw new Error("Costo histórico inválido");
+  if (!input.useParallelRef) return cost;
+  const p = Number(input.currentProtectedRate ?? 0);
+  const b = Number(input.currentBcvRate ?? 0);
+  if (!(p > 0) || !(b > 0)) return cost;
+  return (cost * p) / b;
+}
+
+/** Conversión explícita entre monedas — la tasa NUNCA se inventa. */
+export function convertWithExplicitRate(input: {
+  amount: number;
+  rate: number;
+  /** true = amount es moneda origen y rate = unidades destino por 1 origen (ej. Bs por USD). */
+  multiply?: boolean;
+}): { amountOut: number; rate: number } {
+  const amount = Number(input.amount);
+  const rate = Number(input.rate);
+  if (!(amount > 0)) throw new Error("Monto inválido");
+  if (!(rate > 0)) throw new Error("Tasa explícita obligatoria y positiva");
+  const multiply = input.multiply !== false;
+  return {
+    amountOut: multiply ? amount * rate : amount / rate,
+    rate,
+  };
+}
+
+/**
+ * Diferencia financiera de una conversión vs valor original de venta.
+ * La venta original NO se modifica; esto es solo analítica.
+ */
+export function fxConversionDifference(input: {
+  originalAmount: number;
+  convertedAmount: number;
+  rateUsed: number;
+}): { originalAmount: number; convertedAmount: number; rateUsed: number; difference: number } {
+  const original = Number(input.originalAmount);
+  const converted = Number(input.convertedAmount);
+  const rate = Number(input.rateUsed);
+  return {
+    originalAmount: original,
+    convertedAmount: converted,
+    rateUsed: rate,
+    difference: converted - original * rate,
+  };
+}
+
 export function equivalentBsFromUsd(amountUsd: number, rate: number): number {
   if (!(rate > 0)) return 0;
   return amountUsd * rate;

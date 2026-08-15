@@ -89,6 +89,36 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       anyOf: ["purchases.create", "purchase.create", "purchases.manage"],
     },
     {
+      key: "bancos",
+      label: "Bancos",
+      to: r.bancos,
+      anyOf: ["finance.view", "finance.manage"],
+    },
+    {
+      key: "movimientos",
+      label: "Movimientos",
+      to: r.movimientos,
+      anyOf: ["finance.view"],
+    },
+    {
+      key: "casaCambio",
+      label: "Casa de Cambio",
+      to: r.casaCambio,
+      anyOf: ["finance.exchange"],
+    },
+    {
+      key: "tasas",
+      label: "Tasas",
+      to: r.tasas,
+      anyOf: ["finance.rates", "rates.bcv.manage", "rates.protected.manage"],
+    },
+    {
+      key: "configFinanciera",
+      label: "Config. financiera",
+      to: r.configFinanciera,
+      anyOf: ["finance.manage"],
+    },
+    {
       key: "proveedores",
       label: "Proveedores",
       to: r.proveedores,

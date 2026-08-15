@@ -980,6 +980,39 @@ enum AdImportBatchStatus {
   @@schema("ad_licoreria")
 }
 
+/// Fase 7 — tipo de cuenta financiera (no confundir con AdAccount = mesa/POS).
+enum AdFinancialAccountType {
+  BANK
+  CASH
+  TILL
+  DIGITAL
+  OTHER
+
+  @@schema("ad_licoreria")
+}
+
+enum AdFinancialMovementType {
+  INGRESO_VENTA
+  EGRESO_COMPRA
+  EGRESO_GASTO
+  RETIRO
+  TRANSFERENCIA
+  CAMBIO_MONEDA
+  AJUSTE
+  OTROS
+
+  @@schema("ad_licoreria")
+}
+
+enum AdFinancialDocStatus {
+  DRAFT
+  PRELIMINARY
+  CONFIRMED
+  VOIDED
+
+  @@schema("ad_licoreria")
+}
+
 /// Tenant operativo A&D (1:1 conceptual con Project de donaive_core).
 model AdTenant {
   id        String   @id @default(uuid())
@@ -1019,6 +1052,9 @@ model AdTenant {
   combos            AdCombo[]
   purchaseOrders    AdPurchaseOrder[]
   importBatches     AdImportBatch[]
+  financialAccounts AdFinancialAccount[]
+  financialMovements AdFinancialMovement[]
+  financeSettings   AdFinanceSettings?
 
   @@schema("ad_licoreria")
 }
@@ -1043,6 +1079,7 @@ model AdWarehouse {
   purchases       AdPurchase[]
   cashClosures    AdCashClosure[]
   invClosures     AdInventoryClosure[]
+  financialAccounts AdFinancialAccount[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -1116,9 +1153,12 @@ model AdProduct {
   description   String?
   baseUnitLabel String   @default("u")
   minStockBase  Decimal  @default(0) @db.Decimal(18, 4)
-  /// Costo promedio ponderado (CPP) — monedas independientes.
+  /// Costo promedio ponderado (CPP) — monedas independientes. Histórico contable.
   avgCostUsd    Decimal  @default(0) @db.Decimal(18, 6)
   avgCostBs     Decimal  @default(0) @db.Decimal(18, 6)
+  /// Costo de reposición/referencia (no altera CPP ni compra histórica).
+  replacementCostUsd Decimal @default(0) @db.Decimal(18, 6)
+  replacementCostBs  Decimal @default(0) @db.Decimal(18, 6)
   /// Aplica IVA 16% por defecto al agregar a compras (editable por factura).
   taxable       Boolean  @default(false)
   active        Boolean  @default(true)
@@ -1344,6 +1384,10 @@ model AdSalePayment {
   amount    Decimal         @db.Decimal(18, 4)
   reference String?
   bank      String?
+  /// Fase 7 — vínculo opcional a método/cuenta financiera.
+  paymentMethodId     String?
+  financialAccountId  String?
+  financialMovementId String?
 
   @@index([saleId])
   @@schema("ad_licoreria")
@@ -1842,6 +1886,9 @@ model AdPayablePayment {
   operatorId      String?
   notes           String?
   createdAt       DateTime @default(now())
+  /// Fase 7 — egreso en cuenta financiera al pagar CxP.
+  financialAccountId  String?
+  financialMovementId String?
 
   @@index([payableId])
   @@schema("ad_licoreria")
@@ -1872,10 +1919,13 @@ model AdPaymentMethod {
   currency              AdMoneyCurrency
   active                Boolean         @default(true)
   accountLabel          String?
-  /// Referencia financiera interna — no cambia tasa de venta automáticamente.
+  /// Referencia financiera interna (dólar real / paralela) — no se muestra al usuario común.
   usesSpecialRateRef    Boolean         @default(false)
   requiresReference     Boolean         @default(false)
   sortOrder             Int             @default(0)
+  /// Cuenta financiera asociada (ingresos/egresos por este método).
+  financialAccountId    String?         @unique
+  financialAccount      AdFinancialAccount? @relation(fields: [financialAccountId], references: [id])
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
@@ -2080,5 +2130,96 @@ model AdImportRow {
   valid     Boolean       @default(false)
 
   @@index([batchId])
+  @@schema("ad_licoreria")
+}
+
+/// Fase 7 — configuración financiera del tenant (atajo tasa paralela, etc.).
+model AdFinanceSettings {
+  id                    String   @id @default(uuid())
+  tenantId              String   @unique
+  tenant                AdTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Atajo teclado para modal de tasa paralela (ej. Control+x). Configurable.
+  parallelRateHotkey    String   @default("Control+x")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@schema("ad_licoreria")
+}
+
+/// Cuenta financiera (banco / efectivo / Zelle / Binance…). NO es AdAccount (mesa).
+model AdFinancialAccount {
+  id              String                 @id @default(uuid())
+  tenantId        String
+  tenant          AdTenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  warehouseId     String?
+  warehouse       AdWarehouse?           @relation(fields: [warehouseId], references: [id])
+  name            String
+  code            String?
+  type            AdFinancialAccountType @default(BANK)
+  currency        AdMoneyCurrency
+  openingBalance  Decimal                @default(0) @db.Decimal(18, 4)
+  /// Saldo actual (actualizado solo al confirmar movimientos).
+  balance         Decimal                @default(0) @db.Decimal(18, 4)
+  active          Boolean                @default(true)
+  notes           String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  paymentMethods AdPaymentMethod[]
+  movements      AdFinancialMovement[]   @relation("MovementAccount")
+  movementsAsCounter AdFinancialMovement[] @relation("MovementCounterAccount")
+
+  @@unique([tenantId, name])
+  @@index([tenantId, currency, active])
+  @@index([warehouseId])
+  @@schema("ad_licoreria")
+}
+
+/// Movimiento / documento financiero (borrador → preliminar → confirmado).
+model AdFinancialMovement {
+  id                 String                   @id @default(uuid())
+  tenantId           String
+  tenant             AdTenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type               AdFinancialMovementType
+  status             AdFinancialDocStatus     @default(DRAFT)
+  accountId          String
+  account            AdFinancialAccount       @relation("MovementAccount", fields: [accountId], references: [id])
+  /// Cuenta destino (transferencia / cambio de moneda).
+  counterAccountId   String?
+  counterAccount     AdFinancialAccount?      @relation("MovementCounterAccount", fields: [counterAccountId], references: [id])
+  currency           AdMoneyCurrency
+  amount             Decimal                  @db.Decimal(18, 4)
+  /// Monto en cuenta destino cuando hay conversión.
+  counterAmount      Decimal?                 @db.Decimal(18, 4)
+  counterCurrency    AdMoneyCurrency?
+  /// Tasa explícita usada (origen→destino). Nunca inventada.
+  rateUsed           Decimal?                 @db.Decimal(18, 6)
+  concept            String?
+  reference          String?
+  relatedEntity      String?
+  relatedId          String?
+  saleId             String?
+  purchaseId         String?
+  payableId          String?
+  operatorId         String?
+  warehouseId        String?
+  /// Snapshots de saldo al confirmar (auditoría).
+  balanceBefore      Decimal?                 @db.Decimal(18, 4)
+  balanceAfter       Decimal?                 @db.Decimal(18, 4)
+  counterBalanceBefore Decimal?               @db.Decimal(18, 4)
+  counterBalanceAfter  Decimal?               @db.Decimal(18, 4)
+  /// Para CAMBIO_MONEDA: no altera venta original; diferencia financiera opcional.
+  originalSaleAmount Decimal?                 @db.Decimal(18, 4)
+  originalSaleCurrency AdMoneyCurrency?
+  fxDifference       Decimal?                 @db.Decimal(18, 4)
+  confirmedAt        DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, type, status])
+  @@index([accountId, createdAt])
+  @@index([counterAccountId])
+  @@index([relatedEntity, relatedId])
   @@schema("ad_licoreria")
 }

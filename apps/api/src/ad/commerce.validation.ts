@@ -110,6 +110,7 @@ export const upsertPaymentMethodSchema = z.object({
   usesSpecialRateRef: z.boolean().optional(),
   requiresReference: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
+  financialAccountId: z.string().uuid().optional().nullable(),
 });
 
 export const setPresentationPriceSchema = z.object({
@@ -222,6 +223,7 @@ export const payablePaymentSchema = z.object({
   amount: z.number().positive(),
   currency: z.enum(["USD", "BS"]),
   paymentMethodId: z.string().uuid().optional(),
+  financialAccountId: z.string().uuid().optional(),
   reference: z.string().max(120).optional(),
   notes: z.string().max(500).optional(),
 });

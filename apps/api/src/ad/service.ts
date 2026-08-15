@@ -596,7 +596,7 @@ export const adService = {
       const year = new Date().getFullYear();
       const receiptNumber = `AD-${year}-${String(count + 1).padStart(6, "0")}`;
 
-      return tx.adSale.create({
+      const created = await tx.adSale.create({
         data: {
           tenantId: ctx.tenantId,
           warehouseId,
@@ -631,6 +631,50 @@ export const adService = {
               }
             : undefined,
         },
+        include: { lines: true, payments: true },
+      });
+
+      /** Fase 7 — ingreso a cuenta financiera según método de pago. */
+      if (created.payments.length) {
+        const { postConfirmedMovement, resolveAccountForPaymentMethod } =
+          await import("./finance-ledger.js");
+        for (const pay of created.payments) {
+          const resolved = await resolveAccountForPaymentMethod(
+            tx,
+            ctx.tenantId,
+            {
+              methodName: pay.method,
+              currency: pay.currency as "USD" | "BS",
+            },
+          );
+          if (!resolved?.account) continue;
+          const mov = await postConfirmedMovement(tx, {
+            tenantId: ctx.tenantId,
+            type: "INGRESO_VENTA",
+            accountId: resolved.account.id,
+            currency: pay.currency as "USD" | "BS",
+            amount: toNum(pay.amount),
+            concept: `Venta ${receiptNumber}`,
+            reference: pay.reference,
+            relatedEntity: "sale",
+            relatedId: created.id,
+            saleId: created.id,
+            operatorId: ctx.operator.id,
+            warehouseId,
+          });
+          await tx.adSalePayment.update({
+            where: { id: pay.id },
+            data: {
+              paymentMethodId: resolved.method.id,
+              financialAccountId: resolved.account.id,
+              financialMovementId: mov.id,
+            },
+          });
+        }
+      }
+
+      return tx.adSale.findUniqueOrThrow({
+        where: { id: created.id },
         include: { lines: true, payments: true },
       });
     });

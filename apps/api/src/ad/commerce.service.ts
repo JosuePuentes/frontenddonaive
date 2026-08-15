@@ -1174,7 +1174,7 @@ export const adCommerceService = {
         });
         if (!existingPayable) {
           const isCredit = before.paymentCondition === "CREDITO";
-          await tx.adPayable.create({
+          const payable = await tx.adPayable.create({
             data: {
               tenantId: ctx.tenantId,
               supplierId: before.supplierId,
@@ -1193,6 +1193,52 @@ export const adCommerceService = {
               paymentMethodId: before.paymentMethodId,
             },
           });
+
+          /** Contado: egreso inmediato si hay cuenta asociada al método. Crédito: solo CxP. */
+          if (!isCredit && grand > 0) {
+            const { postConfirmedMovement, resolveAccountForPaymentMethod } =
+              await import("./finance-ledger.js");
+            const resolved = await resolveAccountForPaymentMethod(
+              tx,
+              ctx.tenantId,
+              {
+                paymentMethodId: before.paymentMethodId,
+                currency: before.currency as "USD" | "BS",
+              },
+            );
+            let movementId: string | null = null;
+            let accountId: string | null = null;
+            if (resolved?.account) {
+              accountId = resolved.account.id;
+              const mov = await postConfirmedMovement(tx, {
+                tenantId: ctx.tenantId,
+                type: "EGRESO_COMPRA",
+                accountId,
+                currency: before.currency as "USD" | "BS",
+                amount: grand,
+                concept: `Compra contado ${before.invoiceNumber}`,
+                relatedEntity: "purchase",
+                relatedId: purchaseId,
+                purchaseId,
+                payableId: payable.id,
+                operatorId: ctx.operator.id,
+                warehouseId: before.warehouseId,
+              });
+              movementId = mov.id;
+            }
+            await tx.adPayablePayment.create({
+              data: {
+                payableId: payable.id,
+                amount: dec(grand),
+                currency: before.currency,
+                paymentMethodId: before.paymentMethodId,
+                operatorId: ctx.operator.id,
+                notes: "Pago al confirmar compra contado",
+                financialAccountId: accountId,
+                financialMovementId: movementId,
+              },
+            });
+          }
         }
       }
 
@@ -1338,12 +1384,15 @@ export const adCommerceService = {
       amount: number;
       currency: "USD" | "BS";
       paymentMethodId?: string;
+      financialAccountId?: string;
       reference?: string;
       notes?: string;
     },
   ) {
     requireAdPermission(ctx, "payables.manage");
     const prisma = getPrisma();
+    const { postConfirmedMovement, resolveAccountForPaymentMethod } =
+      await import("./finance-ledger.js");
     return prisma.$transaction(async (tx) => {
       const payable = await tx.adPayable.findFirst({
         where: { id: payableId, tenantId: ctx.tenantId },
@@ -1355,6 +1404,36 @@ export const adCommerceService = {
       if (input.amount > num(payable.balance) + 1e-9) {
         throw new ValidationError("Monto supera el saldo");
       }
+
+      let accountId = input.financialAccountId ?? null;
+      if (!accountId) {
+        const resolved = await resolveAccountForPaymentMethod(tx, ctx.tenantId, {
+          paymentMethodId: input.paymentMethodId,
+          currency: input.currency,
+        });
+        accountId = resolved?.account.id ?? null;
+      }
+
+      let movementId: string | null = null;
+      if (accountId) {
+        const mov = await postConfirmedMovement(tx, {
+          tenantId: ctx.tenantId,
+          type: "EGRESO_COMPRA",
+          accountId,
+          currency: input.currency,
+          amount: input.amount,
+          concept: `Pago CxP ${payable.invoiceNumber}`,
+          reference: input.reference,
+          relatedEntity: "payable",
+          relatedId: payableId,
+          payableId,
+          purchaseId: payable.purchaseId,
+          operatorId: ctx.operator.id,
+          warehouseId: payable.warehouseId,
+        });
+        movementId = mov.id;
+      }
+
       await tx.adPayablePayment.create({
         data: {
           payableId,
@@ -1364,6 +1443,8 @@ export const adCommerceService = {
           reference: input.reference,
           notes: input.notes,
           operatorId: ctx.operator.id,
+          financialAccountId: accountId,
+          financialMovementId: movementId,
         },
       });
       const paidAmount = num(payable.paidAmount) + input.amount;
@@ -1385,7 +1466,13 @@ export const adCommerceService = {
         entity: "payable",
         entityId: payableId,
         before: { balance: num(payable.balance), status: payable.status },
-        after: { balance, status, amount: input.amount },
+        after: {
+          balance,
+          status,
+          amount: input.amount,
+          financialAccountId: accountId,
+          financialMovementId: movementId,
+        },
       });
       return updated;
     });
@@ -1549,10 +1636,23 @@ export const adCommerceService = {
       usesSpecialRateRef?: boolean;
       requiresReference?: boolean;
       sortOrder?: number;
+      financialAccountId?: string | null;
     },
   ) {
     requireAdPermission(ctx, "settings.manage");
     const prisma = getPrisma();
+    if (input.usesSpecialRateRef) {
+      requireAdPermission(ctx, "rates.protected.manage");
+    }
+    if (input.financialAccountId) {
+      const acc = await prisma.adFinancialAccount.findFirst({
+        where: { id: input.financialAccountId, tenantId: ctx.tenantId },
+      });
+      if (!acc) throw new NotFoundError("Cuenta financiera no encontrada");
+      if (acc.currency !== input.currency) {
+        throw new ValidationError("Moneda de cuenta ≠ método de pago");
+      }
+    }
     const before = await prisma.adPaymentMethod.findUnique({
       where: {
         tenantId_code: { tenantId: ctx.tenantId, code: input.code },
@@ -1572,6 +1672,7 @@ export const adCommerceService = {
         usesSpecialRateRef: input.usesSpecialRateRef ?? false,
         requiresReference: input.requiresReference ?? false,
         sortOrder: input.sortOrder ?? 0,
+        financialAccountId: input.financialAccountId ?? undefined,
       },
       update: {
         name: input.name,
@@ -1581,6 +1682,10 @@ export const adCommerceService = {
         usesSpecialRateRef: input.usesSpecialRateRef,
         requiresReference: input.requiresReference,
         sortOrder: input.sortOrder,
+        financialAccountId:
+          input.financialAccountId === undefined
+            ? undefined
+            : input.financialAccountId,
       },
     });
     await writeAdAudit({
