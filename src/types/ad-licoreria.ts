@@ -67,6 +67,14 @@ export type AdOperator = {
   name: string;
   role: AdRole;
   active: boolean;
+  /**
+   * Depósito asignado.
+   * Obligatorio para cajero/mesonera de POS: aísla facturación por depósito.
+   * Admin / inventario pueden quedar sin depósito (acceso transversal).
+   */
+  warehouseId?: string | null;
+  /** Si true, puede entrar al POS de su depósito. */
+  posEnabled?: boolean;
 };
 
 export type AdCategory = {
@@ -650,6 +658,7 @@ export type AdInvoiceDraft = {
   provisionalNumber: string;
   status: AdInvoiceDraftStatus;
   kind: "pos_sale" | "account_close";
+  operatorId?: string;
   customerId?: string;
   customerName?: string;
   customerPhone?: string;

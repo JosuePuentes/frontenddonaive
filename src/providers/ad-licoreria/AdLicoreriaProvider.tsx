@@ -20,6 +20,7 @@ import type {
   AdInventoryMovement,
   AdInventoryMovementType,
   AdInvoiceDraft,
+  AdOperator,
   AdPayment,
   AdPaymentMethodCode,
   AdPaymentMethodConfig,
@@ -33,6 +34,7 @@ import type {
   AdSaleItem,
   AdStockTransfer,
   AdStockTransferStatus,
+  AdWarehouse,
 } from "@/types/ad-licoreria";
 
 type AdStore = AdRepositoryState & {
@@ -43,6 +45,10 @@ type AdStore = AdRepositoryState & {
   upsertPaymentMethod: (
     method: AdPaymentMethodConfig,
   ) => AdResult<AdPaymentMethodConfig>;
+  upsertWarehouse: (warehouse: AdWarehouse) => AdResult<AdWarehouse>;
+  upsertOperator: (operator: AdOperator) => AdResult<AdOperator>;
+  getPosOperatorsForWarehouse: (warehouseId: string) => AdOperator[];
+  getFloorOperatorsForWarehouse: (warehouseId: string) => AdOperator[];
   upsertProduct: (product: AdProduct) => AdResult<AdProduct>;
   upsertPresentation: (pres: AdPresentation) => AdResult<AdPresentation>;
   registerMovement: (input: {
@@ -168,6 +174,7 @@ type AdStore = AdRepositoryState & {
     payments: Omit<AdPayment, "id" | "createdAt">[];
     warehouseId: string;
     userName: string;
+    operatorId?: string;
     tableId?: string;
     mesoneraName?: string;
     customerId?: string;
@@ -257,6 +264,12 @@ export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
         adLicoreriaRepository.getPaymentMethods(activeOnly),
       updateSettings: (patch) => adLicoreriaRepository.updateSettings(patch),
       upsertPaymentMethod: (m) => adLicoreriaRepository.upsertPaymentMethod(m),
+      upsertWarehouse: (w) => adLicoreriaRepository.upsertWarehouse(w),
+      upsertOperator: (o) => adLicoreriaRepository.upsertOperator(o),
+      getPosOperatorsForWarehouse: (warehouseId) =>
+        adLicoreriaRepository.getPosOperatorsForWarehouse(warehouseId),
+      getFloorOperatorsForWarehouse: (warehouseId) =>
+        adLicoreriaRepository.getFloorOperatorsForWarehouse(warehouseId),
       upsertProduct: (p) => adLicoreriaRepository.upsertProduct(p),
       upsertPresentation: (p) => adLicoreriaRepository.upsertPresentation(p),
       registerMovement: (input) =>

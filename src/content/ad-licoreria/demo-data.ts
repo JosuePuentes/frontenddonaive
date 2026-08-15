@@ -123,11 +123,54 @@ export const AD_DEMO_PAYMENT_METHODS: AdPaymentMethodConfig[] = [
 ];
 
 export const AD_DEMO_OPERATORS: AdOperator[] = [
-  { id: "op-admin", name: "Admin A&D", role: "admin", active: true },
-  { id: "op-maria", name: "María", role: "mesonera", active: true },
-  { id: "op-carlos", name: "Carlos", role: "mesonera", active: true },
-  { id: "op-caja", name: "Cajero", role: "cajero", active: true },
-  { id: "op-inv", name: "Inventario", role: "inventario", active: true },
+  {
+    id: "op-admin",
+    name: "Admin A&D",
+    role: "admin",
+    active: true,
+    warehouseId: null,
+    posEnabled: false,
+  },
+  {
+    id: "op-maria",
+    name: "María",
+    role: "mesonera",
+    active: true,
+    warehouseId: "wh-2",
+    posEnabled: true,
+  },
+  {
+    id: "op-caja-lic",
+    name: "Cajero Licorería",
+    role: "cajero",
+    active: true,
+    warehouseId: "wh-2",
+    posEnabled: true,
+  },
+  {
+    id: "op-carlos",
+    name: "Carlos",
+    role: "mesonera",
+    active: true,
+    warehouseId: "wh-1",
+    posEnabled: true,
+  },
+  {
+    id: "op-caja-bod",
+    name: "Cajero Bodegón",
+    role: "cajero",
+    active: true,
+    warehouseId: "wh-1",
+    posEnabled: true,
+  },
+  {
+    id: "op-inv",
+    name: "Inventario",
+    role: "inventario",
+    active: true,
+    warehouseId: null,
+    posEnabled: false,
+  },
 ];
 
 export const AD_DEMO_CATEGORIES: AdCategory[] = [

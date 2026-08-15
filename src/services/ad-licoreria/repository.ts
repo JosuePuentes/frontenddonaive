@@ -413,6 +413,144 @@ export const adLicoreriaRepository = {
     return { ok: true, data: method };
   },
 
+  /** Renombrar / editar depósito (el usuario define el nombre visible). */
+  upsertWarehouse(warehouse: AdWarehouse): AdResult<AdWarehouse> {
+    if (!warehouse.name.trim()) {
+      return { ok: false, error: "Nombre del depósito obligatorio" };
+    }
+    if (!warehouse.code.trim()) {
+      return { ok: false, error: "Código del depósito obligatorio" };
+    }
+    const idx = state.warehouses.findIndex((w) => w.id === warehouse.id);
+    const before = idx >= 0 ? JSON.stringify(state.warehouses[idx]) : undefined;
+    const normalized = {
+      ...warehouse,
+      name: warehouse.name.trim(),
+      code: warehouse.code.trim().toUpperCase(),
+    };
+    if (idx === -1) state.warehouses = [...state.warehouses, normalized];
+    else {
+      const next = [...state.warehouses];
+      next[idx] = normalized;
+      state.warehouses = next;
+    }
+    audit("upsert", "warehouse", "Admin A&D", normalized.name, normalized.id, {
+      beforeValue: before,
+      afterValue: JSON.stringify(normalized),
+    });
+    emit();
+    return { ok: true, data: normalized };
+  },
+
+  /**
+   * Alta/edición de usuarios operativos.
+   * Cajero/mesonera con POS deben tener warehouseId para no mezclar facturación.
+   */
+  upsertOperator(operator: AdOperator): AdResult<AdOperator> {
+    if (!operator.name.trim()) {
+      return { ok: false, error: "Nombre de usuario obligatorio" };
+    }
+    const needsWarehouse =
+      operator.posEnabled === true ||
+      operator.role === "cajero" ||
+      operator.role === "mesonera";
+    if (needsWarehouse && !operator.warehouseId) {
+      return {
+        ok: false,
+        error:
+          "Usuarios de POS / mesonera / cajero deben estar asignados a un depósito",
+      };
+    }
+    if (
+      operator.warehouseId &&
+      !state.warehouses.some((w) => w.id === operator.warehouseId)
+    ) {
+      return { ok: false, error: "Depósito asignado no existe" };
+    }
+    const normalized: AdOperator = {
+      ...operator,
+      name: operator.name.trim(),
+      warehouseId: operator.warehouseId ?? null,
+      posEnabled:
+        operator.posEnabled ??
+        (operator.role === "cajero" || operator.role === "mesonera"),
+    };
+    const idx = state.operators.findIndex((o) => o.id === normalized.id);
+    const before = idx >= 0 ? JSON.stringify(state.operators[idx]) : undefined;
+    if (idx === -1) state.operators = [normalized, ...state.operators];
+    else {
+      const next = [...state.operators];
+      next[idx] = normalized;
+      state.operators = next;
+    }
+    audit("upsert", "operator", "Admin A&D", normalized.name, normalized.id, {
+      beforeValue: before,
+      afterValue: JSON.stringify({
+        role: normalized.role,
+        warehouseId: normalized.warehouseId,
+        posEnabled: normalized.posEnabled,
+      }),
+    });
+    emit();
+    return { ok: true, data: normalized };
+  },
+
+  /** Operadores habilitados para POS de un depósito (sin mezclar facturación). */
+  getPosOperatorsForWarehouse(warehouseId: string): AdOperator[] {
+    return state.operators.filter(
+      (o) =>
+        o.active &&
+        o.posEnabled !== false &&
+        (o.role === "cajero" || o.role === "mesonera") &&
+        o.warehouseId === warehouseId,
+    );
+  },
+
+  /** Mesoneras del mismo depósito (servicio en piso). */
+  getFloorOperatorsForWarehouse(warehouseId: string): AdOperator[] {
+    return state.operators.filter(
+      (o) =>
+        o.active &&
+        (o.role === "mesonera" || o.role === "cajero") &&
+        o.warehouseId === warehouseId,
+    );
+  },
+
+  assertOperatorCanSellInWarehouse(
+    operatorId: string | undefined,
+    warehouseId: string,
+    required = false,
+  ): AdResult {
+    if (!operatorId) {
+      if (required) {
+        return {
+          ok: false,
+          error: "Seleccione el usuario del depósito para facturar",
+        };
+      }
+      return { ok: true, data: undefined };
+    }
+    const op = state.operators.find((o) => o.id === operatorId);
+    if (!op || !op.active) {
+      return { ok: false, error: "Usuario no válido o inactivo" };
+    }
+    if (op.posEnabled === false && op.role !== "admin") {
+      return { ok: false, error: "Este usuario no tiene acceso al POS" };
+    }
+    if (op.role === "admin" && !op.warehouseId) {
+      return { ok: true, data: undefined };
+    }
+    if (op.warehouseId !== warehouseId) {
+      const wh = state.warehouses.find((w) => w.id === warehouseId);
+      const own = state.warehouses.find((w) => w.id === op.warehouseId);
+      return {
+        ok: false,
+        error: `El usuario ${op.name} pertenece a «${own?.name ?? "otro depósito"}» y no puede facturar en «${wh?.name ?? warehouseId}»`,
+      };
+    }
+    return { ok: true, data: undefined };
+  },
+
   upsertProduct(product: AdProduct): AdResult<AdProduct> {
     const idx = state.products.findIndex((p) => p.id === product.id);
     if (idx === -1) state.products = [product, ...state.products];
@@ -1459,6 +1597,7 @@ export const adLicoreriaRepository = {
     payments: Omit<AdPayment, "id" | "createdAt">[];
     warehouseId: string;
     userName: string;
+    operatorId?: string;
     tableId?: string;
     mesoneraName?: string;
     customerId?: string;
@@ -1474,6 +1613,13 @@ export const adLicoreriaRepository = {
   }): AdResult<AdSale> {
     if (!input.items.length) return { ok: false, error: "Agregue productos" };
     if (!input.payments.length) return { ok: false, error: "Registre pagos" };
+
+    const access = this.assertOperatorCanSellInWarehouse(
+      input.operatorId,
+      input.warehouseId,
+      Boolean(input.operatorId),
+    );
+    if (!access.ok) return access;
 
     for (const pay of input.payments) {
       const cfg = state.paymentMethods.find((m) => m.code === pay.method);
@@ -2131,6 +2277,7 @@ export const adLicoreriaRepository = {
     payments: Omit<AdPayment, "id" | "createdAt">[];
     warehouseId: string;
     cashierName: string;
+    operatorId?: string;
     tableId?: string;
     mesoneraName?: string;
     customerId?: string;
@@ -2145,6 +2292,12 @@ export const adLicoreriaRepository = {
     shortageDecision?: string;
   }): AdResult<AdInvoiceDraft> {
     if (!input.items.length) return { ok: false, error: "Agregue productos" };
+    const access = this.assertOperatorCanSellInWarehouse(
+      input.operatorId,
+      input.warehouseId,
+      true,
+    );
+    if (!access.ok) return access;
     const customer = input.customerId
       ? state.customers.find((c) => c.id === input.customerId)
       : undefined;
@@ -2174,6 +2327,7 @@ export const adLicoreriaRepository = {
       provisionalNumber: nextProvisionalInvoiceNumber(state.invoiceDraftSeq++),
       status: "PRELIMINAR",
       kind: input.kind ?? "pos_sale",
+      operatorId: input.operatorId,
       customerId: input.customerId,
       customerName: input.customerName ?? customer?.name,
       customerPhone: input.customerPhone ?? customer?.phone,
@@ -2238,6 +2392,7 @@ export const adLicoreriaRepository = {
       payments: draft.payments,
       warehouseId: draft.warehouseId,
       userName: input.userName,
+      operatorId: draft.operatorId,
       tableId: draft.tableId,
       mesoneraName: draft.mesoneraName,
       customerId: draft.customerId,

@@ -216,6 +216,7 @@ step(13, "Generar preliminar de factura (POS)", () => {
     ],
     payments: [{ method: "efectivo_usd", currency: "USD", amount: 5 }],
     warehouseId: AD_WH_LICORERIA,
+    operatorId: "op-caja-lic",
     cashierName: "Cajero QA",
     customerId: "cli-1",
     customerName: "Juan Pérez",
@@ -303,6 +304,7 @@ step(21, "Vender mercancía comprometida NO bloquea", () => {
     ],
     payments: [{ method: "efectivo_usd", currency: "USD", amount: qty }],
     warehouseId: AD_WH_LICORERIA,
+    operatorId: "op-caja-lic",
     cashierName: "QA",
   });
   assert(draft.ok, "draft");

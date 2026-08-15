@@ -4,7 +4,6 @@ import {
   toBaseUnits,
 } from "@/lib/ad-licoreria/conversions";
 import {
-  AD_WH_BODEGON,
   AD_WH_LICORERIA,
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
@@ -23,12 +22,15 @@ export default function AdLicoreriaVentas() {
     products,
     presentations,
     tables,
+    warehouses,
     operators,
     customers,
     paymentMethods,
     getPresentationsFor,
     getStock,
     getOperationalAvailability,
+    getPosOperatorsForWarehouse,
+    getFloorOperatorsForWarehouse,
     openAccount,
     addAccountItem,
     createPrepaid,
@@ -38,17 +40,23 @@ export default function AdLicoreriaVentas() {
     logDocumentAction,
   } = useAdLicoreria();
 
-  const mesoneras = operators.filter(
-    (o) => (o.role === "mesonera" || o.role === "cajero") && o.active,
-  );
   const activeMethods = paymentMethods.filter((m) => m.active);
+
+  const [posWarehouseId, setPosWarehouseId] = useState(
+    warehouses.find((w) => w.id === AD_WH_LICORERIA)?.id ??
+      warehouses[0]?.id ??
+      AD_WH_LICORERIA,
+  );
+  const posUsers = getPosOperatorsForWarehouse(posWarehouseId);
+  const floorUsers = getFloorOperatorsForWarehouse(posWarehouseId);
 
   const [query, setQuery] = useState("");
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [presentationId, setPresentationId] = useState("");
   const [qty, setQty] = useState(1);
   const [tableId, setTableId] = useState("");
-  const [mesoneraId, setMesoneraId] = useState(mesoneras[0]?.id ?? "");
+  const [cashierId, setCashierId] = useState(posUsers[0]?.id ?? "");
+  const [mesoneraId, setMesoneraId] = useState(floorUsers[0]?.id ?? "");
   const [customerId, setCustomerId] = useState("");
   const [cart, setCart] = useState<AdSaleItem[]>([]);
   const [notes, setNotes] = useState("");
@@ -66,6 +74,25 @@ export default function AdLicoreriaVentas() {
   const [draft, setDraft] = useState<AdInvoiceDraft | null>(null);
   const [confirmedReceipt, setConfirmedReceipt] = useState<string | null>(null);
 
+  function switchWarehouse(nextId: string) {
+    if (nextId === posWarehouseId) return;
+    if (cart.length || payments.length) {
+      const ok = window.confirm(
+        "Al cambiar de depósito se limpia el carrito y los pagos para no mezclar facturación. ¿Continuar?",
+      );
+      if (!ok) return;
+    }
+    setPosWarehouseId(nextId);
+    const nextPos = getPosOperatorsForWarehouse(nextId);
+    const nextFloor = getFloorOperatorsForWarehouse(nextId);
+    setCashierId(nextPos[0]?.id ?? "");
+    setMesoneraId(nextFloor[0]?.id ?? "");
+    setCart([]);
+    setPayments([]);
+    setDraft(null);
+    setMsg(`POS activo: ${warehouseLabel(nextId, warehouses)}`);
+  }
+
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return products.filter((p) => p.active);
@@ -82,6 +109,7 @@ export default function AdLicoreriaVentas() {
   const availablePres = getPresentationsFor(productId);
   const activePres =
     presentations.find((p) => p.id === presentationId) ?? availablePres[0];
+  const cashier = operators.find((o) => o.id === cashierId);
   const mesonera = operators.find((o) => o.id === mesoneraId);
   const customer = customers.find((c) => c.id === customerId);
   const methodCfg = activeMethods.find((m) => m.code === payMethod);
@@ -101,9 +129,9 @@ export default function AdLicoreriaVentas() {
     return getOperationalAvailability(
       productId,
       requestedBase,
-      AD_WH_LICORERIA,
+      posWarehouseId,
     );
-  }, [activePres, qty, productId, getOperationalAvailability]);
+  }, [activePres, qty, productId, getOperationalAvailability, posWarehouseId]);
 
   const cartAlerts = useMemo(
     () =>
@@ -111,7 +139,7 @@ export default function AdLicoreriaVentas() {
         const av = getOperationalAvailability(
           line.productId,
           line.qtyBase,
-          AD_WH_LICORERIA,
+          posWarehouseId,
         );
         const shortfall = Math.max(
           0,
@@ -119,7 +147,7 @@ export default function AdLicoreriaVentas() {
         );
         return { line, av, shortfall };
       }),
-    [cart, getOperationalAvailability],
+    [cart, getOperationalAvailability, posWarehouseId],
   );
 
   function addLine() {
@@ -224,6 +252,10 @@ export default function AdLicoreriaVentas() {
       setMsg("Agregue productos");
       return;
     }
+    if (!cashierId) {
+      setMsg("Seleccione el usuario POS de este depósito");
+      return;
+    }
     if (!payments.length) {
       setMsg("Registre al menos un pago");
       return;
@@ -235,8 +267,9 @@ export default function AdLicoreriaVentas() {
     const result = createInvoiceDraft({
       items: cart,
       payments,
-      warehouseId: AD_WH_LICORERIA,
-      cashierName: mesonera?.name ?? "Cajero",
+      warehouseId: posWarehouseId,
+      operatorId: cashierId,
+      cashierName: cashier?.name ?? "Cajero",
       tableId: tableId || undefined,
       mesoneraName: mesonera?.name,
       customerId: customer?.id,
@@ -259,7 +292,7 @@ export default function AdLicoreriaVentas() {
     if (!draft) return;
     const result = confirmInvoiceDraft({
       draftId: draft.id,
-      userName: mesonera?.name ?? "Cajero",
+      userName: cashier?.name ?? mesonera?.name ?? "Cajero",
       continueWithShortage,
       shortageDecision: continueWithShortage
         ? "continuar_con_faltante"
@@ -284,10 +317,14 @@ export default function AdLicoreriaVentas() {
       setMsg("Agregue productos");
       return;
     }
+    if (!cashierId && !mesoneraId) {
+      setMsg("Seleccione usuario del depósito");
+      return;
+    }
     const opened = openAccount({
       tableId: tableId || undefined,
-      mesoneraId: mesonera?.id,
-      mesoneraName: mesonera?.name ?? "Mesonera",
+      mesoneraId: mesonera?.id ?? cashier?.id,
+      mesoneraName: mesonera?.name ?? cashier?.name ?? "Mesonera",
       customerId: customer?.id,
       customerName: customer?.name,
       customerPhone: customer?.phone,
@@ -303,9 +340,9 @@ export default function AdLicoreriaVentas() {
         productId: line.productId,
         presentationId: line.presentationId,
         qty: line.qty,
-        userName: mesonera?.name ?? "Mesonera",
+        userName: mesonera?.name ?? cashier?.name ?? "Mesonera",
         deductStock: false,
-        warehouseId: AD_WH_LICORERIA,
+        warehouseId: posWarehouseId,
       });
       if (!r.ok) {
         setMsg(r.error);
@@ -316,13 +353,17 @@ export default function AdLicoreriaVentas() {
     setPayments([]);
     setNotes("");
     setMsg(
-      `Cuenta #${opened.data.number} abierta · productos pendientes de servir`,
+      `Cuenta #${opened.data.number} abierta en ${warehouseLabel(posWarehouseId, warehouses)} · pendientes de servir`,
     );
   }
 
   function toPrepaid() {
     if (!cart.length) {
       setMsg("Agregue productos");
+      return;
+    }
+    if (!cashierId) {
+      setMsg("Seleccione el usuario POS de este depósito");
       return;
     }
     if (!customer?.phone) {
@@ -339,7 +380,7 @@ export default function AdLicoreriaVentas() {
         qty: c.qty,
       })),
       payments,
-      userName: mesonera?.name ?? "Cajero",
+      userName: cashier?.name ?? "Cajero",
     });
     if (!result.ok) {
       setMsg(result.error);
@@ -357,17 +398,46 @@ export default function AdLicoreriaVentas() {
     ? Math.max(0, qtyAvail.requestedBase - qtyAvail.availableOperationalTotal)
     : 0;
   const licAv = qtyAvail?.byWarehouse.find(
-    (w) => w.warehouseId === AD_WH_LICORERIA,
+    (w) => w.warehouseId === posWarehouseId,
   );
   const bodAv = qtyAvail?.byWarehouse.find(
-    (w) => w.warehouseId === AD_WH_BODEGON,
+    (w) => w.warehouseId !== posWarehouseId,
   );
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
       <section className="ad-panel space-y-3">
         <h2 className="ad-panel-title">Punto de venta</h2>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <p className="text-sm text-[var(--ad-muted)]">
+          Cada depósito tiene sus propios usuarios POS. La facturación no se
+          mezcla entre depósitos.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <select
+            className="ad-select"
+            value={posWarehouseId}
+            onChange={(e) => switchWarehouse(e.target.value)}
+          >
+            {warehouses
+              .filter((w) => w.active)
+              .map((w) => (
+                <option key={w.id} value={w.id}>
+                  Depósito: {w.name} ({w.code})
+                </option>
+              ))}
+          </select>
+          <select
+            className="ad-select"
+            value={cashierId}
+            onChange={(e) => setCashierId(e.target.value)}
+          >
+            <option value="">Usuario POS</option>
+            {posUsers.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} · {m.role}
+              </option>
+            ))}
+          </select>
           <select
             className="ad-select"
             value={tableId}
@@ -387,27 +457,34 @@ export default function AdLicoreriaVentas() {
             value={mesoneraId}
             onChange={(e) => setMesoneraId(e.target.value)}
           >
-            {mesoneras.map((m) => (
+            <option value="">Mesonera (piso)</option>
+            {floorUsers.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name} · {m.role}
               </option>
             ))}
           </select>
-          <select
-            className="ad-select"
-            value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
-          >
-            <option value="">Cliente</option>
-            {customers
-              .filter((c) => c.active)
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} · {c.phone}
-                </option>
-              ))}
-          </select>
         </div>
+        <select
+          className="ad-select"
+          value={customerId}
+          onChange={(e) => setCustomerId(e.target.value)}
+        >
+          <option value="">Cliente</option>
+          {customers
+            .filter((c) => c.active)
+            .map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} · {c.phone}
+              </option>
+            ))}
+        </select>
+        {!posUsers.length ? (
+          <p className="text-sm text-[var(--ad-danger)]">
+            No hay usuarios POS asignados a este depósito. Configúrelos en
+            Configuración.
+          </p>
+        ) : null}
 
         <input
           className="ad-input"
@@ -476,15 +553,16 @@ export default function AdLicoreriaVentas() {
                   unidades.
                 </p>
                 <p className="text-[var(--ad-muted)]">
-                  Licorería: {licAv?.availableOperational ?? 0} · Bodegón:{" "}
-                  {bodAv?.availableOperational ?? 0} · Compra necesaria:{" "}
-                  {qtyAvail.plan.purchaseNeeded}
-                </p>
+              {warehouseLabel(posWarehouseId, warehouses)}:{" "}
+              {licAv?.availableOperational ?? 0} · Otros depósitos:{" "}
+              {bodAv?.availableOperational ?? 0} · Compra necesaria:{" "}
+              {qtyAvail.plan.purchaseNeeded}
+            </p>
               </>
             ) : null}
             <p className="text-xs text-[var(--ad-muted)]">
-              Stock físico Licorería: {getStock(productId, AD_WH_LICORERIA)} u.
-              base
+              Stock físico {warehouseLabel(posWarehouseId, warehouses)}:{" "}
+              {getStock(productId, posWarehouseId)} u. base
               {activePres
                 ? ` · línea = ${toBaseUnits(activePres, qty)} u. base`
                 : null}
@@ -722,7 +800,7 @@ export default function AdLicoreriaVentas() {
                   action: "print",
                   entity: "sale",
                   entityId: confirmedReceipt,
-                  userName: mesonera?.name ?? "Cajero",
+                  userName: cashier?.name ?? "Cajero",
                   detail: confirmedReceipt,
                 })
               }
@@ -737,7 +815,7 @@ export default function AdLicoreriaVentas() {
                   action: "download",
                   entity: "sale",
                   entityId: confirmedReceipt,
-                  userName: mesonera?.name ?? "Cajero",
+                  userName: cashier?.name ?? "Cajero",
                   detail: confirmedReceipt,
                 })
               }
@@ -768,6 +846,11 @@ export default function AdLicoreriaVentas() {
               <p>Cédula: {draft.customerDocumentId ?? "—"}</p>
               <p>Mesa: {draft.tableNumber ?? "—"}</p>
               <p>Mesonera: {draft.mesoneraName ?? "—"}</p>
+              <p>
+                Depósito:{" "}
+                {warehouseLabel(draft.warehouseId, warehouses)}
+              </p>
+              <p>Cajero: {draft.cashierName}</p>
               <p>Fecha: {new Date(draft.createdAt).toLocaleString("es-VE")}</p>
             </div>
             <table className="ad-table mt-3">
@@ -808,11 +891,11 @@ export default function AdLicoreriaVentas() {
                 {draft.supplyAlerts
                   .filter((a) => a.shortfall > 0)
                   .map((a) => {
-                    const lic = a.availability.byWarehouse.find(
-                      (w) => w.warehouseId === AD_WH_LICORERIA,
+                    const preferred = a.availability.byWarehouse.find(
+                      (w) => w.warehouseId === draft.warehouseId,
                     );
-                    const bod = a.availability.byWarehouse.find(
-                      (w) => w.warehouseId === AD_WH_BODEGON,
+                    const other = a.availability.byWarehouse.find(
+                      (w) => w.warehouseId !== draft.warehouseId,
                     );
                     return (
                       <div key={a.productId} className="mb-2 text-sm">
@@ -828,11 +911,10 @@ export default function AdLicoreriaVentas() {
                           {a.requestedBase} · Faltante: {a.shortfall}
                         </p>
                         <p className="text-[var(--ad-muted)]">
-                          {warehouseLabel(AD_WH_LICORERIA)}:{" "}
-                          {lic?.availableOperational ?? 0} ·{" "}
-                          {warehouseLabel(AD_WH_BODEGON)}:{" "}
-                          {bod?.availableOperational ?? 0} · Compra necesaria:{" "}
-                          {a.availability.plan.purchaseNeeded}
+                          {warehouseLabel(draft.warehouseId, warehouses)}:{" "}
+                          {preferred?.availableOperational ?? 0} · Otro
+                          depósito: {other?.availableOperational ?? 0} · Compra
+                          necesaria: {a.availability.plan.purchaseNeeded}
                         </p>
                       </div>
                     );
@@ -862,7 +944,7 @@ export default function AdLicoreriaVentas() {
                 onClick={() => {
                   cancelInvoiceDraft({
                     draftId: draft.id,
-                    userName: mesonera?.name ?? "Cajero",
+                    userName: cashier?.name ?? "Cajero",
                   });
                   setDraft(null);
                 }}
