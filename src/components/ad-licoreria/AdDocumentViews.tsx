@@ -366,4 +366,172 @@ export function maskDocument(doc?: string | null): string {
   return `${t.slice(0, 2)}****${t.slice(-2)}`;
 }
 
+export type AdPurchasePrintLine = {
+  code: string;
+  description: string;
+  brand: string;
+  presentation: string;
+  qty: number;
+  unitCost: number;
+  presentationCost: number;
+  lineSubtotal: number;
+  taxable: boolean;
+  lineTax: number;
+  lineTotal: number;
+};
+
+export type AdPurchasePrintDoc = {
+  title: string;
+  supplierName: string;
+  invoiceNumber: string;
+  invoiceDate: string | Date | null;
+  paymentMethodName: string;
+  currency: string;
+  paymentCondition: string;
+  creditDays: number | null;
+  dueDate: string | Date | null;
+  notes?: string | null;
+  subtotal: number;
+  tax: number;
+  taxLabel: string;
+  grandTotal: number;
+  lines: AdPurchasePrintLine[];
+};
+
+function fmtDate(v: string | Date | null | undefined): string {
+  if (!v) return "—";
+  const d = typeof v === "string" ? new Date(v) : v;
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("es-VE");
+}
+
+/** Documento imprimible de compra (preliminar / confirmada) — sin utilidad/margen/PVP. */
+export function AdPurchaseDocument(props: {
+  document: AdPurchasePrintDoc;
+  onBack?: () => void;
+  onConfirm?: () => void;
+  confirmLabel?: string;
+  confirmDisabled?: boolean;
+}) {
+  const doc = props.document;
+  const docId = `ad-purchase-doc-${doc.invoiceNumber}`.replace(/\s+/g, "-");
+  const cur = doc.currency === "BS" ? "Bs" : "USD";
+
+  return (
+    <div className="ad-doc-shell space-y-4">
+      <div id={docId} className="ad-doc">
+        <p className="ad-eyebrow">{doc.title}</p>
+        <h2 className="ad-display text-3xl text-[var(--ad-gold-soft)]">
+          {adLicoreriaBrand.name}
+        </h2>
+        <p className="text-sm text-[var(--ad-muted)]">{adLicoreriaBrand.tagline}</p>
+        <dl className="ad-doc__meta mt-4">
+          <div>
+            <dt>Proveedor</dt>
+            <dd>{doc.supplierName}</dd>
+          </div>
+          <div>
+            <dt>Nº factura</dt>
+            <dd>{doc.invoiceNumber}</dd>
+          </div>
+          <div>
+            <dt>Fecha</dt>
+            <dd>{fmtDate(doc.invoiceDate)}</dd>
+          </div>
+          <div>
+            <dt>Método de pago</dt>
+            <dd>{doc.paymentMethodName || "—"}</dd>
+          </div>
+          <div>
+            <dt>Moneda</dt>
+            <dd>{doc.currency}</dd>
+          </div>
+          <div>
+            <dt>Condición</dt>
+            <dd>{doc.paymentCondition}</dd>
+          </div>
+          <div>
+            <dt>Días de crédito</dt>
+            <dd>{doc.creditDays ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Vencimiento</dt>
+            <dd>{fmtDate(doc.dueDate)}</dd>
+          </div>
+        </dl>
+        <table className="ad-table mt-4">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Descripción</th>
+              <th>Marca</th>
+              <th>Presentación</th>
+              <th>Cant.</th>
+              <th>Costo u.</th>
+              <th>Costo pres.</th>
+              <th>Subtotal</th>
+              <th>IVA</th>
+            </tr>
+          </thead>
+          <tbody>
+            {doc.lines.map((l, i) => (
+              <tr key={`${l.code}-${i}`}>
+                <td>{l.code}</td>
+                <td>{l.description}</td>
+                <td>{l.brand || "—"}</td>
+                <td>{l.presentation}</td>
+                <td>{l.qty}</td>
+                <td className="tabular-nums">{l.unitCost.toFixed(4)}</td>
+                <td className="tabular-nums">{l.presentationCost.toFixed(2)}</td>
+                <td className="tabular-nums">{l.lineSubtotal.toFixed(2)}</td>
+                <td className="tabular-nums">
+                  {l.taxable ? l.lineTax.toFixed(2) : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <ul className="mt-3 space-y-1 text-sm tabular-nums">
+          <li>
+            Subtotal: {doc.subtotal.toFixed(2)} {cur}
+          </li>
+          <li>
+            {doc.taxLabel || "IVA 16%"}: {doc.tax.toFixed(2)} {cur}
+          </li>
+          <li className="text-base font-semibold">
+            Total general: {doc.grandTotal.toFixed(2)} {cur}
+          </li>
+        </ul>
+        {doc.notes ? (
+          <p className="mt-2 text-xs text-[var(--ad-muted)]">Notas: {doc.notes}</p>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {props.onBack ? (
+          <button type="button" className="ad-btn" onClick={props.onBack}>
+            Editar compra
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="ad-btn ad-btn--gold"
+          onClick={() => printNode(docId)}
+        >
+          Imprimir / descargar
+        </button>
+        {props.onConfirm ? (
+          <button
+            type="button"
+            className="ad-btn"
+            disabled={props.confirmDisabled}
+            onClick={props.onConfirm}
+          >
+            {props.confirmLabel ?? "Confirmar compra"}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export type { MoneyLine };

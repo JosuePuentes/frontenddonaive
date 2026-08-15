@@ -87,6 +87,12 @@ export const adCommerceClient = {
       "/api/v1/ad/commerce/purchases",
       body,
     ),
+  updatePurchase: (id: string, body: Record<string, unknown>) =>
+    commerceFetch<Record<string, unknown>>(
+      "PUT",
+      `/api/v1/ad/commerce/purchases/${id}`,
+      body,
+    ),
   getPurchase: (id: string) =>
     commerceFetch<Record<string, unknown>>(
       "GET",

@@ -20,6 +20,7 @@ import {
   setPresentationPriceSchema,
   setProtectedRateSchema,
   updateCommercePurchaseLineSchema,
+  updateCommercePurchaseSchema,
   updateSupplierSchema,
   upsertPaymentMethodSchema,
 } from "./commerce.validation.js";
@@ -112,6 +113,21 @@ adCommerceRouter.get("/commerce/purchases/:id", async (req, res, next) => {
   try {
     const ctx = getAdContext(req);
     const data = await adCommerceService.getPurchase(ctx, req.params.id);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adCommerceRouter.put("/commerce/purchases/:id", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(updateCommercePurchaseSchema, req.body);
+    const data = await adCommerceService.updatePurchase(
+      ctx,
+      req.params.id,
+      body,
+    );
     res.json({ data });
   } catch (err) {
     next(err);

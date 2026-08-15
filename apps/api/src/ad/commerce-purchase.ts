@@ -200,60 +200,74 @@ export function moneyDoc(purchase: {
   creditDays: number | null;
   dueDate: Date | null;
   paymentMethodId: string | null;
+  paymentMethod?: { name: string; currency: string } | null;
+  warehouse?: { name: string; code: string } | null;
   status: string;
   id: string;
   notes: string | null;
   invoiceDate: Date | null;
 }) {
   const cur = purchase.currency === "BS" ? "Bs" : "USD";
+  const pick = (usd: unknown, bs: unknown) =>
+    num((cur === "Bs" ? bs : usd) as Prisma.Decimal);
   return {
     id: purchase.id,
     status: purchase.status,
     supplierName: purchase.supplierName,
     invoiceNumber: purchase.invoiceNumber,
     warehouseId: purchase.warehouseId,
+    warehouseName: purchase.warehouse?.name ?? null,
     currency: purchase.currency,
     paymentCondition: purchase.paymentCondition,
     creditDays: purchase.creditDays,
     dueDate: purchase.dueDate,
     paymentMethodId: purchase.paymentMethodId,
+    paymentMethodName: purchase.paymentMethod?.name ?? null,
     invoiceDate: purchase.invoiceDate,
     notes: purchase.notes,
-    /** Documento imprimible — sin utilidad/margen/PVP. */
+    /** Documento imprimible — sin utilidad/margen/PVP/tasa protegida. */
     document: {
-      subtotal: num(
-        cur === "Bs" ? purchase.subtotalBs : purchase.subtotalUsd,
-      ),
-      tax: num(cur === "Bs" ? purchase.taxBs : purchase.taxUsd),
-      grandTotal: num(
-        cur === "Bs" ? purchase.grandTotalBs : purchase.grandTotalUsd,
-      ),
-      lines: purchase.lines.map((l) => ({
-        productId: l.productId,
-        presentationId: l.presentationId,
-        qty: num(l.qty as Prisma.Decimal),
-        qtyBonus: num(l.qtyBonus as Prisma.Decimal),
-        unitCost: num(
-          cur === "Bs" ? (l.unitCostBs as Prisma.Decimal) : (l.unitCostUsd as Prisma.Decimal),
-        ),
-        presentationCost: num(
-          cur === "Bs"
-            ? (l.presentationCostBs as Prisma.Decimal)
-            : (l.presentationCostUsd as Prisma.Decimal),
-        ),
-        lineSubtotal: num(
-          cur === "Bs" ? (l.lineCostBs as Prisma.Decimal) : (l.lineCostUsd as Prisma.Decimal),
-        ),
-        taxable: Boolean(l.taxable),
-        lineTax: num(
-          cur === "Bs" ? (l.lineTaxBs as Prisma.Decimal) : (l.lineTaxUsd as Prisma.Decimal),
-        ),
-        lineTotal: num(
-          cur === "Bs"
-            ? (l.lineTotalWithTaxBs as Prisma.Decimal)
-            : (l.lineTotalWithTaxUsd as Prisma.Decimal),
-        ),
-      })),
+      title:
+        purchase.status === "RECEIVED"
+          ? "COMPRA CONFIRMADA"
+          : "COMPRA PRELIMINAR",
+      supplierName: purchase.supplierName,
+      invoiceNumber: purchase.invoiceNumber,
+      invoiceDate: purchase.invoiceDate,
+      warehouseName: purchase.warehouse?.name ?? purchase.warehouseId,
+      paymentMethodName: purchase.paymentMethod?.name ?? "—",
+      currency: purchase.currency,
+      paymentCondition: purchase.paymentCondition,
+      creditDays: purchase.creditDays,
+      dueDate: purchase.dueDate,
+      notes: purchase.notes,
+      subtotal: pick(purchase.subtotalUsd, purchase.subtotalBs),
+      tax: pick(purchase.taxUsd, purchase.taxBs),
+      taxLabel: "IVA 16%",
+      grandTotal: pick(purchase.grandTotalUsd, purchase.grandTotalBs),
+      lines: purchase.lines.map((l) => {
+        const product = l.product as
+          | { sku?: string | null; name?: string; brand?: string | null }
+          | undefined;
+        const presentation = l.presentation as
+          | { name?: string; unitsPerPresentation?: Prisma.Decimal | number }
+          | undefined;
+        return {
+          code: product?.sku ?? "",
+          description: product?.name ?? "",
+          brand: product?.brand ?? "",
+          presentation: presentation?.name ?? "",
+          unitsPerPresentation: num(presentation?.unitsPerPresentation),
+          qty: num(l.qty as Prisma.Decimal),
+          qtyBonus: num(l.qtyBonus as Prisma.Decimal),
+          unitCost: pick(l.unitCostUsd, l.unitCostBs),
+          presentationCost: pick(l.presentationCostUsd, l.presentationCostBs),
+          lineSubtotal: pick(l.lineCostUsd, l.lineCostBs),
+          taxable: Boolean(l.taxable),
+          lineTax: pick(l.lineTaxUsd, l.lineTaxBs),
+          lineTotal: pick(l.lineTotalWithTaxUsd, l.lineTotalWithTaxBs),
+        };
+      }),
     },
   };
 }

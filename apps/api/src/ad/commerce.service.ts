@@ -511,6 +511,28 @@ export const adCommerceService = {
     };
   },
 
+  purchaseTotalsPayload(purchase: {
+    currency: string;
+    subtotalUsd: Prisma.Decimal | number;
+    subtotalBs: Prisma.Decimal | number;
+    taxUsd: Prisma.Decimal | number;
+    taxBs: Prisma.Decimal | number;
+    grandTotalUsd: Prisma.Decimal | number;
+    grandTotalBs: Prisma.Decimal | number;
+  }) {
+    return {
+      subtotal: num(
+        purchase.currency === "BS" ? purchase.subtotalBs : purchase.subtotalUsd,
+      ),
+      tax: num(purchase.currency === "BS" ? purchase.taxBs : purchase.taxUsd),
+      grandTotal: num(
+        purchase.currency === "BS"
+          ? purchase.grandTotalBs
+          : purchase.grandTotalUsd,
+      ),
+    };
+  },
+
   async getPurchase(ctx: AdRequestContext, purchaseId: string) {
     requireAdPermission(ctx, "purchases.create");
     const prisma = getPrisma();
@@ -520,6 +542,7 @@ export const adCommerceService = {
         lines: { include: { product: true, presentation: true } },
         supplier: true,
         paymentMethod: true,
+        warehouse: true,
         payable: true,
       },
     });
@@ -530,21 +553,200 @@ export const adCommerceService = {
         purchase as unknown as Record<string, unknown>,
       ),
       ...moneyDoc(purchase),
-      totals: {
-        subtotal: num(
-          purchase.currency === "BS"
-            ? purchase.subtotalBs
-            : purchase.subtotalUsd,
-        ),
-        tax: num(
-          purchase.currency === "BS" ? purchase.taxBs : purchase.taxUsd,
-        ),
-        grandTotal: num(
-          purchase.currency === "BS"
-            ? purchase.grandTotalBs
-            : purchase.grandTotalUsd,
-        ),
+      totals: this.purchaseTotalsPayload(purchase),
+    };
+  },
+
+  /**
+   * Sincroniza encabezado + líneas de la misma compra (DRAFT/PRELIMINARY).
+   * No crea factura nueva, no toca inventario ni CxP.
+   * Si estaba PRELIMINARY, vuelve a DRAFT hasta re-totalizar.
+   */
+  async updatePurchase(
+    ctx: AdRequestContext,
+    purchaseId: string,
+    input: {
+      warehouseId: string;
+      supplierId?: string;
+      supplierName?: string;
+      invoiceNumber: string;
+      invoiceDate?: string;
+      currency: "USD" | "BS";
+      paymentMethodId?: string;
+      paymentCondition: "CONTADO" | "CREDITO";
+      creditDays?: number;
+      dueDate?: string;
+      reference?: string;
+      notes?: string;
+      useProtectedRateRef?: boolean;
+      preliminary?: boolean;
+      lines: (RawPurchaseLineInput & { taxable?: boolean; taxRate?: number })[];
+    },
+  ) {
+    requireAdPermission(ctx, "purchases.create");
+    const prisma = getPrisma();
+    const existing = await prisma.adPurchase.findFirst({
+      where: { id: purchaseId, tenantId: ctx.tenantId },
+      include: { lines: true },
+    });
+    if (!existing) throw new NotFoundError("Compra no encontrada");
+    if (existing.status !== "DRAFT" && existing.status !== "PRELIMINARY") {
+      throw new ValidationError(
+        "Solo se sincronizan compras en borrador o preliminar",
+      );
+    }
+    requireWarehouseAccess(ctx, existing.warehouseId);
+
+    const warehouseId = resolveEffectiveWarehouseId(
+      ctx.operator,
+      input.warehouseId,
+    );
+    if (!warehouseId) throw new ValidationError("Depósito destino obligatorio");
+    requireWarehouseAccess(ctx, warehouseId);
+
+    if (!input.lines?.length) {
+      throw new ValidationError("Agregue al menos un producto");
+    }
+
+    let supplierName = input.supplierName?.trim() ?? "";
+    if (input.supplierId) {
+      const supplier = await prisma.adSupplier.findFirst({
+        where: { id: input.supplierId, tenantId: ctx.tenantId },
+      });
+      if (!supplier) throw new NotFoundError("Proveedor no encontrado");
+      supplierName = supplier.name;
+    }
+    if (!supplierName) throw new ValidationError("Proveedor requerido");
+
+    let useProtected = Boolean(input.useProtectedRateRef);
+    if (input.paymentMethodId) {
+      const pm = await prisma.adPaymentMethod.findFirst({
+        where: { id: input.paymentMethodId, tenantId: ctx.tenantId },
+      });
+      if (pm?.usesSpecialRateRef) useProtected = true;
+    }
+
+    const bcv = await latestRate(ctx.tenantId, "BCV");
+    const protectedRate = await latestRate(ctx.tenantId, "PROTECTED");
+    if (useProtected) {
+      requireAdPermission(ctx, "rates.protected.manage");
+      if (!protectedRate || !bcv) {
+        throw new ValidationError(
+          "Tasa BCV y tasa protegida requeridas para referencia especial",
+        );
+      }
+    }
+
+    const built = [];
+    for (const raw of input.lines) {
+      const pres = await prisma.adPresentation.findUniqueOrThrow({
+        where: { id: raw.presentationId },
+        include: { product: true },
+      });
+      if (pres.product.tenantId !== ctx.tenantId) {
+        throw new ForbiddenError("Presentación fuera del tenant");
+      }
+      built.push(
+        buildPurchaseLineFromPresentation(pres, raw, {
+          tenantId: ctx.tenantId,
+          useProtected,
+          protectedRate,
+          bcv,
+          currency: input.currency,
+        }),
+      );
+    }
+    const agg = aggregateBuiltLines(built);
+
+    const invoiceDate = input.invoiceDate
+      ? new Date(input.invoiceDate)
+      : existing.invoiceDate ?? new Date();
+    let dueDate: Date | null = input.dueDate ? new Date(input.dueDate) : null;
+    const creditDays = input.creditDays ?? 0;
+    if (input.paymentCondition === "CREDITO" && !dueDate && creditDays > 0) {
+      dueDate = new Date(invoiceDate);
+      dueDate.setDate(dueDate.getDate() + creditDays);
+    }
+
+    const beforeSnapshot = {
+      status: existing.status,
+      invoiceNumber: existing.invoiceNumber,
+      lines: existing.lines.length,
+      subtotalUsd: num(existing.subtotalUsd),
+      taxUsd: num(existing.taxUsd),
+      grandTotalUsd: num(existing.grandTotalUsd),
+    };
+
+    const purchase = await prisma.$transaction(async (tx) => {
+      await tx.adPurchaseLine.deleteMany({ where: { purchaseId } });
+      return tx.adPurchase.update({
+        where: { id: purchaseId },
+        data: {
+          warehouseId,
+          supplierId: input.supplierId,
+          supplierName,
+          invoiceNumber: input.invoiceNumber,
+          invoiceDate,
+          /** Tras editar, vuelve a borrador hasta re-totalizar. */
+          status: "DRAFT",
+          currency: input.currency,
+          paymentMethodId: input.paymentMethodId,
+          paymentCondition: input.paymentCondition,
+          creditDays: creditDays || null,
+          dueDate,
+          reference: input.reference,
+          notes: input.notes,
+          bcvRateSnapshot: bcv != null ? dec(bcv) : undefined,
+          protectedRateSnapshot:
+            useProtected && protectedRate != null
+              ? dec(protectedRate)
+              : undefined,
+          useProtectedRateRef: useProtected,
+          totalCostUsd: dec(agg.totalEffectiveUsd),
+          totalCostBs: dec(agg.totalEffectiveBs),
+          totalInvoicedUsd: dec(agg.totalInvoicedUsd),
+          totalInvoicedBs: dec(agg.totalInvoicedBs),
+          subtotalUsd: dec(agg.subtotalUsd),
+          subtotalBs: dec(agg.subtotalBs),
+          taxUsd: dec(agg.taxUsd),
+          taxBs: dec(agg.taxBs),
+          grandTotalUsd: dec(agg.grandTotalUsd),
+          grandTotalBs: dec(agg.grandTotalBs),
+          lines: { create: built.map((b) => b.data) },
+        },
+        include: {
+          lines: { include: { product: true, presentation: true } },
+          supplier: true,
+          paymentMethod: true,
+          warehouse: true,
+        },
+      });
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      warehouseId,
+      action: "update",
+      entity: "purchase",
+      entityId: purchaseId,
+      before: beforeSnapshot,
+      after: {
+        status: purchase.status,
+        invoiceNumber: purchase.invoiceNumber,
+        lines: purchase.lines.length,
+        subtotalUsd: num(purchase.subtotalUsd),
+        taxUsd: num(purchase.taxUsd),
+        grandTotalUsd: num(purchase.grandTotalUsd),
       },
+    });
+
+    return {
+      ...sanitizePurchaseForClient(
+        purchase as unknown as Record<string, unknown>,
+      ),
+      ...moneyDoc(purchase),
+      totals: this.purchaseTotalsPayload(purchase),
     };
   },
 
@@ -585,6 +787,7 @@ export const adCommerceService = {
         lines: { include: { product: true, presentation: true } },
         supplier: true,
         paymentMethod: true,
+        warehouse: true,
       },
     });
   },
@@ -779,7 +982,7 @@ export const adCommerceService = {
     return this.getPurchase(ctx, purchaseId);
   },
 
-  /** Totalizar → PRELIMINARY (sin inventario ni CxP). */
+  /** Totalizar → PRELIMINARY (sin inventario ni CxP). Re-totalizar = mismo id. */
   async totalizePurchase(ctx: AdRequestContext, purchaseId: string) {
     requireAdPermission(ctx, "purchases.create");
     const prisma = getPrisma();
@@ -796,14 +999,18 @@ export const adCommerceService = {
       throw new ValidationError("Estado no permite totalizar");
     }
 
-    const updated = await prisma.adPurchase.update({
-      where: { id: purchaseId },
-      data: { status: "PRELIMINARY" },
-      include: {
-        lines: { include: { product: true, presentation: true } },
-        supplier: true,
-        paymentMethod: true,
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      await this.recalculatePurchaseTotals(tx, purchaseId);
+      return tx.adPurchase.update({
+        where: { id: purchaseId },
+        data: { status: "PRELIMINARY" },
+        include: {
+          lines: { include: { product: true, presentation: true } },
+          supplier: true,
+          paymentMethod: true,
+          warehouse: true,
+        },
+      });
     });
 
     await writeAdAudit({
@@ -813,12 +1020,17 @@ export const adCommerceService = {
       action: "totalize",
       entity: "purchase",
       entityId: purchaseId,
-      before: { status: before.status },
+      before: {
+        status: before.status,
+        subtotalUsd: num(before.subtotalUsd),
+        taxUsd: num(before.taxUsd),
+        grandTotalUsd: num(before.grandTotalUsd),
+      },
       after: {
         status: "PRELIMINARY",
-        subtotal: num(updated.subtotalUsd),
-        tax: num(updated.taxUsd),
-        grandTotal: num(updated.grandTotalUsd),
+        subtotalUsd: num(updated.subtotalUsd),
+        taxUsd: num(updated.taxUsd),
+        grandTotalUsd: num(updated.grandTotalUsd),
       },
     });
 
@@ -827,17 +1039,7 @@ export const adCommerceService = {
         updated as unknown as Record<string, unknown>,
       ),
       ...moneyDoc(updated),
-      totals: {
-        subtotal: num(
-          updated.currency === "BS" ? updated.subtotalBs : updated.subtotalUsd,
-        ),
-        tax: num(updated.currency === "BS" ? updated.taxBs : updated.taxUsd),
-        grandTotal: num(
-          updated.currency === "BS"
-            ? updated.grandTotalBs
-            : updated.grandTotalUsd,
-        ),
-      },
+      totals: this.purchaseTotalsPayload(updated),
     };
   },
 
@@ -961,6 +1163,7 @@ export const adCommerceService = {
           lines: { include: { product: true, presentation: true } },
           supplier: true,
           paymentMethod: true,
+          warehouse: true,
         },
       });
 

@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import {
+  AdPurchaseDocument,
+  type AdPurchasePrintDoc,
+} from "@/components/ad-licoreria/AdDocumentViews";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { adCommerceClient } from "@/services/ad-licoreria/commerce-client";
@@ -108,6 +112,13 @@ export default function AdLicoreriaCompras() {
     }
     return { subtotal, tax, grandTotal: subtotal + tax };
   }, [lines]);
+
+  const printDoc = useMemo((): AdPurchasePrintDoc | null => {
+    if (!prelim) return null;
+    const d = (prelim as { document?: AdPurchasePrintDoc }).document;
+    if (!d) return null;
+    return d;
+  }, [prelim]);
 
   useEffect(() => {
     void (async () => {
@@ -270,17 +281,12 @@ export default function AdLicoreriaCompras() {
       id = String((created.data as { id: string }).id);
       setPurchaseId(id);
     } else {
-      // Re-crear borrador simple: si ya hay id, totalizar sobre el existente
-      // (ediciones locales se reenvían creando nueva compra si se borró).
-      const created = await adCommerceClient.createPurchase({
-        ...body,
-        invoiceNumber: `${invoice.trim()}-${Date.now().toString().slice(-4)}`,
-      });
-      if (!created.ok) {
-        setMsg(created.error);
+      const updated = await adCommerceClient.updatePurchase(id, body);
+      if (!updated.ok) {
+        setMsg(updated.error);
         return;
       }
-      id = String((created.data as { id: string }).id);
+      id = String((updated.data as { id: string }).id);
       setPurchaseId(id);
     }
 
@@ -293,7 +299,7 @@ export default function AdLicoreriaCompras() {
       setPrelim(t.data as Record<string, unknown>);
       setMsg("Preliminar listo — revise y confirme");
     } else {
-      setMsg("Borrador guardado");
+      setMsg("Borrador guardado (misma compra)");
     }
   }
 
@@ -312,21 +318,9 @@ export default function AdLicoreriaCompras() {
       return;
     }
     setMsg("Compra confirmada — inventario y CxP registrados");
-    setPrelim(null);
+    setPrelim(r.data as Record<string, unknown>);
     setLines([]);
-    setPurchaseId(null);
     setInvoice("");
-  }
-
-  function printPrelim() {
-    if (!prelim) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(
-      `<pre>${JSON.stringify((prelim as { document?: unknown }).document ?? prelim, null, 2)}</pre>`,
-    );
-    w.document.close();
-    w.print();
   }
 
   return (
@@ -749,39 +743,35 @@ export default function AdLicoreriaCompras() {
         </div>
       )}
 
-      {prelim && (
+      {prelim && printDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="ad-panel max-h-[90vh] w-full max-w-2xl space-y-3 overflow-auto">
-            <h2 className="text-lg font-semibold">Preliminar de compra</h2>
-            <p className="text-sm text-[var(--ad-muted)]">
-              Sin utilidad / margen / precio de venta.
-            </p>
-            <pre className="overflow-auto rounded bg-black/5 p-2 text-xs">
-              {JSON.stringify(
-                (prelim as { document?: unknown }).document ?? prelim,
-                null,
-                2,
-              )}
-            </pre>
-            <div className="flex flex-wrap gap-2">
+          <div className="ad-panel max-h-[90vh] w-full max-w-4xl space-y-3 overflow-auto">
+            <AdPurchaseDocument
+              document={printDoc}
+              onBack={
+                (prelim as { status?: string }).status === "RECEIVED"
+                  ? undefined
+                  : () => setPrelim(null)
+              }
+              onConfirm={
+                (prelim as { status?: string }).status === "RECEIVED"
+                  ? undefined
+                  : () => void confirmPurchase()
+              }
+              confirmLabel="Confirmar compra"
+            />
+            {(prelim as { status?: string }).status === "RECEIVED" ? (
               <button
                 type="button"
                 className="ad-btn"
-                onClick={() => setPrelim(null)}
+                onClick={() => {
+                  setPrelim(null);
+                  setPurchaseId(null);
+                }}
               >
-                Editar compra
+                Cerrar / nueva compra
               </button>
-              <button type="button" className="ad-btn" onClick={printPrelim}>
-                Imprimir / Descargar
-              </button>
-              <button
-                type="button"
-                className="ad-btn"
-                onClick={() => void confirmPurchase()}
-              >
-                Confirmar compra
-              </button>
-            </div>
+            ) : null}
           </div>
         </div>
       )}

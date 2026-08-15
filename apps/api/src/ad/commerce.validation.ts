@@ -82,6 +82,9 @@ export const createCommercePurchaseSchema = z.object({
   lines: z.array(commercePurchaseLineSchema).min(1),
 });
 
+/** Sincroniza la misma compra DRAFT/PRELIMINARY (mismo purchaseId). */
+export const updateCommercePurchaseSchema = createCommercePurchaseSchema;
+
 export const confirmPurchaseSchema = z.object({
   receive: z.boolean().optional(),
 });

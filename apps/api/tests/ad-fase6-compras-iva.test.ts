@@ -373,4 +373,154 @@ describeE2E("A&D Fase 6 — compras IVA E2E", () => {
     expect(Number(bs.body.data.totals.tax)).toBeCloseTo(320, 2);
     expect(Number(bs.body.data.totals.grandTotal)).toBeCloseTo(2320, 2);
   });
+
+  it("re-totalizar — mismo purchaseId, sin duplicar CxP ni factura", async () => {
+    const invoiceNumber = `F6-RETOT-${Date.now()}`;
+    const createBody = {
+      warehouseId: licId,
+      supplierId,
+      invoiceNumber,
+      currency: "USD",
+      paymentMethodId: paymentId,
+      paymentCondition: "CREDITO",
+      creditDays: 10,
+      lines: [
+        {
+          presentationId: taxablePresId,
+          qty: 10,
+          costMode: "UNIT",
+          unitCostUsd: 5,
+          taxable: true,
+        },
+      ],
+    };
+
+    const buy = await request(app)
+      .post("/api/v1/ad/commerce/purchases")
+      .set(auth(adminToken))
+      .send(createBody);
+    expect(buy.status).toBe(201);
+    const id = buy.body.data.id as string;
+    expect(Number(buy.body.data.totals.subtotal)).toBeCloseTo(50, 4);
+    expect(Number(buy.body.data.totals.tax)).toBeCloseTo(8, 4);
+    expect(Number(buy.body.data.totals.grandTotal)).toBeCloseTo(58, 4);
+
+    const t1 = await request(app)
+      .post(`/api/v1/ad/commerce/purchases/${id}/totalize`)
+      .set(auth(adminToken));
+    expect(t1.status).toBe(200);
+    expect(t1.body.data.id).toBe(id);
+    expect(t1.body.data.status).toBe("PRELIMINARY");
+    expect(t1.body.data.document?.lines?.[0]?.description).toBeTruthy();
+    expect(t1.body.data.document?.taxLabel).toBe("IVA 16%");
+    expect(JSON.stringify(t1.body.data.document)).not.toMatch(
+      /utilidad|margen|precio de venta|protectedRate/i,
+    );
+
+    // sin CxP aún
+    let payables = await request(app)
+      .get("/api/v1/ad/payables")
+      .set(auth(adminToken));
+    expect(
+      payables.body.data.filter(
+        (p: { purchaseId: string }) => p.purchaseId === id,
+      ).length,
+    ).toBe(0);
+
+    // editar vía PUT (misma factura) → vuelve DRAFT
+    const upd = await request(app)
+      .put(`/api/v1/ad/commerce/purchases/${id}`)
+      .set(auth(adminToken))
+      .send({
+        ...createBody,
+        lines: [
+          {
+            presentationId: taxablePresId,
+            qty: 20,
+            costMode: "UNIT",
+            unitCostUsd: 5,
+            taxable: true,
+          },
+          {
+            presentationId,
+            qty: 4,
+            costMode: "UNIT",
+            unitCostUsd: 2.5,
+            taxable: false,
+          },
+        ],
+      });
+    expect(upd.status).toBe(200);
+    expect(upd.body.data.id).toBe(id);
+    expect(upd.body.data.status).toBe("DRAFT");
+    expect(upd.body.data.invoiceNumber).toBe(invoiceNumber);
+    // subtotal 100 + 10 = 110; IVA 16; total 126
+    expect(Number(upd.body.data.totals.subtotal)).toBeCloseTo(110, 4);
+    expect(Number(upd.body.data.totals.tax)).toBeCloseTo(16, 4);
+    expect(Number(upd.body.data.totals.grandTotal)).toBeCloseTo(126, 4);
+    expect(upd.body.data.lines.length).toBe(2);
+
+    const t2 = await request(app)
+      .post(`/api/v1/ad/commerce/purchases/${id}/totalize`)
+      .set(auth(adminToken));
+    expect(t2.status).toBe(200);
+    expect(t2.body.data.id).toBe(id);
+    expect(t2.body.data.status).toBe("PRELIMINARY");
+    expect(Number(t2.body.data.totals.grandTotal)).toBeCloseTo(126, 4);
+
+    // aún una sola compra con ese invoice
+    const sameInvoice = await getPrisma().adPurchase.count({
+      where: { invoiceNumber, tenantId: buy.body.data.tenantId },
+    });
+    expect(sameInvoice).toBe(1);
+
+    payables = await request(app)
+      .get("/api/v1/ad/payables")
+      .set(auth(adminToken));
+    expect(
+      payables.body.data.filter(
+        (p: { purchaseId: string }) => p.purchaseId === id,
+      ).length,
+    ).toBe(0);
+
+    const conf = await request(app)
+      .post(`/api/v1/ad/commerce/purchases/${id}/confirm`)
+      .set(auth(adminToken))
+      .send({});
+    expect(conf.status).toBe(200);
+    expect(conf.body.data.id).toBe(id);
+    expect(conf.body.data.status).toBe("RECEIVED");
+    expect(conf.body.data.document?.title).toMatch(/CONFIRMADA/i);
+
+    payables = await request(app)
+      .get("/api/v1/ad/payables")
+      .set(auth(adminToken));
+    const forPurchase = payables.body.data.filter(
+      (p: { purchaseId: string }) => p.purchaseId === id,
+    );
+    expect(forPurchase.length).toBe(1);
+    expect(Number(forPurchase[0].amount)).toBeCloseTo(126, 2);
+    expect(Number(forPurchase[0].taxAmount)).toBeCloseTo(16, 2);
+    expect(Number(forPurchase[0].subtotal)).toBeCloseTo(110, 2);
+
+    // re-totalizar tras confirm debe fallar
+    const bad = await request(app)
+      .post(`/api/v1/ad/commerce/purchases/${id}/totalize`)
+      .set(auth(adminToken));
+    expect(bad.status).toBeGreaterThanOrEqual(400);
+
+    const audits = await getPrisma().adAuditEvent.findMany({
+      where: {
+        entityId: id,
+        action: { in: ["create", "update", "totalize", "confirm"] },
+      },
+    });
+    expect(audits.some((a) => a.action === "update")).toBe(true);
+    expect(audits.filter((a) => a.action === "totalize").length).toBeGreaterThanOrEqual(
+      2,
+    );
+    const updAudit = audits.find((a) => a.action === "update");
+    expect(updAudit?.before).toBeTruthy();
+    expect(updAudit?.after).toBeTruthy();
+  });
 });
