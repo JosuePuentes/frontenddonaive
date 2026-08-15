@@ -3,12 +3,54 @@ import type { AdInvoiceDraft, AdPayment, AdReceipt, AdSale } from "@/types/ad-li
 import { formatAdPrice } from "@/lib/ad-licoreria/conversions";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { adLicoreriaBrand } from "@/content/ad-licoreria/brand";
-import { printDocumentElement } from "@/lib/ad-licoreria/document-export";
+import {
+  downloadReceiptPdf,
+  previewAdPdf,
+  printDocumentElement,
+} from "@/lib/ad-licoreria/document-export";
+import { isAdApiDataSource } from "@/services/ad-licoreria/data-source";
 
 type MoneyLine = { label: string; usd?: number; bs?: number };
 
 function printNode(id: string) {
   printDocumentElement(id, "Documento A&D");
+}
+
+function receiptPdfActions(saleIdOrNumber: string, elementId: string) {
+  return (
+    <>
+      <button
+        type="button"
+        className="ad-btn ad-btn--gold"
+        onClick={() => {
+          if (isAdApiDataSource()) {
+            void previewAdPdf(
+              `/api/v1/ad/documents/receipts/${encodeURIComponent(saleIdOrNumber)}/pdf`,
+            ).catch(() => printNode(elementId));
+          } else {
+            printNode(elementId);
+          }
+        }}
+      >
+        Previsualizar / imprimir
+      </button>
+      <button
+        type="button"
+        className="ad-btn"
+        onClick={() => {
+          if (isAdApiDataSource()) {
+            void downloadReceiptPdf(saleIdOrNumber).catch(() =>
+              printNode(elementId),
+            );
+          } else {
+            printNode(elementId);
+          }
+        }}
+      >
+        Descargar PDF
+      </button>
+    </>
+  );
 }
 
 export function AdPreliminarDocument(props: {
@@ -241,13 +283,7 @@ export function AdReceiptDocument(props: {
         <PaymentList payments={receipt.payments} />
       </div>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="ad-btn ad-btn--gold"
-          onClick={() => printNode(docId)}
-        >
-          Imprimir / descargar
-        </button>
+        {receiptPdfActions(receipt.number || receipt.id, docId)}
         {props.onClose ? (
           <button type="button" className="ad-btn" onClick={props.onClose}>
             Cerrar
@@ -314,13 +350,7 @@ export function AdSaleReceiptFallback(props: {
         <PaymentList payments={sale.payments} />
       </div>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="ad-btn ad-btn--gold"
-          onClick={() => printNode(docId)}
-        >
-          Imprimir / descargar
-        </button>
+        {receiptPdfActions(sale.receiptNumber || sale.id, docId)}
         {props.onClose ? (
           <button type="button" className="ad-btn" onClick={props.onClose}>
             Cerrar

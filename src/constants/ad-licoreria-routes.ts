@@ -5,6 +5,7 @@ import { getAdLicoreriaBasePath } from "@/lib/ad-licoreria-host";
  * Prefijo `/licoreria` en Donaive; vacío cuando exista dominio propio.
  */
 const AD_SEGMENTS = {
+  login: "/login",
   inicio: "/inicio",
   ventas: "/ventas",
   cuentas: "/cuentas",
@@ -55,6 +56,7 @@ const AD_SEGMENTS = {
 
 export type AdLicoreriaRoutes = {
   home: string;
+  login: string;
   inicio: string;
   ventas: string;
   cuentas: string;
@@ -107,6 +109,7 @@ export function getAdLicoreriaRoutes(
 ): AdLicoreriaRoutes {
   return {
     home: joinPath(base, ""),
+    login: joinPath(base, AD_SEGMENTS.login),
     inicio: joinPath(base, AD_SEGMENTS.inicio),
     ventas: joinPath(base, AD_SEGMENTS.ventas),
     cuentas: joinPath(base, AD_SEGMENTS.cuentas),

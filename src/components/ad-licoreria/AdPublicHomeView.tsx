@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdLicoreriaBrandMark } from "@/components/ad-licoreria/AdLicoreriaBrandMark";
 import { adDesignRepository } from "@/services/ad-licoreria/design/repository";
 import { applySiteDesignToDom } from "@/services/ad-licoreria/design/apply";
@@ -15,6 +15,8 @@ type Props = {
   categories?: AdCategory[];
   /** Marca la vista como preview (banner info). */
   previewMode?: boolean;
+  /** CTA de sesión (Iniciar sesión / Entrar al sistema). */
+  authAction?: ReactNode;
 };
 
 function alignClass(align: string) {
@@ -32,6 +34,7 @@ export function AdPublicHomeView({
   presentations = [],
   categories = [],
   previewMode = false,
+  authAction,
 }: Props) {
   const [popupOpen, setPopupOpen] = useState(false);
 
@@ -106,6 +109,13 @@ export function AdPublicHomeView({
       {previewMode ? (
         <div className="ad-public-home__preview-bar">
           VISTA PREVIA · borrador (no publicado)
+        </div>
+      ) : null}
+
+      {authAction ? (
+        <div className="ad-public-home__auth-bar">
+          <AdLicoreriaBrandMark size="sm" showText />
+          <div className="ad-public-home__auth-actions">{authAction}</div>
         </div>
       ) : null}
 

@@ -5,6 +5,9 @@ import { adLicoreriaRouterPath } from "@/constants/ad-licoreria-routes";
 const AdLicoreriaHome = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaHome"),
 );
+const AdLicoreriaLogin = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaLogin"),
+);
 const AdLicoreriaInicio = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaInicio"),
 );
@@ -138,6 +141,10 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
       <Route
         path={adLicoreriaRouterPath(prefix, "home")}
         element={<AdLicoreriaHome />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "login")}
+        element={<AdLicoreriaLogin />}
       />
       <Route
         path={adLicoreriaRouterPath(prefix, "inicio")}

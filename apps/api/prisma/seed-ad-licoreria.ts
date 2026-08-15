@@ -11,6 +11,7 @@ import { hashPassword } from "../src/ad/password.js";
 
 const prisma = new PrismaClient();
 
+/** Contraseña demo reproducible (todos los operadores de este seed). */
 const DEMO_PASSWORD = process.env.AD_SEED_PASSWORD ?? "AdDemo#2026";
 
 type OpSeed = {
@@ -20,6 +21,13 @@ type OpSeed = {
   warehouseCode?: "LIC" | "BOD";
 };
 
+/**
+ * ADMIN demo canónico para prueba en navegador:
+ *   usuario: admin
+ *   password: AdDemo#2026 (o AD_SEED_PASSWORD)
+ *   rol: admin · permisos: todos · depósito: transversal (null)
+ * Ver docs/ad-licoreria/DEMO-CREDENTIALS.md — no mostrar en UI pública.
+ */
 const OPERATORS: OpSeed[] = [
   { username: "admin", name: "Admin A&D", role: "admin" },
   { username: "supervisor", name: "Supervisor A&D", role: "supervisor" },

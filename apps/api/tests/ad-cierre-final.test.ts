@@ -507,6 +507,66 @@ describeE2E("A&D CIERRE E2E A–J", () => {
     expect(pdf.body.length ?? Buffer.byteLength(pdf.text)).toBeGreaterThan(100);
   });
 
+  it("PDF recibo / transferencia / cierre", async () => {
+    const prisma = getPrisma();
+    const tenant = await prisma.adTenant.findUnique({
+      where: { slug: "ad-licoreria" },
+    });
+    expect(tenant).toBeTruthy();
+
+    const salePdf = await request(app)
+      .get(`/api/v1/ad/documents/receipts/${saleBeforeId}/pdf`)
+      .set(auth(adminToken));
+    expect(salePdf.status).toBe(200);
+    expect(salePdf.headers["content-type"]).toMatch(/pdf/);
+
+    const transfer = await request(app)
+      .post("/api/v1/ad/transfers")
+      .set(auth(adminToken))
+      .send({
+        fromWarehouseId: licId,
+        toWarehouseId:
+          (
+            await request(app)
+              .get("/api/v1/ad/warehouses")
+              .set(auth(adminToken))
+          ).body.data.find((w: { code: string }) => w.code === "BOD")?.id ??
+          licId,
+        reason: "PDF smoke",
+        lines: [
+          {
+            productId,
+            presentationId,
+            qty: 1,
+          },
+        ],
+      });
+    expect(transfer.status).toBeLessThan(400);
+    const transferId = transfer.body.data.id as string;
+    const trPdf = await request(app)
+      .get(`/api/v1/ad/documents/transfers/${transferId}/pdf`)
+      .set(auth(adminToken));
+    expect(trPdf.status).toBe(200);
+    expect(trPdf.headers["content-type"]).toMatch(/pdf/);
+
+    const closure = await request(app)
+      .post("/api/v1/ad/closures/cash")
+      .set(auth(adminToken))
+      .send({
+        warehouseId: licId,
+        countedCashUsd: 0,
+        countedCashBs: 0,
+        notes: "PDF smoke",
+      });
+    expect(closure.status).toBeLessThan(400);
+    const closureId = closure.body.data.id as string;
+    const clPdf = await request(app)
+      .get(`/api/v1/ad/documents/closures/${closureId}/pdf`)
+      .set(auth(adminToken));
+    expect(clPdf.status).toBe(200);
+    expect(clPdf.headers["content-type"]).toMatch(/pdf/);
+  });
+
   it("umbral zona crítica configurable", async () => {
     const upd = await request(app)
       .put("/api/v1/ad/finance/settings")

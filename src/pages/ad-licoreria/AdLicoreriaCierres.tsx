@@ -1,8 +1,13 @@
 import { useMemo, useState } from "react";
 import { AD_ROLE_LABELS } from "@/lib/ad-licoreria/access";
+import {
+  downloadClosurePdf,
+  previewAdPdf,
+} from "@/lib/ad-licoreria/document-export";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
+import { isAdApiDataSource } from "@/services/ad-licoreria/data-source";
 
 export default function AdLicoreriaCierres() {
   const {
@@ -22,6 +27,7 @@ export default function AdLicoreriaCierres() {
   } = useAdLicoreria();
 
   const session = getCurrentOperator();
+  const warehouseLocked = Boolean(session?.warehouseId);
   const [warehouseId, setWarehouseId] = useState(
     session?.warehouseId ?? warehouses[0]?.id ?? "wh-1",
   );
@@ -289,14 +295,42 @@ export default function AdLicoreriaCierres() {
           >
             Generar cierre diario
           </button>
-          <ul className="text-xs text-[var(--ad-muted)]">
+          <ul className="text-xs text-[var(--ad-muted)] space-y-2">
             {dailyClosures.slice(0, 5).map((c) => (
-              <li key={c.id}>
-                {c.date} · {c.createdBy}
-                {c.warehouseId
-                  ? ` · ${warehouseLabel(c.warehouseId, warehouses)}`
-                  : ""}{" "}
-                · Δ USD {c.cashDifferenceUsd}
+              <li key={c.id} className="flex flex-wrap items-center gap-2">
+                <span>
+                  {c.date} · {c.createdBy}
+                  {c.warehouseId
+                    ? ` · ${warehouseLabel(c.warehouseId, warehouses)}`
+                    : ""}{" "}
+                  · Δ USD {c.cashDifferenceUsd}
+                </span>
+                {isAdApiDataSource() ? (
+                  <>
+                    <button
+                      type="button"
+                      className="ad-btn"
+                      onClick={() =>
+                        void previewAdPdf(
+                          `/api/v1/ad/documents/closures/${c.id}/pdf`,
+                        ).catch(() => setMsg("No se pudo previsualizar el PDF"))
+                      }
+                    >
+                      PDF
+                    </button>
+                    <button
+                      type="button"
+                      className="ad-btn"
+                      onClick={() =>
+                        void downloadClosurePdf(c.id).catch(() =>
+                          setMsg("No se pudo descargar el PDF"),
+                        )
+                      }
+                    >
+                      Descargar
+                    </button>
+                  </>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -308,6 +342,7 @@ export default function AdLicoreriaCierres() {
             className="ad-select"
             value={warehouseId}
             onChange={(e) => setWarehouseId(e.target.value)}
+            disabled={warehouseLocked}
           >
             {visibleWarehouses.map((w) => (
               <option key={w.id} value={w.id}>
@@ -315,6 +350,11 @@ export default function AdLicoreriaCierres() {
               </option>
             ))}
           </select>
+          {warehouseLocked ? (
+            <p className="text-xs text-[var(--ad-muted)]">
+              Depósito fijado por sesión — no se permite selección manual.
+            </p>
+          ) : null}
           <div className="max-h-64 space-y-2 overflow-auto">
             {products.map((p) => {
               const theo = getStock(p.id, warehouseId);

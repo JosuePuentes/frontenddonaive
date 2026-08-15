@@ -30,10 +30,13 @@ export default function AdLicoreriaCop() {
   const canTransfer =
     hasPermission("cop.transfer") || hasPermission("inventory.transfer");
   const canPurchaseReq = hasPermission("cop.purchase_request");
+  const warehouseLocked = Boolean(session?.warehouseId);
 
   const dash = getCopDashboard();
   const [productId, setProductId] = useState("prod-regional");
-  const [warehouseId, setWarehouseId] = useState(AD_WH_LICORERIA);
+  const [warehouseId, setWarehouseId] = useState(
+    session?.warehouseId ?? AD_WH_LICORERIA,
+  );
   const [requestQty, setRequestQty] = useState(20);
   const [msg, setMsg] = useState("");
   const [query, setQuery] = useState("");
@@ -454,12 +457,16 @@ export default function AdLicoreriaCop() {
       <section className="ad-panel space-y-3">
         <h2 className="ad-panel-title">
           Vista por depósito · {warehouseLabel(warehouseId)}
+          {warehouseLocked ? " · fijado" : ""}
         </h2>
         <div className="flex gap-2">
           <button
             type="button"
             className={`ad-btn ${warehouseId === AD_WH_LICORERIA ? "ad-btn--gold" : ""}`}
             onClick={() => setWarehouseId(AD_WH_LICORERIA)}
+            disabled={
+              warehouseLocked && session?.warehouseId !== AD_WH_LICORERIA
+            }
           >
             Licorería
           </button>
@@ -467,6 +474,9 @@ export default function AdLicoreriaCop() {
             type="button"
             className={`ad-btn ${warehouseId === AD_WH_BODEGON ? "ad-btn--gold" : ""}`}
             onClick={() => setWarehouseId(AD_WH_BODEGON)}
+            disabled={
+              warehouseLocked && session?.warehouseId !== AD_WH_BODEGON
+            }
           >
             Bodegón
           </button>

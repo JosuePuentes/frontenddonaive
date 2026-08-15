@@ -3,6 +3,9 @@
  * PDF tipográfico real vía API (`GET /documents/.../pdf` con pdfkit).
  * Fallback FE: HTML + window.print() / Guardar como PDF.
  */
+import { API_BASE_URL } from "@/config/api";
+import { getAdSessionHeaders, loadAdSession } from "@/services/ad-licoreria/session";
+
 export function printDocumentElement(elementId: string, title = "Documento A&D") {
   const node = document.getElementById(elementId);
   if (!node) return { ok: false as const, mode: "none" as const, reason: "Elemento no encontrado" };
@@ -30,20 +33,82 @@ export function printDocumentElement(elementId: string, title = "Documento A&D")
   return { ok: true as const, mode: "print-html" as const };
 }
 
-export async function downloadPurchasePdf(purchaseId: string, token: string, apiBase: string) {
-  const res = await fetch(
-    `${apiBase.replace(/\/+$/, "")}/api/v1/ad/documents/purchases/${purchaseId}/pdf`,
-    { headers: { Authorization: `Bearer ${token}`, Accept: "application/pdf" } },
-  );
+async function downloadAdPdf(
+  path: string,
+  filename: string,
+  token?: string,
+  apiBase = API_BASE_URL,
+) {
+  const base = apiBase?.replace(/\/+$/, "");
+  if (!base) throw new Error("VITE_API_BASE_URL no configurada");
+  const auth =
+    token != null
+      ? { Authorization: `Bearer ${token}` }
+      : getAdSessionHeaders();
+  const res = await fetch(`${base}${path}`, {
+    headers: { ...auth, Accept: "application/pdf" },
+  });
   if (!res.ok) throw new Error(`PDF HTTP ${res.status}`);
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `compra-${purchaseId}.pdf`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
   return { ok: true as const, mode: "api-pdf" as const };
+}
+
+export async function downloadPurchasePdf(
+  purchaseId: string,
+  token?: string,
+  apiBase?: string,
+) {
+  return downloadAdPdf(
+    `/api/v1/ad/documents/purchases/${purchaseId}/pdf`,
+    `compra-${purchaseId}.pdf`,
+    token,
+    apiBase,
+  );
+}
+
+export async function downloadTransferPdf(transferId: string) {
+  return downloadAdPdf(
+    `/api/v1/ad/documents/transfers/${transferId}/pdf`,
+    `transferencia-${transferId}.pdf`,
+  );
+}
+
+export async function downloadReceiptPdf(saleIdOrNumber: string) {
+  return downloadAdPdf(
+    `/api/v1/ad/documents/receipts/${encodeURIComponent(saleIdOrNumber)}/pdf`,
+    `recibo-${saleIdOrNumber}.pdf`,
+  );
+}
+
+export async function downloadClosurePdf(closureId: string) {
+  return downloadAdPdf(
+    `/api/v1/ad/documents/closures/${closureId}/pdf`,
+    `cierre-${closureId}.pdf`,
+  );
+}
+
+/** Abre PDF en pestaña nueva (previsualizar / imprimir). */
+export async function previewAdPdf(path: string) {
+  const base = API_BASE_URL?.replace(/\/+$/, "");
+  if (!base) throw new Error("VITE_API_BASE_URL no configurada");
+  const res = await fetch(`${base}${path}`, {
+    headers: { ...getAdSessionHeaders(), Accept: "application/pdf" },
+  });
+  if (!res.ok) throw new Error(`PDF HTTP ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener,noreferrer");
+  return { ok: true as const, mode: "api-pdf-preview" as const };
+}
+
+export function currentAdToken(): string | null {
+  return loadAdSession()?.accessToken ?? null;
 }
 
 export const AD_PDF_EXPORT_STATUS = {
@@ -51,7 +116,10 @@ export const AD_PDF_EXPORT_STATUS = {
   apiPaths: [
     "/api/v1/ad/documents/purchases/:id/pdf",
     "/api/v1/ad/documents/purchase-orders/:id/pdf",
+    "/api/v1/ad/documents/transfers/:id/pdf",
+    "/api/v1/ad/documents/receipts/:id/pdf",
+    "/api/v1/ad/documents/closures/:id/pdf",
   ],
   fallback: "print-html",
-  note: "PDF real vía pdfkit en API; FE puede descargar o usar print-HTML.",
+  note: "PDF real vía pdfkit en API; FE puede previsualizar, imprimir o descargar. Sin utilidad/margen/tasa paralela.",
 } as const;

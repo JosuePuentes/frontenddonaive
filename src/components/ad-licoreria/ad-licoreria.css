@@ -560,6 +560,44 @@
   color: var(--ad-gold-soft);
 }
 
+.ad-public-home__auth-bar {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: color-mix(in srgb, var(--ad-bg, #0a0b0f) 82%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid color-mix(in srgb, var(--ad-gold, #c9a227) 28%, transparent);
+}
+
+.ad-public-home__auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ad-login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background:
+    radial-gradient(ellipse at 20% 10%, color-mix(in srgb, var(--ad-gold, #c9a227) 18%, transparent), transparent 50%),
+    linear-gradient(160deg, #0a0b0f 0%, #141822 55%, #0d1018 100%);
+  color: var(--ad-text, #f3f0e8);
+}
+
+.ad-login-card {
+  width: min(420px, 100%);
+  padding: 2rem 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--ad-gold, #c9a227) 35%, transparent);
+  background: color-mix(in srgb, #12151c 92%, transparent);
+}
+
 .ad-public-hero {
   position: relative;
   min-height: min(92vh, 820px);

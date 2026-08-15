@@ -1,5 +1,5 @@
-import { useEffect, type ReactNode } from "react";
-import { Link, Outlet, useLocation } from "react-router";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { Link, Navigate, Outlet, useLocation } from "react-router";
 import { AdLicoreriaSidebar } from "@/components/ad-licoreria/AdLicoreriaSidebar";
 import { AdLicoreriaTopbar } from "@/components/ad-licoreria/AdLicoreriaTopbar";
 import {
@@ -14,7 +14,13 @@ import {
   isTvPlayerPath,
 } from "@/lib/ad-licoreria/route-access";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
-import { AdApiLoginPanel } from "@/components/ad-licoreria/AdApiLoginPanel";
+import {
+  clearAdSession,
+  isAdSessionValid,
+  loadAdSession,
+  subscribeAdSession,
+} from "@/services/ad-licoreria/session";
+import { getAdDataSourceMode } from "@/services/ad-licoreria/repository-adapter";
 import "@/components/ad-licoreria/ad-licoreria.css";
 
 const FONT_HREF =
@@ -28,15 +34,33 @@ function AdDesignApplier({ children }: { children: ReactNode }) {
   return children;
 }
 
+function isPublicAdPath(normalizedPath: string): boolean {
+  if (normalizedPath === "/" || normalizedPath === "/login") return true;
+  return isTvPlayerPath(normalizedPath);
+}
+
 function AdRouteGate({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const path = normalizeAdLicoreriaPathname(pathname);
   const { getCurrentOperator, getRolePermissionMatrix } = useAdLicoreria();
   const session = getCurrentOperator();
   const matrix = getRolePermissionMatrix();
+  const mode = getAdDataSourceMode();
+  const apiSession = useSyncExternalStore(
+    subscribeAdSession,
+    loadAdSession,
+    () => null,
+  );
 
   if (isTvPlayerPath(path)) {
     return children;
+  }
+
+  if (mode === "api" && !isPublicAdPath(path)) {
+    if (!isAdSessionValid(apiSession)) {
+      if (apiSession) clearAdSession();
+      return <Navigate to={AD_LICORERIA_ROUTES.login} replace />;
+    }
   }
 
   if (!canAccessPath(session, path, matrix)) {
@@ -48,9 +72,18 @@ function AdRouteGate({ children }: { children: ReactNode }) {
             ? `${session.name} (${session.role}) no tiene permiso para esta ruta.`
             : "Sin sesión activa."}
         </p>
-        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.inicio}>
-          Volver al inicio
+        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.home}>
+          Volver al Home
         </Link>
+        {mode === "api" ? (
+          <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.login}>
+            Iniciar sesión
+          </Link>
+        ) : (
+          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.inicio}>
+            Volver al inicio
+          </Link>
+        )}
       </div>
     );
   }
@@ -62,9 +95,11 @@ function AdLicoreriaLayout() {
   const { pathname } = useLocation();
   const path = normalizeAdLicoreriaPathname(pathname);
   const isLanding = path === "/";
+  const isLogin = path === "/login";
   const isMesonera = path === "/mesonera";
   const isTvPlayer = isTvPlayerPath(path);
   const isDesignPreview = path === "/configuracion/diseno/preview";
+  const bare = isLanding || isLogin || isMesonera || isTvPlayer || isDesignPreview;
 
   useEffect(() => {
     const id = "ad-licoreria-fonts";
@@ -81,8 +116,7 @@ function AdLicoreriaLayout() {
       <AdTvProvider>
         <AdDesignApplier>
           <div className="ad-shell">
-            <AdApiLoginPanel />
-            {isLanding || isMesonera || isTvPlayer || isDesignPreview ? (
+            {bare ? (
               <Outlet />
             ) : (
               <div className="ad-layout">

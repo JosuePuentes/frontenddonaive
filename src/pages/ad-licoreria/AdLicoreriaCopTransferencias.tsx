@@ -6,8 +6,14 @@ import {
   AD_WH_LICORERIA,
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
+import {
+  downloadTransferPdf,
+  previewAdPdf,
+  printDocumentElement,
+} from "@/lib/ad-licoreria/document-export";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
+import { isAdApiDataSource } from "@/services/ad-licoreria/data-source";
 
 type DraftLine = {
   productId: string;
@@ -26,10 +32,17 @@ export default function AdLicoreriaCopTransferencias() {
     confirmTransfer,
     advanceTransferStatus,
     logDocumentAction,
+    getCurrentOperator,
   } = useAdLicoreria();
 
-  const [fromId, setFromId] = useState(AD_WH_BODEGON);
-  const [toId, setToId] = useState(AD_WH_LICORERIA);
+  const session = getCurrentOperator();
+  const warehouseLocked = Boolean(session?.warehouseId);
+  const [fromId, setFromId] = useState(
+    session?.warehouseId === AD_WH_LICORERIA ? AD_WH_BODEGON : AD_WH_BODEGON,
+  );
+  const [toId, setToId] = useState(
+    session?.warehouseId ?? AD_WH_LICORERIA,
+  );
   const [reason, setReason] = useState("Reposición operativa");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([]);
@@ -126,6 +139,7 @@ export default function AdLicoreriaCopTransferencias() {
               className="ad-select"
               value={fromId}
               onChange={(e) => setFromId(e.target.value)}
+              disabled={warehouseLocked}
             >
               <option value={AD_WH_BODEGON}>Origen: Bodegón</option>
               <option value={AD_WH_LICORERIA}>Origen: Licorería</option>
@@ -134,6 +148,7 @@ export default function AdLicoreriaCopTransferencias() {
               className="ad-select"
               value={toId}
               onChange={(e) => setToId(e.target.value)}
+              disabled={warehouseLocked}
             >
               <option value={AD_WH_LICORERIA}>Destino: Licorería</option>
               <option value={AD_WH_BODEGON}>Destino: Bodegón</option>
@@ -235,6 +250,7 @@ export default function AdLicoreriaCopTransferencias() {
           <h2 className="ad-panel-title">Preliminar / documento</h2>
           {preview ? (
             <div className="ad-doc space-y-3">
+              <div id={`ad-transfer-doc-${preview.id}`}>
               <p className="ad-eyebrow">Transferencia de inventario</p>
               <p className="ad-display text-2xl">{preview.number}</p>
               <p className="text-sm">
@@ -276,7 +292,13 @@ export default function AdLicoreriaCopTransferencias() {
                   ))}
                 </tbody>
               </table>
+              </div>
               <div className="flex flex-wrap gap-2">
+                {warehouseLocked ? (
+                  <p className="w-full text-xs text-[var(--ad-muted)]">
+                    Depósito de sesión fijado (sin cruce manual).
+                  </p>
+                ) : null}
                 {preview.status === "BORRADOR" ? (
                   <button
                     type="button"
@@ -289,32 +311,70 @@ export default function AdLicoreriaCopTransferencias() {
                 <button
                   type="button"
                   className="ad-btn"
-                  onClick={() =>
-                    logDocumentAction({
-                      action: "print",
-                      entity: "transfer",
-                      entityId: preview.id,
-                      userName: "COP A&D",
-                      detail: preview.number,
-                    })
-                  }
+                  onClick={() => {
+                    const elId = `ad-transfer-doc-${preview.id}`;
+                    if (isAdApiDataSource()) {
+                      void previewAdPdf(
+                        `/api/v1/ad/documents/transfers/${preview.id}/pdf`,
+                      )
+                        .then(() =>
+                          logDocumentAction({
+                            action: "print",
+                            entity: "transfer",
+                            entityId: preview.id,
+                            userName: session?.name ?? "COP A&D",
+                            detail: preview.number,
+                          }),
+                        )
+                        .catch(() => printDocumentElement(elId, "Transferencia A&D"));
+                    } else {
+                      printDocumentElement(elId, "Transferencia A&D");
+                      logDocumentAction({
+                        action: "print",
+                        entity: "transfer",
+                        entityId: preview.id,
+                        userName: session?.name ?? "COP A&D",
+                        detail: preview.number,
+                      });
+                    }
+                  }}
                 >
-                  Imprimir
+                  Previsualizar / imprimir
                 </button>
                 <button
                   type="button"
                   className="ad-btn"
-                  onClick={() =>
-                    logDocumentAction({
-                      action: "download",
-                      entity: "transfer",
-                      entityId: preview.id,
-                      userName: "COP A&D",
-                      detail: preview.number,
-                    })
-                  }
+                  onClick={() => {
+                    if (isAdApiDataSource()) {
+                      void downloadTransferPdf(preview.id)
+                        .then(() =>
+                          logDocumentAction({
+                            action: "download",
+                            entity: "transfer",
+                            entityId: preview.id,
+                            userName: session?.name ?? "COP A&D",
+                            detail: preview.number,
+                          }),
+                        )
+                        .catch(() =>
+                          setMsg("No se pudo descargar el PDF de transferencia"),
+                        );
+                    } else {
+                      logDocumentAction({
+                        action: "download",
+                        entity: "transfer",
+                        entityId: preview.id,
+                        userName: session?.name ?? "COP A&D",
+                        detail: preview.number,
+                      });
+                      printDocumentElement(
+                        `ad-transfer-doc-${preview.id}`,
+                        "Transferencia A&D",
+                      );
+                    }
+                  }}
                 >
-                  Descargar
+                  Descargar PDF
                 </button>
                 {preview.status === "BORRADOR" ? (
                   <button

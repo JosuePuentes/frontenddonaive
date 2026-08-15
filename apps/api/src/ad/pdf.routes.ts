@@ -3,10 +3,11 @@
  */
 import { Router } from "express";
 import { getAdContext } from "./middleware.js";
-import { requireAdPermission } from "./authorization.js";
+import { requireAdPermission, requireWarehouseAccess } from "./authorization.js";
 import { getPrisma } from "../config/database.js";
 import { NotFoundError } from "../errors/app-error.js";
 import { buildPurchasePdf, pdfToBuffer } from "./pdf/purchase-pdf.js";
+import { buildOperationalPdf } from "./pdf/operational-pdf.js";
 import { Prisma } from "@prisma/client";
 
 function num(v: Prisma.Decimal | number | null | undefined): number {
@@ -136,6 +137,229 @@ adPdfRouter.get("/documents/purchase-orders/:id/pdf", async (req, res, next) => 
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="oc-${po.documentNumber}.pdf"`,
+    );
+    res.send(buf);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Transferencia de stock (COP). */
+adPdfRouter.get("/documents/transfers/:id/pdf", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    requireAdPermission(ctx, "cop.transfer");
+    const prisma = getPrisma();
+    const transfer = await prisma.adStockTransfer.findFirst({
+      where: { id: req.params.id, tenantId: ctx.tenantId },
+      include: {
+        lines: { include: { product: true, presentation: true } },
+        fromWarehouse: true,
+        toWarehouse: true,
+      },
+    });
+    if (!transfer) throw new NotFoundError("Transferencia no encontrada");
+    requireWarehouseAccess(ctx, transfer.fromWarehouseId);
+    requireWarehouseAccess(ctx, transfer.toWarehouseId);
+
+    const doc = buildOperationalPdf({
+      documentTitle: "Transferencia de inventario",
+      subtitle: transfer.documentNumber,
+      meta: [
+        { label: "Estado", value: transfer.status },
+        { label: "Origen", value: transfer.fromWarehouse.name },
+        { label: "Destino", value: transfer.toWarehouse.name },
+        { label: "Motivo", value: transfer.reason ?? "—" },
+        {
+          label: "Creada",
+          value: transfer.createdAt.toISOString().slice(0, 19).replace("T", " "),
+        },
+        {
+          label: "Confirmada",
+          value: transfer.confirmedAt
+            ? transfer.confirmedAt.toISOString().slice(0, 19).replace("T", " ")
+            : "—",
+        },
+      ],
+      tableHeaders: ["SKU", "Producto", "Marca", "Presentación", "Cant.", "Base"],
+      rows: transfer.lines.map((l) => ({
+        cells: [
+          l.product.sku ?? "—",
+          l.product.name.slice(0, 28),
+          (l.product.brand ?? "—").slice(0, 14),
+          (l.presentation?.name ?? "base").slice(0, 14),
+          String(num(l.qty)),
+          String(num(l.qtyBase)),
+        ],
+      })),
+    });
+
+    const buf = await pdfToBuffer(doc);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="transferencia-${transfer.documentNumber}.pdf"`,
+    );
+    res.send(buf);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Recibo de venta confirmada. */
+adPdfRouter.get("/documents/receipts/:id/pdf", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    requireAdPermission(ctx, "pos.sell");
+    const prisma = getPrisma();
+    const sale = await prisma.adSale.findFirst({
+      where: {
+        tenantId: ctx.tenantId,
+        OR: [{ id: req.params.id }, { receiptNumber: req.params.id }],
+      },
+      include: {
+        lines: { include: { product: true, presentation: true } },
+        payments: true,
+        warehouse: true,
+        operator: true,
+        customer: true,
+      },
+    });
+    if (!sale) throw new NotFoundError("Recibo no encontrado");
+    requireWarehouseAccess(ctx, sale.warehouseId);
+
+    const doc = buildOperationalPdf({
+      documentTitle: "Recibo de venta",
+      subtitle: sale.receiptNumber,
+      meta: [
+        { label: "Estado", value: sale.status },
+        { label: "Depósito", value: sale.warehouse.name },
+        { label: "Cajero", value: sale.operator.name },
+        { label: "Cliente", value: sale.customer?.name ?? "—" },
+        {
+          label: "Fecha",
+          value: sale.createdAt.toISOString().slice(0, 19).replace("T", " "),
+        },
+      ],
+      tableHeaders: ["Producto", "Pres.", "Cant.", "P.unit USD", "Total USD"],
+      rows: sale.lines.map((l) => ({
+        cells: [
+          l.product.name.slice(0, 28),
+          l.presentation.name.slice(0, 12),
+          String(num(l.qty)),
+          num(l.unitPriceUsd).toFixed(2),
+          num(l.lineTotalUsd).toFixed(2),
+        ],
+      })),
+      totals: [
+        {
+          label: "Total USD",
+          value: num(sale.totalUsd).toFixed(2),
+        },
+        {
+          label: "Total Bs",
+          value: num(sale.totalBs).toFixed(2),
+        },
+        {
+          label: "Descuento USD",
+          value: num(sale.discountUsd).toFixed(2),
+        },
+        ...sale.payments.map((p) => ({
+          label: `Pago ${p.method} (${p.currency})`,
+          value: num(p.amount).toFixed(2),
+        })),
+      ],
+    });
+
+    const buf = await pdfToBuffer(doc);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="recibo-${sale.receiptNumber}.pdf"`,
+    );
+    res.send(buf);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Cierre de caja. */
+adPdfRouter.get("/documents/closures/:id/pdf", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    requireAdPermission(ctx, "closures.create");
+    const prisma = getPrisma();
+    const closure = await prisma.adCashClosure.findFirst({
+      where: { id: req.params.id, tenantId: ctx.tenantId },
+      include: { warehouse: true },
+    });
+    if (!closure) throw new NotFoundError("Cierre no encontrado");
+    requireWarehouseAccess(ctx, closure.warehouseId);
+
+    const operator = await prisma.adOperator.findUnique({
+      where: { id: closure.operatorId },
+    });
+
+    const snap =
+      closure.snapshot && typeof closure.snapshot === "object"
+        ? (closure.snapshot as Record<string, unknown>)
+        : {};
+
+    const doc = buildOperationalPdf({
+      documentTitle: "Cierre de caja",
+      subtitle: closure.id.slice(0, 8),
+      meta: [
+        { label: "Estado", value: closure.status },
+        { label: "Depósito", value: closure.warehouse.name },
+        { label: "Operador", value: operator?.name ?? closure.operatorId },
+        {
+          label: "Período",
+          value: `${closure.periodStart.toISOString().slice(0, 16)} → ${closure.periodEnd.toISOString().slice(0, 16)}`,
+        },
+        {
+          label: "Creado",
+          value: closure.createdAt.toISOString().slice(0, 19).replace("T", " "),
+        },
+      ],
+      tableHeaders: ["Concepto", "USD", "Bs"],
+      rows: [
+        {
+          cells: [
+            "Efectivo esperado",
+            num(closure.expectedCashUsd).toFixed(2),
+            num(closure.expectedCashBs).toFixed(2),
+          ],
+        },
+        {
+          cells: [
+            "Efectivo contado",
+            num(closure.countedCashUsd).toFixed(2),
+            num(closure.countedCashBs).toFixed(2),
+          ],
+        },
+        {
+          cells: [
+            "Diferencia",
+            num(closure.differenceUsd).toFixed(2),
+            num(closure.differenceBs).toFixed(2),
+          ],
+        },
+      ],
+      totals: Object.keys(snap).length
+        ? [
+            {
+              label: "Notas / snapshot (sin costos sensibles)",
+              value: JSON.stringify(snap).slice(0, 280),
+            },
+          ]
+        : undefined,
+    });
+
+    const buf = await pdfToBuffer(doc);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="cierre-${closure.id.slice(0, 8)}.pdf"`,
     );
     res.send(buf);
   } catch (err) {

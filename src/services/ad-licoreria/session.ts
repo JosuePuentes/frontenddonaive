@@ -59,11 +59,25 @@ export function clearAdSession() {
   emit();
 }
 
+/** true si hay JWT en storage y `expiresAt` aún no pasó. */
+export function isAdSessionValid(
+  session: AdApiSession | null = loadAdSession(),
+): boolean {
+  if (!session?.accessToken) return false;
+  if (!session.expiresAt) return true;
+  const exp = Date.parse(session.expiresAt);
+  if (Number.isNaN(exp)) return true;
+  return exp > Date.now() + 5_000;
+}
+
 export function getAdSessionHeaders(): Record<string, string> {
   const s = loadAdSession();
-  if (!s?.accessToken) return {};
+  if (!isAdSessionValid(s)) {
+    if (s) clearAdSession();
+    return {};
+  }
   return {
-    Authorization: `Bearer ${s.accessToken}`,
+    Authorization: `Bearer ${s!.accessToken}`,
   };
 }
 

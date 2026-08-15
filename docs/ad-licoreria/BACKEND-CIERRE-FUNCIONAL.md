@@ -57,6 +57,13 @@ Rentabilidad usa snapshot.
 
 ## Pendientes / límites
 
-- PDF de transferencias/recibos/cierres: estructura lista; compra y OC implementados primero.
 - Snapshot en ventas previas a esta migración = 0 (solo ventas nuevas).
 - Tasa paralela sigue privada (no en PDF/dashboard).
+
+## PDFs (cierre browser-ready)
+
+Además de compra/OC:
+
+- `GET /api/v1/ad/documents/transfers/:id/pdf`
+- `GET /api/v1/ad/documents/receipts/:id/pdf` (id o receiptNumber)
+- `GET /api/v1/ad/documents/closures/:id/pdf`
