@@ -5,3 +5,12 @@ export const apiConfig = {
 } as const;
 
 export const API_BASE_URL = apiConfig.baseUrl;
+
+/**
+ * Fuente de datos operativa A&D.
+ * - `mock` (default): repository.ts en memoria — UI no migrada aún.
+ * - `api`: habilita bridge HTTP `/api/v1/ad` (migración progresiva F2+).
+ */
+export const AD_DATA_SOURCE = (
+  (import.meta.env.VITE_AD_DATA_SOURCE as string | undefined) ?? "mock"
+).toLowerCase() as "mock" | "api";

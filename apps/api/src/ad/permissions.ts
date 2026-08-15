@@ -1,0 +1,111 @@
+/**
+ * Matriz de permisos A&D (espejo del MOCK frontend).
+ * La autorización real se verifica siempre en backend.
+ */
+
+export const AD_PERMISSIONS = [
+  "pos.sell",
+  "pos.refund",
+  "pos.discount",
+  "pos.close_account",
+  "pos.shortage_override",
+  "inventory.read",
+  "inventory.adjust",
+  "inventory.transfer",
+  "inventory.receive",
+  "purchase.create",
+  "purchase.approve",
+  "cop.read",
+  "cop.transfer",
+  "cop.purchase_request",
+  "reports.read",
+  "users.manage",
+  "deposits.manage",
+  "settings.manage",
+  "accounts.open",
+  "accounts.serve",
+  "tables.manage",
+  "clients.read",
+  "closures.create",
+  "tv.view",
+  "tv.manage",
+  "tv.control",
+  "tv.content.manage",
+  "tv.groups.manage",
+  "tv.screen.manage",
+] as const;
+
+export type AdPermission = (typeof AD_PERMISSIONS)[number];
+
+export type AdOperatorRoleName =
+  | "admin"
+  | "supervisor"
+  | "cajero"
+  | "mesonera"
+  | "inventario"
+  | "tv";
+
+export const AD_DEFAULT_ROLE_PERMISSIONS: Record<
+  AdOperatorRoleName,
+  AdPermission[]
+> = {
+  admin: [...AD_PERMISSIONS],
+  supervisor: [
+    "pos.sell",
+    "pos.refund",
+    "pos.discount",
+    "pos.close_account",
+    "pos.shortage_override",
+    "inventory.read",
+    "inventory.adjust",
+    "inventory.transfer",
+    "inventory.receive",
+    "purchase.create",
+    "purchase.approve",
+    "cop.read",
+    "cop.transfer",
+    "cop.purchase_request",
+    "reports.read",
+    "accounts.open",
+    "accounts.serve",
+    "tables.manage",
+    "clients.read",
+    "closures.create",
+    "tv.view",
+    "tv.control",
+    "tv.content.manage",
+    "tv.groups.manage",
+    "tv.screen.manage",
+  ],
+  cajero: [
+    "pos.sell",
+    "pos.discount",
+    "pos.close_account",
+    "clients.read",
+    "accounts.open",
+    "closures.create",
+    "reports.read",
+  ],
+  mesonera: [
+    "accounts.open",
+    "accounts.serve",
+    "tables.manage",
+    "clients.read",
+  ],
+  inventario: [
+    "inventory.read",
+    "inventory.adjust",
+    "inventory.transfer",
+    "inventory.receive",
+    "purchase.create",
+    "cop.read",
+    "cop.transfer",
+    "cop.purchase_request",
+    "reports.read",
+  ],
+  tv: ["tv.view", "tv.control"],
+};
+
+export function isAdPermission(value: string): value is AdPermission {
+  return (AD_PERMISSIONS as readonly string[]).includes(value);
+}

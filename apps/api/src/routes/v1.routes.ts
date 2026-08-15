@@ -11,8 +11,12 @@ import {
 import { auditService } from "../services/audit.service.js";
 import { API_CAPABILITIES } from "../auth/capabilities.js";
 import { requireCapability } from "../auth/authorization.js";
+import { adRouter } from "../ad/routes.js";
 
 export const v1Router = Router();
+
+/** A&D Licorería — núcleo Fase 1 (schema ad_licoreria). */
+v1Router.use("/ad", adRouter);
 
 v1Router.get("/projects", async (req, res, next) => {
   try {

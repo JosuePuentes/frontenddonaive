@@ -1,10 +1,9 @@
 # A&D Licorería & Bodegón — Modelo administrativo real (Fase 4 · DISEÑO)
 
-> **Estado:** diseño funcional y de datos.  
-> **No implementar** todavía PostgreSQL / Prisma / `apps/api` / migraciones.  
-> **Mock actual:** portal `/licoreria`, repositorio en memoria, suite Fase 3 (14/14) + escenario COP Fase 7 (25/25).  
-> **Fase 7:** COP `/licoreria/cop`, `getOperationalAvailability()`, transferencias multiproducto, pre-factura, compromisos cliente.  
-> **Objetivo:** contrato estable para sustituir `adLicoreriaRepository` por API real sin rehacer la UI.
+> **Estado MOCK UI:** portal `/licoreria` sigue en `repository.ts` (memoria).  
+> **Backend Fase 1:** schema Prisma `ad_licoreria` + API `/api/v1/ad` — ver `docs/ad-licoreria/BACKEND-FASE1-PLAN.md`.  
+> **Adapter:** `repository-adapter.ts` + flag `VITE_AD_DATA_SOURCE=mock|api` (default mock).  
+> **Objetivo:** migrar módulo a módulo sin rehacer la UI.
 
 ---
 
