@@ -93,4 +93,26 @@ export const adFinanceClient = {
     ),
   updateSettings: (body: Record<string, unknown>) =>
     financeFetch("PUT", "/api/v1/ad/finance/settings", body),
+  reconciliationPreview: (q: {
+    accountId: string;
+    from?: string;
+    to?: string;
+  }) => {
+    const qs = new URLSearchParams({ accountId: q.accountId });
+    if (q.from) qs.set("from", q.from);
+    if (q.to) qs.set("to", q.to);
+    return financeFetch<Record<string, unknown>>(
+      "GET",
+      `/api/v1/ad/finance/reconciliations/preview?${qs}`,
+    );
+  },
+  listReconciliations: (accountId?: string) =>
+    financeFetch<unknown[]>(
+      "GET",
+      `/api/v1/ad/finance/reconciliations${
+        accountId ? `?accountId=${accountId}` : ""
+      }`,
+    ),
+  createReconciliation: (body: Record<string, unknown>) =>
+    financeFetch("POST", "/api/v1/ad/finance/reconciliations", body),
 };

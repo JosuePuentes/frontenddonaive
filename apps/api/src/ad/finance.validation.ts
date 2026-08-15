@@ -89,3 +89,19 @@ export const payablePaymentWithAccountSchema = z.object({
   reference: z.string().max(120).optional(),
   notes: z.string().max(500).optional(),
 });
+
+/** Preview de conciliación: from/to inclusivos YYYY-MM-DD o ISO. */
+export const reconciliationPreviewSchema = z.object({
+  accountId: z.string().uuid(),
+  from: z.string().min(8).optional(),
+  to: z.string().min(8).optional(),
+});
+
+export const createReconciliationSchema = z.object({
+  accountId: z.string().uuid(),
+  asOfDate: z.string().min(8),
+  from: z.string().min(8).optional(),
+  to: z.string().min(8).optional(),
+  declaredBalance: z.number(),
+  notes: z.string().max(1000).optional(),
+});

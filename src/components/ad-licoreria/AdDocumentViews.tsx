@@ -3,26 +3,12 @@ import type { AdInvoiceDraft, AdPayment, AdReceipt, AdSale } from "@/types/ad-li
 import { formatAdPrice } from "@/lib/ad-licoreria/conversions";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { adLicoreriaBrand } from "@/content/ad-licoreria/brand";
+import { printDocumentElement } from "@/lib/ad-licoreria/document-export";
 
 type MoneyLine = { label: string; usd?: number; bs?: number };
 
 function printNode(id: string) {
-  const node = document.getElementById(id);
-  if (!node) return;
-  const w = window.open("", "_blank", "noopener,noreferrer,width=480,height=720");
-  if (!w) return;
-  w.document.write(`<!doctype html><html><head><title>Documento A&D</title>
-    <style>
-      body{font-family:Georgia,serif;color:#111;padding:24px;max-width:420px;margin:0 auto}
-      h1{font-size:1.4rem;margin:0 0 .25rem} .muted{color:#666;font-size:.8rem}
-      table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.85rem}
-      th,td{border-bottom:1px solid #ddd;padding:6px 4px;text-align:left}
-      .right{text-align:right} .badge{display:inline-block;border:1px solid #999;padding:2px 6px;font-size:.65rem;letter-spacing:.08em}
-      @media print{button{display:none}}
-    </style></head><body>${node.innerHTML}
-    <p class="muted">A&D Licorería & Bodegón · documento mock</p>
-    <script>window.onload=()=>window.print()</script></body></html>`);
-  w.document.close();
+  printDocumentElement(id, "Documento A&D");
 }
 
 export function AdPreliminarDocument(props: {

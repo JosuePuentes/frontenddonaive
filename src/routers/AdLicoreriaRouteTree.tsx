@@ -50,6 +50,12 @@ const AdLicoreriaMovimientos = lazy(
 const AdLicoreriaCasaCambio = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaCasaCambio"),
 );
+const AdLicoreriaConciliacion = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaConciliacion"),
+);
+const AdLicoreriaPromociones = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaPromociones"),
+);
 const AdLicoreriaConfigFinanciera = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaConfigFinanciera"),
 );
@@ -204,6 +210,14 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
       <Route
         path={adLicoreriaRouterPath(prefix, "casaCambio")}
         element={<AdLicoreriaCasaCambio />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "conciliacion")}
+        element={<AdLicoreriaConciliacion />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "promociones")}
+        element={<AdLicoreriaPromociones />}
       />
       <Route
         path={adLicoreriaRouterPath(prefix, "configFinanciera")}

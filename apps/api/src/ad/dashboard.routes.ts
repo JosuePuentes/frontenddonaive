@@ -10,6 +10,7 @@ export const dashboardQuerySchema = z.object({
       "hoy",
       "ayer",
       "semana",
+      "ultimos_7_dias",
       "semana_anterior",
       "mes",
       "mes_anterior",
@@ -21,6 +22,7 @@ export const dashboardQuerySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   displayCurrency: z.enum(["USD", "BS"]).optional(),
+  currency: z.enum(["USD", "BS"]).optional(),
   warehouseId: z.string().uuid().optional(),
 });
 

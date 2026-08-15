@@ -4,6 +4,7 @@ export type AdReportPreset =
   | "hoy"
   | "ayer"
   | "semana"
+  | "ultimos_7_dias"
   | "semana_anterior"
   | "mes"
   | "mes_anterior"
@@ -15,6 +16,7 @@ export const AD_REPORT_PRESET_LABELS: Record<AdReportPreset, string> = {
   hoy: "Hoy",
   ayer: "Ayer",
   semana: "Esta semana",
+  ultimos_7_dias: "Últimos 7 días",
   semana_anterior: "Semana anterior",
   mes: "Este mes",
   mes_anterior: "Mes anterior",
@@ -49,6 +51,11 @@ export function rangeForPreset(
   }
   if (preset === "semana") {
     const start = startOfWeek(now);
+    return { from: isoDate(start), to: today };
+  }
+  if (preset === "ultimos_7_dias") {
+    const start = new Date(now);
+    start.setDate(start.getDate() - 6);
     return { from: isoDate(start), to: today };
   }
   if (preset === "semana_anterior") {

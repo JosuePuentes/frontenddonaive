@@ -5,9 +5,11 @@ import {
   createExchangeSchema,
   createExpenseSchema,
   createFinancialAccountSchema,
+  createReconciliationSchema,
   createTransferSchema,
   listMovementsQuerySchema,
   parseBody,
+  reconciliationPreviewSchema,
   updateFinanceSettingsSchema,
   updateFinancialAccountSchema,
 } from "./finance.validation.js";
@@ -180,3 +182,42 @@ adFinanceRouter.get(
     }
   },
 );
+
+/** Fase 9 — conciliación */
+adFinanceRouter.get("/finance/reconciliations/preview", async (req, res, next) => {
+  try {
+    const q = reconciliationPreviewSchema.parse(req.query);
+    const data = await adFinanceService.reconciliationPreview(
+      getAdContext(req),
+      q,
+    );
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adFinanceRouter.get("/finance/reconciliations", async (req, res, next) => {
+  try {
+    const data = await adFinanceService.listReconciliations(getAdContext(req), {
+      accountId: req.query.accountId ? String(req.query.accountId) : undefined,
+      limit: req.query.limit ? Number(req.query.limit) : undefined,
+    });
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adFinanceRouter.post("/finance/reconciliations", async (req, res, next) => {
+  try {
+    const body = parseBody(createReconciliationSchema, req.body);
+    const data = await adFinanceService.createReconciliation(
+      getAdContext(req),
+      body,
+    );
+    res.status(201).json({ data });
+  } catch (err) {
+    next(err);
+  }
+});

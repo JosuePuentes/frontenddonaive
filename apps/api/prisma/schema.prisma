@@ -1055,6 +1055,7 @@ model AdTenant {
   financialAccounts AdFinancialAccount[]
   financialMovements AdFinancialMovement[]
   financeSettings   AdFinanceSettings?
+  financialReconciliations AdFinancialReconciliation[]
 
   @@schema("ad_licoreria")
 }
@@ -2168,6 +2169,7 @@ model AdFinancialAccount {
   paymentMethods AdPaymentMethod[]
   movements      AdFinancialMovement[]   @relation("MovementAccount")
   movementsAsCounter AdFinancialMovement[] @relation("MovementCounterAccount")
+  reconciliations AdFinancialReconciliation[]
 
   @@unique([tenantId, name])
   @@index([tenantId, currency, active])
@@ -2221,5 +2223,39 @@ model AdFinancialMovement {
   @@index([accountId, createdAt])
   @@index([counterAccountId])
   @@index([relatedEntity, relatedId])
+  @@schema("ad_licoreria")
+}
+
+/// Fase 9 — conciliación básica (saldo declarado vs sistema). Solo lectura operativa + registro auditado.
+model AdFinancialReconciliation {
+  id                     String              @id @default(uuid())
+  tenantId               String
+  tenant                 AdTenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accountId              String
+  account                AdFinancialAccount  @relation(fields: [accountId], references: [id])
+  currency               AdMoneyCurrency
+  /// Fecha de corte de la conciliación (día inclusivo).
+  asOfDate               DateTime
+  periodFrom             DateTime?
+  periodTo               DateTime?
+  openingBalance         Decimal             @db.Decimal(18, 4)
+  income                 Decimal             @default(0) @db.Decimal(18, 4)
+  expense                Decimal             @default(0) @db.Decimal(18, 4)
+  transfersIn            Decimal             @default(0) @db.Decimal(18, 4)
+  transfersOut           Decimal             @default(0) @db.Decimal(18, 4)
+  /// Saldo calculado desde opening + movimientos del período.
+  calculatedBalance      Decimal             @db.Decimal(18, 4)
+  /// Saldo registrado en cuenta al momento de conciliar.
+  systemBalance          Decimal             @db.Decimal(18, 4)
+  /// Saldo declarado por el operador (extracto / conteo).
+  declaredBalance        Decimal             @db.Decimal(18, 4)
+  /// declared − system (o calculated, según decisión documentada: declared − system).
+  difference             Decimal             @db.Decimal(18, 4)
+  notes                  String?
+  operatorId             String?
+  createdAt              DateTime            @default(now())
+
+  @@index([tenantId, asOfDate])
+  @@index([accountId, createdAt])
   @@schema("ad_licoreria")
 }

@@ -21,7 +21,9 @@ const AD_SEGMENTS = {
   bancos: "/bancos",
   movimientos: "/finanzas/movimientos",
   casaCambio: "/casa-cambio",
+  conciliacion: "/finanzas/conciliacion",
   configFinanciera: "/finanzas/configuracion",
+  promociones: "/promociones",
   cierres: "/cierres",
   clientes: "/clientes",
   reportes: "/reportes",
@@ -68,7 +70,9 @@ export type AdLicoreriaRoutes = {
   bancos: string;
   movimientos: string;
   casaCambio: string;
+  conciliacion: string;
   configFinanciera: string;
+  promociones: string;
   cierres: string;
   clientes: string;
   reportes: string;
@@ -118,7 +122,9 @@ export function getAdLicoreriaRoutes(
     bancos: joinPath(base, AD_SEGMENTS.bancos),
     movimientos: joinPath(base, AD_SEGMENTS.movimientos),
     casaCambio: joinPath(base, AD_SEGMENTS.casaCambio),
+    conciliacion: joinPath(base, AD_SEGMENTS.conciliacion),
     configFinanciera: joinPath(base, AD_SEGMENTS.configFinanciera),
+    promociones: joinPath(base, AD_SEGMENTS.promociones),
     cierres: joinPath(base, AD_SEGMENTS.cierres),
     clientes: joinPath(base, AD_SEGMENTS.clientes),
     reportes: joinPath(base, AD_SEGMENTS.reportes),

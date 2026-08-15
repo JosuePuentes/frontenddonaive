@@ -24,8 +24,11 @@ import {
   type BuiltPurchaseLine,
   type RawPurchaseLineInput,
 } from "./commerce-purchase.js";
-import { weightedAverageCost } from "./availability.js";
+import { weightedAverageCost, computeOperationalAvailability } from "./availability.js";
 import { writeAdAudit } from "./service.js";
+
+/** Zona crítica provisional: utilidad < 5% sobre costo (documentado en FASE9). */
+export const PRICING_CRITICAL_UTILITY_PCT = 5;
 
 function dec(n: number): Prisma.Decimal {
   return new Prisma.Decimal(n);
@@ -1810,7 +1813,97 @@ export const adCommerceService = {
       utilityPercent: util.utilityPercent,
       marginPercent: util.marginPercent,
       belowCost: util.belowCost,
+      /** Alerta soft: cerca del costo (umbral provisional documentado). */
+      nearCost:
+        !util.belowCost && util.utilityPercent < PRICING_CRITICAL_UTILITY_PCT,
+      criticalZone:
+        util.belowCost || util.utilityPercent < PRICING_CRITICAL_UTILITY_PCT,
     };
+  },
+
+  async listPromotions(ctx: AdRequestContext) {
+    requireAdPermission(ctx, "promotions.manage");
+    const prisma = getPrisma();
+    return prisma.adPromotion.findMany({
+      where: { tenantId: ctx.tenantId },
+      include: {
+        items: { include: { presentation: true, product: true } },
+        paymentMethods: { include: { paymentMethod: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  async updatePromotion(
+    ctx: AdRequestContext,
+    id: string,
+    input: {
+      name?: string;
+      description?: string | null;
+      active?: boolean;
+      startsAt?: string | null;
+      endsAt?: string | null;
+      paymentMethodIds?: string[];
+    },
+  ) {
+    requireAdPermission(ctx, "promotions.manage");
+    const prisma = getPrisma();
+    const before = await prisma.adPromotion.findFirst({
+      where: { id, tenantId: ctx.tenantId },
+      include: { paymentMethods: true },
+    });
+    if (!before) throw new NotFoundError("Promoción no encontrada");
+
+    const after = await prisma.$transaction(async (tx) => {
+      if (input.paymentMethodIds) {
+        await tx.adPromotionPaymentMethod.deleteMany({
+          where: { promotionId: id },
+        });
+        if (input.paymentMethodIds.length) {
+          await tx.adPromotionPaymentMethod.createMany({
+            data: input.paymentMethodIds.map((paymentMethodId) => ({
+              promotionId: id,
+              paymentMethodId,
+            })),
+          });
+        }
+      }
+      return tx.adPromotion.update({
+        where: { id },
+        data: {
+          name: input.name,
+          description: input.description,
+          active: input.active,
+          startsAt:
+            input.startsAt === undefined
+              ? undefined
+              : input.startsAt
+                ? new Date(input.startsAt)
+                : null,
+          endsAt:
+            input.endsAt === undefined
+              ? undefined
+              : input.endsAt
+                ? new Date(input.endsAt)
+                : null,
+        },
+        include: {
+          items: true,
+          paymentMethods: { include: { paymentMethod: true } },
+        },
+      });
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      action: "update",
+      entity: "promotion",
+      entityId: id,
+      before: { active: before.active, name: before.name },
+      after: { active: after.active, name: after.name },
+    });
+    return after;
   },
 
   async createPromotion(
@@ -2106,22 +2199,62 @@ export const adCommerceService = {
     const since = new Date();
     since.setDate(since.getDate() - input.windowDays);
 
+    const warehouses = await prisma.adWarehouse.findMany({
+      where: { tenantId: ctx.tenantId, active: true },
+      select: { id: true },
+    });
+    const warehouseIds = warehouses.map((w) => w.id);
+    const preferred =
+      warehouseId ?? warehouseIds[0] ?? "";
+
     const products = await prisma.adProduct.findMany({
       where: { tenantId: ctx.tenantId, active: true },
       include: {
-        stocks: warehouseId ? { where: { warehouseId } } : true,
-        presentations: { where: { active: true }, take: 1 },
+        stocks: true,
+        presentations: { where: { active: true } },
       },
     });
 
-    const movements = await prisma.adInventoryMovement.findMany({
-      where: {
-        type: { in: ["SALE", "SERVE"] },
-        createdAt: { gte: since },
-        ...(warehouseId ? { warehouseId } : {}),
-        product: { tenantId: ctx.tenantId },
-      },
-    });
+    const [movements, openAccounts, transfers, commitments, pendingPos] =
+      await Promise.all([
+        prisma.adInventoryMovement.findMany({
+          where: {
+            type: { in: ["SALE", "SERVE"] },
+            createdAt: { gte: since },
+            ...(warehouseId ? { warehouseId } : {}),
+            product: { tenantId: ctx.tenantId },
+          },
+        }),
+        prisma.adAccount.findMany({
+          where: {
+            tenantId: ctx.tenantId,
+            status: {
+              in: ["ABIERTA", "PREPAGADA", "PARCIALMENTE_PAGADA", "PAGADA"],
+            },
+          },
+          include: { lines: true },
+        }),
+        prisma.adStockTransfer.findMany({
+          where: {
+            tenantId: ctx.tenantId,
+            status: {
+              in: ["REQUESTED", "AUTHORIZED", "PRELIMINARY", "DRAFT", "SENT"],
+            },
+          },
+          include: { lines: true },
+        }),
+        prisma.adCustomerCommitment.findMany({
+          where: { tenantId: ctx.tenantId, status: "PENDIENTE" },
+        }),
+        prisma.adPurchaseOrder.findMany({
+          where: {
+            tenantId: ctx.tenantId,
+            status: { in: ["PRELIMINARY", "CONFIRMED", "SENT"] },
+          },
+          include: { lines: true },
+        }),
+      ]);
+
     const consumed = new Map<string, number>();
     for (const m of movements) {
       consumed.set(
@@ -2130,15 +2263,79 @@ export const adCommerceService = {
       );
     }
 
+    const inTransitByProduct = new Map<string, number>();
+    for (const po of pendingPos) {
+      for (const l of po.lines) {
+        inTransitByProduct.set(
+          l.productId,
+          (inTransitByProduct.get(l.productId) ?? 0) + num(l.qtyBase),
+        );
+      }
+    }
+
+    const avPresentations = products.flatMap((p) =>
+      p.presentations.map((pr) => ({
+        id: pr.id,
+        unitsPerPresentation: num(pr.unitsPerPresentation),
+      })),
+    );
+    const avStocks = products.flatMap((p) =>
+      p.stocks.map((s) => ({
+        warehouseId: s.warehouseId,
+        productId: s.productId,
+        qtyBase: num(s.qtyBase),
+      })),
+    );
+    const avAccounts = openAccounts.map((a) => ({
+      status: a.status,
+      warehouseId: a.warehouseId,
+      lines: a.lines.map((l) => ({
+        productId: l.productId,
+        presentationId: l.presentationId,
+        qtyOrdered: num(l.qtyOrdered),
+        qtyServed: num(l.qtyServed),
+      })),
+    }));
+    const avTransfers = transfers.map((t) => ({
+      status: t.status,
+      fromWarehouseId: t.fromWarehouseId,
+      lines: t.lines
+        .filter((l) => l.presentationId)
+        .map((l) => ({
+          productId: l.productId,
+          presentationId: l.presentationId as string,
+          qty: num(l.qty),
+          qtyBase: num(l.qtyBase),
+        })),
+    }));
+    const avCommitments = commitments.map((c) => ({
+      productId: c.productId,
+      status: c.status,
+      qtyBaseRemaining: num(c.qtyBaseRemaining),
+    }));
+
     const suggestions = products.map((p) => {
-      const stock = p.stocks.reduce((a, s) => a + num(s.qtyBase), 0);
+      const av = computeOperationalAvailability({
+        productId: p.id,
+        requestedBase: 0,
+        preferredWarehouseId: preferred,
+        warehouseIds,
+        stocks: avStocks,
+        accounts: avAccounts,
+        presentations: avPresentations,
+        transfers: avTransfers,
+        commitments: avCommitments,
+      });
       const qtyConsumed = consumed.get(p.id) ?? 0;
       const daily = avgDailyFromWindow(qtyConsumed, input.windowDays);
       const weekly = daily * 7;
       const monthly = daily * 30;
+      const inTransit = inTransitByProduct.get(p.id) ?? 0;
+      /** Disponible operativo + en tránsito (OC abiertas) para sugerencia. */
+      const stockForSuggest = av.availableOperationalTotal + inTransit;
       const sug = suggestReplenishment({
         avgDailyConsumption: daily,
-        stockAvailable: stock,
+        stockAvailable: stockForSuggest,
         coverageDays: input.coverageDays,
       });
       return {
@@ -2150,11 +2347,16 @@ export const adCommerceService = {
         avgDaily: daily,
         avgWeekly: weekly,
         avgMonthly: monthly,
-        stockAvailable: stock,
-        stockCommitted: 0,
+        stockPhysical: av.physicalTotal,
+        stockCommitted: av.committedActiveTotal,
+        stockAvailable: av.availableOperationalTotal,
+        inTransitQtyBase: inTransit,
         estimatedCoverageDays: sug.estimatedCoverageDays,
         suggestedQtyBase: sug.suggested,
         needQtyBase: sug.need,
+        avgCostUsd: num(p.avgCostUsd),
+        replacementHint:
+          "Costo de reposición usa tasas actuales (finance); CPP histórico no se altera.",
       };
     });
 
@@ -2168,6 +2370,82 @@ export const adCommerceService = {
     });
 
     return suggestions.filter((s) => s.suggestedQtyBase > 0 || s.avgDaily > 0);
+  },
+
+  async listPurchaseOrders(ctx: AdRequestContext) {
+    requireAdPermission(ctx, "purchase-orders.create");
+    const prisma = getPrisma();
+    return prisma.adPurchaseOrder.findMany({
+      where: { tenantId: ctx.tenantId },
+      include: { lines: true, supplier: true },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  },
+
+  async updatePurchaseOrder(
+    ctx: AdRequestContext,
+    id: string,
+    input: {
+      status?: "PRELIMINARY" | "CONFIRMED" | "CANCELLED";
+      notes?: string;
+      lines?: {
+        id?: string;
+        productId: string;
+        presentationId?: string;
+        suggestedQtyBase: number;
+        qtyBase: number;
+        notes?: string;
+      }[];
+    },
+  ) {
+    requireAdPermission(ctx, "purchase-orders.create");
+    const prisma = getPrisma();
+    const before = await prisma.adPurchaseOrder.findFirst({
+      where: { id, tenantId: ctx.tenantId },
+      include: { lines: true },
+    });
+    if (!before) throw new NotFoundError("OC no encontrada");
+    if (before.status === "CONVERTED" || before.status === "CANCELLED") {
+      throw new ValidationError(`OC en estado ${before.status} no editable`);
+    }
+
+    const after = await prisma.$transaction(async (tx) => {
+      if (input.lines) {
+        await tx.adPurchaseOrderLine.deleteMany({
+          where: { purchaseOrderId: id },
+        });
+        await tx.adPurchaseOrderLine.createMany({
+          data: input.lines.map((l) => ({
+            purchaseOrderId: id,
+            productId: l.productId,
+            presentationId: l.presentationId,
+            suggestedQtyBase: dec(l.suggestedQtyBase),
+            qtyBase: dec(l.qtyBase),
+            notes: l.notes,
+          })),
+        });
+      }
+      return tx.adPurchaseOrder.update({
+        where: { id },
+        data: {
+          status: input.status,
+          notes: input.notes,
+        },
+        include: { lines: true, supplier: true },
+      });
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      action: input.status === "CONFIRMED" ? "confirm" : "update",
+      entity: "purchase_order",
+      entityId: id,
+      before: { status: before.status, lines: before.lines.length },
+      after: { status: after.status, lines: after.lines.length },
+    });
+    return after;
   },
 
   async createPurchaseOrder(

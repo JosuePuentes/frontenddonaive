@@ -21,6 +21,8 @@ import {
   setProtectedRateSchema,
   updateCommercePurchaseLineSchema,
   updateCommercePurchaseSchema,
+  updatePromotionSchema,
+  updatePurchaseOrderSchema,
   updateSupplierSchema,
   upsertPaymentMethodSchema,
 } from "./commerce.validation.js";
@@ -347,6 +349,31 @@ adCommerceRouter.post("/promotions", async (req, res, next) => {
   }
 });
 
+adCommerceRouter.get("/promotions", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const data = await adCommerceService.listPromotions(ctx);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adCommerceRouter.patch("/promotions/:id", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(updatePromotionSchema, req.body);
+    const data = await adCommerceService.updatePromotion(
+      ctx,
+      req.params.id,
+      body,
+    );
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 adCommerceRouter.post("/combos", async (req, res, next) => {
   try {
     const ctx = getAdContext(req);
@@ -391,12 +418,37 @@ adCommerceRouter.get("/commerce/replenishment", async (req, res, next) => {
   }
 });
 
+adCommerceRouter.get("/commerce/purchase-orders", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const data = await adCommerceService.listPurchaseOrders(ctx);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 adCommerceRouter.post("/commerce/purchase-orders", async (req, res, next) => {
   try {
     const ctx = getAdContext(req);
     const body = parseBody(createPurchaseOrderSchema, req.body);
     const data = await adCommerceService.createPurchaseOrder(ctx, body);
     res.status(201).json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adCommerceRouter.patch("/commerce/purchase-orders/:id", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(updatePurchaseOrderSchema, req.body);
+    const data = await adCommerceService.updatePurchaseOrder(
+      ctx,
+      req.params.id,
+      body,
+    );
+    res.json({ data });
   } catch (err) {
     next(err);
   }

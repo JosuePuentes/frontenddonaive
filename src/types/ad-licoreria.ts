@@ -54,6 +54,7 @@ export type AdPermission =
   | "finance.expenses"
   | "finance.withdrawals"
   | "finance.dashboard.view"
+  | "finance.reconcile"
   | "cop.read"
   | "cop.transfer"
   | "cop.purchase_request"

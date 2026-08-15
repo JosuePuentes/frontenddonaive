@@ -140,7 +140,11 @@ export const adCommerceClient = {
   getProtected: () => commerceFetch("GET", "/api/v1/ad/rates/protected"),
   setProtected: (rate: number, reason?: string) =>
     commerceFetch("POST", "/api/v1/ad/rates/protected", { rate, reason }),
-  analysis: () => commerceFetch<unknown[]>("GET", "/api/v1/ad/commerce/analysis"),
+  analysis: (qs = "") =>
+    commerceFetch<unknown[]>(
+      "GET",
+      `/api/v1/ad/commerce/analysis${qs}`,
+    ),
   replenishment: (coverageDays = 7) =>
     commerceFetch<unknown[]>(
       "GET",
@@ -148,6 +152,16 @@ export const adCommerceClient = {
     ),
   createPurchaseOrder: (body: Record<string, unknown>) =>
     commerceFetch("POST", "/api/v1/ad/commerce/purchase-orders", body),
+  listPurchaseOrders: () =>
+    commerceFetch<unknown[]>("GET", "/api/v1/ad/commerce/purchase-orders"),
+  updatePurchaseOrder: (id: string, body: Record<string, unknown>) =>
+    commerceFetch(
+      "PATCH",
+      `/api/v1/ad/commerce/purchase-orders/${id}`,
+      body,
+    ),
+  setPresentationPrice: (body: Record<string, unknown>) =>
+    commerceFetch("POST", "/api/v1/ad/pricing/presentation", body),
   importPreview: (rows: unknown[]) =>
     commerceFetch("POST", "/api/v1/ad/imports/preview", {
       fileName: "upload.json",
@@ -155,8 +169,12 @@ export const adCommerceClient = {
     }),
   importConfirm: (batchId: string) =>
     commerceFetch("POST", "/api/v1/ad/imports/confirm", { batchId }),
+  listPromotions: () =>
+    commerceFetch<unknown[]>("GET", "/api/v1/ad/promotions"),
   createPromotion: (body: Record<string, unknown>) =>
     commerceFetch("POST", "/api/v1/ad/promotions", body),
+  updatePromotion: (id: string, body: Record<string, unknown>) =>
+    commerceFetch("PATCH", `/api/v1/ad/promotions/${id}`, body),
   createCombo: (body: Record<string, unknown>) =>
     commerceFetch("POST", "/api/v1/ad/combos", body),
 };

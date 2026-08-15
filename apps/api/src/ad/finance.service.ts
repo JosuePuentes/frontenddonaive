@@ -15,6 +15,7 @@ import {
 } from "./authorization.js";
 import {
   convertBetweenCurrencies,
+  movementSignForAccount,
   replacementCostFromRates,
 } from "./finance-domain.js";
 import { postConfirmedMovement } from "./finance-ledger.js";
@@ -27,6 +28,16 @@ function dec(n: number): Prisma.Decimal {
 function num(v: Prisma.Decimal | number | null | undefined): number {
   if (v == null) return 0;
   return typeof v === "number" ? v : Number(v);
+}
+
+function dayBounds(fromDate: string, toDateInclusive: string): {
+  from: Date;
+  toExclusive: Date;
+} {
+  const from = new Date(`${fromDate.slice(0, 10)}T00:00:00.000Z`);
+  const end = new Date(`${toDateInclusive.slice(0, 10)}T00:00:00.000Z`);
+  const toExclusive = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  return { from, toExclusive };
 }
 
 function money(m: {
@@ -809,6 +820,16 @@ export const adFinanceService = {
         rateBsPerUsd: input.rateBsPerUsd,
         amountOut: conv.amountOut,
         currencyOut: to.currency,
+        /** Valor original / convertido / impacto (analítica; no altera venta). */
+        originalValue: input.amount,
+        convertedValue: conv.amountOut,
+        rateUsed: conv.rateUsed,
+        /** Diferencia de representación monetaria (destino − origen convertido 1:1 no aplica).
+         * No se etiqueta automáticamente como pérdida/ganancia: solo se reporta el delta
+         * cuando hay originalSaleAmount explícito. */
+        fxDifference: null as number | null,
+        impactNote:
+          "La conversión cambia la representación monetaria; no implica pérdida automática.",
       },
       after: {
         origin: {
@@ -821,6 +842,221 @@ export const adFinanceService = {
         },
       },
     };
+  },
+
+  /**
+   * Preview de conciliación: ingresos/egresos/transferencias y saldos.
+   * calculatedBalance = opening + Σ signos del período.
+   * systemBalance = balance actual de la cuenta.
+   */
+  async reconciliationPreview(
+    ctx: AdRequestContext,
+    input: { accountId: string; from?: string; to?: string },
+  ) {
+    requireAdPermission(ctx, "finance.reconcile");
+    const prisma = getPrisma();
+    const account = await prisma.adFinancialAccount.findFirst({
+      where: { id: input.accountId, tenantId: ctx.tenantId },
+    });
+    if (!account) throw new NotFoundError("Cuenta no encontrada");
+
+    const today = new Date().toISOString().slice(0, 10);
+    const fromDate = (input.from ?? today).slice(0, 10);
+    const toDate = (input.to ?? today).slice(0, 10);
+    const { from, toExclusive } = dayBounds(fromDate, toDate);
+
+    const movements = await prisma.adFinancialMovement.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        status: "CONFIRMED",
+        OR: [
+          { accountId: account.id },
+          { counterAccountId: account.id },
+        ],
+        confirmedAt: { gte: from, lt: toExclusive },
+      },
+      orderBy: { confirmedAt: "asc" },
+    });
+
+    let income = 0;
+    let expense = 0;
+    let transfersIn = 0;
+    let transfersOut = 0;
+    let periodDelta = 0;
+
+    for (const m of movements) {
+      const role =
+        m.accountId === account.id ? ("primary" as const) : ("counter" as const);
+      const amt =
+        role === "primary"
+          ? num(m.amount)
+          : num(m.counterAmount ?? m.amount);
+      const sign = movementSignForAccount(m.type, role);
+      const delta = sign * amt;
+      periodDelta += delta;
+
+      if (m.type === "INGRESO_VENTA" && role === "primary") income += amt;
+      else if (
+        (m.type === "EGRESO_COMPRA" ||
+          m.type === "EGRESO_GASTO" ||
+          m.type === "RETIRO") &&
+        role === "primary"
+      ) {
+        expense += amt;
+      } else if (m.type === "TRANSFERENCIA" || m.type === "CAMBIO_MONEDA") {
+        if (sign > 0) transfersIn += amt;
+        else transfersOut += amt;
+      } else if (m.type === "INGRESO_VENTA") {
+        income += amt;
+      }
+    }
+
+    const openingBalance = num(account.openingBalance);
+    /** opening + todos los confirmados hasta fin de período ≈ system; aquí usamos period delta. */
+    const priorMoves = await prisma.adFinancialMovement.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        status: "CONFIRMED",
+        OR: [{ accountId: account.id }, { counterAccountId: account.id }],
+        confirmedAt: { lt: from },
+      },
+    });
+    let openingCalculated = openingBalance;
+    for (const m of priorMoves) {
+      const role =
+        m.accountId === account.id ? ("primary" as const) : ("counter" as const);
+      const amt =
+        role === "primary"
+          ? num(m.amount)
+          : num(m.counterAmount ?? m.amount);
+      openingCalculated += movementSignForAccount(m.type, role) * amt;
+    }
+
+    const calculatedBalance = openingCalculated + periodDelta;
+    const systemBalance = num(account.balance);
+
+    return {
+      account: {
+        id: account.id,
+        name: account.name,
+        currency: account.currency,
+        type: account.type,
+      },
+      period: { from: fromDate, to: toDate },
+      openingBalance: openingCalculated,
+      income,
+      expense,
+      transfersIn,
+      transfersOut,
+      calculatedBalance,
+      systemBalance,
+      movementsCount: movements.length,
+    };
+  },
+
+  async createReconciliation(
+    ctx: AdRequestContext,
+    input: {
+      accountId: string;
+      asOfDate: string;
+      from?: string;
+      to?: string;
+      declaredBalance: number;
+      notes?: string;
+    },
+  ) {
+    requireAdPermission(ctx, "finance.reconcile");
+    const preview = await this.reconciliationPreview(ctx, {
+      accountId: input.accountId,
+      from: input.from ?? input.asOfDate,
+      to: input.to ?? input.asOfDate,
+    });
+    const difference = input.declaredBalance - preview.systemBalance;
+    const prisma = getPrisma();
+    const row = await prisma.adFinancialReconciliation.create({
+      data: {
+        tenantId: ctx.tenantId,
+        accountId: input.accountId,
+        currency: preview.account.currency as "USD" | "BS",
+        asOfDate: new Date(`${input.asOfDate.slice(0, 10)}T00:00:00.000Z`),
+        periodFrom: new Date(
+          `${(input.from ?? input.asOfDate).slice(0, 10)}T00:00:00.000Z`,
+        ),
+        periodTo: new Date(
+          `${(input.to ?? input.asOfDate).slice(0, 10)}T00:00:00.000Z`,
+        ),
+        openingBalance: dec(preview.openingBalance),
+        income: dec(preview.income),
+        expense: dec(preview.expense),
+        transfersIn: dec(preview.transfersIn),
+        transfersOut: dec(preview.transfersOut),
+        calculatedBalance: dec(preview.calculatedBalance),
+        systemBalance: dec(preview.systemBalance),
+        declaredBalance: dec(input.declaredBalance),
+        difference: dec(difference),
+        notes: input.notes,
+        operatorId: ctx.operator.id,
+      },
+      include: { account: true },
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      action: "create",
+      entity: "financial_reconciliation",
+      entityId: row.id,
+      after: {
+        accountId: row.accountId,
+        declaredBalance: input.declaredBalance,
+        systemBalance: preview.systemBalance,
+        calculatedBalance: preview.calculatedBalance,
+        difference,
+        notes: input.notes,
+      },
+    });
+
+    return {
+      ...row,
+      openingBalance: num(row.openingBalance),
+      income: num(row.income),
+      expense: num(row.expense),
+      transfersIn: num(row.transfersIn),
+      transfersOut: num(row.transfersOut),
+      calculatedBalance: num(row.calculatedBalance),
+      systemBalance: num(row.systemBalance),
+      declaredBalance: num(row.declaredBalance),
+      difference: num(row.difference),
+    };
+  },
+
+  async listReconciliations(
+    ctx: AdRequestContext,
+    query?: { accountId?: string; limit?: number },
+  ) {
+    requireAdPermission(ctx, "finance.reconcile");
+    const prisma = getPrisma();
+    const rows = await prisma.adFinancialReconciliation.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        ...(query?.accountId ? { accountId: query.accountId } : {}),
+      },
+      include: { account: { select: { id: true, name: true, currency: true } } },
+      orderBy: { createdAt: "desc" },
+      take: query?.limit ?? 50,
+    });
+    return rows.map((r) => ({
+      ...r,
+      openingBalance: num(r.openingBalance),
+      income: num(r.income),
+      expense: num(r.expense),
+      transfersIn: num(r.transfersIn),
+      transfersOut: num(r.transfersOut),
+      calculatedBalance: num(r.calculatedBalance),
+      systemBalance: num(r.systemBalance),
+      declaredBalance: num(r.declaredBalance),
+      difference: num(r.difference),
+    }));
   },
 };
 

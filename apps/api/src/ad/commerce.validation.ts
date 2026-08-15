@@ -147,6 +147,32 @@ export const createPromotionSchema = z.object({
     .min(1),
 });
 
+export const updatePromotionSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  active: z.boolean().optional(),
+  startsAt: z.string().datetime().optional().nullable(),
+  endsAt: z.string().datetime().optional().nullable(),
+  paymentMethodIds: z.array(z.string().uuid()).optional(),
+});
+
+export const updatePurchaseOrderSchema = z.object({
+  status: z.enum(["PRELIMINARY", "CONFIRMED", "CANCELLED"]).optional(),
+  notes: z.string().max(1000).optional(),
+  lines: z
+    .array(
+      z.object({
+        id: z.string().uuid().optional(),
+        productId: z.string().uuid(),
+        presentationId: z.string().uuid().optional(),
+        suggestedQtyBase: z.number().nonnegative(),
+        qtyBase: z.number().nonnegative(),
+        notes: z.string().max(500).optional(),
+      }),
+    )
+    .optional(),
+});
+
 export const createComboSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),

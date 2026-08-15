@@ -198,9 +198,50 @@ export default function AdLicoreriaCasaCambio() {
       </section>
 
       {preview && (
-        <pre className="overflow-auto rounded bg-black/5 p-3 text-xs">
-          {JSON.stringify(preview, null, 2)}
-        </pre>
+        <section className="ad-panel space-y-2 text-sm">
+          <h2 className="font-medium">Vista previa (sin alterar venta original)</h2>
+          <dl className="grid gap-1 sm:grid-cols-2">
+            <div>
+              Valor original:{" "}
+              <strong>
+                {Number(
+                  (preview.operation as { originalValue?: number })?.originalValue ??
+                    (preview.operation as { amountIn?: number })?.amountIn,
+                ).toFixed(2)}{" "}
+                {(preview.operation as { currencyIn?: string })?.currencyIn}
+              </strong>
+            </div>
+            <div>
+              Valor convertido:{" "}
+              <strong>
+                {Number(
+                  (preview.operation as { convertedValue?: number })?.convertedValue ??
+                    (preview.operation as { amountOut?: number })?.amountOut,
+                ).toFixed(2)}{" "}
+                {(preview.operation as { currencyOut?: string })?.currencyOut}
+              </strong>
+            </div>
+            <div>
+              Tasa usada:{" "}
+              <strong>
+                {Number(
+                  (preview.operation as { rateBsPerUsd?: number })?.rateBsPerUsd,
+                ).toFixed(4)}{" "}
+                Bs/USD
+              </strong>
+            </div>
+            <div className="sm:col-span-2 text-[var(--ad-muted)]">
+              {(preview.operation as { impactNote?: string })?.impactNote ??
+                "Cambio de representación monetaria; no implica pérdida automática."}
+            </div>
+          </dl>
+          <details>
+            <summary className="cursor-pointer text-xs">JSON técnico</summary>
+            <pre className="overflow-auto rounded bg-black/5 p-3 text-xs">
+              {JSON.stringify(preview, null, 2)}
+            </pre>
+          </details>
+        </section>
       )}
 
       {prelim && (

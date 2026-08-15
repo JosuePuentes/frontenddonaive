@@ -7,6 +7,7 @@ export type DashboardPreset =
   | "hoy"
   | "ayer"
   | "semana"
+  | "ultimos_7_dias"
   | "semana_anterior"
   | "mes"
   | "mes_anterior"
@@ -91,6 +92,9 @@ export function resolveDashboardPeriod(input: {
   } else if (preset === "semana") {
     fromDate = startOfWeekMonday(today);
     toDate = today;
+  } else if (preset === "ultimos_7_dias") {
+    toDate = today;
+    fromDate = addDays(today, -6);
   } else if (preset === "semana_anterior") {
     const startThis = startOfWeekMonday(today);
     toDate = addDays(startThis, -1);
