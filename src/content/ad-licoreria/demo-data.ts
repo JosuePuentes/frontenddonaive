@@ -604,6 +604,7 @@ export const AD_DEMO_PREPAIDS: AdPrepaidAccount[] = [
     customerId: "cli-1",
     customerName: "Juan Pérez",
     customerPhone: "0414-0000000",
+    customerDocumentId: "V-12345678",
     status: "ACTIVO",
     items: [
       {

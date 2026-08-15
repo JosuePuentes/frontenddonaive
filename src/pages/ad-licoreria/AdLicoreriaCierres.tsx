@@ -30,11 +30,14 @@ export default function AdLicoreriaCierres() {
   const [notes, setNotes] = useState("");
   const [msg, setMsg] = useState("");
 
+  const today = new Date().toISOString().slice(0, 10);
   const closureWarehouseId = session?.warehouseId ?? warehouseId;
   const canClose = hasPermission("closures.create");
 
+  /** Mismo período que createDailyClosure: HOY + depósito (+ cajero si aplica). */
   const scopedSales = useMemo(() => {
     return sales.filter((s) => {
+      if (s.createdAt.slice(0, 10) !== today) return false;
       if (s.status !== "completed") return false;
       if (closureWarehouseId && s.warehouseId !== closureWarehouseId) {
         return false;
@@ -49,7 +52,20 @@ export default function AdLicoreriaCierres() {
       }
       return true;
     });
-  }, [sales, closureWarehouseId, session]);
+  }, [sales, closureWarehouseId, session, today]);
+
+  const voidedToday = useMemo(
+    () =>
+      sales.filter(
+        (s) =>
+          s.createdAt.slice(0, 10) === today &&
+          s.status === "voided" &&
+          (!closureWarehouseId || s.warehouseId === closureWarehouseId) &&
+          (!(session?.role === "cajero" && session.id) ||
+            s.operatorId === session.id),
+      ),
+    [sales, today, closureWarehouseId, session],
+  );
 
   const byMethod = useMemo(() => {
     const map: Record<string, { usd: number; bs: number }> = {};
@@ -157,72 +173,76 @@ export default function AdLicoreriaCierres() {
         <section className="ad-panel space-y-3">
           <h2 className="ad-panel-title">Cierre de caja</h2>
           <p className="text-sm text-[var(--ad-muted)]">
-            Depósito del cierre:{" "}
+            Período: <strong className="text-[var(--ad-text)]">HOY ({today})</strong>
+            {" · "}
+            Depósito:{" "}
             <strong className="text-[var(--ad-text)]">
               {warehouseLabel(closureWarehouseId, warehouses)}
             </strong>
           </p>
-          <div className="ad-grid-stats">
-            <div className="ad-stat">
-              <div className="ad-stat__value">
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="ad-panel !p-3">
+              <p className="ad-eyebrow">Ventas del día</p>
+              <p className="ad-display text-2xl">
                 $
                 {scopedSales
                   .reduce((a, s) => a + s.total.usd, 0)
                   .toFixed(0)}
-              </div>
-              <div className="ad-stat__label">Ventas del alcance USD</div>
+              </p>
+              <p className="text-xs text-[var(--ad-muted)]">
+                {scopedSales.length} ventas · {voidedToday.length} anulaciones
+              </p>
             </div>
-            <div className="ad-stat">
-              <div className="ad-stat__value">
-                {
-                  sales.filter(
-                    (s) =>
-                      s.status === "voided" &&
-                      (!closureWarehouseId ||
-                        s.warehouseId === closureWarehouseId),
-                  ).length
-                }
-              </div>
-              <div className="ad-stat__label">Anulaciones</div>
+            <div className="ad-panel !p-3">
+              <p className="ad-eyebrow">Dinero recibido</p>
+              <p className="text-sm">
+                Efectivo USD esp. ${expectedCash.usd.toFixed(2)}
+              </p>
+              <p className="text-sm">
+                Efectivo Bs esp. {expectedCash.bs.toLocaleString("es-VE")}
+              </p>
+              <p className="text-xs text-[var(--ad-muted)] mt-1">
+                Dif. USD {(countedUsd - expectedCash.usd).toFixed(2)} · Dif. Bs{" "}
+                {(countedBs - expectedCash.bs).toFixed(0)}
+              </p>
             </div>
-            <div className="ad-stat">
-              <div className="ad-stat__value">${expectedCash.usd.toFixed(2)}</div>
-              <div className="ad-stat__label">Efectivo USD esperado</div>
-            </div>
-            <div className="ad-stat">
-              <div className="ad-stat__value">
-                {expectedCash.bs.toLocaleString("es-VE")}
-              </div>
-              <div className="ad-stat__label">Efectivo Bs esperado</div>
-            </div>
-            <div className="ad-stat">
-              <div className="ad-stat__value">
+            <div className="ad-panel !p-3">
+              <p className="ad-eyebrow">Pendientes / pasivos</p>
+              <p className="text-sm">
+                Cuentas abiertas:{" "}
                 {
                   accounts.filter(
                     (a) =>
-                      a.status === "ABIERTA" ||
-                      a.status === "PREPAGADA" ||
-                      a.status === "PARCIALMENTE_PAGADA",
+                      (a.status === "ABIERTA" ||
+                        a.status === "PREPAGADA" ||
+                        a.status === "PARCIALMENTE_PAGADA") &&
+                      (!closureWarehouseId ||
+                        a.warehouseId === closureWarehouseId),
                   ).length
                 }
-              </div>
-              <div className="ad-stat__label">Cuentas abiertas</div>
-            </div>
-            <div className="ad-stat">
-              <div className="ad-stat__value">
+              </p>
+              <p className="text-sm">
+                Prepagos activos:{" "}
                 {prepaids.filter((p) => p.status === "ACTIVO").length}
-              </div>
-              <div className="ad-stat__label">Prepagos activos</div>
+              </p>
+              <p className="text-sm">
+                Descuentos USD:{" "}
+                {scopedSales
+                  .reduce((a, s) => a + (s.discountUsd || 0), 0)
+                  .toFixed(2)}
+              </p>
             </div>
           </div>
 
           <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
+            <li className="text-[var(--ad-gold-soft)]">Pagos del día por método</li>
             {Object.entries(byMethod).map(([method, v]) => (
               <li key={method}>
                 {method}: ${v.usd.toFixed(2)} · Bs {v.bs.toLocaleString("es-VE")}
               </li>
             ))}
-            {!Object.keys(byMethod).length ? <li>Sin pagos en el alcance</li> : null}
+            {!Object.keys(byMethod).length ? <li>Sin pagos hoy en el alcance</li> : null}
           </ul>
 
           <div className="grid gap-2 sm:grid-cols-2">

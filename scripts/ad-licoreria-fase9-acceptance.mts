@@ -65,7 +65,7 @@ const PRES = "pres-reg-1";
 const PRES_BALDE = "pres-reg-balde";
 const PRES_CAJA = "pres-reg-caja";
 const PHONE = "0414-5558899";
-const DOC = "V-20111222";
+const DOC = "V-12345678";
 
 console.log("\n=== A&D Fase 9 — Validación integral operativa ===\n");
 
@@ -532,6 +532,7 @@ step("N", "Consumo QR parcial 3 + 4 → AGOTADO", () => {
       qty: 3,
       mesoneraName: "Ana",
       verifyPhone: PHONE,
+      verifyDocumentId: DOC,
     }).ok,
     "consume 3",
   );
@@ -544,7 +545,8 @@ step("N", "Consumo QR parcial 3 + 4 → AGOTADO", () => {
       presentationId: PRES,
       qty: 4,
       mesoneraName: "Ana",
-      verifyDocumentId: "V-12345678",
+      verifyPhone: PHONE,
+      verifyDocumentId: DOC,
     }).ok,
     "consume 4",
   );

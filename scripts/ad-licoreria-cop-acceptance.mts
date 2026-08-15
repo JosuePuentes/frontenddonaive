@@ -335,6 +335,7 @@ step(23, "Sugerencia de reposición", () => {
 });
 
 step(24, "Crear compra", () => {
+  adLicoreriaRepository.setCurrentOperator("op-admin");
   const req = adLicoreriaRepository.createPurchaseRequest({
     productId: PRODUCT,
     presentationId: PRES,

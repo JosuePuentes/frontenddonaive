@@ -8,10 +8,15 @@ import {
 } from "@/lib/ad-licoreria/warehouses";
 import { AD_SHORTAGE_REASON_LABELS } from "@/types/ad-licoreria";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import {
+  AdPreliminarDocument,
+  AdSaleReceiptFallback,
+} from "@/components/ad-licoreria/AdDocumentViews";
 import type {
   AdInvoiceDraft,
   AdPayment,
   AdPaymentMethodCode,
+  AdSale,
   AdSaleItem,
   AdShortageOverrideReason,
 } from "@/types/ad-licoreria";
@@ -40,7 +45,6 @@ export default function AdLicoreriaVentas() {
     createInvoiceDraft,
     confirmInvoiceDraft,
     cancelInvoiceDraft,
-    logDocumentAction,
     hasPermission,
   } = useAdLicoreria();
 
@@ -84,8 +88,12 @@ export default function AdLicoreriaVentas() {
   const [msg, setMsg] = useState("");
   const [draft, setDraft] = useState<AdInvoiceDraft | null>(null);
   const [confirmedReceipt, setConfirmedReceipt] = useState<string | null>(null);
+  const [confirmedSale, setConfirmedSale] = useState<AdSale | null>(null);
   const [shortageReason, setShortageReason] = useState("");
   const [shortageNote, setShortageNote] = useState("");
+  const [posStep, setPosStep] = useState<"productos" | "cliente" | "cobro">(
+    "productos",
+  );
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -333,6 +341,7 @@ export default function AdLicoreriaVentas() {
       return;
     }
     setConfirmedReceipt(result.data.receiptNumber);
+    setConfirmedSale(result.data);
     setCart([]);
     setPayments([]);
     setNotes("");
@@ -341,6 +350,7 @@ export default function AdLicoreriaVentas() {
     setShortageReason("");
     setShortageNote("");
     setDraft(null);
+    setPosStep("productos");
     setMsg(`Factura confirmada ${result.data.receiptNumber}`);
   }
 
@@ -437,12 +447,31 @@ export default function AdLicoreriaVentas() {
   );
 
   return (
+    <div className="ad-pos space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ["productos", "1 · Producto"],
+            ["cliente", "2 · Cliente / mesa"],
+            ["cobro", "3 · Cobro"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            className={`ad-btn ad-btn--touch ${posStep === k ? "ad-btn--gold" : ""}`}
+            onClick={() => setPosStep(k)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-      <section className="ad-panel space-y-3">
+      <section className={`ad-panel space-y-3 ${posStep !== "productos" && posStep !== "cliente" ? "max-xl:hidden" : ""}`}>
         <h2 className="ad-panel-title">Punto de venta</h2>
         <p className="text-sm text-[var(--ad-muted)]">
-          El depósito del POS está fijado por el usuario en sesión. No hay venta
-          cruzada entre depósitos.
+          Flujo rápido: producto → cantidad → cliente/mesa → cobro → preliminar →
+          confirmar. Depósito fijado por sesión.
         </p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <select
@@ -836,215 +865,135 @@ export default function AdLicoreriaVentas() {
           </button>
         </div>
         {msg ? <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p> : null}
-        {confirmedReceipt ? (
-          <div className="ad-cop__alert flex flex-wrap gap-2">
-            <span>Recibo {confirmedReceipt}</span>
-            <button
-              type="button"
-              className="ad-btn"
-              onClick={() =>
-                logDocumentAction({
-                  action: "print",
-                  entity: "sale",
-                  entityId: confirmedReceipt,
-                  userName: cashier?.name ?? "Cajero",
-                  detail: confirmedReceipt,
-                })
-              }
-            >
-              Imprimir
-            </button>
-            <button
-              type="button"
-              className="ad-btn"
-              onClick={() =>
-                logDocumentAction({
-                  action: "download",
-                  entity: "sale",
-                  entityId: confirmedReceipt,
-                  userName: cashier?.name ?? "Cajero",
-                  detail: confirmedReceipt,
-                })
-              }
-            >
-              Descargar
-            </button>
-            <button
-              type="button"
-              className="ad-btn"
-              onClick={() => setConfirmedReceipt(null)}
-            >
-              Cerrar
-            </button>
-          </div>
+        {confirmedSale ? (
+          <AdSaleReceiptFallback
+            sale={confirmedSale}
+            productName={(id) =>
+              products.find((p) => p.id === id)?.name ?? id
+            }
+            presentationName={(id) =>
+              presentations.find((p) => p.id === id)?.name ?? id
+            }
+            onClose={() => {
+              setConfirmedSale(null);
+              setConfirmedReceipt(null);
+            }}
+          />
+        ) : confirmedReceipt ? (
+          <div className="ad-cop__alert text-sm">Recibo {confirmedReceipt}</div>
         ) : null}
       </section>
 
       {draft ? (
         <div className="ad-modal-backdrop">
-          <div className="ad-modal ad-doc">
-            <p className="ad-eyebrow">Preliminar de factura</p>
-            <h3 className="ad-display text-3xl text-[var(--ad-gold-soft)]">
-              {draft.provisionalNumber}
-            </h3>
-            <div className="mt-3 grid gap-1 text-sm sm:grid-cols-2">
-              <p>Cliente: {draft.customerName ?? "—"}</p>
-              <p>Teléfono: {draft.customerPhone ?? "—"}</p>
-              <p>Cédula: {draft.customerDocumentId ?? "—"}</p>
-              <p>Mesa: {draft.tableNumber ?? "—"}</p>
-              <p>Mesonera: {draft.mesoneraName ?? "—"}</p>
-              <p>
-                Depósito:{" "}
-                {warehouseLabel(draft.warehouseId, warehouses)}
-              </p>
-              <p>Cajero: {draft.cashierName}</p>
-              <p>Fecha: {new Date(draft.createdAt).toLocaleString("es-VE")}</p>
-            </div>
-            <table className="ad-table mt-3">
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Presentación</th>
-                  <th>Cant.</th>
-                  <th>Precio</th>
-                </tr>
-              </thead>
-              <tbody>
-                {draft.items.map((it, i) => (
-                  <tr key={`${it.presentationId}-${i}`}>
-                    <td>
-                      {products.find((p) => p.id === it.productId)?.name}
-                    </td>
-                    <td>
-                      {
-                        presentations.find((p) => p.id === it.presentationId)
-                          ?.name
-                      }
-                    </td>
-                    <td>{it.qty}</td>
-                    <td>{formatAdPrice(it.unitPrice)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-2 text-sm">
-              Descuento USD {draft.discountUsd} · Métodos:{" "}
-              {draft.payments
-                .map((p) => `${p.method} ${p.currency} ${p.amount}`)
-                .join(" + ")}
-            </p>
-            {draft.supplyAlerts.some((a) => a.shortfall > 0) ? (
-              <div className="ad-cop__alert mt-3 space-y-3">
-                <p className="text-sm font-medium text-[var(--ad-gold-soft)]">
-                  La operación supera la disponibilidad operativa.
-                </p>
-                {draft.supplyAlerts
-                  .filter((a) => a.shortfall > 0)
-                  .map((a) => {
-                    const preferred = a.availability.byWarehouse.find(
-                      (w) => w.warehouseId === draft.warehouseId,
-                    );
-                    return (
-                      <div key={a.productId} className="text-sm">
-                        <p>{a.productName}</p>
-                        <ul className="mt-1 space-y-0.5 text-[var(--ad-muted)]">
-                          <li>
-                            Físico: {preferred?.physical ?? a.availability.physicalTotal}
-                          </li>
-                          <li>
-                            Comprometido:{" "}
-                            {preferred?.committedActive ??
-                              a.availability.committedActiveTotal}
-                          </li>
-                          <li>
-                            Disponible operativo:{" "}
-                            {preferred?.availableOperational ??
-                              a.availability.availableOperationalTotal}
-                          </li>
-                          <li>Cantidad solicitada: {a.requestedBase}</li>
-                          <li>Déficit: {a.shortfall}</li>
-                        </ul>
+          <div className="ad-modal ad-modal--wide">
+            <AdPreliminarDocument
+              draft={draft}
+              productName={(id) =>
+                products.find((p) => p.id === id)?.name ?? id
+              }
+              presentationName={(id) =>
+                presentations.find((p) => p.id === id)?.name ?? id
+              }
+              warehouseName={warehouseLabel(draft.warehouseId, warehouses)}
+              onBack={() => {
+                cancelInvoiceDraft({
+                  draftId: draft.id,
+                  userName: cashier?.name ?? "Cajero",
+                });
+                setDraft(null);
+              }}
+              onConfirm={() =>
+                confirmDraft(draft.supplyAlerts.some((a) => a.shortfall > 0))
+              }
+              confirmDisabled={
+                draft.supplyAlerts.some((a) => a.shortfall > 0) &&
+                !canShortageOverride
+              }
+              confirmLabel={
+                draft.supplyAlerts.some((a) => a.shortfall > 0)
+                  ? "Continuar con faltante"
+                  : "Confirmar factura"
+              }
+              footerExtra={
+                draft.supplyAlerts.some((a) => a.shortfall > 0) ? (
+                  <div className="ad-cop__alert space-y-3">
+                    <p className="text-sm font-medium text-[var(--ad-gold-soft)]">
+                      La operación supera la disponibilidad operativa.
+                    </p>
+                    {draft.supplyAlerts
+                      .filter((a) => a.shortfall > 0)
+                      .map((a) => {
+                        const preferred = a.availability.byWarehouse.find(
+                          (w) => w.warehouseId === draft.warehouseId,
+                        );
+                        return (
+                          <div key={a.productId} className="text-sm">
+                            <p>{a.productName}</p>
+                            <ul className="mt-1 space-y-0.5 text-[var(--ad-muted)]">
+                              <li>
+                                Físico:{" "}
+                                {preferred?.physical ??
+                                  a.availability.physicalTotal}
+                              </li>
+                              <li>
+                                Comprometido:{" "}
+                                {preferred?.committedActive ??
+                                  a.availability.committedActiveTotal}
+                              </li>
+                              <li>
+                                Disponible:{" "}
+                                {preferred?.availableOperational ??
+                                  a.availability.availableOperationalTotal}
+                              </li>
+                              <li>Solicitado: {a.requestedBase}</li>
+                              <li>Déficit: {a.shortfall}</li>
+                            </ul>
+                          </div>
+                        );
+                      })}
+                    {canShortageOverride ? (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <select
+                          className="ad-select"
+                          value={shortageReason}
+                          onChange={(e) => setShortageReason(e.target.value)}
+                        >
+                          <option value="">Motivo del override…</option>
+                          {(
+                            Object.keys(
+                              AD_SHORTAGE_REASON_LABELS,
+                            ) as AdShortageOverrideReason[]
+                          ).map((k) => (
+                            <option key={k} value={k}>
+                              {AD_SHORTAGE_REASON_LABELS[k]}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          className="ad-input"
+                          placeholder={
+                            shortageReason === "otro"
+                              ? "Detalle obligatorio"
+                              : "Nota (opcional)"
+                          }
+                          value={shortageNote}
+                          onChange={(e) => setShortageNote(e.target.value)}
+                        />
                       </div>
-                    );
-                  })}
-                {canShortageOverride ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <select
-                      className="ad-select"
-                      value={shortageReason}
-                      onChange={(e) => setShortageReason(e.target.value)}
-                    >
-                      <option value="">Motivo del override…</option>
-                      {(
-                        Object.keys(
-                          AD_SHORTAGE_REASON_LABELS,
-                        ) as AdShortageOverrideReason[]
-                      ).map((k) => (
-                        <option key={k} value={k}>
-                          {AD_SHORTAGE_REASON_LABELS[k]}
-                        </option>
-                      ))}
-                    </select>
-                    {shortageReason === "otro" ? (
-                      <input
-                        className="ad-input"
-                        placeholder="Detalle obligatorio"
-                        value={shortageNote}
-                        onChange={(e) => setShortageNote(e.target.value)}
-                      />
                     ) : (
-                      <input
-                        className="ad-input"
-                        placeholder="Nota (opcional)"
-                        value={shortageNote}
-                        onChange={(e) => setShortageNote(e.target.value)}
-                      />
+                      <p className="text-sm text-[var(--ad-muted)]">
+                        Sin permiso <code>pos.shortage_override</code>.
+                      </p>
                     )}
                   </div>
-                ) : (
-                  <p className="text-sm text-[var(--ad-muted)]">
-                    No tiene permiso <code>pos.shortage_override</code>. Solicite
-                    a un supervisor o administrador.
-                  </p>
-                )}
-              </div>
-            ) : null}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="ad-btn ad-btn--gold"
-                onClick={() => confirmDraft(false)}
-                disabled={draft.supplyAlerts.some((a) => a.shortfall > 0)}
-              >
-                Confirmar
-              </button>
-              {draft.supplyAlerts.some((a) => a.shortfall > 0) &&
-              canShortageOverride ? (
-                <button
-                  type="button"
-                  className="ad-btn ad-btn--primary"
-                  onClick={() => confirmDraft(true)}
-                >
-                  Continuar con faltante
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className="ad-btn"
-                onClick={() => {
-                  cancelInvoiceDraft({
-                    draftId: draft.id,
-                    userName: cashier?.name ?? "Cajero",
-                  });
-                  setDraft(null);
-                }}
-              >
-                Cancelar / editar
-              </button>
-            </div>
+                ) : null
+              }
+            />
           </div>
         </div>
       ) : null}
+    </div>
     </div>
   );
 }

@@ -1761,21 +1761,41 @@ export const adLicoreriaRepository = {
     if (prepaid.status !== "ACTIVO") {
       return { ok: false, error: "Prepago no activo" };
     }
-    const phoneOk =
-      input.verifyPhone &&
-      prepaid.customerPhone &&
-      normalizePhone(input.verifyPhone) ===
-        normalizePhone(prepaid.customerPhone);
-    const docOk =
-      input.verifyDocumentId &&
-      prepaid.customerDocumentId &&
-      input.verifyDocumentId.trim().toLowerCase() ===
-        prepaid.customerDocumentId.trim().toLowerCase();
-    if (!phoneOk && !docOk) {
+    const phoneProvided = Boolean(input.verifyPhone?.trim());
+    const docProvided = Boolean(input.verifyDocumentId?.trim());
+    if (!phoneProvided || !docProvided) {
       return {
         ok: false,
         error:
-          "Verificación de cliente requerida (teléfono o cédula). El QR solo es un token opaco.",
+          "Teléfono y cédula obligatorios para consumir. El QR solo es un token opaco.",
+      };
+    }
+    const phoneOk =
+      prepaid.customerPhone &&
+      normalizePhone(input.verifyPhone!) ===
+        normalizePhone(prepaid.customerPhone);
+    const docOnFile = Boolean(prepaid.customerDocumentId?.trim());
+    const docOk =
+      docOnFile &&
+      input.verifyDocumentId!.trim().toLowerCase() ===
+        prepaid.customerDocumentId!.trim().toLowerCase();
+    if (!phoneOk) {
+      return {
+        ok: false,
+        error: "Teléfono no coincide con el titular del prepago",
+      };
+    }
+    if (!docOnFile) {
+      return {
+        ok: false,
+        error:
+          "Prepago sin cédula registrada; no se puede verificar identidad completa",
+      };
+    }
+    if (!docOk) {
+      return {
+        ok: false,
+        error: "Cédula no coincide con el titular del prepago",
       };
     }
     const item = prepaid.items.find(
@@ -3251,6 +3271,15 @@ export const adLicoreriaRepository = {
     notes?: string;
   }): AdResult<AdPurchaseRequest> {
     if (input.qty <= 0) return { ok: false, error: "Cantidad inválida" };
+    const actor = this.getCurrentOperator();
+    if (
+      actor &&
+      !hasPermission(actor, "cop.purchase_request", state.rolePermissionOverrides) &&
+      !hasPermission(actor, "purchase.create", state.rolePermissionOverrides) &&
+      actor.role !== "admin"
+    ) {
+      return { ok: false, error: "Sin permiso para solicitar compras" };
+    }
     const pres = state.presentations.find((p) => p.id === input.presentationId);
     if (!pres) return { ok: false, error: "Presentación no encontrada" };
     const req: AdPurchaseRequest = {

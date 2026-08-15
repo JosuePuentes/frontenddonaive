@@ -83,17 +83,20 @@ export default function AdLicoreriaCop() {
       setMsg("Sin permiso para transferencias");
       return;
     }
-    const qty = av.plan.transferSuggestion;
-    if (qty <= 0 || !av.plan.transferFromId || !defaultPres) {
+    const qtyBase = av.plan.transferSuggestion;
+    if (qtyBase <= 0 || !av.plan.transferFromId || !defaultPres) {
       setMsg("No hay sugerencia de transferencia o presentación");
       return;
     }
+    /** Sugerencia COP está en u. base → convertir a qty de presentación. */
+    const units = Math.max(1, defaultPres.unitsPerPresentation || 1);
+    const qty = Math.ceil(qtyBase / units);
     const result = createTransferDraft({
       fromWarehouseId: av.plan.transferFromId,
       toWarehouseId: warehouseId,
       lines: [{ productId, presentationId: defaultPres.id, qty }],
       createdBy: "COP A&D",
-      reason: `COP · cubrir pedido de ${requestQty} u. base`,
+      reason: `COP · cubrir pedido de ${requestQty} u. base (${qtyBase} base → ${qty} × ${defaultPres.name})`,
     });
     if (!result.ok) {
       setMsg(result.error);
@@ -130,22 +133,24 @@ export default function AdLicoreriaCop() {
       setMsg("Sin permiso para solicitar compras");
       return;
     }
-    const need =
+    const needBase =
       av.plan.purchaseNeeded ||
       Math.max(0, requestQty - av.availableOperationalTotal);
-    if (need <= 0 || !defaultPres) {
+    if (needBase <= 0 || !defaultPres) {
       setMsg("No hace falta compra");
       return;
     }
+    const units = Math.max(1, defaultPres.unitsPerPresentation || 1);
+    const qty = Math.ceil(needBase / units);
     const r = createPurchaseRequest({
       productId,
       presentationId: defaultPres.id,
-      qty: need,
+      qty,
       warehouseId,
       createdBy: "COP A&D",
-      reason: `Faltante operativo pedido ${requestQty}`,
+      reason: `Faltante operativo pedido ${requestQty} (${needBase} u. base → ${qty} × ${defaultPres.name})`,
     });
-    setMsg(r.ok ? `Solicitud ${r.data.number} · ${need} u.` : r.error);
+    setMsg(r.ok ? `Solicitud ${r.data.number} · ${qty} × ${defaultPres.name}` : r.error);
   }
 
   return (

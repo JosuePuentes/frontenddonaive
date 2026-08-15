@@ -12,7 +12,11 @@ export const AD_LICORERIA_HOSTNAMES = [
 export function isAdLicoreriaHost(
   hostname = typeof window !== "undefined" ? window.location.hostname : "",
 ): boolean {
-  if (import.meta.env.VITE_AD_LICORERIA_HOST === "true") {
+  const envFlag =
+    typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    (import.meta.env as { VITE_AD_LICORERIA_HOST?: string }).VITE_AD_LICORERIA_HOST;
+  if (envFlag === "true") {
     return true;
   }
   const host = hostname.trim().toLowerCase();

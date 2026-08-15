@@ -79,6 +79,7 @@ type AdStore = AdRepositoryState & {
     customerId?: string;
     customerName?: string;
     customerPhone?: string;
+    warehouseId?: string;
     prepaid?: boolean;
     notes?: string;
   }) => AdResult<AdAccount>;

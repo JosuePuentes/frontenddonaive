@@ -338,6 +338,7 @@ run("H/I", "Prepago + QR + consumo parcial", () => {
   const pp = adLicoreriaRepository.createPrepaid({
     customerId: "cli-1",
     customerPhone: "0414-0000000",
+    customerDocumentId: "V-12345678",
     items: [
       {
         productId: "prod-regional",
@@ -358,6 +359,7 @@ run("H/I", "Prepago + QR + consumo parcial", () => {
       qty: 8,
       mesoneraName: "María",
       verifyPhone: "0414-0000000",
+      verifyDocumentId: "V-12345678",
     }).ok,
     "consume",
   );
