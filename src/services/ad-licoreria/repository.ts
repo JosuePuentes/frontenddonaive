@@ -89,6 +89,7 @@ import type {
 } from "@/types/ad-licoreria";
 import {
   AD_DEFAULT_ROLE_PERMISSIONS,
+  assertShortageOverride,
   canAccessWarehouse,
   hasPermission,
   posWarehouseIdFor,
@@ -1898,9 +1899,11 @@ export const adLicoreriaRepository = {
     discountUsd?: number;
     discountBs?: number;
     notes?: string;
-    /** No bloquear facturación por faltante; exige decisión auditada. */
+    /** Override de faltante: exige pos.shortage_override + motivo (capa central). */
     continueWithShortage?: boolean;
     shortageDecision?: string;
+    shortageReasonCode?: string;
+    shortageReasonNote?: string;
   }): AdResult<AdSale> {
     if (!input.items.length) return { ok: false, error: "Agregue productos" };
     if (!input.payments.length) return { ok: false, error: "Registre pagos" };
@@ -1911,6 +1914,21 @@ export const adLicoreriaRepository = {
       Boolean(input.operatorId),
     );
     if (!access.ok) return access;
+
+    /** Gate usa sesión actual (quién autoriza), no solo el cajero del ticket. */
+    const actor =
+      this.getCurrentOperator() ??
+      (input.operatorId
+        ? state.operators.find((o) => o.id === input.operatorId)
+        : undefined);
+    const overrideGate = assertShortageOverride({
+      user: actor,
+      continueWithShortage: Boolean(input.continueWithShortage),
+      reasonCode: input.shortageReasonCode ?? input.shortageDecision,
+      reasonNote: input.shortageReasonNote,
+      roleOverrides: state.rolePermissionOverrides,
+    });
+    if (!overrideGate.ok) return overrideGate;
 
     for (const pay of input.payments) {
       const cfg = state.paymentMethods.find((m) => m.code === pay.method);
@@ -1927,30 +1945,53 @@ export const adLicoreriaRepository = {
       needed: number;
       available: number;
       shortfall: number;
+      physical: number;
+      committed: number;
+      availableOperational: number;
     }[] = [];
 
     for (const line of input.items) {
       const physical = getStock(line.productId, input.warehouseId);
-      if (line.qtyBase > physical) {
+      const av = this.getOperationalAvailability(
+        line.productId,
+        line.qtyBase,
+        input.warehouseId,
+      );
+      const preferred = av.byWarehouse.find(
+        (w) => w.warehouseId === input.warehouseId,
+      );
+      const availableOperational = preferred?.availableOperational ?? 0;
+      const committed = preferred?.committedActive ?? av.committedActiveTotal;
+      const physicalShort = line.qtyBase > physical;
+      const operationalShort = line.qtyBase > availableOperational;
+      if (physicalShort || operationalShort) {
         shortageLines.push({
           productId: line.productId,
           needed: line.qtyBase,
-          available: physical,
-          shortfall: line.qtyBase - physical,
+          available: availableOperational,
+          shortfall: Math.max(
+            0,
+            line.qtyBase - availableOperational,
+            physicalShort ? line.qtyBase - physical : 0,
+          ),
+          physical,
+          committed,
+          availableOperational,
         });
       }
     }
 
-    if (shortageLines.length && !input.continueWithShortage) {
+    const hasShortage = shortageLines.length > 0;
+    if (hasShortage && !input.continueWithShortage) {
       const detail = shortageLines
         .map(
           (s) =>
-            `${productName(s.productId)}: faltan ${s.shortfall} (disp. físico ${s.available})`,
+            `${productName(s.productId)}: físico ${s.physical}, comprometido ${s.committed}, disponible ${s.availableOperational}, solicitado ${s.needed}, déficit ${s.shortfall}`,
         )
         .join("; ");
       return {
         ok: false,
-        error: `Stock insuficiente. ${detail}. Use preliminar y decida continuar con faltante, transferir o comprar.`,
+        error: `La operación supera la disponibilidad operativa. ${detail}. Se requiere pos.shortage_override + motivo para continuar.`,
       };
     }
 
@@ -1975,32 +2016,55 @@ export const adLicoreriaRepository = {
           qtyPresentation: deductQtyPres,
           warehouseId: input.warehouseId,
           userName: input.userName,
-          reason: shortageLines.length
-            ? "Venta POS (parcial por faltante)"
+          reason: hasShortage
+            ? "Venta POS (parcial/override faltante)"
             : "Venta POS",
         });
         if (!mov.ok) return mov;
       }
     }
 
-    if (shortageLines.length) {
+    if (input.continueWithShortage) {
+      const reasonLabel =
+        input.shortageReasonCode === "otro"
+          ? `otro: ${input.shortageReasonNote}`
+          : (input.shortageReasonCode ??
+            input.shortageDecision ??
+            "continuar_con_faltante");
+      audit("shortage_override", "sale", input.userName, reasonLabel, undefined, {
+        afterValue: JSON.stringify({
+          warehouseId: input.warehouseId,
+          operatorId: input.operatorId,
+          reasonCode: input.shortageReasonCode,
+          reasonNote: input.shortageReasonNote,
+          shortageLines,
+          decision: reasonLabel,
+        }),
+        reason: reasonLabel,
+      });
+    }
+
+    if (shortageLines.length && input.continueWithShortage) {
       audit(
         "invoice_with_shortage",
         "sale",
         input.userName,
         input.shortageDecision ??
+          input.shortageReasonCode ??
           "Continuar con faltante autorizado",
         undefined,
         {
           afterValue: JSON.stringify({
             shortageLines,
-            decision: input.shortageDecision ?? "continuar_con_faltante",
+            decision:
+              input.shortageReasonCode ??
+              input.shortageDecision ??
+              "continuar_con_faltante",
             warehouseId: input.warehouseId,
           }),
-          reason: input.shortageDecision,
+          reason: input.shortageReasonNote ?? input.shortageDecision,
         },
       );
-      // Recalcular déficits de compromiso cliente tras vender físico.
       for (const s of shortageLines) {
         const av = this.getOperationalAvailability(s.productId);
         if (av.customerCommitmentDeficit > 0) {
@@ -2665,15 +2729,17 @@ export const adLicoreriaRepository = {
         line.qtyBase,
         input.warehouseId,
       );
+      const preferred = av.byWarehouse.find(
+        (w) => w.warehouseId === input.warehouseId,
+      );
+      const availableOperational =
+        preferred?.availableOperational ?? av.availableOperationalTotal;
       return {
         productId: line.productId,
         productName: productName(line.productId),
         requestedBase: line.qtyBase,
-        availableOperational: av.availableOperationalTotal,
-        shortfall: Math.max(
-          0,
-          line.qtyBase - av.availableOperationalTotal,
-        ),
+        availableOperational,
+        shortfall: Math.max(0, line.qtyBase - availableOperational),
         availability: av,
       };
     });
@@ -2726,6 +2792,8 @@ export const adLicoreriaRepository = {
     userName: string;
     continueWithShortage?: boolean;
     shortageDecision?: string;
+    shortageReasonCode?: string;
+    shortageReasonNote?: string;
   }): AdResult<AdSale> {
     const draft = state.invoiceDrafts.find((d) => d.id === input.draftId);
     if (!draft) return { ok: false, error: "Preliminar no encontrado" };
@@ -2739,9 +2807,29 @@ export const adLicoreriaRepository = {
       return {
         ok: false,
         error:
-          "Hay faltantes. Decida: transferir, crear compra, reducir cantidad, continuar con faltante o cancelar.",
+          "La operación supera la disponibilidad operativa. Decida: transferir, crear compra, reducir cantidad o CONTINUAR CON FALTANTE (requiere pos.shortage_override).",
       };
     }
+    /** Quién autoriza el override = sesión actual (capa central, no flag UI). */
+    const actor =
+      this.getCurrentOperator() ??
+      (draft.operatorId
+        ? state.operators.find((o) => o.id === draft.operatorId)
+        : undefined);
+    const reasonCode =
+      input.shortageReasonCode ??
+      (continueShortage
+        ? input.shortageDecision ?? draft.shortageDecision
+        : undefined);
+    const gate = assertShortageOverride({
+      user: actor,
+      continueWithShortage: Boolean(continueShortage),
+      reasonCode,
+      reasonNote: input.shortageReasonNote,
+      roleOverrides: state.rolePermissionOverrides,
+    });
+    if (!gate.ok) return gate;
+
     const sale = this.completeSale({
       items: draft.items,
       payments: draft.payments,
@@ -2757,10 +2845,9 @@ export const adLicoreriaRepository = {
       discountBs: draft.discountBs,
       notes: draft.notes,
       continueWithShortage: continueShortage,
-      shortageDecision:
-        input.shortageDecision ??
-        draft.shortageDecision ??
-        (hasShortage ? "continuar_con_faltante" : undefined),
+      shortageDecision: reasonCode,
+      shortageReasonCode: reasonCode,
+      shortageReasonNote: input.shortageReasonNote,
     });
     if (!sale.ok) return sale;
     state.invoiceDrafts = state.invoiceDrafts.map((d) =>

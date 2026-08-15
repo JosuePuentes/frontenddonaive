@@ -21,6 +21,7 @@ const ROLES: AdRole[] = [
 /** Filas resumidas de la matriz pedida en Fase 8. */
 const MATRIX_ROWS: { label: string; permissions: AdPermission[] }[] = [
   { label: "POS", permissions: ["pos.sell", "pos.close_account"] },
+  { label: "Override faltante", permissions: ["pos.shortage_override"] },
   {
     label: "Inventario",
     permissions: ["inventory.read", "inventory.adjust"],

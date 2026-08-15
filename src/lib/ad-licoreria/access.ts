@@ -10,6 +10,7 @@ export const AD_ALL_PERMISSIONS: AdPermission[] = [
   "pos.refund",
   "pos.discount",
   "pos.close_account",
+  "pos.shortage_override",
   "inventory.read",
   "inventory.adjust",
   "inventory.transfer",
@@ -35,6 +36,7 @@ export const AD_PERMISSION_LABELS: Record<AdPermission, string> = {
   "pos.refund": "POS · anular / reembolso",
   "pos.discount": "POS · descuento",
   "pos.close_account": "POS · cerrar cuenta",
+  "pos.shortage_override": "POS · continuar con faltante",
   "inventory.read": "Inventario · consultar",
   "inventory.adjust": "Inventario · ajustar",
   "inventory.transfer": "Inventario · transferir",
@@ -63,6 +65,7 @@ export const AD_DEFAULT_ROLE_PERMISSIONS: Record<AdRole, AdPermission[]> = {
     "pos.refund",
     "pos.discount",
     "pos.close_account",
+    "pos.shortage_override",
     "inventory.read",
     "inventory.adjust",
     "inventory.transfer",
@@ -182,6 +185,60 @@ export function hasPermission(
 ): boolean {
   if (!user || !user.active) return false;
   return resolvePermissions(user, roleOverrides).has(permission);
+}
+
+/**
+ * API reutilizable de autorización (misma regla conceptual para futura API).
+ * Preferir `can(user, "pos.shortage_override")` frente a `if (role === …)`.
+ */
+export function can(
+  user: AdOperator | null | undefined,
+  permission: AdPermission,
+  roleOverrides?: Partial<Record<AdRole, AdPermission[]>>,
+): boolean {
+  return hasPermission(user, permission, roleOverrides);
+}
+
+export type ShortageOverrideGateInput = {
+  user: AdOperator | null | undefined;
+  continueWithShortage: boolean;
+  reasonCode?: string | null;
+  reasonNote?: string | null;
+  roleOverrides?: Partial<Record<AdRole, AdPermission[]>>;
+};
+
+export type ShortageOverrideGateResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Gate central: el flag continueWithShortage no basta sin permiso + motivo.
+ */
+export function assertShortageOverride(
+  input: ShortageOverrideGateInput,
+): ShortageOverrideGateResult {
+  if (!input.continueWithShortage) return { ok: true };
+  if (!can(input.user, "pos.shortage_override", input.roleOverrides)) {
+    return {
+      ok: false,
+      error:
+        "Sin permiso pos.shortage_override. Solo ADMIN/SUPERVISOR (o permiso explícito) pueden continuar con faltante.",
+    };
+  }
+  const code = (input.reasonCode ?? "").trim();
+  if (!code) {
+    return {
+      ok: false,
+      error: "Motivo obligatorio para continuar con faltante",
+    };
+  }
+  if (code === "otro" && !(input.reasonNote ?? "").trim()) {
+    return {
+      ok: false,
+      error: "Detalle obligatorio cuando el motivo es «otro»",
+    };
+  }
+  return { ok: true };
 }
 
 /**

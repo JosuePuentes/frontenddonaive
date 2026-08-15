@@ -229,9 +229,12 @@ step(13, "Generar preliminar de factura (POS)", () => {
 });
 
 step(14, "Confirmar factura", () => {
+  adLicoreriaRepository.setCurrentOperator("op-supervisor");
   const sale = adLicoreriaRepository.confirmInvoiceDraft({
     draftId,
-    userName: "Cajero QA",
+    userName: "Supervisor A&D",
+    continueWithShortage: true,
+    shortageReasonCode: "reposicion_en_curso",
   });
   assert(sale.ok, sale.ok ? "" : sale.error);
   assert(sale.data.receiptNumber.startsWith("AD-"), sale.data.receiptNumber);
@@ -309,11 +312,12 @@ step(21, "Vender mercancía comprometida NO bloquea", () => {
     cashierName: "QA",
   });
   assert(draft.ok, "draft");
+  adLicoreriaRepository.setCurrentOperator("op-supervisor");
   const sale = adLicoreriaRepository.confirmInvoiceDraft({
     draftId: draft.data.id,
-    userName: "QA",
+    userName: "Supervisor A&D",
     continueWithShortage: true,
-    shortageDecision: "continuar_con_faltante",
+    shortageReasonCode: "reposicion_en_curso",
   });
   assert(sale.ok, sale.ok ? "" : sale.error);
 });

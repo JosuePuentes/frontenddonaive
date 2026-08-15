@@ -6,12 +6,14 @@ import {
 import {
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
+import { AD_SHORTAGE_REASON_LABELS } from "@/types/ad-licoreria";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import type {
   AdInvoiceDraft,
   AdPayment,
   AdPaymentMethodCode,
   AdSaleItem,
+  AdShortageOverrideReason,
 } from "@/types/ad-licoreria";
 
 type DraftPayment = Omit<AdPayment, "id" | "createdAt">;
@@ -82,6 +84,8 @@ export default function AdLicoreriaVentas() {
   const [msg, setMsg] = useState("");
   const [draft, setDraft] = useState<AdInvoiceDraft | null>(null);
   const [confirmedReceipt, setConfirmedReceipt] = useState<string | null>(null);
+  const [shortageReason, setShortageReason] = useState("");
+  const [shortageNote, setShortageNote] = useState("");
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -289,15 +293,40 @@ export default function AdLicoreriaVentas() {
     setMsg(`Preliminar ${result.data.provisionalNumber}`);
   }
 
+  const canShortageOverride =
+    hasPermission("pos.shortage_override") ||
+    hasPermission("pos.shortage_override", cashier?.id);
+
   function confirmDraft(continueWithShortage = false) {
     if (!draft) return;
+    if (continueWithShortage) {
+      if (!canShortageOverride) {
+        setMsg(
+          "Sin permiso pos.shortage_override. Solicite a un supervisor o admin.",
+        );
+        return;
+      }
+      if (!shortageReason.trim()) {
+        setMsg("Seleccione el motivo para continuar con faltante");
+        return;
+      }
+      if (shortageReason === "otro" && !shortageNote.trim()) {
+        setMsg("Detalle obligatorio cuando el motivo es «otro»");
+        return;
+      }
+    }
     const result = confirmInvoiceDraft({
       draftId: draft.id,
       userName: cashier?.name ?? mesonera?.name ?? "Cajero",
       continueWithShortage,
-      shortageDecision: continueWithShortage
-        ? "continuar_con_faltante"
-        : undefined,
+      shortageDecision: continueWithShortage ? shortageReason : undefined,
+      shortageReasonCode: continueWithShortage ? shortageReason : undefined,
+      shortageReasonNote:
+        continueWithShortage && shortageReason === "otro"
+          ? shortageNote.trim()
+          : continueWithShortage
+            ? shortageNote.trim() || undefined
+            : undefined,
     });
     if (!result.ok) {
       setMsg(result.error);
@@ -309,6 +338,8 @@ export default function AdLicoreriaVentas() {
     setNotes("");
     setDiscountUsd(0);
     setDiscountAuth("");
+    setShortageReason("");
+    setShortageNote("");
     setDraft(null);
     setMsg(`Factura confirmada ${result.data.receiptNumber}`);
   }
@@ -903,38 +934,79 @@ export default function AdLicoreriaVentas() {
                 .join(" + ")}
             </p>
             {draft.supplyAlerts.some((a) => a.shortfall > 0) ? (
-              <div className="ad-cop__alert mt-3">
+              <div className="ad-cop__alert mt-3 space-y-3">
+                <p className="text-sm font-medium text-[var(--ad-gold-soft)]">
+                  La operación supera la disponibilidad operativa.
+                </p>
                 {draft.supplyAlerts
                   .filter((a) => a.shortfall > 0)
                   .map((a) => {
                     const preferred = a.availability.byWarehouse.find(
                       (w) => w.warehouseId === draft.warehouseId,
                     );
-                    const other = a.availability.byWarehouse.find(
-                      (w) => w.warehouseId !== draft.warehouseId,
-                    );
                     return (
-                      <div key={a.productId} className="mb-2 text-sm">
-                        <p>
-                          ⚠ Esta operación requiere {a.shortfall} unidades
-                          adicionales para cumplir completamente la orden (
-                          {a.productName}).
-                        </p>
-                        <p className="text-[var(--ad-muted)]">
-                          Físico: {a.availability.physicalTotal} · Comprometido:{" "}
-                          {a.availability.committedActiveTotal} · Disponible:{" "}
-                          {a.availability.availableOperationalTotal} · Pedido:{" "}
-                          {a.requestedBase} · Faltante: {a.shortfall}
-                        </p>
-                        <p className="text-[var(--ad-muted)]">
-                          {warehouseLabel(draft.warehouseId, warehouses)}:{" "}
-                          {preferred?.availableOperational ?? 0} · Otro
-                          depósito: {other?.availableOperational ?? 0} · Compra
-                          necesaria: {a.availability.plan.purchaseNeeded}
-                        </p>
+                      <div key={a.productId} className="text-sm">
+                        <p>{a.productName}</p>
+                        <ul className="mt-1 space-y-0.5 text-[var(--ad-muted)]">
+                          <li>
+                            Físico: {preferred?.physical ?? a.availability.physicalTotal}
+                          </li>
+                          <li>
+                            Comprometido:{" "}
+                            {preferred?.committedActive ??
+                              a.availability.committedActiveTotal}
+                          </li>
+                          <li>
+                            Disponible operativo:{" "}
+                            {preferred?.availableOperational ??
+                              a.availability.availableOperationalTotal}
+                          </li>
+                          <li>Cantidad solicitada: {a.requestedBase}</li>
+                          <li>Déficit: {a.shortfall}</li>
+                        </ul>
                       </div>
                     );
                   })}
+                {canShortageOverride ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <select
+                      className="ad-select"
+                      value={shortageReason}
+                      onChange={(e) => setShortageReason(e.target.value)}
+                    >
+                      <option value="">Motivo del override…</option>
+                      {(
+                        Object.keys(
+                          AD_SHORTAGE_REASON_LABELS,
+                        ) as AdShortageOverrideReason[]
+                      ).map((k) => (
+                        <option key={k} value={k}>
+                          {AD_SHORTAGE_REASON_LABELS[k]}
+                        </option>
+                      ))}
+                    </select>
+                    {shortageReason === "otro" ? (
+                      <input
+                        className="ad-input"
+                        placeholder="Detalle obligatorio"
+                        value={shortageNote}
+                        onChange={(e) => setShortageNote(e.target.value)}
+                      />
+                    ) : (
+                      <input
+                        className="ad-input"
+                        placeholder="Nota (opcional)"
+                        value={shortageNote}
+                        onChange={(e) => setShortageNote(e.target.value)}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--ad-muted)]">
+                    No tiene permiso <code>pos.shortage_override</code>. Solicite
+                    a un supervisor o administrador.
+                  </p>
+                )}
               </div>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
@@ -942,10 +1014,12 @@ export default function AdLicoreriaVentas() {
                 type="button"
                 className="ad-btn ad-btn--gold"
                 onClick={() => confirmDraft(false)}
+                disabled={draft.supplyAlerts.some((a) => a.shortfall > 0)}
               >
                 Confirmar
               </button>
-              {draft.supplyAlerts.some((a) => a.shortfall > 0) ? (
+              {draft.supplyAlerts.some((a) => a.shortfall > 0) &&
+              canShortageOverride ? (
                 <button
                   type="button"
                   className="ad-btn ad-btn--primary"

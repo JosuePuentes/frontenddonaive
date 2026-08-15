@@ -275,11 +275,21 @@ step("F", "Venta con déficit operativo: alerta + continuar con auditoría", () 
     userName: "María",
   });
   assert(!blocked.ok, "exige decisión ante déficit operativo");
-  const conf = adLicoreriaRepository.confirmInvoiceDraft({
+  /** Cajero sin pos.shortage_override no puede forzar el flag. */
+  const denied = adLicoreriaRepository.confirmInvoiceDraft({
     draftId: draft.data.id,
     userName: "María",
     continueWithShortage: true,
-    shortageDecision: "continuar_con_faltante_operativo_autorizado",
+    shortageReasonCode: "autorizacion_administrativa",
+  });
+  assert(!denied.ok, "cajero no puede override");
+  /** Supervisor en sesión autoriza con motivo. */
+  adLicoreriaRepository.setCurrentOperator("op-supervisor");
+  const conf = adLicoreriaRepository.confirmInvoiceDraft({
+    draftId: draft.data.id,
+    userName: "Supervisor A&D",
+    continueWithShortage: true,
+    shortageReasonCode: "autorizacion_administrativa",
   });
   assert(conf.ok, conf.ok ? "" : conf.error);
   const confirmed = adLicoreriaRepository
@@ -287,15 +297,10 @@ step("F", "Venta con déficit operativo: alerta + continuar con auditoría", () 
     .invoiceDrafts.find((d) => d.id === draft.data.id)!;
   assert(confirmed.status === "CONFIRMADA", "confirmada");
   assert(
-    (confirmed.shortageDecision ?? "").includes("faltante") ||
-      adLicoreriaRepository
-        .getState()
-        .audit.some(
-          (a) =>
-            a.action === "invoice_confirm" &&
-            a.entityId === draft.data.id,
-        ),
-    "auditoría / decisión registrada",
+    adLicoreriaRepository
+      .getState()
+      .audit.some((a) => a.action === "shortage_override"),
+    "auditoría shortage_override",
   );
 
   adLicoreriaRepository.voidAccount({
@@ -708,23 +713,6 @@ step("CIERRE", "Cierre diario María / Licorería (snapshot)", () => {
   assert(typeof closure.data.prepaidsActive === "number", "prepagos");
 });
 
-/** Problemas conocidos / hallazgos (no silenciosos). */
-problems.push({
-  problema:
-    "El gate de «continuar con faltante físico» sigue siendo flag continueWithShortage + auditoría, no un permiso granular dedicado (p. ej. pos.shortage_override).",
-  impacto:
-    "Cualquier caller que pase el flag puede continuar; la UI debe restringirlo a roles autorizados.",
-  propuesta:
-    "Añadir permiso pos.shortage_override (default SUPERVISOR/ADMIN) y exigir hasPermission en confirmInvoiceDraft/completeSale cuando continueWithShortage=true. Esperar aprobación.",
-});
-
-problems.push({
-  problema:
-    "Filtro de reportes por método de pago / estado de venta existe parcialmente en UI (depósito/usuario/mesonera/cajero/cliente/producto); método de pago y estado aún no están como selects dedicados.",
-  impacto: "Admin debe filtrar mentalmente o en código para algunos informes.",
-  propuesta: "Agregar selects method/status en AdLicoreriaReportes en una micro-fase UX. Esperar aprobación si se considera cambio de alcance.",
-});
-
 const failed = rows.filter((r) => r.resultado === "FAIL");
 console.log("\n--- Resumen Fase 9 ---");
 for (const r of rows) {
@@ -735,11 +723,13 @@ for (const r of rows) {
 console.log(
   `\nTotal: ${rows.length} · PASS: ${rows.filter((r) => r.resultado === "PASS").length} · FAIL: ${failed.length}`,
 );
-console.log("\n--- Problemas reportados (sin corrección silenciosa de reglas) ---");
-for (const p of problems) {
-  console.log(`\nPROBLEMA: ${p.problema}`);
-  console.log(`IMPACTO: ${p.impacto}`);
-  console.log(`PROPUESTA: ${p.propuesta}`);
+if (problems.length) {
+  console.log("\n--- Problemas reportados ---");
+  for (const p of problems) {
+    console.log(`\nPROBLEMA: ${p.problema}`);
+    console.log(`IMPACTO: ${p.impacto}`);
+    console.log(`PROPUESTA: ${p.propuesta}`);
+  }
 }
 console.log("");
 process.exit(failed.length ? 1 : 0);

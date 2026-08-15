@@ -23,6 +23,7 @@ export type AdPermission =
   | "pos.refund"
   | "pos.discount"
   | "pos.close_account"
+  | "pos.shortage_override"
   | "inventory.read"
   | "inventory.adjust"
   | "inventory.transfer"
@@ -41,6 +42,25 @@ export type AdPermission =
   | "tables.manage"
   | "clients.read"
   | "closures.create";
+
+/** Motivos de override de faltante operativo/físico. */
+export type AdShortageOverrideReason =
+  | "cliente_comprometido"
+  | "reposicion_en_curso"
+  | "transferencia_pendiente"
+  | "compra_pendiente"
+  | "autorizacion_administrativa"
+  | "otro";
+
+export const AD_SHORTAGE_REASON_LABELS: Record<AdShortageOverrideReason, string> =
+  {
+    cliente_comprometido: "Cliente comprometido",
+    reposicion_en_curso: "Reposición en curso",
+    transferencia_pendiente: "Transferencia pendiente",
+    compra_pendiente: "Compra pendiente",
+    autorizacion_administrativa: "Autorización administrativa",
+    otro: "Otro",
+  };
 
 /** @deprecated preferir AdPermission — módulos UI legacy. */
 export type AdModulePermission =

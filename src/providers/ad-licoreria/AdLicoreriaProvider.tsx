@@ -194,6 +194,8 @@ type AdStore = AdRepositoryState & {
     notes?: string;
     continueWithShortage?: boolean;
     shortageDecision?: string;
+    shortageReasonCode?: string;
+    shortageReasonNote?: string;
   }) => AdResult<AdSale>;
   voidSale: (input: {
     saleId: string;

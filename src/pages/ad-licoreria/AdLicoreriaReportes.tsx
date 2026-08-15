@@ -5,6 +5,14 @@ import {
   rangeForPreset,
   type AdReportPreset,
 } from "@/lib/ad-licoreria/report-presets";
+import {
+  AD_REPORT_PAYMENT_METHOD_LABELS,
+  AD_REPORT_STATUS_LABELS,
+  filterSalesByReportQuery,
+  type AdReportPaymentMethodFilter,
+  type AdReportStatusFilter,
+  type AdSavedReportDefinition,
+} from "@/lib/ad-licoreria/report-filters";
 import { prepaidAvailable } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
@@ -42,6 +50,14 @@ export default function AdLicoreriaReportes() {
   const [cashierId, setCashierId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [productId, setProductId] = useState("");
+  const [paymentMethod, setPaymentMethod] =
+    useState<AdReportPaymentMethodFilter>("");
+  const [status, setStatus] = useState<AdReportStatusFilter>("");
+  /** Prep. arquitectura reportes guardados (mock local en sesión). */
+  const [savedReports, setSavedReports] = useState<AdSavedReportDefinition[]>(
+    [],
+  );
+  const [saveName, setSaveName] = useState("");
 
   function applyPreset(p: AdReportPreset) {
     setPreset(p);
@@ -51,47 +67,63 @@ export default function AdLicoreriaReportes() {
     setTo(r.to);
   }
 
+  const reportFilters = useMemo(
+    () => ({
+      from,
+      to,
+      warehouseId: warehouseId || undefined,
+      operatorId: operatorId || undefined,
+      cashierId: cashierId || undefined,
+      mesoneraName: mesonera || undefined,
+      customerId: customerId || undefined,
+      productId: productId || undefined,
+      categoryId: categoryId || undefined,
+      paymentMethod: paymentMethod || undefined,
+      status: status || undefined,
+    }),
+    [
+      from,
+      to,
+      warehouseId,
+      operatorId,
+      cashierId,
+      mesonera,
+      customerId,
+      productId,
+      categoryId,
+      paymentMethod,
+      status,
+    ],
+  );
+
   const filteredSales = useMemo(() => {
-    return sales.filter((s) => {
-      if (!inDateRange(s.createdAt, from, to)) return false;
-      if (warehouseId && s.warehouseId !== warehouseId) return false;
-      if (operatorId && s.operatorId !== operatorId) return false;
-      if (
-        cashierId &&
-        s.operatorId !== cashierId &&
-        s.userName !==
-          operators.find((o) => o.id === cashierId)?.name
-      ) {
-        return false;
-      }
-      if (customerId && s.customerId !== customerId) return false;
-      if (mesonera && (s.mesoneraName ?? s.userName) !== mesonera) return false;
-      if (productId) {
-        if (!s.items.some((it) => it.productId === productId)) return false;
-      }
-      if (categoryId) {
-        const ok = s.items.some((it) => {
+    let list = filterSalesByReportQuery(sales, reportFilters, {
+      cashierNameById: (id) => operators.find((o) => o.id === id)?.name,
+    });
+    if (categoryId) {
+      list = list.filter((s) =>
+        s.items.some((it) => {
           const p = products.find((x) => x.id === it.productId);
           return p?.categoryId === categoryId;
-        });
-        if (!ok) return false;
-      }
-      return true;
-    });
-  }, [
-    sales,
-    from,
-    to,
-    mesonera,
-    categoryId,
-    products,
-    warehouseId,
-    operatorId,
-    cashierId,
-    customerId,
-    productId,
-    operators,
-  ]);
+        }),
+      );
+    }
+    return list;
+  }, [sales, reportFilters, categoryId, products, operators]);
+
+  function saveCurrentReport() {
+    if (!saveName.trim()) return;
+    const def: AdSavedReportDefinition = {
+      id: `sr-${Date.now()}`,
+      name: saveName.trim(),
+      filters: { ...reportFilters, from, to },
+      createdByUserId: "local",
+      createdByName: "Admin A&D",
+      createdAt: new Date().toISOString(),
+    };
+    setSavedReports((prev) => [def, ...prev]);
+    setSaveName("");
+  }
 
   const completed = filteredSales.filter((s) => s.status === "completed");
   const voided = filteredSales.filter((s) => s.status === "voided");
@@ -389,6 +421,59 @@ export default function AdLicoreriaReportes() {
               </option>
             ))}
           </select>
+          <select
+            className="ad-select"
+            value={paymentMethod}
+            onChange={(e) =>
+              setPaymentMethod(e.target.value as AdReportPaymentMethodFilter)
+            }
+          >
+            <option value="">Todos los métodos de pago</option>
+            {(
+              Object.keys(
+                AD_REPORT_PAYMENT_METHOD_LABELS,
+              ) as Exclude<AdReportPaymentMethodFilter, "">[]
+            ).map((k) => (
+              <option key={k} value={k}>
+                {AD_REPORT_PAYMENT_METHOD_LABELS[k]}
+              </option>
+            ))}
+          </select>
+          <select
+            className="ad-select"
+            value={status}
+            onChange={(e) =>
+              setStatus(e.target.value as AdReportStatusFilter)
+            }
+          >
+            <option value="">Todos los estados</option>
+            {(
+              Object.keys(AD_REPORT_STATUS_LABELS) as Exclude<
+                AdReportStatusFilter,
+                ""
+              >[]
+            ).map((k) => (
+              <option key={k} value={k}>
+                {AD_REPORT_STATUS_LABELS[k]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <input
+            className="ad-input max-w-xs"
+            placeholder="Nombre para guardar filtros…"
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+          />
+          <button type="button" className="ad-btn" onClick={saveCurrentReport}>
+            Guardar definición (mock)
+          </button>
+          {savedReports[0] ? (
+            <span className="text-xs text-[var(--ad-muted)]">
+              Último: {savedReports[0].name}
+            </span>
+          ) : null}
         </div>
       </section>
 
