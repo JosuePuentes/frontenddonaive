@@ -54,6 +54,8 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 5173,
+      // Preview / túneles temporales (trycloudflare, port-forward)
+      allowedHosts: true,
     },
   };
 });

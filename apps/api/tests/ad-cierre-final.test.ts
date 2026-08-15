@@ -508,11 +508,14 @@ describeE2E("A&D CIERRE E2E A–J", () => {
   });
 
   it("PDF recibo / transferencia / cierre", async () => {
-    const prisma = getPrisma();
-    const tenant = await prisma.adTenant.findUnique({
-      where: { slug: "ad-licoreria" },
-    });
-    expect(tenant).toBeTruthy();
+    const whRes = await request(app)
+      .get("/api/v1/ad/warehouses")
+      .set(auth(adminToken));
+    const bodId =
+      whRes.body.data.find((w: { code: string }) => w.code === "BOD")?.id ??
+      whRes.body.data.find((w: { id: string }) => w.id !== licId)?.id;
+    expect(bodId).toBeTruthy();
+    expect(bodId).not.toBe(licId);
 
     const salePdf = await request(app)
       .get(`/api/v1/ad/documents/receipts/${saleBeforeId}/pdf`)
@@ -524,22 +527,10 @@ describeE2E("A&D CIERRE E2E A–J", () => {
       .post("/api/v1/ad/transfers")
       .set(auth(adminToken))
       .send({
-        fromWarehouseId: licId,
-        toWarehouseId:
-          (
-            await request(app)
-              .get("/api/v1/ad/warehouses")
-              .set(auth(adminToken))
-          ).body.data.find((w: { code: string }) => w.code === "BOD")?.id ??
-          licId,
+        fromWarehouseId: bodId,
+        toWarehouseId: licId,
         reason: "PDF smoke",
-        lines: [
-          {
-            productId,
-            presentationId,
-            qty: 1,
-          },
-        ],
+        lines: [{ presentationId, qty: 1 }],
       });
     expect(transfer.status).toBeLessThan(400);
     const transferId = transfer.body.data.id as string;

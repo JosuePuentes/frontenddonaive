@@ -1,5 +1,5 @@
-import { useEffect, useSyncExternalStore, type ReactNode } from "react";
-import { Link, Navigate, Outlet, useLocation } from "react-router";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router";
 import { AdLicoreriaSidebar } from "@/components/ad-licoreria/AdLicoreriaSidebar";
 import { AdLicoreriaTopbar } from "@/components/ad-licoreria/AdLicoreriaTopbar";
 import {
@@ -14,6 +14,10 @@ import {
   isTvPlayerPath,
 } from "@/lib/ad-licoreria/route-access";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import {
+  filterNavForUser,
+  mobilePrimaryNavKeys,
+} from "@/lib/ad-licoreria/nav-by-role";
 import {
   clearAdSession,
   isAdSessionValid,
@@ -91,7 +95,42 @@ function AdRouteGate({ children }: { children: ReactNode }) {
   return children;
 }
 
-function AdLicoreriaLayout() {
+function AdMobileBottomNav({ onOpenMore }: { onOpenMore: () => void }) {
+  const { getCurrentOperator, getRolePermissionMatrix } = useAdLicoreria();
+  const session = getCurrentOperator();
+  const matrix = getRolePermissionMatrix();
+  const items = filterNavForUser(session, matrix);
+  const keys = mobilePrimaryNavKeys(session?.role);
+  const primary = useMemo(() => {
+    const picked = keys
+      .map((k) => items.find((i) => i.key === k))
+      .filter(Boolean) as typeof items;
+    return picked.slice(0, 4);
+  }, [items, keys]);
+
+  if (!primary.length) return null;
+
+  return (
+    <nav className="ad-mobile-tabbar" aria-label="Atajos móviles">
+      {primary.map((item) => (
+        <NavLink
+          key={item.key}
+          to={item.to}
+          className={({ isActive }) =>
+            ["ad-mobile-tab", isActive ? "is-active" : ""].join(" ")
+          }
+        >
+          {item.label}
+        </NavLink>
+      ))}
+      <button type="button" className="ad-mobile-tab" onClick={onOpenMore}>
+        Más
+      </button>
+    </nav>
+  );
+}
+
+function AdLicoreriaShell() {
   const { pathname } = useLocation();
   const path = normalizeAdLicoreriaPathname(pathname);
   const isLanding = path === "/";
@@ -100,6 +139,11 @@ function AdLicoreriaLayout() {
   const isTvPlayer = isTvPlayerPath(path);
   const isDesignPreview = path === "/configuracion/diseno/preview";
   const bare = isLanding || isLogin || isMesonera || isTvPlayer || isDesignPreview;
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const id = "ad-licoreria-fonts";
@@ -111,26 +155,42 @@ function AdLicoreriaLayout() {
     document.head.appendChild(link);
   }, []);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  if (bare) {
+    return <Outlet />;
+  }
+
+  return (
+    <div className={`ad-layout ${menuOpen ? "ad-layout--menu-open" : ""}`}>
+      <AdLicoreriaSidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <div className="ad-main">
+        <AdLicoreriaTopbar onOpenMenu={() => setMenuOpen(true)} />
+        <div className="ad-content">
+          <AdRouteGate>
+            <Outlet />
+          </AdRouteGate>
+        </div>
+        <AdMobileBottomNav onOpenMore={() => setMenuOpen(true)} />
+      </div>
+    </div>
+  );
+}
+
+function AdLicoreriaLayout() {
   return (
     <AdLicoreriaProvider>
       <AdTvProvider>
         <AdDesignApplier>
           <div className="ad-shell">
-            {bare ? (
-              <Outlet />
-            ) : (
-              <div className="ad-layout">
-                <AdLicoreriaSidebar />
-                <div className="ad-main">
-                  <AdLicoreriaTopbar />
-                  <div className="ad-content">
-                    <AdRouteGate>
-                      <Outlet />
-                    </AdRouteGate>
-                  </div>
-                </div>
-              </div>
-            )}
+            <AdLicoreriaShell />
           </div>
         </AdDesignApplier>
       </AdTvProvider>

@@ -31,7 +31,11 @@ const titles: Record<string, string> = {
   "/mesonera": "Interfaz mesonera",
 };
 
-function AdLicoreriaTopbar() {
+type Props = {
+  onOpenMenu: () => void;
+};
+
+function AdLicoreriaTopbar({ onOpenMenu }: Props) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const path = normalizeAdLicoreriaPathname(pathname);
@@ -44,23 +48,33 @@ function AdLicoreriaTopbar() {
 
   return (
     <header className="ad-topbar">
-      <div>
-        <p className="ad-eyebrow">A&D Licorería & Bodegón</p>
-        <h1 className="ad-display mt-1 text-2xl text-[var(--ad-text)] sm:text-3xl">
-          {title}
-        </h1>
-        {session ? (
-          <p className="mt-1 text-xs text-[var(--ad-muted)]">
-            Sesión: {session.name} · {AD_ROLE_LABELS[session.role]}
-            {session.warehouseId
-              ? ` · ${warehouseLabel(session.warehouseId, warehouses)}`
-              : " · Transversal"}
-            {warehouseLocked ? " · depósito fijado" : ""}
-          </p>
-        ) : null}
+      <div className="ad-topbar__lead">
+        <button
+          type="button"
+          className="ad-btn ad-topbar__menu"
+          onClick={onOpenMenu}
+          aria-label="Abrir menú de módulos"
+        >
+          Menú
+        </button>
+        <div className="min-w-0">
+          <p className="ad-eyebrow">A&D Licorería & Bodegón</p>
+          <h1 className="ad-display mt-1 text-xl text-[var(--ad-text)] sm:text-3xl truncate">
+            {title}
+          </h1>
+          {session ? (
+            <p className="mt-1 text-xs text-[var(--ad-muted)] truncate">
+              {session.name} · {AD_ROLE_LABELS[session.role]}
+              {session.warehouseId
+                ? ` · ${warehouseLabel(session.warehouseId, warehouses)}`
+                : " · Transversal"}
+              {warehouseLocked ? " · fijado" : ""}
+            </p>
+          ) : null}
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Link to={AD_LICORERIA_ROUTES.home} className="ad-btn">
+      <div className="ad-topbar__actions">
+        <Link to={AD_LICORERIA_ROUTES.home} className="ad-btn ad-topbar__desktop-only">
           Home
         </Link>
         {mode === "api" ? (
@@ -73,11 +87,11 @@ function AdLicoreriaTopbar() {
               });
             }}
           >
-            Cerrar sesión
+            Salir
           </button>
         ) : (
           <select
-            className="ad-select max-w-[11rem]"
+            className="ad-select max-w-[11rem] ad-topbar__desktop-only"
             value={session?.id ?? ""}
             onChange={(e) => setCurrentOperator(e.target.value || null)}
             aria-label="Usuario en sesión"
@@ -92,18 +106,6 @@ function AdLicoreriaTopbar() {
               ))}
           </select>
         )}
-        {session?.role === "mesonera" || mode === "mock" ? (
-          <Link to={AD_LICORERIA_ROUTES.mesonera} className="ad-btn">
-            Mesonera
-          </Link>
-        ) : null}
-        {session?.role === "cajero" ||
-        session?.role === "admin" ||
-        mode === "mock" ? (
-          <Link to={AD_LICORERIA_ROUTES.ventas} className="ad-btn ad-btn--gold">
-            Abrir ventas
-          </Link>
-        ) : null}
       </div>
     </header>
   );
