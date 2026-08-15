@@ -83,10 +83,22 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       anyOf: ["deposits.manage", "inventory.read"],
     },
     {
+      key: "compras",
+      label: "Compras",
+      to: r.compras,
+      anyOf: ["purchases.create", "purchase.create", "purchases.manage"],
+    },
+    {
+      key: "proveedores",
+      label: "Proveedores",
+      to: r.proveedores,
+      anyOf: ["suppliers.manage"],
+    },
+    {
       key: "productos",
       label: "Productos",
       to: r.productos,
-      anyOf: ["inventory.read", "settings.manage"],
+      anyOf: ["inventory.read", "settings.manage", "products.manage"],
     },
     {
       key: "tv",

@@ -11,6 +11,11 @@ const AD_SEGMENTS = {
   inventario: "/inventario",
   productos: "/productos",
   depositos: "/depositos",
+  compras: "/compras",
+  comprasAnalisis: "/compras/analisis",
+  proveedores: "/proveedores",
+  importacion: "/importacion",
+  tasas: "/configuracion/tasas",
   cierres: "/cierres",
   clientes: "/clientes",
   reportes: "/reportes",
@@ -48,6 +53,11 @@ export type AdLicoreriaRoutes = {
   inventario: string;
   productos: string;
   depositos: string;
+  compras: string;
+  comprasAnalisis: string;
+  proveedores: string;
+  importacion: string;
+  tasas: string;
   cierres: string;
   clientes: string;
   reportes: string;
@@ -88,6 +98,11 @@ export function getAdLicoreriaRoutes(
     inventario: joinPath(base, AD_SEGMENTS.inventario),
     productos: joinPath(base, AD_SEGMENTS.productos),
     depositos: joinPath(base, AD_SEGMENTS.depositos),
+    compras: joinPath(base, AD_SEGMENTS.compras),
+    comprasAnalisis: joinPath(base, AD_SEGMENTS.comprasAnalisis),
+    proveedores: joinPath(base, AD_SEGMENTS.proveedores),
+    importacion: joinPath(base, AD_SEGMENTS.importacion),
+    tasas: joinPath(base, AD_SEGMENTS.tasas),
     cierres: joinPath(base, AD_SEGMENTS.cierres),
     clientes: joinPath(base, AD_SEGMENTS.clientes),
     reportes: joinPath(base, AD_SEGMENTS.reportes),
@@ -143,6 +158,7 @@ export function getAdLicoreriaNavItems(base = getAdLicoreriaBasePath()) {
     { key: "cuentas", label: "Cuentas", to: r.cuentas },
     { key: "inventario", label: "Inventario", to: r.inventario },
     { key: "productos", label: "Productos", to: r.productos },
+    { key: "compras", label: "Compras", to: r.compras },
     { key: "depositos", label: "Depósitos", to: r.depositos },
     { key: "cierres", label: "Cierres", to: r.cierres },
     { key: "clientes", label: "Clientes", to: r.clientes },

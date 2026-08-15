@@ -14,6 +14,7 @@ import {
 
 import { adOpsRouter } from "./ops.routes.js";
 import { adPortalRouter } from "./portal.routes.js";
+import { adCommerceRouter } from "./commerce.routes.js";
 
 export const adRouter = Router();
 
@@ -34,6 +35,8 @@ adRouter.use(adContextMiddleware);
 adRouter.use(adOpsRouter);
 /** Portal Fase 3 — operadores, snapshot, reportes */
 adRouter.use(adPortalRouter);
+/** Comercio Fase 5 — proveedores, compras, tasas, precios, OC */
+adRouter.use(adCommerceRouter);
 
 adRouter.get("/context", async (req, res, next) => {
   try {

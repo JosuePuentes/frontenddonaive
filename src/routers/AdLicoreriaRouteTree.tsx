@@ -23,6 +23,21 @@ const AdLicoreriaPresentaciones = lazy(
 const AdLicoreriaDepositos = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaDepositos"),
 );
+const AdLicoreriaCompras = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaCompras"),
+);
+const AdLicoreriaComprasAnalisis = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaComprasAnalisis"),
+);
+const AdLicoreriaProveedores = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaProveedores"),
+);
+const AdLicoreriaImportacion = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaImportacion"),
+);
+const AdLicoreriaTasas = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaTasas"),
+);
 const AdLicoreriaMesas = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaMesas"),
 );
@@ -142,6 +157,26 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
       <Route
         path={adLicoreriaRouterPath(prefix, "depositos")}
         element={<AdLicoreriaDepositos />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "compras")}
+        element={<AdLicoreriaCompras />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "comprasAnalisis")}
+        element={<AdLicoreriaComprasAnalisis />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "proveedores")}
+        element={<AdLicoreriaProveedores />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "importacion")}
+        element={<AdLicoreriaImportacion />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "tasas")}
+        element={<AdLicoreriaTasas />}
       />
       <Route
         path={adLicoreriaRouterPath(prefix, "cierres")}

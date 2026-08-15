@@ -635,17 +635,30 @@ export const adOpsService = {
         const product = await tx.adProduct.findUniqueOrThrow({
           where: { id: line.productId },
         });
+        /** F5: CPP usa cantidad recibida (facturada+bonificada) y costo efectivo. */
+        const qtyIn =
+          num(line.qtyReceivedBase) > 0
+            ? num(line.qtyReceivedBase)
+            : num(line.qtyBase);
+        const unitUsd =
+          num(line.effectiveUnitCostUsd) > 0
+            ? num(line.effectiveUnitCostUsd)
+            : num(line.unitCostUsd);
+        const unitBs =
+          num(line.effectiveUnitCostBs) > 0
+            ? num(line.effectiveUnitCostBs)
+            : num(line.unitCostBs);
         const avgUsd = weightedAverageCost(
           prevQty,
           num(product.avgCostUsd),
-          num(line.qtyBase),
-          num(line.unitCostUsd),
+          qtyIn,
+          unitUsd,
         );
         const avgBs = weightedAverageCost(
           prevQty,
           num(product.avgCostBs),
-          num(line.qtyBase),
-          num(line.unitCostBs),
+          qtyIn,
+          unitBs,
         );
         await tx.adProduct.update({
           where: { id: line.productId },
@@ -661,16 +674,16 @@ export const adOpsService = {
           create: {
             warehouseId: purchase.warehouseId,
             productId: line.productId,
-            qtyBase: line.qtyBase,
+            qtyBase: dec(qtyIn),
           },
-          update: { qtyBase: { increment: line.qtyBase } },
+          update: { qtyBase: { increment: dec(qtyIn) } },
         });
         await tx.adInventoryMovement.create({
           data: {
             warehouseId: purchase.warehouseId,
             productId: line.productId,
             type: "PURCHASE",
-            qtyBase: line.qtyBase,
+            qtyBase: dec(qtyIn),
             presentationId: line.presentationId,
             qtyPresentation: line.qty,
             operatorId: ctx.operator.id,
