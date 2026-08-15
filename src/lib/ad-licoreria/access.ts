@@ -281,6 +281,8 @@ export function hasPermission(
   roleOverrides?: Partial<Record<AdRole, AdPermission[]>>,
 ): boolean {
   if (!user || !user.active) return false;
+  /** Igual que backend: admin transversal tiene todos los permisos A&D. */
+  if (user.role === "admin") return true;
   return resolvePermissions(user, roleOverrides).has(permission);
 }
 

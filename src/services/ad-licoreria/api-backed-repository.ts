@@ -182,6 +182,44 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
     };
   });
 
+  /** Garantiza operador de sesión (permisos JWT) aunque el snapshot venga incompleto. */
+  if (session?.operatorId) {
+    const sessionPerms = (session.permissions ?? []).filter(Boolean) as AdPermission[];
+    const idx = next.operators.findIndex((o) => o.id === session.operatorId);
+    if (idx >= 0) {
+      const existing = next.operators[idx];
+      next.operators[idx] = {
+        ...existing,
+        role: (session.role as AdRole) || existing.role,
+        name: session.name || existing.name,
+        username: session.username || existing.username,
+        warehouseId: session.warehouseId ?? existing.warehouseId,
+        customPermissions:
+          existing.customPermissions?.length
+            ? existing.customPermissions
+            : sessionPerms.length
+              ? sessionPerms
+              : existing.customPermissions,
+      };
+    } else {
+      next.operators.push({
+        id: session.operatorId,
+        username: session.username,
+        name: session.name,
+        role: (session.role as AdRole) || "admin",
+        active: true,
+        warehouseId: session.warehouseId,
+        customPermissions: sessionPerms.length ? sessionPerms : undefined,
+        posEnabled: true,
+        inventoryAccess: true,
+        copAccess: true,
+        purchaseAccess: true,
+        closuresAccess: true,
+      });
+    }
+    next.currentOperatorId = session.operatorId;
+  }
+
   const products = (snap.products as Record<string, unknown>[]) ?? [];
   const presentations: AdPresentation[] = [];
   const categoriesMap = new Map<string, { id: string; name: string }>();
@@ -472,9 +510,28 @@ export const adApiBackedRepository = {
     return adLicoreriaRepository.getPaymentMethods(activeOnly);
   },
   getCurrentOperator() {
-    return (
-      state.operators.find((o) => o.id === state.currentOperatorId) ?? null
-    );
+    const fromState =
+      state.operators.find((o) => o.id === state.currentOperatorId) ?? null;
+    if (fromState) return fromState;
+    const session = loadAdSession();
+    if (!session?.operatorId) return null;
+    const sessionPerms = (session.permissions ?? []).filter(
+      Boolean,
+    ) as AdPermission[];
+    return {
+      id: session.operatorId,
+      username: session.username,
+      name: session.name,
+      role: (session.role as AdRole) || "admin",
+      active: true,
+      warehouseId: session.warehouseId,
+      customPermissions: sessionPerms.length ? sessionPerms : undefined,
+      posEnabled: true,
+      inventoryAccess: true,
+      copAccess: true,
+      purchaseAccess: true,
+      closuresAccess: true,
+    } satisfies AdOperator;
   },
   setCurrentOperator(operatorId: string | null): AdResult<AdOperator | null> {
     if (!operatorId) {
@@ -482,7 +539,11 @@ export const adApiBackedRepository = {
       emit();
       return { ok: true, data: null };
     }
-    const op = state.operators.find((o) => o.id === operatorId);
+    const op =
+      state.operators.find((o) => o.id === operatorId) ??
+      (this.getCurrentOperator()?.id === operatorId
+        ? this.getCurrentOperator()
+        : null);
     if (!op) return { ok: false, error: "Operador no encontrado" };
     state = { ...state, currentOperatorId: operatorId };
     emit();
@@ -490,14 +551,20 @@ export const adApiBackedRepository = {
   },
   canAccessWarehouse(warehouseId: string, operatorId?: string) {
     const op = operatorId
-      ? state.operators.find((o) => o.id === operatorId)
+      ? state.operators.find((o) => o.id === operatorId) ??
+        (this.getCurrentOperator()?.id === operatorId
+          ? this.getCurrentOperator()
+          : null)
       : this.getCurrentOperator();
     if (!op) return false;
     return canAccessWarehouse(op, warehouseId);
   },
   hasPermission(permission: AdPermission, operatorId?: string) {
     const op = operatorId
-      ? state.operators.find((o) => o.id === operatorId)
+      ? state.operators.find((o) => o.id === operatorId) ??
+        (this.getCurrentOperator()?.id === operatorId
+          ? this.getCurrentOperator()
+          : null)
       : this.getCurrentOperator();
     if (!op) return false;
     return hasPermission(op, permission, state.rolePermissionOverrides);
