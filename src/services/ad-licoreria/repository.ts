@@ -67,6 +67,7 @@ import type {
   AdPayment,
   AdPaymentMethodCode,
   AdPaymentMethodConfig,
+  AdPermission,
   AdPrepaidAccount,
   AdPrepaidConsumption,
   AdPresentation,
@@ -75,6 +76,7 @@ import type {
   AdPurchaseItem,
   AdPurchaseRequest,
   AdReceipt,
+  AdRole,
   AdSale,
   AdSaleItem,
   AdServiceLog,
@@ -85,6 +87,12 @@ import type {
   AdWarehouse,
   AdWhatsAppLog,
 } from "@/types/ad-licoreria";
+import {
+  AD_DEFAULT_ROLE_PERMISSIONS,
+  canAccessWarehouse,
+  hasPermission,
+  posWarehouseIdFor,
+} from "@/lib/ad-licoreria/access";
 
 export type AdRepositoryState = {
   settings: AdAppSettings;
@@ -113,6 +121,10 @@ export type AdRepositoryState = {
   purchaseRequests: AdPurchaseRequest[];
   customerCommitments: AdCustomerCommitment[];
   invoiceDrafts: AdInvoiceDraft[];
+  /** Sesión mock: usuario operativo actual. */
+  currentOperatorId: string | null;
+  /** Overrides de matriz de permisos por rol (solo ADMIN). */
+  rolePermissionOverrides: Partial<Record<AdRole, AdPermission[]>>;
   accountSeq: number;
   prepaidSeq: number;
   receiptSeq: number;
@@ -120,6 +132,7 @@ export type AdRepositoryState = {
   transferSeq: number;
   purchaseRequestSeq: number;
   invoiceDraftSeq: number;
+  warehouseSeq: number;
 };
 
 export type AdResult<T = void> =
@@ -154,6 +167,8 @@ function cloneState(): AdRepositoryState {
     purchaseRequests: [],
     customerCommitments: [],
     invoiceDrafts: [],
+    currentOperatorId: "op-maria",
+    rolePermissionOverrides: {},
     accountSeq: 186,
     prepaidSeq: 126,
     receiptSeq: 1,
@@ -161,6 +176,7 @@ function cloneState(): AdRepositoryState {
     transferSeq: 1,
     purchaseRequestSeq: 1,
     invoiceDraftSeq: 1,
+    warehouseSeq: 3,
   };
 }
 
@@ -442,6 +458,151 @@ export const adLicoreriaRepository = {
     return { ok: true, data: normalized };
   },
 
+  createWarehouse(input: {
+    name: string;
+    code?: string;
+    kind?: AdWarehouse["kind"];
+    responsibleUserId?: string | null;
+    userName: string;
+  }): AdResult<AdWarehouse> {
+    if (!input.name.trim()) {
+      return { ok: false, error: "Nombre del depósito obligatorio" };
+    }
+    const code =
+      input.code?.trim().toUpperCase() ||
+      `WH-${String(state.warehouseSeq++).padStart(3, "0")}`;
+    if (state.warehouses.some((w) => w.code === code)) {
+      return { ok: false, error: "Código de depósito ya existe" };
+    }
+    const warehouse: AdWarehouse = {
+      id: uid("wh"),
+      name: input.name.trim(),
+      code,
+      kind: input.kind ?? "otro",
+      active: true,
+      responsibleUserId: input.responsibleUserId ?? null,
+    };
+    state.warehouses = [...state.warehouses, warehouse];
+    audit("create", "warehouse", input.userName, warehouse.name, warehouse.id);
+    emit();
+    return { ok: true, data: warehouse };
+  },
+
+  setWarehouseActive(input: {
+    warehouseId: string;
+    active: boolean;
+    userName: string;
+  }): AdResult<AdWarehouse> {
+    const wh = state.warehouses.find((w) => w.id === input.warehouseId);
+    if (!wh) return { ok: false, error: "Depósito no encontrado" };
+    const updated = { ...wh, active: input.active };
+    state.warehouses = state.warehouses.map((w) =>
+      w.id === wh.id ? updated : w,
+    );
+    audit(
+      input.active ? "activate" : "deactivate",
+      "warehouse",
+      input.userName,
+      wh.name,
+      wh.id,
+    );
+    emit();
+    return { ok: true, data: updated };
+  },
+
+  getCurrentOperator(): AdOperator | null {
+    if (!state.currentOperatorId) return null;
+    return state.operators.find((o) => o.id === state.currentOperatorId) ?? null;
+  },
+
+  setCurrentOperator(operatorId: string | null): AdResult<AdOperator | null> {
+    if (!operatorId) {
+      const before = state.currentOperatorId;
+      state.currentOperatorId = null;
+      audit("session", "operator", "system", "Cerró sesión", before ?? undefined);
+      emit();
+      return { ok: true, data: null };
+    }
+    const op = state.operators.find((o) => o.id === operatorId);
+    if (!op || !op.active) {
+      return { ok: false, error: "Usuario no válido o inactivo" };
+    }
+    const before = state.currentOperatorId;
+    state.currentOperatorId = operatorId;
+    audit("session", "operator", op.name, `Sesión → ${op.username}`, op.id, {
+      beforeValue: before ?? undefined,
+      afterValue: op.id,
+    });
+    emit();
+    return { ok: true, data: op };
+  },
+
+  canAccessWarehouse(warehouseId: string, operatorId?: string): boolean {
+    const op = operatorId
+      ? state.operators.find((o) => o.id === operatorId)
+      : this.getCurrentOperator();
+    return canAccessWarehouse(op, warehouseId);
+  },
+
+  hasPermission(permission: AdPermission, operatorId?: string): boolean {
+    const op = operatorId
+      ? state.operators.find((o) => o.id === operatorId)
+      : this.getCurrentOperator();
+    return hasPermission(op, permission, state.rolePermissionOverrides);
+  },
+
+  setRolePermissions(input: {
+    role: AdRole;
+    permissions: AdPermission[];
+    userName: string;
+  }): AdResult {
+    const actor = this.getCurrentOperator();
+    if (
+      actor &&
+      !hasPermission(actor, "users.manage", state.rolePermissionOverrides) &&
+      actor.role !== "admin"
+    ) {
+      return {
+        ok: false,
+        error: "Solo ADMIN puede modificar la matriz de permisos",
+      };
+    }
+    const before = JSON.stringify(
+      state.rolePermissionOverrides[input.role] ?? null,
+    );
+    state.rolePermissionOverrides = {
+      ...state.rolePermissionOverrides,
+      [input.role]: [...input.permissions],
+    };
+    audit(
+      "permissions",
+      "role",
+      input.userName,
+      `Actualizó permisos ${input.role}`,
+      input.role,
+      { beforeValue: before, afterValue: JSON.stringify(input.permissions) },
+    );
+    emit();
+    return { ok: true, data: undefined };
+  },
+
+  getRolePermissionMatrix(): Record<AdRole, AdPermission[]> {
+    const roles: AdRole[] = [
+      "admin",
+      "supervisor",
+      "cajero",
+      "mesonera",
+      "inventario",
+    ];
+    const out = {} as Record<AdRole, AdPermission[]>;
+    for (const role of roles) {
+      out[role] =
+        state.rolePermissionOverrides[role] ??
+        AD_DEFAULT_ROLE_PERMISSIONS[role];
+    }
+    return out;
+  },
+
   /**
    * Alta/edición de usuarios operativos.
    * Cajero/mesonera con POS deben tener warehouseId para no mezclar facturación.
@@ -449,6 +610,17 @@ export const adLicoreriaRepository = {
   upsertOperator(operator: AdOperator): AdResult<AdOperator> {
     if (!operator.name.trim()) {
       return { ok: false, error: "Nombre de usuario obligatorio" };
+    }
+    if (!operator.username?.trim()) {
+      return { ok: false, error: "Usuario (login) obligatorio" };
+    }
+    const username = operator.username.trim().toLowerCase();
+    if (
+      state.operators.some(
+        (o) => o.username === username && o.id !== operator.id,
+      )
+    ) {
+      return { ok: false, error: "El usuario (login) ya existe" };
     }
     const needsWarehouse =
       operator.posEnabled === true ||
@@ -469,11 +641,13 @@ export const adLicoreriaRepository = {
     }
     const normalized: AdOperator = {
       ...operator,
+      username,
       name: operator.name.trim(),
       warehouseId: operator.warehouseId ?? null,
       posEnabled:
         operator.posEnabled ??
         (operator.role === "cajero" || operator.role === "mesonera"),
+      createdAt: operator.createdAt ?? new Date().toISOString(),
     };
     const idx = state.operators.findIndex((o) => o.id === normalized.id);
     const before = idx >= 0 ? JSON.stringify(state.operators[idx]) : undefined;
@@ -486,6 +660,7 @@ export const adLicoreriaRepository = {
     audit("upsert", "operator", "Admin A&D", normalized.name, normalized.id, {
       beforeValue: before,
       afterValue: JSON.stringify({
+        username: normalized.username,
         role: normalized.role,
         warehouseId: normalized.warehouseId,
         posEnabled: normalized.posEnabled,
@@ -537,15 +712,19 @@ export const adLicoreriaRepository = {
     if (op.posEnabled === false && op.role !== "admin") {
       return { ok: false, error: "Este usuario no tiene acceso al POS" };
     }
-    if (op.role === "admin" && !op.warehouseId) {
-      return { ok: true, data: undefined };
-    }
-    if (op.warehouseId !== warehouseId) {
+    if (!canAccessWarehouse(op, warehouseId)) {
       const wh = state.warehouses.find((w) => w.id === warehouseId);
       const own = state.warehouses.find((w) => w.id === op.warehouseId);
       return {
         ok: false,
         error: `El usuario ${op.name} pertenece a «${own?.name ?? "otro depósito"}» y no puede facturar en «${wh?.name ?? warehouseId}»`,
+      };
+    }
+    const forced = posWarehouseIdFor(op);
+    if (forced && forced !== warehouseId) {
+      return {
+        ok: false,
+        error: "El POS de este usuario está bloqueado a su depósito asignado",
       };
     }
     return { ok: true, data: undefined };
@@ -1746,6 +1925,9 @@ export const adLicoreriaRepository = {
       createdAt: new Date().toISOString(),
     }));
     const receiptNumber = nextReceiptNumber(state.receiptSeq++);
+    const operator = input.operatorId
+      ? state.operators.find((o) => o.id === input.operatorId)
+      : undefined;
     const sale: AdSale = {
       id: uid("sale"),
       receiptNumber,
@@ -1753,6 +1935,8 @@ export const adLicoreriaRepository = {
       tableId: input.tableId,
       mesoneraName: input.mesoneraName,
       cashierName: input.userName,
+      operatorId: input.operatorId,
+      operatorRole: operator?.role,
       customerId: input.customerId,
       customerName: input.customerName ?? customer?.name,
       customerPhone: input.customerPhone ?? customer?.phone,
@@ -1937,6 +2121,19 @@ export const adLicoreriaRepository = {
     userName: string;
     notes?: string;
   }): AdResult<AdPurchase> {
+    const actor = this.getCurrentOperator();
+    if (
+      actor &&
+      !hasPermission(actor, "purchase.create", state.rolePermissionOverrides)
+    ) {
+      return { ok: false, error: "Sin permiso para crear compras" };
+    }
+    if (!input.warehouseId?.trim()) {
+      return { ok: false, error: "Depósito destino obligatorio" };
+    }
+    if (!state.warehouses.some((w) => w.id === input.warehouseId && w.active)) {
+      return { ok: false, error: "Depósito destino inválido o inactivo" };
+    }
     if (!input.items.length) return { ok: false, error: "Agregue productos" };
     const items: AdPurchaseItem[] = [];
     for (const raw of input.items) {
@@ -1994,13 +2191,38 @@ export const adLicoreriaRepository = {
     countedCashUsd: number;
     countedCashBs: number;
     notes?: string;
+    operatorId?: string;
+    warehouseId?: string;
   }): AdResult<AdDailyClosure> {
     const today = new Date().toISOString().slice(0, 10);
-    const todaySales = state.sales.filter(
+    /** Solo filtrar por cajero/depósito si el caller lo indica (no mezclar cierres). */
+    const opId = input.operatorId;
+    const op = opId
+      ? state.operators.find((o) => o.id === opId)
+      : undefined;
+    const warehouseId =
+      input.warehouseId ??
+      (op?.role === "cajero" ? op.warehouseId ?? undefined : undefined);
+
+    let todaySales = state.sales.filter(
       (s) => s.createdAt.slice(0, 10) === today && s.status === "completed",
     );
+    if (warehouseId) {
+      todaySales = todaySales.filter((s) => s.warehouseId === warehouseId);
+    }
+    if (opId && op?.role === "cajero") {
+      todaySales = todaySales.filter(
+        (s) => s.operatorId === opId || s.userName === input.userName,
+      );
+    }
     const voidedCount = state.sales.filter(
-      (s) => s.createdAt.slice(0, 10) === today && s.status === "voided",
+      (s) =>
+        s.createdAt.slice(0, 10) === today &&
+        s.status === "voided" &&
+        (!warehouseId || s.warehouseId === warehouseId) &&
+        (!(opId && op?.role === "cajero") ||
+          s.operatorId === opId ||
+          s.userName === input.userName),
     ).length;
 
     const byMethod: AdDailyClosure["byMethod"] = {};
@@ -2057,6 +2279,8 @@ export const adLicoreriaRepository = {
     const closure: AdDailyClosure = {
       id: uid("dclose"),
       date: today,
+      warehouseId,
+      operatorId: opId,
       salesCount: todaySales.length,
       totalUsd: todaySales.reduce((a, s) => a + s.total.usd, 0),
       totalBs: todaySales.reduce((a, s) => a + s.total.bs, 0),
@@ -2483,6 +2707,14 @@ export const adLicoreriaRepository = {
     relatedAccountId?: string;
     relatedDraftId?: string;
   }): AdResult<AdStockTransfer> {
+    const actor = this.getCurrentOperator();
+    if (
+      actor &&
+      !hasPermission(actor, "cop.transfer", state.rolePermissionOverrides) &&
+      !hasPermission(actor, "inventory.transfer", state.rolePermissionOverrides)
+    ) {
+      return { ok: false, error: "Sin permiso para transferencias" };
+    }
     if (input.fromWarehouseId === input.toWarehouseId) {
       return { ok: false, error: "Origen y destino deben ser distintos" };
     }
@@ -3059,6 +3291,76 @@ export const adLicoreriaRepository = {
       abastecimientoMes: supplyByPeriod(30),
       abastecimientoAnio: supplyByPeriod(365),
     };
+  },
+
+  reassignMesonera(input: {
+    accountId: string;
+    newMesoneraId: string;
+    userName: string;
+  }): AdResult<AdAccount> {
+    const account = state.accounts.find((a) => a.id === input.accountId);
+    if (!account) return { ok: false, error: "Cuenta no encontrada" };
+    if (account.status === "CERRADA" || account.status === "CANCELADA") {
+      return { ok: false, error: "Cuenta cerrada" };
+    }
+    const mesonera = state.operators.find((o) => o.id === input.newMesoneraId);
+    if (!mesonera || mesonera.role !== "mesonera" || !mesonera.active) {
+      return { ok: false, error: "Mesonera no válida" };
+    }
+    const before = `${account.mesoneraName ?? "—"} (${account.mesoneraId ?? ""})`;
+    const updated: AdAccount = {
+      ...account,
+      mesoneraId: mesonera.id,
+      mesoneraName: mesonera.name,
+      updatedAt: new Date().toISOString(),
+    };
+    state.accounts = state.accounts.map((a) =>
+      a.id === account.id ? updated : a,
+    );
+    audit(
+      "reassign_mesonera",
+      "account",
+      input.userName,
+      `Cuenta #${account.number}: ${before} → ${mesonera.name}`,
+      account.id,
+      {
+        beforeValue: before,
+        afterValue: `${mesonera.name} (${mesonera.id})`,
+      },
+    );
+    emit();
+    return { ok: true, data: updated };
+  },
+
+  upsertTable(table: AdTable): AdResult<AdTable> {
+    if (!table.number.trim() && !table.code?.trim()) {
+      return { ok: false, error: "Número o código obligatorio" };
+    }
+    const idx = state.tables.findIndex((t) => t.id === table.id);
+    const normalized: AdTable = {
+      ...table,
+      number: table.number.trim() || table.code || table.id,
+      code: table.code?.trim().toUpperCase(),
+      spaceType: table.spaceType ?? "mesa",
+    };
+    if (idx === -1) state.tables = [normalized, ...state.tables];
+    else {
+      const next = [...state.tables];
+      next[idx] = normalized;
+      state.tables = next;
+    }
+    audit("upsert", "table", "Admin A&D", normalized.code ?? normalized.number, normalized.id);
+    emit();
+    return { ok: true, data: normalized };
+  },
+
+  getAccountsForMesonera(mesoneraId: string) {
+    return state.accounts.filter(
+      (a) =>
+        a.mesoneraId === mesoneraId &&
+        a.status !== "CERRADA" &&
+        a.status !== "CANCELADA",
+    );
   },
 };
 

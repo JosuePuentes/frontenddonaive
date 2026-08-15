@@ -1,11 +1,14 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { AD_LICORERIA_MEDIA, adLicoreriaBrand } from "@/content/ad-licoreria/brand";
-import { AD_ROLE_PERMISSIONS, type AdOperator, type AdRole } from "@/types/ad-licoreria";
+import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import { AD_ROLE_LABELS } from "@/lib/ad-licoreria/access";
 import { uid } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import type {
   AdPaymentMethodCode,
   AdPaymentMethodConfig,
+  AdWarehouse,
   MoneyCurrency,
 } from "@/types/ad-licoreria";
 import { adWhatsAppService } from "@/services/ad-licoreria/whatsapp";
@@ -21,8 +24,6 @@ const CODES: AdPaymentMethodCode[] = [
   "otro",
 ];
 
-const ROLES: AdRole[] = ["admin", "cajero", "mesonera", "inventario"];
-
 export default function AdLicoreriaConfiguracion() {
   const {
     warehouses,
@@ -33,7 +34,8 @@ export default function AdLicoreriaConfiguracion() {
     updateSettings,
     upsertPaymentMethod,
     upsertWarehouse,
-    upsertOperator,
+    createWarehouse,
+    setWarehouseActive,
   } = useAdLicoreria();
 
   const [rate, setRate] = useState(settings.exchangeRateUsdToBs);
@@ -54,13 +56,11 @@ export default function AdLicoreriaConfiguracion() {
   const [whId, setWhId] = useState(warehouses[0]?.id ?? "");
   const [whName, setWhName] = useState(warehouses[0]?.name ?? "");
   const [whCode, setWhCode] = useState(warehouses[0]?.code ?? "");
-
-  const [opId, setOpId] = useState<string | null>(null);
-  const [opName, setOpName] = useState("");
-  const [opRole, setOpRole] = useState<AdRole>("cajero");
-  const [opWh, setOpWh] = useState(warehouses[0]?.id ?? "");
-  const [opPos, setOpPos] = useState(true);
-  const [opActive, setOpActive] = useState(true);
+  const [whResponsible, setWhResponsible] = useState(
+    warehouses[0]?.responsibleUserId ?? "",
+  );
+  const [newWhName, setNewWhName] = useState("");
+  const [newWhCode, setNewWhCode] = useState("");
 
   function saveSettings() {
     const r = updateSettings({
@@ -114,6 +114,7 @@ export default function AdLicoreriaConfiguracion() {
     setWhId(w.id);
     setWhName(w.name);
     setWhCode(w.code);
+    setWhResponsible(w.responsibleUserId ?? "");
   }
 
   function saveWarehouse() {
@@ -122,46 +123,66 @@ export default function AdLicoreriaConfiguracion() {
       setMsg("Seleccione un depósito");
       return;
     }
-    const r = upsertWarehouse({
+    const patch: AdWarehouse = {
       ...current,
-      name: whName,
-      code: whCode,
-    });
+      name: whName.trim() || current.name,
+      code: whCode.trim().toUpperCase() || current.code,
+      responsibleUserId: whResponsible || null,
+    };
+    const r = upsertWarehouse(patch);
     setMsg(r.ok ? `Depósito «${r.data.name}» actualizado` : r.error);
   }
 
-  function loadOperator(o: AdOperator) {
-    setOpId(o.id);
-    setOpName(o.name);
-    setOpRole(o.role);
-    setOpWh(o.warehouseId ?? "");
-    setOpPos(o.posEnabled !== false);
-    setOpActive(o.active);
-  }
-
-  function saveOperator() {
-    const operator: AdOperator = {
-      id: opId ?? uid("op"),
-      name: opName,
-      role: opRole,
-      active: opActive,
-      warehouseId: opWh || null,
-      posEnabled: opPos,
-    };
-    const r = upsertOperator(operator);
-    setMsg(r.ok ? `Usuario ${r.data.name} guardado` : r.error);
+  function createNewWarehouse() {
+    const r = createWarehouse({
+      name: newWhName,
+      code: newWhCode || undefined,
+      userName: "Admin A&D",
+    });
+    setMsg(r.ok ? `Depósito creado: ${r.data.code} · ${r.data.name}` : r.error);
     if (r.ok) {
-      setOpId(null);
-      setOpName("");
+      setNewWhName("");
+      setNewWhCode("");
+      loadWarehouse(r.data.id);
     }
   }
+
+  function toggleWarehouseActive() {
+    const current = warehouses.find((w) => w.id === whId);
+    if (!current) return;
+    const r = setWarehouseActive({
+      warehouseId: current.id,
+      active: !current.active,
+      userName: "Admin A&D",
+    });
+    setMsg(
+      r.ok
+        ? `Depósito ${r.data.name}: ${r.data.active ? "activo" : "inactivo"}`
+        : r.error,
+    );
+  }
+
+  const assignedUsers = operators.filter((o) => o.warehouseId === whId);
+  const responsible = operators.find((o) => o.id === whResponsible);
 
   return (
     <div className="space-y-5">
       <p className="max-w-2xl text-sm text-[var(--ad-muted)]">
-        Configuración operativa: depósitos (nombres propios), usuarios por
-        depósito, tasa, métodos de pago y WhatsApp mock.
+        Configuración operativa mock: depósitos, tasa, métodos de pago y
+        WhatsApp. Usuarios y matriz de permisos tienen pantallas dedicadas.
       </p>
+
+      <section className="ad-panel flex flex-wrap gap-2">
+        <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.configUsuarios}>
+          Usuarios
+        </Link>
+        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.configPermisos}>
+          Matriz de permisos
+        </Link>
+        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.mesas}>
+          Espacios / mesas
+        </Link>
+      </section>
 
       <section className="ad-panel space-y-2">
         <h2 className="ad-panel-title">Identidad</h2>
@@ -174,12 +195,53 @@ export default function AdLicoreriaConfiguracion() {
       </section>
 
       <section className="ad-panel space-y-3">
-        <h2 className="ad-panel-title">Depósitos (nombres)</h2>
+        <h2 className="ad-panel-title">Depósitos</h2>
         <p className="text-sm text-[var(--ad-muted)]">
-          Coloque el nombre real de cada depósito para identificarlos en POS,
-          compras y transferencias.
+          Nombres y códigos configurables (no hardcodeados en UI). Cada usuario
+          operativo se ata a un depósito o queda transversal.
         </p>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="ad-table-wrap">
+          <table className="ad-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Responsable</th>
+                <th>Usuarios</th>
+                <th>Estado</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {warehouses.map((w) => (
+                <tr key={w.id}>
+                  <td>{w.code}</td>
+                  <td>{w.name}</td>
+                  <td>
+                    {operators.find((o) => o.id === w.responsibleUserId)?.name ??
+                      "—"}
+                  </td>
+                  <td>
+                    {
+                      operators.filter((o) => o.warehouseId === w.id).length
+                    }
+                  </td>
+                  <td>{w.active ? "Activo" : "Inactivo"}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="ad-btn"
+                      onClick={() => loadWarehouse(w.id)}
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <select
             className="ad-select"
             value={whId}
@@ -187,7 +249,7 @@ export default function AdLicoreriaConfiguracion() {
           >
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.name} ({w.code})
+                {w.code} · {w.name}
               </option>
             ))}
           </select>
@@ -199,115 +261,101 @@ export default function AdLicoreriaConfiguracion() {
           />
           <input
             className="ad-input"
-            placeholder="Código"
+            placeholder="Código interno"
             value={whCode}
             onChange={(e) => setWhCode(e.target.value)}
           />
-        </div>
-        <button type="button" className="ad-btn ad-btn--gold" onClick={saveWarehouse}>
-          Guardar depósito
-        </button>
-      </section>
-
-      <section className="ad-panel space-y-3">
-        <h2 className="ad-panel-title">Usuarios por depósito</h2>
-        <p className="text-sm text-[var(--ad-muted)]">
-          Cajero / mesonera con POS deben pertenecer a un solo depósito. Así no
-          se mezclan las facturaciones.
-        </p>
-        <div className="ad-table-wrap">
-          <table className="ad-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Rol</th>
-                <th>Depósito</th>
-                <th>POS</th>
-                <th>Estado</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {operators.map((o) => (
-                <tr key={o.id}>
-                  <td>{o.name}</td>
-                  <td>{o.role}</td>
-                  <td>
-                    {o.warehouseId
-                      ? warehouses.find((w) => w.id === o.warehouseId)?.name ??
-                        o.warehouseId
-                      : "— (transversal)"}
-                  </td>
-                  <td>{o.posEnabled === false ? "No" : "Sí"}</td>
-                  <td>{o.active ? "Activo" : "Inactivo"}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="ad-btn"
-                      onClick={() => loadOperator(o)}
-                    >
-                      Editar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <input
-            className="ad-input"
-            placeholder="Nombre"
-            value={opName}
-            onChange={(e) => setOpName(e.target.value)}
-          />
           <select
             className="ad-select"
-            value={opRole}
-            onChange={(e) => setOpRole(e.target.value as AdRole)}
+            value={whResponsible}
+            onChange={(e) => setWhResponsible(e.target.value)}
           >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
+            <option value="">Sin responsable</option>
+            {operators.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name} ({AD_ROLE_LABELS[o.role]})
               </option>
             ))}
           </select>
-          <select
-            className="ad-select"
-            value={opWh}
-            onChange={(e) => setOpWh(e.target.value)}
-          >
-            <option value="">Sin depósito (admin/inventario)</option>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-2 text-sm text-[var(--ad-muted)]">
-            <input
-              type="checkbox"
-              checked={opPos}
-              onChange={(e) => setOpPos(e.target.checked)}
-            />
-            Acceso POS
-          </label>
-          <label className="flex items-center gap-2 text-sm text-[var(--ad-muted)]">
-            <input
-              type="checkbox"
-              checked={opActive}
-              onChange={(e) => setOpActive(e.target.checked)}
-            />
-            Activo
-          </label>
-          <button type="button" className="ad-btn ad-btn--gold" onClick={saveOperator}>
-            {opId ? "Actualizar usuario" : "Crear usuario"}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="ad-btn ad-btn--gold" onClick={saveWarehouse}>
+            Guardar depósito
+          </button>
+          <button type="button" className="ad-btn" onClick={toggleWarehouseActive}>
+            Activar / desactivar
           </button>
         </div>
+        {whId ? (
+          <div className="border border-[var(--ad-line)] p-3 text-sm text-[var(--ad-muted)]">
+            <p>
+              Código: <strong className="text-[var(--ad-text)]">{whCode}</strong>
+            </p>
+            <p>
+              Responsable:{" "}
+              <strong className="text-[var(--ad-text)]">
+                {responsible?.name ?? "—"}
+              </strong>
+            </p>
+            <p className="mt-2">Usuarios asignados:</p>
+            <ul className="mt-1 space-y-1">
+              {assignedUsers.map((o) => (
+                <li key={o.id}>
+                  {o.name} · {AD_ROLE_LABELS[o.role]} · POS{" "}
+                  {o.posEnabled === false ? "No" : "Sí"}
+                </li>
+              ))}
+              {!assignedUsers.length ? <li>Ninguno</li> : null}
+            </ul>
+          </div>
+        ) : null}
+        <div className="grid gap-2 sm:grid-cols-3">
+          <input
+            className="ad-input"
+            placeholder="Nuevo nombre"
+            value={newWhName}
+            onChange={(e) => setNewWhName(e.target.value)}
+          />
+          <input
+            className="ad-input"
+            placeholder="Código (opcional WH-xxx)"
+            value={newWhCode}
+            onChange={(e) => setNewWhCode(e.target.value)}
+          />
+          <button
+            type="button"
+            className="ad-btn ad-btn--gold"
+            onClick={createNewWarehouse}
+          >
+            Crear depósito
+          </button>
+        </div>
+      </section>
+
+      <section className="ad-panel space-y-2">
+        <h2 className="ad-panel-title">Usuarios y roles</h2>
+        <p className="text-sm text-[var(--ad-muted)]">
+          Alta, edición, depósito asignado, acceso POS/inventario/COP y permisos
+          personalizados.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            className="ad-btn ad-btn--gold"
+            to={AD_LICORERIA_ROUTES.configUsuarios}
+          >
+            Abrir módulo de usuarios
+          </Link>
+          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.configPermisos}>
+            Matriz de permisos
+          </Link>
+        </div>
         <ul className="space-y-1 text-xs text-[var(--ad-muted)]">
-          {operators.map((o) => (
-            <li key={`perm-${o.id}`}>
-              {o.name}: {AD_ROLE_PERMISSIONS[o.role].join(", ")}
+          {operators.slice(0, 8).map((o) => (
+            <li key={o.id}>
+              {o.username} · {o.name} · {AD_ROLE_LABELS[o.role]} ·{" "}
+              {o.warehouseId
+                ? warehouses.find((w) => w.id === o.warehouseId)?.name
+                : "Transversal"}
             </li>
           ))}
         </ul>

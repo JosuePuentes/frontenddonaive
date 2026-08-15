@@ -1,0 +1,261 @@
+import { useState } from "react";
+import { Link } from "react-router";
+import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import { AD_ROLE_LABELS } from "@/lib/ad-licoreria/access";
+import { uid } from "@/lib/ad-licoreria/conversions";
+import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import type { AdOperator, AdRole } from "@/types/ad-licoreria";
+
+const ROLES: AdRole[] = [
+  "admin",
+  "supervisor",
+  "cajero",
+  "mesonera",
+  "inventario",
+];
+
+export default function AdLicoreriaConfigUsuarios() {
+  const { operators, warehouses, upsertOperator, setCurrentOperator } =
+    useAdLicoreria();
+
+  const [opId, setOpId] = useState<string | null>(null);
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [role, setRole] = useState<AdRole>("cajero");
+  const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
+  const [pos, setPos] = useState(true);
+  const [inv, setInv] = useState(false);
+  const [cop, setCop] = useState(false);
+  const [purchase, setPurchase] = useState(false);
+  const [closures, setClosures] = useState(true);
+  const [active, setActive] = useState(true);
+  const [msg, setMsg] = useState("");
+
+  function load(o: AdOperator) {
+    setOpId(o.id);
+    setUsername(o.username);
+    setName(o.name);
+    setPhone(o.phone ?? "");
+    setRole(o.role);
+    setWarehouseId(o.warehouseId ?? "");
+    setPos(o.posEnabled !== false);
+    setInv(o.inventoryAccess === true);
+    setCop(o.copAccess === true);
+    setPurchase(o.purchaseAccess === true);
+    setClosures(o.closuresAccess !== false);
+    setActive(o.active);
+  }
+
+  function save() {
+    const operator: AdOperator = {
+      id: opId ?? uid("op"),
+      username,
+      name,
+      phone: phone.trim() || undefined,
+      role,
+      active,
+      warehouseId: warehouseId || null,
+      posEnabled: pos,
+      inventoryAccess: inv,
+      copAccess: cop,
+      purchaseAccess: purchase,
+      closuresAccess: closures,
+    };
+    const r = upsertOperator(operator);
+    setMsg(r.ok ? `Usuario ${r.data.username} guardado` : r.error);
+    if (r.ok) {
+      setOpId(null);
+      setUsername("");
+      setName("");
+      setPhone("");
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="ad-eyebrow">Configuración</p>
+          <h1 className="ad-display text-4xl text-[var(--ad-gold-soft)]">
+            Usuarios
+          </h1>
+          <p className="mt-1 text-sm text-[var(--ad-muted)]">
+            Sin contraseñas en el mock. El depósito asignado restringe el POS de
+            forma real.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.configuracion}>
+            ← Config
+          </Link>
+          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.configPermisos}>
+            Permisos
+          </Link>
+        </div>
+      </header>
+
+      <section className="ad-panel">
+        <div className="ad-table-wrap">
+          <table className="ad-table">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Nombre</th>
+                <th>Rol</th>
+                <th>Depósito</th>
+                <th>POS</th>
+                <th>Inv</th>
+                <th>COP</th>
+                <th>Estado</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {operators.map((o) => (
+                <tr key={o.id}>
+                  <td>{o.username}</td>
+                  <td>{o.name}</td>
+                  <td>{AD_ROLE_LABELS[o.role]}</td>
+                  <td>
+                    {o.warehouseId
+                      ? warehouses.find((w) => w.id === o.warehouseId)?.name
+                      : "Transversal"}
+                  </td>
+                  <td>{o.posEnabled === false ? "No" : "Sí"}</td>
+                  <td>{o.inventoryAccess ? "Sí" : "—"}</td>
+                  <td>{o.copAccess ? "Sí" : "—"}</td>
+                  <td>{o.active ? "Activo" : "Inactivo"}</td>
+                  <td className="space-x-1">
+                    <button
+                      type="button"
+                      className="ad-btn"
+                      onClick={() => load(o)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="ad-btn ad-btn--gold"
+                      onClick={() => {
+                        const r = setCurrentOperator(o.id);
+                        setMsg(
+                          r.ok
+                            ? `Sesión: ${o.name} · ${AD_ROLE_LABELS[o.role]}`
+                            : r.error,
+                        );
+                      }}
+                    >
+                      Usar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="ad-panel space-y-3">
+        <h2 className="ad-panel-title">
+          {opId ? "Editar usuario" : "Crear usuario"}
+        </h2>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <input
+            className="ad-input"
+            placeholder="Usuario (login)"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <input
+            className="ad-input"
+            placeholder="Nombre"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            className="ad-input"
+            placeholder="Teléfono (opcional)"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          <select
+            className="ad-select"
+            value={role}
+            onChange={(e) => setRole(e.target.value as AdRole)}
+          >
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {AD_ROLE_LABELS[r]}
+              </option>
+            ))}
+          </select>
+          <select
+            className="ad-select"
+            value={warehouseId}
+            onChange={(e) => setWarehouseId(e.target.value)}
+          >
+            <option value="">Transversal</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name} ({w.code})
+              </option>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
+            />
+            Activo
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={pos}
+              onChange={(e) => setPos(e.target.checked)}
+            />
+            Acceso POS
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={inv}
+              onChange={(e) => setInv(e.target.checked)}
+            />
+            Acceso inventario
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={cop}
+              onChange={(e) => setCop(e.target.checked)}
+            />
+            Acceso COP
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={purchase}
+              onChange={(e) => setPurchase(e.target.checked)}
+            />
+            Acceso compras
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={closures}
+              onChange={(e) => setClosures(e.target.checked)}
+            />
+            Acceso cierres
+          </label>
+        </div>
+        <button type="button" className="ad-btn ad-btn--gold" onClick={save}>
+          Guardar
+        </button>
+        {msg ? <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p> : null}
+      </section>
+    </div>
+  );
+}

@@ -18,18 +18,25 @@ export default function AdLicoreriaDepositos() {
     transferStock,
     registerMovement,
     createPurchase,
+    hasPermission,
+    canAccessWarehouse,
+    getCurrentOperator,
   } = useAdLicoreria();
+  const session = getCurrentOperator();
+  const visibleWarehouses = warehouses.filter(
+    (w) => w.active && canAccessWarehouse(w.id),
+  );
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [presentationId, setPresentationId] = useState("");
   const [qty, setQty] = useState(10);
-  const [fromId, setFromId] = useState(warehouses[0]?.id ?? "wh-1");
-  const [toId, setToId] = useState(warehouses[1]?.id ?? "wh-2");
+  const [fromId, setFromId] = useState(visibleWarehouses[0]?.id ?? "wh-1");
+  const [toId, setToId] = useState(visibleWarehouses[1]?.id ?? "wh-2");
   const [adjustType, setAdjustType] =
     useState<AdInventoryMovementType>("AJUSTE_ENTRADA");
-  const [adjustWh, setAdjustWh] = useState(warehouses[0]?.id ?? "wh-1");
+  const [adjustWh, setAdjustWh] = useState(visibleWarehouses[0]?.id ?? "wh-1");
   const [msg, setMsg] = useState("");
 
-  const [buyWh, setBuyWh] = useState(warehouses[0]?.id ?? "wh-1");
+  const [buyWh, setBuyWh] = useState(visibleWarehouses[0]?.id ?? "wh-1");
   const [buyProductId, setBuyProductId] = useState(products[0]?.id ?? "");
   const [buyPresId, setBuyPresId] = useState("");
   const [buyQty, setBuyQty] = useState(12);
@@ -46,6 +53,13 @@ export default function AdLicoreriaDepositos() {
     buyPresentations.find((p) => p.id === buyPresId) ?? buyPresentations[0];
 
   function transfer() {
+    if (
+      !hasPermission("inventory.transfer") &&
+      !hasPermission("cop.transfer")
+    ) {
+      setMsg("Sin permiso para transferencias");
+      return;
+    }
     if (!pres) return;
     const result = transferStock({
       productId,
@@ -53,26 +67,38 @@ export default function AdLicoreriaDepositos() {
       qtyPresentation: qty,
       fromId,
       toId,
-      userName: "Admin A&D",
+      userName: session?.name ?? "Admin A&D",
       reason: "Traslado entre depósitos",
     });
     setMsg(result.ok ? "Transferencia registrada" : result.error);
   }
 
   function adjust() {
+    if (!hasPermission("inventory.adjust")) {
+      setMsg("Sin permiso para ajustar inventario");
+      return;
+    }
+    if (!canAccessWarehouse(adjustWh)) {
+      setMsg("No puede ajustar inventario de otro depósito");
+      return;
+    }
     const result = registerMovement({
       type: adjustType,
       productId,
       presentationId: pres?.id,
       qtyPresentation: qty,
       warehouseId: adjustWh,
-      userName: "Inventario",
+      userName: session?.name ?? "Inventario",
       reason: `Movimiento ${adjustType}`,
     });
     setMsg(result.ok ? "Movimiento registrado" : result.error);
   }
 
   function registerPurchase() {
+    if (!hasPermission("purchase.create")) {
+      setMsg("Sin permiso para crear compras");
+      return;
+    }
     if (!buyPres) {
       setMsg("Seleccione presentación");
       return;
@@ -99,7 +125,7 @@ export default function AdLicoreriaDepositos() {
           unitCostBs: buyCostBs,
         },
       ],
-      userName: "Inventario",
+      userName: session?.name ?? "Inventario",
       notes: `Entrada a ${warehouses.find((w) => w.id === buyWh)?.name ?? buyWh}`,
     });
     setMsg(
@@ -123,7 +149,7 @@ export default function AdLicoreriaDepositos() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="ad-panel space-y-3">
           <h2 className="ad-panel-title">Existencias</h2>
-          {warehouses.map((w) => (
+          {visibleWarehouses.map((w) => (
             <div key={w.id} className="border border-[var(--ad-line)] p-3">
               <p className="text-sm text-[var(--ad-gold-soft)]">
                 {w.name} ({w.code})
@@ -154,7 +180,7 @@ export default function AdLicoreriaDepositos() {
               value={buyWh}
               onChange={(e) => setBuyWh(e.target.value)}
             >
-              {warehouses.map((w) => (
+              {visibleWarehouses.map((w) => (
                 <option key={w.id} value={w.id}>
                   Destino: {w.name} ({w.code})
                 </option>
@@ -274,7 +300,7 @@ export default function AdLicoreriaDepositos() {
                 value={fromId}
                 onChange={(e) => setFromId(e.target.value)}
               >
-                {warehouses.map((w) => (
+                {visibleWarehouses.map((w) => (
                   <option key={w.id} value={w.id}>
                     Desde {w.name}
                   </option>
@@ -285,7 +311,7 @@ export default function AdLicoreriaDepositos() {
                 value={toId}
                 onChange={(e) => setToId(e.target.value)}
               >
-                {warehouses.map((w) => (
+                {visibleWarehouses.map((w) => (
                   <option key={w.id} value={w.id}>
                     Hacia {w.name}
                   </option>
@@ -321,7 +347,7 @@ export default function AdLicoreriaDepositos() {
               value={adjustWh}
               onChange={(e) => setAdjustWh(e.target.value)}
             >
-              {warehouses.map((w) => (
+              {visibleWarehouses.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
                 </option>

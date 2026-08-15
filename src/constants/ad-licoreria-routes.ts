@@ -25,6 +25,9 @@ const AD_SEGMENTS = {
   cop: "/cop",
   copTransferencias: "/cop/transferencias",
   copReportes: "/cop/reportes",
+  /** Fase 8 — usuarios / permisos */
+  configUsuarios: "/configuracion/usuarios",
+  configPermisos: "/configuracion/permisos",
 } as const;
 
 export type AdLicoreriaRoutes = {
@@ -47,6 +50,8 @@ export type AdLicoreriaRoutes = {
   cop: string;
   copTransferencias: string;
   copReportes: string;
+  configUsuarios: string;
+  configPermisos: string;
 };
 
 function joinPath(base: "" | "/licoreria", segment: string): string {
@@ -77,6 +82,8 @@ export function getAdLicoreriaRoutes(
     cop: joinPath(base, AD_SEGMENTS.cop),
     copTransferencias: joinPath(base, AD_SEGMENTS.copTransferencias),
     copReportes: joinPath(base, AD_SEGMENTS.copReportes),
+    configUsuarios: joinPath(base, AD_SEGMENTS.configUsuarios),
+    configPermisos: joinPath(base, AD_SEGMENTS.configPermisos),
   };
 }
 

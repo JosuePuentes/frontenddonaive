@@ -20,7 +20,15 @@ export default function AdLicoreriaCop() {
     createTransferDraft,
     confirmTransfer,
     createPurchaseRequest,
+    hasPermission,
+    getCurrentOperator,
   } = useAdLicoreria();
+
+  const session = getCurrentOperator();
+  const canRead = hasPermission("cop.read");
+  const canTransfer =
+    hasPermission("cop.transfer") || hasPermission("inventory.transfer");
+  const canPurchaseReq = hasPermission("cop.purchase_request");
 
   const dash = getCopDashboard();
   const [productId, setProductId] = useState("prod-regional");
@@ -43,6 +51,22 @@ export default function AdLicoreriaCop() {
     );
   }, [dash.inventory.critical, query]);
 
+  if (!canRead) {
+    return (
+      <div className="ad-panel space-y-2">
+        <h1 className="ad-panel-title">Centro de operaciones</h1>
+        <p className="text-sm text-[var(--ad-muted)]">
+          {session
+            ? `${session.name} no tiene permiso COP (cop.read).`
+            : "Sin sesión o sin permiso para consultar el COP."}
+        </p>
+        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.inicio}>
+          Volver
+        </Link>
+      </div>
+    );
+  }
+
   const statusLabel =
     av.status === "OK"
       ? "PUEDE CUMPLIRSE"
@@ -55,6 +79,10 @@ export default function AdLicoreriaCop() {
             : "COMPRA NECESARIA";
 
   function prepareTransfer() {
+    if (!canTransfer) {
+      setMsg("Sin permiso para transferencias");
+      return;
+    }
     const qty = av.plan.transferSuggestion;
     if (qty <= 0 || !av.plan.transferFromId || !defaultPres) {
       setMsg("No hay sugerencia de transferencia o presentación");
@@ -98,6 +126,10 @@ export default function AdLicoreriaCop() {
   }
 
   function createBuy() {
+    if (!canPurchaseReq) {
+      setMsg("Sin permiso para solicitar compras");
+      return;
+    }
     const need =
       av.plan.purchaseNeeded ||
       Math.max(0, requestQty - av.availableOperationalTotal);
@@ -293,6 +325,7 @@ export default function AdLicoreriaCop() {
                       type="button"
                       className="ad-btn ad-btn--gold"
                       onClick={prepareTransfer}
+                      disabled={!canTransfer}
                     >
                       Preparar transferencia {av.plan.transferSuggestion}
                     </button>
@@ -300,6 +333,7 @@ export default function AdLicoreriaCop() {
                       type="button"
                       className="ad-btn ad-btn--primary"
                       onClick={confirmSuggestedTransfer}
+                      disabled={!canTransfer}
                     >
                       Confirmar última borrador
                     </button>
@@ -310,6 +344,7 @@ export default function AdLicoreriaCop() {
                     type="button"
                     className="ad-btn"
                     onClick={createBuy}
+                    disabled={!canPurchaseReq}
                   >
                     Crear compra de {av.plan.purchaseNeeded}
                   </button>

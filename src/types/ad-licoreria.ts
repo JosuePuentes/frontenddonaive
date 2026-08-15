@@ -10,8 +10,39 @@ export type AdPrice = {
   bs: number;
 };
 
-export type AdRole = "admin" | "mesonera" | "cajero" | "inventario";
+export type AdRole =
+  | "admin"
+  | "supervisor"
+  | "mesonera"
+  | "cajero"
+  | "inventario";
 
+/** Permisos granulares (independientes del rol; roles otorgan defaults). */
+export type AdPermission =
+  | "pos.sell"
+  | "pos.refund"
+  | "pos.discount"
+  | "pos.close_account"
+  | "inventory.read"
+  | "inventory.adjust"
+  | "inventory.transfer"
+  | "inventory.receive"
+  | "purchase.create"
+  | "purchase.approve"
+  | "cop.read"
+  | "cop.transfer"
+  | "cop.purchase_request"
+  | "reports.read"
+  | "users.manage"
+  | "deposits.manage"
+  | "settings.manage"
+  | "accounts.open"
+  | "accounts.serve"
+  | "tables.manage"
+  | "clients.read"
+  | "closures.create";
+
+/** @deprecated preferir AdPermission — módulos UI legacy. */
 export type AdModulePermission =
   | "ventas"
   | "cuentas"
@@ -30,6 +61,7 @@ export type AdModulePermission =
   | "anulaciones"
   | "descuentos";
 
+/** Mapa legado módulo ← rol (nav / compat). */
 export const AD_ROLE_PERMISSIONS: Record<AdRole, AdModulePermission[]> = {
   admin: [
     "ventas",
@@ -49,6 +81,23 @@ export const AD_ROLE_PERMISSIONS: Record<AdRole, AdModulePermission[]> = {
     "anulaciones",
     "descuentos",
   ],
+  supervisor: [
+    "ventas",
+    "cuentas",
+    "pagos",
+    "clientes",
+    "cierres_caja",
+    "mesas",
+    "servir",
+    "inventario",
+    "depositos",
+    "kardex",
+    "conteos",
+    "productos",
+    "reportes",
+    "anulaciones",
+    "descuentos",
+  ],
   cajero: [
     "ventas",
     "cuentas",
@@ -62,19 +111,34 @@ export const AD_ROLE_PERMISSIONS: Record<AdRole, AdModulePermission[]> = {
   inventario: ["inventario", "depositos", "kardex", "conteos", "productos"],
 };
 
+/**
+ * Usuario operativo (futuro User + WarehouseUserAssignment).
+ * Sin contraseñas en el mock — preparado para auth futura.
+ */
 export type AdOperator = {
   id: string;
+  /** Login / handle único (sin password en mock). */
+  username: string;
   name: string;
+  phone?: string;
   role: AdRole;
   active: boolean;
   /**
    * Depósito asignado.
-   * Obligatorio para cajero/mesonera de POS: aísla facturación por depósito.
-   * Admin / inventario pueden quedar sin depósito (acceso transversal).
+   * null = transversal (admin / inventario / supervisor).
+   * Obligatorio para cajero/mesonera.
    */
   warehouseId?: string | null;
-  /** Si true, puede entrar al POS de su depósito. */
   posEnabled?: boolean;
+  inventoryAccess?: boolean;
+  copAccess?: boolean;
+  purchaseAccess?: boolean;
+  closuresAccess?: boolean;
+  /** Permisos extra sobre el rol. */
+  customPermissions?: AdPermission[];
+  /** Permisos denegados explícitamente. */
+  deniedPermissions?: AdPermission[];
+  createdAt?: string;
 };
 
 export type AdCategory = {
@@ -118,9 +182,11 @@ export type AdPresentation = {
 export type AdWarehouse = {
   id: string;
   name: string;
+  /** Código interno estable (ej. WH-001). */
   code: string;
   kind: "principal" | "barra" | "otro";
   active: boolean;
+  responsibleUserId?: string | null;
 };
 
 export type AdInventoryItem = {
@@ -159,6 +225,14 @@ export type AdInventoryMovement = {
   createdAt: string;
 };
 
+export type AdSpaceType =
+  | "mesa"
+  | "barra"
+  | "area"
+  | "privado"
+  | "terraza"
+  | "otro";
+
 export type AdTableStatus =
   | "disponible"
   | "ocupada"
@@ -170,10 +244,15 @@ export type AdTableStatus =
 export type AdTable = {
   id: string;
   number: string;
+  /** Código operativo ej. MESA-01, BAR-01. */
+  code?: string;
   label?: string;
+  spaceType?: AdSpaceType;
   capacity: number;
   status: AdTableStatus;
   active: boolean;
+  /** Depósito al que pertenece el espacio. */
+  warehouseId?: string | null;
 };
 
 /** Código estable del método de pago. */
@@ -335,8 +414,11 @@ export type AdSale = {
   receiptNumber: string;
   accountId?: string;
   tableId?: string;
+  mesoneraId?: string;
   mesoneraName?: string;
   cashierName?: string;
+  operatorId?: string;
+  operatorRole?: AdRole;
   customerId?: string;
   customerName?: string;
   customerPhone?: string;
@@ -415,6 +497,8 @@ export type AdPurchase = {
 export type AdDailyClosure = {
   id: string;
   date: string;
+  warehouseId?: string;
+  operatorId?: string;
   salesCount: number;
   totalUsd: number;
   totalBs: number;

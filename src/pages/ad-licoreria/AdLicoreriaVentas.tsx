@@ -4,7 +4,6 @@ import {
   toBaseUnits,
 } from "@/lib/ad-licoreria/conversions";
 import {
-  AD_WH_LICORERIA,
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
@@ -26,11 +25,13 @@ export default function AdLicoreriaVentas() {
     operators,
     customers,
     paymentMethods,
+    currentOperatorId,
     getPresentationsFor,
     getStock,
     getOperationalAvailability,
-    getPosOperatorsForWarehouse,
     getFloorOperatorsForWarehouse,
+    getCurrentOperator,
+    setCurrentOperator,
     openAccount,
     addAccountItem,
     createPrepaid,
@@ -38,24 +39,32 @@ export default function AdLicoreriaVentas() {
     confirmInvoiceDraft,
     cancelInvoiceDraft,
     logDocumentAction,
+    hasPermission,
   } = useAdLicoreria();
 
   const activeMethods = paymentMethods.filter((m) => m.active);
-
-  const [posWarehouseId, setPosWarehouseId] = useState(
-    warehouses.find((w) => w.id === AD_WH_LICORERIA)?.id ??
-      warehouses[0]?.id ??
-      AD_WH_LICORERIA,
+  const sessionUser = getCurrentOperator();
+  const posCashiers = operators.filter(
+    (o) =>
+      o.active &&
+      o.posEnabled !== false &&
+      o.warehouseId &&
+      (o.role === "cajero" || o.role === "mesonera"),
   );
-  const posUsers = getPosOperatorsForWarehouse(posWarehouseId);
-  const floorUsers = getFloorOperatorsForWarehouse(posWarehouseId);
+
+  const cashierId = sessionUser?.warehouseId
+    ? sessionUser.id
+    : (currentOperatorId ?? "");
+  const posWarehouseId = sessionUser?.warehouseId ?? "";
+  const floorUsers = posWarehouseId
+    ? getFloorOperatorsForWarehouse(posWarehouseId)
+    : [];
 
   const [query, setQuery] = useState("");
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [presentationId, setPresentationId] = useState("");
   const [qty, setQty] = useState(1);
   const [tableId, setTableId] = useState("");
-  const [cashierId, setCashierId] = useState(posUsers[0]?.id ?? "");
   const [mesoneraId, setMesoneraId] = useState(floorUsers[0]?.id ?? "");
   const [customerId, setCustomerId] = useState("");
   const [cart, setCart] = useState<AdSaleItem[]>([]);
@@ -74,25 +83,6 @@ export default function AdLicoreriaVentas() {
   const [draft, setDraft] = useState<AdInvoiceDraft | null>(null);
   const [confirmedReceipt, setConfirmedReceipt] = useState<string | null>(null);
 
-  function switchWarehouse(nextId: string) {
-    if (nextId === posWarehouseId) return;
-    if (cart.length || payments.length) {
-      const ok = window.confirm(
-        "Al cambiar de depósito se limpia el carrito y los pagos para no mezclar facturación. ¿Continuar?",
-      );
-      if (!ok) return;
-    }
-    setPosWarehouseId(nextId);
-    const nextPos = getPosOperatorsForWarehouse(nextId);
-    const nextFloor = getFloorOperatorsForWarehouse(nextId);
-    setCashierId(nextPos[0]?.id ?? "");
-    setMesoneraId(nextFloor[0]?.id ?? "");
-    setCart([]);
-    setPayments([]);
-    setDraft(null);
-    setMsg(`POS activo: ${warehouseLabel(nextId, warehouses)}`);
-  }
-
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return products.filter((p) => p.active);
@@ -109,7 +99,7 @@ export default function AdLicoreriaVentas() {
   const availablePres = getPresentationsFor(productId);
   const activePres =
     presentations.find((p) => p.id === presentationId) ?? availablePres[0];
-  const cashier = operators.find((o) => o.id === cashierId);
+  const cashier = operators.find((o) => o.id === cashierId) ?? sessionUser;
   const mesonera = operators.find((o) => o.id === mesoneraId);
   const customer = customers.find((c) => c.id === customerId);
   const methodCfg = activeMethods.find((m) => m.code === payMethod);
@@ -123,15 +113,26 @@ export default function AdLicoreriaVentas() {
     .filter((p) => p.currency === "BS")
     .reduce((a, p) => a + p.amount, 0);
 
+  const canSell =
+    Boolean(cashier?.warehouseId) &&
+    cashier?.posEnabled !== false &&
+    hasPermission("pos.sell", cashier?.id);
+
   const qtyAvail = useMemo(() => {
-    if (!activePres || qty <= 0) return null;
+    if (!activePres || qty <= 0 || !posWarehouseId) return null;
     const requestedBase = toBaseUnits(activePres, qty);
     return getOperationalAvailability(
       productId,
       requestedBase,
       posWarehouseId,
     );
-  }, [activePres, qty, productId, getOperationalAvailability, posWarehouseId]);
+  }, [
+    activePres,
+    qty,
+    productId,
+    getOperationalAvailability,
+    posWarehouseId,
+  ]);
 
   const cartAlerts = useMemo(
     () =>
@@ -139,7 +140,7 @@ export default function AdLicoreriaVentas() {
         const av = getOperationalAvailability(
           line.productId,
           line.qtyBase,
-          posWarehouseId,
+          posWarehouseId || "wh-2",
         );
         const shortfall = Math.max(
           0,
@@ -248,12 +249,12 @@ export default function AdLicoreriaVentas() {
   }
 
   function openPrelim() {
-    if (!cart.length) {
-      setMsg("Agregue productos");
+    if (!canSell || !posWarehouseId || !cashierId) {
+      setMsg("Sesión POS inválida: usuario con depósito asignado requerido");
       return;
     }
-    if (!cashierId) {
-      setMsg("Seleccione el usuario POS de este depósito");
+    if (!cart.length) {
+      setMsg("Agregue productos");
       return;
     }
     if (!payments.length) {
@@ -409,35 +410,42 @@ export default function AdLicoreriaVentas() {
       <section className="ad-panel space-y-3">
         <h2 className="ad-panel-title">Punto de venta</h2>
         <p className="text-sm text-[var(--ad-muted)]">
-          Cada depósito tiene sus propios usuarios POS. La facturación no se
-          mezcla entre depósitos.
+          El depósito del POS está fijado por el usuario en sesión. No hay venta
+          cruzada entre depósitos.
         </p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <select
             className="ad-select"
-            value={posWarehouseId}
-            onChange={(e) => switchWarehouse(e.target.value)}
+            value={cashier?.id ?? ""}
+            onChange={(e) => {
+              const r = setCurrentOperator(e.target.value || null);
+              setCart([]);
+              setPayments([]);
+              setDraft(null);
+              setMsg(
+                r.ok
+                  ? r.data
+                    ? `Sesión POS: ${r.data.name} · ${warehouseLabel(r.data.warehouseId ?? "", warehouses)}`
+                    : "Sin sesión"
+                  : r.error,
+              );
+            }}
           >
-            {warehouses
-              .filter((w) => w.active)
-              .map((w) => (
-                <option key={w.id} value={w.id}>
-                  Depósito: {w.name} ({w.code})
-                </option>
-              ))}
-          </select>
-          <select
-            className="ad-select"
-            value={cashierId}
-            onChange={(e) => setCashierId(e.target.value)}
-          >
-            <option value="">Usuario POS</option>
-            {posUsers.map((m) => (
+            <option value="">Seleccione usuario POS</option>
+            {posCashiers.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.name} · {m.role}
+                {m.name} · {warehouseLabel(m.warehouseId ?? "", warehouses)}
               </option>
             ))}
           </select>
+          <div className="ad-input flex items-center text-sm">
+            Depósito asignado:{" "}
+            <strong className="ml-1 text-[var(--ad-gold-soft)]">
+              {posWarehouseId
+                ? warehouseLabel(posWarehouseId, warehouses)
+                : "—"}
+            </strong>
+          </div>
           <select
             className="ad-select"
             value={tableId}
@@ -445,10 +453,16 @@ export default function AdLicoreriaVentas() {
           >
             <option value="">Sin mesa</option>
             {tables
-              .filter((t) => t.active)
+              .filter(
+                (t) =>
+                  t.active &&
+                  (!posWarehouseId ||
+                    !t.warehouseId ||
+                    t.warehouseId === posWarehouseId),
+              )
               .map((t) => (
                 <option key={t.id} value={t.id}>
-                  Mesa {t.number} ({t.status})
+                  {t.code ?? `Mesa ${t.number}`} ({t.status})
                 </option>
               ))}
           </select>
@@ -458,11 +472,13 @@ export default function AdLicoreriaVentas() {
             onChange={(e) => setMesoneraId(e.target.value)}
           >
             <option value="">Mesonera (piso)</option>
-            {floorUsers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} · {m.role}
-              </option>
-            ))}
+            {floorUsers
+              .filter((m) => m.role === "mesonera")
+              .map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
           </select>
         </div>
         <select
@@ -479,10 +495,10 @@ export default function AdLicoreriaVentas() {
               </option>
             ))}
         </select>
-        {!posUsers.length ? (
+        {!canSell ? (
           <p className="text-sm text-[var(--ad-danger)]">
-            No hay usuarios POS asignados a este depósito. Configúrelos en
-            Configuración.
+            Seleccione un cajero con depósito asignado y permiso POS. El
+            depósito no se puede cambiar manualmente.
           </p>
         ) : null}
 

@@ -37,6 +37,11 @@ export default function AdLicoreriaReportes() {
   const [to, setTo] = useState(initial.to);
   const [categoryId, setCategoryId] = useState("");
   const [mesonera, setMesonera] = useState("");
+  const [warehouseId, setWarehouseId] = useState("");
+  const [operatorId, setOperatorId] = useState("");
+  const [cashierId, setCashierId] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [productId, setProductId] = useState("");
 
   function applyPreset(p: AdReportPreset) {
     setPreset(p);
@@ -49,7 +54,21 @@ export default function AdLicoreriaReportes() {
   const filteredSales = useMemo(() => {
     return sales.filter((s) => {
       if (!inDateRange(s.createdAt, from, to)) return false;
+      if (warehouseId && s.warehouseId !== warehouseId) return false;
+      if (operatorId && s.operatorId !== operatorId) return false;
+      if (
+        cashierId &&
+        s.operatorId !== cashierId &&
+        s.userName !==
+          operators.find((o) => o.id === cashierId)?.name
+      ) {
+        return false;
+      }
+      if (customerId && s.customerId !== customerId) return false;
       if (mesonera && (s.mesoneraName ?? s.userName) !== mesonera) return false;
+      if (productId) {
+        if (!s.items.some((it) => it.productId === productId)) return false;
+      }
       if (categoryId) {
         const ok = s.items.some((it) => {
           const p = products.find((x) => x.id === it.productId);
@@ -59,7 +78,20 @@ export default function AdLicoreriaReportes() {
       }
       return true;
     });
-  }, [sales, from, to, mesonera, categoryId, products]);
+  }, [
+    sales,
+    from,
+    to,
+    mesonera,
+    categoryId,
+    products,
+    warehouseId,
+    operatorId,
+    cashierId,
+    customerId,
+    productId,
+    operators,
+  ]);
 
   const completed = filteredSales.filter((s) => s.status === "completed");
   const voided = filteredSales.filter((s) => s.status === "voided");
@@ -214,6 +246,7 @@ export default function AdLicoreriaReportes() {
   });
   const marginTotal = byProduct.reduce((a, p) => a + p.margin, 0);
   const mesoneras = operators.filter((o) => o.role === "mesonera");
+  const cajeros = operators.filter((o) => o.role === "cajero");
   const totalUsd = completed.reduce((a, s) => a + s.total.usd, 0);
   const collectedUsd = completed.reduce(
     (a, s) =>
@@ -253,7 +286,7 @@ export default function AdLicoreriaReportes() {
             </button>
           ))}
         </div>
-        <div className="grid gap-2 sm:grid-cols-4">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <input
             className="ad-input"
             type="date"
@@ -272,6 +305,18 @@ export default function AdLicoreriaReportes() {
               setTo(e.target.value);
             }}
           />
+          <select
+            className="ad-select"
+            value={warehouseId}
+            onChange={(e) => setWarehouseId(e.target.value)}
+          >
+            <option value="">Todos los depósitos</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name} ({w.code})
+              </option>
+            ))}
+          </select>
           <select
             className="ad-select"
             value={categoryId}
@@ -293,6 +338,54 @@ export default function AdLicoreriaReportes() {
             {mesoneras.map((m) => (
               <option key={m.id} value={m.name}>
                 {m.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="ad-select"
+            value={cashierId}
+            onChange={(e) => setCashierId(e.target.value)}
+          >
+            <option value="">Todos los cajeros</option>
+            {cajeros.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="ad-select"
+            value={operatorId}
+            onChange={(e) => setOperatorId(e.target.value)}
+          >
+            <option value="">Todos los usuarios</option>
+            {operators.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="ad-select"
+            value={customerId}
+            onChange={(e) => setCustomerId(e.target.value)}
+          >
+            <option value="">Todos los clientes</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="ad-select"
+            value={productId}
+            onChange={(e) => setProductId(e.target.value)}
+          >
+            <option value="">Todos los productos</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
               </option>
             ))}
           </select>

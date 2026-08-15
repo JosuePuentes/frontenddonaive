@@ -216,6 +216,8 @@ type AdStore = AdRepositoryState & {
     countedCashUsd: number;
     countedCashBs: number;
     notes?: string;
+    operatorId?: string;
+    warehouseId?: string;
   }) => AdResult<AdDailyClosure>;
   createInventoryClosure: (input: {
     lines: AdInventoryClosureLine[];
@@ -239,6 +241,17 @@ type AdStore = AdRepositoryState & {
   getCopReports: typeof adLicoreriaRepository.getCopReports;
   logDocumentAction: typeof adLicoreriaRepository.logDocumentAction;
   setInventoryQty: typeof adLicoreriaRepository.setInventoryQty;
+  getCurrentOperator: typeof adLicoreriaRepository.getCurrentOperator;
+  setCurrentOperator: typeof adLicoreriaRepository.setCurrentOperator;
+  canAccessWarehouse: typeof adLicoreriaRepository.canAccessWarehouse;
+  hasPermission: typeof adLicoreriaRepository.hasPermission;
+  setRolePermissions: typeof adLicoreriaRepository.setRolePermissions;
+  getRolePermissionMatrix: typeof adLicoreriaRepository.getRolePermissionMatrix;
+  createWarehouse: typeof adLicoreriaRepository.createWarehouse;
+  setWarehouseActive: typeof adLicoreriaRepository.setWarehouseActive;
+  reassignMesonera: typeof adLicoreriaRepository.reassignMesonera;
+  upsertTable: typeof adLicoreriaRepository.upsertTable;
+  getAccountsForMesonera: typeof adLicoreriaRepository.getAccountsForMesonera;
 };
 
 const AdLicoreriaContext = createContext<AdStore | null>(null);
@@ -330,6 +343,26 @@ export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
         adLicoreriaRepository.logDocumentAction(input),
       setInventoryQty: (productId, warehouseId, qtyBase) =>
         adLicoreriaRepository.setInventoryQty(productId, warehouseId, qtyBase),
+      getCurrentOperator: () => adLicoreriaRepository.getCurrentOperator(),
+      setCurrentOperator: (id) =>
+        adLicoreriaRepository.setCurrentOperator(id),
+      canAccessWarehouse: (warehouseId, operatorId) =>
+        adLicoreriaRepository.canAccessWarehouse(warehouseId, operatorId),
+      hasPermission: (permission, operatorId) =>
+        adLicoreriaRepository.hasPermission(permission, operatorId),
+      setRolePermissions: (input) =>
+        adLicoreriaRepository.setRolePermissions(input),
+      getRolePermissionMatrix: () =>
+        adLicoreriaRepository.getRolePermissionMatrix(),
+      createWarehouse: (input) =>
+        adLicoreriaRepository.createWarehouse(input),
+      setWarehouseActive: (input) =>
+        adLicoreriaRepository.setWarehouseActive(input),
+      reassignMesonera: (input) =>
+        adLicoreriaRepository.reassignMesonera(input),
+      upsertTable: (table) => adLicoreriaRepository.upsertTable(table),
+      getAccountsForMesonera: (id) =>
+        adLicoreriaRepository.getAccountsForMesonera(id),
     }),
     [snap],
   );

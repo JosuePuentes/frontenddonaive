@@ -34,6 +34,7 @@ const PRES = "pres-reg-1";
 console.log("\n=== A&D Fase 7 — Escenario COP ===\n");
 
 adLicoreriaRepository.reset();
+adLicoreriaRepository.setCurrentOperator("op-admin");
 
 /** Estado limpio: sin compromisos activos demo sobre regional. */
 function wipeOpenRegionalCommitments() {
@@ -216,7 +217,7 @@ step(13, "Generar preliminar de factura (POS)", () => {
     ],
     payments: [{ method: "efectivo_usd", currency: "USD", amount: 5 }],
     warehouseId: AD_WH_LICORERIA,
-    operatorId: "op-caja-lic",
+    operatorId: "op-maria",
     cashierName: "Cajero QA",
     customerId: "cli-1",
     customerName: "Juan Pérez",
@@ -304,7 +305,7 @@ step(21, "Vender mercancía comprometida NO bloquea", () => {
     ],
     payments: [{ method: "efectivo_usd", currency: "USD", amount: qty }],
     warehouseId: AD_WH_LICORERIA,
-    operatorId: "op-caja-lic",
+    operatorId: "op-maria",
     cashierName: "QA",
   });
   assert(draft.ok, "draft");
