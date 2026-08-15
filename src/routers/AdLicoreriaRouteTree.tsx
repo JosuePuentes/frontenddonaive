@@ -63,6 +63,9 @@ const AdLicoreriaConfigUsuarios = lazy(
 const AdLicoreriaConfigPermisos = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaConfigPermisos"),
 );
+const AdLicoreriaConfigDiseno = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaConfigDiseno"),
+);
 
 /**
  * Árbol de rutas A&D. Invocar como función:
@@ -138,6 +141,10 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
       <Route
         path={adLicoreriaRouterPath(prefix, "configPermisos")}
         element={<AdLicoreriaConfigPermisos />}
+      />
+      <Route
+        path={adLicoreriaRouterPath(prefix, "configDiseno")}
+        element={<AdLicoreriaConfigDiseno />}
       />
       <Route
         path={adLicoreriaRouterPath(prefix, "mesonera")}

@@ -108,6 +108,12 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       roles: ["admin"],
     },
     {
+      key: "diseno",
+      label: "Diseño web",
+      to: r.configDiseno,
+      anyOf: ["settings.manage"],
+    },
+    {
       key: "usuarios",
       label: "Usuarios",
       to: r.configUsuarios,

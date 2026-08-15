@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { AD_LICORERIA_MEDIA, adLicoreriaBrand } from "@/content/ad-licoreria/brand";
 
 type AdLicoreriaBrandMarkProps = {
@@ -13,14 +14,17 @@ const sizeMap = {
 } as const;
 
 /**
- * Marca A&D. Usa el logo oficial si existe en public/;
- * si no, muestra monograma tipográfico (no inventa un logo gráfico).
+ * Marca A&D. Prioriza logo del diseño admin (siteDesign).
  */
 function AdLicoreriaBrandMark({
   size = "md",
   showText = true,
 }: AdLicoreriaBrandMarkProps) {
   const [failed, setFailed] = useState(false);
+  const { siteDesign } = useAdLicoreria();
+  const logo = siteDesign.logoUrl || AD_LICORERIA_MEDIA.logo;
+  const name = siteDesign.brandName || adLicoreriaBrand.name;
+  const tagline = siteDesign.brandTagline || adLicoreriaBrand.tagline;
 
   return (
     <span className="inline-flex min-w-0 items-center gap-3">
@@ -29,8 +33,8 @@ function AdLicoreriaBrandMark({
       >
         {!failed ? (
           <img
-            src={AD_LICORERIA_MEDIA.logo}
-            alt={`${adLicoreriaBrand.name} logo oficial`}
+            src={logo}
+            alt={`${name} logo`}
             className="h-full w-full object-contain p-1"
             onError={() => setFailed(true)}
           />
@@ -47,10 +51,10 @@ function AdLicoreriaBrandMark({
       {showText ? (
         <span className="min-w-0 leading-tight">
           <span className="ad-display block truncate text-xl text-[var(--ad-gold-soft)]">
-            {adLicoreriaBrand.name}
+            {name}
           </span>
           <span className="block truncate text-[0.62rem] uppercase tracking-[0.18em] text-[var(--ad-muted)]">
-            {adLicoreriaBrand.tagline}
+            {tagline}
           </span>
         </span>
       ) : null}

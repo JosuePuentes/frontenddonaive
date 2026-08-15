@@ -88,6 +88,12 @@ import type {
   AdWhatsAppLog,
 } from "@/types/ad-licoreria";
 import {
+  AD_DEFAULT_SITE_DESIGN,
+  loadSiteDesignFromStorage,
+  saveSiteDesignToStorage,
+  type AdSiteDesign,
+} from "@/lib/ad-licoreria/site-design";
+import {
   AD_DEFAULT_ROLE_PERMISSIONS,
   assertShortageOverride,
   canAccessWarehouse,
@@ -97,6 +103,7 @@ import {
 
 export type AdRepositoryState = {
   settings: AdAppSettings;
+  siteDesign: AdSiteDesign;
   operators: AdOperator[];
   categories: AdCategory[];
   products: AdProduct[];
@@ -141,8 +148,10 @@ export type AdResult<T = void> =
   | { ok: false; error: string };
 
 function cloneState(): AdRepositoryState {
+  const storedDesign = loadSiteDesignFromStorage();
   return {
     settings: { ...AD_DEMO_SETTINGS },
+    siteDesign: structuredClone(storedDesign ?? AD_DEFAULT_SITE_DESIGN),
     operators: structuredClone(AD_DEMO_OPERATORS),
     categories: structuredClone(AD_DEMO_CATEGORIES),
     products: structuredClone(AD_DEMO_PRODUCTS),
@@ -425,6 +434,89 @@ export const adLicoreriaRepository = {
     });
     emit();
     return { ok: true, data: undefined };
+  },
+
+  getSiteDesign(): AdSiteDesign {
+    return structuredClone(state.siteDesign);
+  },
+
+  updateSiteDesign(
+    patch: Partial<AdSiteDesign> & { colors?: Partial<AdSiteDesign["colors"]> },
+    userName = "Admin A&D",
+  ): AdResult<AdSiteDesign> {
+    const actor = this.getCurrentOperator();
+    if (
+      actor &&
+      !hasPermission(actor, "settings.manage", state.rolePermissionOverrides) &&
+      actor.role !== "admin"
+    ) {
+      return { ok: false, error: "Sin permiso settings.manage" };
+    }
+    const before = JSON.stringify(state.siteDesign);
+    const next: AdSiteDesign = {
+      ...state.siteDesign,
+      ...patch,
+      colors: {
+        ...state.siteDesign.colors,
+        ...(patch.colors ?? {}),
+      },
+      banners: patch.banners
+        ? structuredClone(patch.banners)
+        : state.siteDesign.banners,
+      updatedAt: new Date().toISOString(),
+      updatedBy: userName,
+    };
+    if (!next.brandName.trim()) {
+      return { ok: false, error: "Nombre de marca obligatorio" };
+    }
+    state.siteDesign = next;
+    /** Sincroniza settings legacy de marca. */
+    state.settings = {
+      ...state.settings,
+      brandName: next.brandName,
+      brandTagline: next.brandTagline,
+    };
+    saveSiteDesignToStorage(next);
+    audit("config", "site_design", userName, "Actualizó diseño web", undefined, {
+      beforeValue: before,
+      afterValue: JSON.stringify({
+        brandName: next.brandName,
+        banners: next.banners.length,
+        colors: next.colors,
+      }),
+    });
+    emit();
+    return { ok: true, data: structuredClone(next) };
+  },
+
+  resetSiteDesign(userName = "Admin A&D"): AdResult<AdSiteDesign> {
+    const actor = this.getCurrentOperator();
+    if (
+      actor &&
+      !hasPermission(actor, "settings.manage", state.rolePermissionOverrides) &&
+      actor.role !== "admin"
+    ) {
+      return { ok: false, error: "Sin permiso settings.manage" };
+    }
+    const before = JSON.stringify(state.siteDesign);
+    const next = {
+      ...structuredClone(AD_DEFAULT_SITE_DESIGN),
+      updatedAt: new Date().toISOString(),
+      updatedBy: userName,
+    };
+    state.siteDesign = next;
+    state.settings = {
+      ...state.settings,
+      brandName: next.brandName,
+      brandTagline: next.brandTagline,
+    };
+    saveSiteDesignToStorage(next);
+    audit("config", "site_design", userName, "Restableció diseño web", undefined, {
+      beforeValue: before,
+      afterValue: JSON.stringify({ brandName: next.brandName }),
+    });
+    emit();
+    return { ok: true, data: structuredClone(next) };
   },
 
   upsertPaymentMethod(

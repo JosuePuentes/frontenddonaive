@@ -28,6 +28,7 @@ const AD_SEGMENTS = {
   /** Fase 8 — usuarios / permisos */
   configUsuarios: "/configuracion/usuarios",
   configPermisos: "/configuracion/permisos",
+  configDiseno: "/configuracion/diseno",
 } as const;
 
 export type AdLicoreriaRoutes = {
@@ -52,6 +53,7 @@ export type AdLicoreriaRoutes = {
   copReportes: string;
   configUsuarios: string;
   configPermisos: string;
+  configDiseno: string;
 };
 
 function joinPath(base: "" | "/licoreria", segment: string): string {
@@ -84,6 +86,7 @@ export function getAdLicoreriaRoutes(
     copReportes: joinPath(base, AD_SEGMENTS.copReportes),
     configUsuarios: joinPath(base, AD_SEGMENTS.configUsuarios),
     configPermisos: joinPath(base, AD_SEGMENTS.configPermisos),
+    configDiseno: joinPath(base, AD_SEGMENTS.configDiseno),
   };
 }
 

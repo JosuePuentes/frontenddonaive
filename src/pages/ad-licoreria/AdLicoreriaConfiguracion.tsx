@@ -176,6 +176,9 @@ export default function AdLicoreriaConfiguracion() {
         <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.configUsuarios}>
           Usuarios
         </Link>
+        <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.configDiseno}>
+          Diseño web
+        </Link>
         <Link className="ad-btn" to={AD_LICORERIA_ROUTES.configPermisos}>
           Matriz de permisos
         </Link>

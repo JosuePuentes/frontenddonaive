@@ -32,6 +32,7 @@ import type {
   AdReceipt,
   AdSale,
   AdSaleItem,
+  AdSiteDesign,
   AdStockTransfer,
   AdStockTransferStatus,
   AdWarehouse,
@@ -42,6 +43,11 @@ type AdStore = AdRepositoryState & {
   getPresentationsFor: (productId: string) => AdPresentation[];
   getPaymentMethods: (activeOnly?: boolean) => AdPaymentMethodConfig[];
   updateSettings: (patch: Partial<AdAppSettings>) => AdResult;
+  updateSiteDesign: (
+    patch: Partial<AdSiteDesign> & { colors?: Partial<AdSiteDesign["colors"]> },
+    userName?: string,
+  ) => AdResult<AdSiteDesign>;
+  resetSiteDesign: (userName?: string) => AdResult<AdSiteDesign>;
   upsertPaymentMethod: (
     method: AdPaymentMethodConfig,
   ) => AdResult<AdPaymentMethodConfig>;
@@ -287,6 +293,10 @@ export function AdLicoreriaProvider({ children }: { children: ReactNode }) {
       getPaymentMethods: (activeOnly) =>
         adLicoreriaRepository.getPaymentMethods(activeOnly),
       updateSettings: (patch) => adLicoreriaRepository.updateSettings(patch),
+      updateSiteDesign: (patch, userName) =>
+        adLicoreriaRepository.updateSiteDesign(patch, userName),
+      resetSiteDesign: (userName) =>
+        adLicoreriaRepository.resetSiteDesign(userName),
       upsertPaymentMethod: (m) => adLicoreriaRepository.upsertPaymentMethod(m),
       upsertWarehouse: (w) => adLicoreriaRepository.upsertWarehouse(w),
       upsertOperator: (o) => adLicoreriaRepository.upsertOperator(o),
