@@ -10,6 +10,7 @@ import {
   errorHandler,
 } from "./middleware/error.middleware.js";
 import { adPublicAuthRouter } from "./ad/public-auth.routes.js";
+import { adRouter } from "./ad/routes.js";
 
 export function createApp() {
   const app = express();
@@ -20,8 +21,14 @@ export function createApp() {
   app.use(express.json({ limit: "1mb" }));
 
   app.use(healthRouter);
-  /** Login/bootstrap A&D sin X-User-Id de Core (JWT pendiente). */
+  /** A&D público: login/bootstrap/logout (JWT). */
   app.use("/api/v1/ad", databaseGuard, adPublicAuthRouter);
+  /**
+   * A&D protegido con JWT propio (Fase 4) — sin exigir X-User-Id Core.
+   * El router aplica adContextMiddleware internamente.
+   */
+  app.use("/api/v1/ad", databaseGuard, adRouter);
+  /** Rutas Core Donaive (headers de desarrollo / futuro JWT Core). */
   app.use("/api/v1", databaseGuard, authMiddleware, v1Router);
 
   app.use(errorHandler);

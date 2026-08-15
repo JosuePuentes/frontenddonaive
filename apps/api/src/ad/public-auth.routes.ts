@@ -1,21 +1,20 @@
 /**
- * Auth A&D pública (login + bootstrap) — sin exigir X-User-Id de Core.
- * JWT sigue pendiente (Fase 1/2); no se inventa arquitectura paralela.
+ * Auth A&D pública (login + bootstrap) — JWT Fase 4.
+ * No exige X-User-Id de Core.
  */
 import { Router } from "express";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import { getPrisma } from "../config/database.js";
 import { ForbiddenError, ValidationError } from "../errors/app-error.js";
 import { hashPassword, verifyPassword } from "./password.js";
-import {
-  resolveRolePermissions,
-} from "./authorization.js";
+import { resolveRolePermissions } from "./authorization.js";
 import {
   isAdPermission,
   type AdOperatorRoleName,
 } from "./permissions.js";
 import { writeAdAudit } from "./service.js";
-import { randomUUID } from "node:crypto";
+import { signAdAccessToken } from "./jwt.js";
 
 export const adPublicAuthRouter = Router();
 
@@ -27,7 +26,7 @@ const loginSchema = z.object({
 });
 
 const bootstrapSchema = z.object({
-  name: z.string().min(1).max(120).default("A&D Licorería"),
+  name: z.string().min(1).max(120).default("A&D Licorería & Bodegón"),
   slug: z.string().min(2).max(64).default("ad-licoreria"),
   projectId: z.string().uuid().optional(),
   adminUsername: z.string().min(1).max(64).default("admin"),
@@ -72,18 +71,36 @@ adPublicAuthRouter.post("/auth/login", async (req, res, next) => {
       .map((p) => p.permission)
       .filter(isAdPermission);
     const permissions = [
-      ...resolveRolePermissions(
-        op.role as AdOperatorRoleName,
-        explicit,
-      ),
+      ...resolveRolePermissions(op.role as AdOperatorRoleName, explicit),
     ];
+
+    const { token, claims, expiresAt } = signAdAccessToken({
+      operatorId: op.id,
+      tenantId: tenant.id,
+      role: op.role,
+      warehouseId: op.warehouseId,
+      username: op.username,
+    });
+
+    await prisma.adAuthSession.create({
+      data: {
+        tenantId: tenant.id,
+        operatorId: op.id,
+        jti: claims.jti,
+        expiresAt,
+        userAgent: req.header("user-agent")?.slice(0, 240) ?? null,
+        ip: req.ip?.slice(0, 64) ?? null,
+      },
+    });
 
     await writeAdAudit({
       tenantId: tenant.id,
       operatorId: op.id,
+      warehouseId: op.warehouseId,
       action: "login",
       entity: "operator",
       entityId: op.id,
+      after: { jti: claims.jti, role: op.role },
     });
 
     const warehouses = await prisma.adWarehouse.findMany({
@@ -93,6 +110,9 @@ adPublicAuthRouter.post("/auth/login", async (req, res, next) => {
 
     res.json({
       data: {
+        accessToken: token,
+        tokenType: "Bearer",
+        expiresAt: expiresAt.toISOString(),
         tenant: {
           id: tenant.id,
           projectId: tenant.projectId,
@@ -116,9 +136,9 @@ adPublicAuthRouter.post("/auth/login", async (req, res, next) => {
           code: w.code,
           active: w.active,
         })),
-        /** Headers sugeridos para llamadas posteriores (sin JWT aún). */
+        /** Compat F3: headers opcionales (JWT es la autoridad). */
         sessionHeaders: {
-          "X-User-Id": op.userId ?? op.id,
+          Authorization: `Bearer ${token}`,
           "X-Ad-Operator-Id": op.id,
           "X-Ad-Tenant-Id": tenant.id,
         },
@@ -129,10 +149,6 @@ adPublicAuthRouter.post("/auth/login", async (req, res, next) => {
   }
 });
 
-/**
- * Bootstrap inicial (solo si no existe el slug).
- * Crea tenant + 2 depósitos + admin. No destructivo.
- */
 adPublicAuthRouter.post("/bootstrap", async (req, res, next) => {
   try {
     const parsed = bootstrapSchema.safeParse(req.body);
@@ -206,6 +222,40 @@ adPublicAuthRouter.post("/bootstrap", async (req, res, next) => {
         adminUsername: result.admin.username,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Logout / revocación del jti actual. */
+adPublicAuthRouter.post("/auth/logout", async (req, res, next) => {
+  try {
+    const auth = req.header("authorization");
+    const m = /^Bearer\s+(.+)$/i.exec(auth ?? "");
+    if (!m) {
+      res.status(204).end();
+      return;
+    }
+    const { verifyAdAccessToken } = await import("./jwt.js");
+    try {
+      const claims = verifyAdAccessToken(m[1]);
+      const prisma = getPrisma();
+      await prisma.adAuthSession.updateMany({
+        where: { jti: claims.jti, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await writeAdAudit({
+        tenantId: claims.tid,
+        operatorId: claims.sub,
+        action: "logout",
+        entity: "operator",
+        entityId: claims.sub,
+        after: { jti: claims.jti },
+      });
+    } catch {
+      /* token inválido → igual 204 */
+    }
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

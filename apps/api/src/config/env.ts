@@ -7,6 +7,18 @@ const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
   JWT_SECRET: z.string().optional(),
+  /** Secreto JWT A&D (preferido). Si vacío, usa JWT_SECRET. */
+  AD_JWT_SECRET: z.string().optional(),
+  /** TTL del access token A&D en segundos (default 12h). */
+  AD_JWT_TTL_SECONDS: z.coerce.number().default(43_200),
+  /**
+   * Solo desarrollo: permite X-Ad-Operator-Id sin Bearer.
+   * Nunca habilitar en producción.
+   */
+  AD_ALLOW_DEV_HEADERS: z
+    .enum(["0", "1", "true", "false"])
+    .optional()
+    .default("0"),
   CORE_DB_SCHEMA: z.string().default("donaive_core"),
   /** Orígenes CORS permitidos (comma-separated). Vacío en dev = permitir todos. */
   CORS_ORIGIN: z.string().optional(),
@@ -21,7 +33,8 @@ export function loadEnv(): Env {
 export const env = loadEnv();
 
 export function isDatabaseConfigured(): boolean {
-  const url = process.env.DATABASE_URL ?? env.DATABASE_URL;
+  /** Solo process.env — permite tests que borran DATABASE_URL en runtime. */
+  const url = process.env.DATABASE_URL;
   return Boolean(url && url.length > 0);
 }
 

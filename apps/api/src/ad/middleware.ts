@@ -6,7 +6,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../errors/app-error.js";
-import { getAuth } from "../middleware/auth.middleware.js";
+import type { AuthenticatedRequest } from "../middleware/auth.middleware.js";
 import {
   resolveRolePermissions,
   type AdOperatorAuth,
@@ -14,6 +14,11 @@ import {
 } from "./authorization.js";
 import type { AdOperatorRoleName, AdPermission } from "./permissions.js";
 import { isAdPermission } from "./permissions.js";
+import {
+  allowAdDevHeaders,
+  extractBearerToken,
+  verifyAdAccessToken,
+} from "./jwt.js";
 
 export type AdAuthenticatedRequest = Request & {
   ad?: AdRequestContext;
@@ -49,36 +54,10 @@ async function loadOperatorById(operatorId: string): Promise<AdOperatorAuth> {
   };
 }
 
-async function loadOperatorByUserId(
-  tenantId: string,
-  userId: string,
-): Promise<AdOperatorAuth | null> {
-  const prisma = getPrisma();
-  const op = await prisma.adOperator.findFirst({
-    where: { tenantId, userId, active: true },
-    include: { permissions: true },
-  });
-  if (!op) return null;
-  const permissions = op.permissions
-    .map((p) => p.permission)
-    .filter(isAdPermission) as AdPermission[];
-  return {
-    id: op.id,
-    tenantId: op.tenantId,
-    userId: op.userId,
-    username: op.username,
-    name: op.name,
-    role: toRoleName(op.role),
-    active: op.active,
-    warehouseId: op.warehouseId,
-    permissions,
-  };
-}
-
 /**
  * Resuelve contexto A&D:
- * - Header `X-Ad-Operator-Id` (preferido en F1)
- * - o User autenticado Core + `X-Ad-Tenant-Id` / query tenantId
+ * 1. Authorization: Bearer <JWT> (autoridad Fase 4)
+ * 2. Solo si AD_ALLOW_DEV_HEADERS=1: X-Ad-Operator-Id (dev)
  *
  * El depósito efectivo NO se toma ciegamente del body.
  */
@@ -88,30 +67,44 @@ export async function adContextMiddleware(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const auth = getAuth(req);
-    const operatorId = req.header("X-Ad-Operator-Id");
-    const tenantHeader = req.header("X-Ad-Tenant-Id");
-
+    const bearer = extractBearerToken(req.header("authorization") ?? undefined);
     let operator: AdOperatorAuth | null = null;
 
-    if (operatorId) {
-      operator = await loadOperatorById(operatorId);
-      if (operator.userId && operator.userId !== auth.userId) {
-        // Permitir admin de plataforma; si hay vínculo userId debe coincidir
-        const isPlatformAdmin = auth.roles.includes("donaive_admin");
-        if (!isPlatformAdmin) {
-          throw new ForbiddenError(
-            "El operador A&D no pertenece al usuario autenticado",
-          );
+    if (bearer) {
+      const claims = verifyAdAccessToken(bearer);
+      const prisma = getPrisma();
+      const session = await prisma.adAuthSession.findUnique({
+        where: { jti: claims.jti },
+      });
+      if (!session || session.revokedAt) {
+        throw new UnauthorizedError("Sesión A&D revocada o inexistente");
+      }
+      if (session.expiresAt.getTime() < Date.now()) {
+        throw new UnauthorizedError("Sesión A&D expirada");
+      }
+      operator = await loadOperatorById(claims.sub);
+      if (operator.tenantId !== claims.tid) {
+        throw new ForbiddenError("Token A&D no coincide con el tenant");
+      }
+    } else if (allowAdDevHeaders()) {
+      const operatorId = req.header("X-Ad-Operator-Id");
+      if (operatorId) {
+        operator = await loadOperatorById(operatorId);
+        const coreAuth = (req as AuthenticatedRequest).auth;
+        if (coreAuth && operator.userId && operator.userId !== coreAuth.userId) {
+          const isPlatformAdmin = coreAuth.roles.includes("donaive_admin");
+          if (!isPlatformAdmin) {
+            throw new ForbiddenError(
+              "El operador A&D no pertenece al usuario autenticado",
+            );
+          }
         }
       }
-    } else if (tenantHeader) {
-      operator = await loadOperatorByUserId(tenantHeader, auth.userId);
     }
 
     if (!operator) {
       throw new UnauthorizedError(
-        "Contexto A&D requerido (X-Ad-Operator-Id o X-Ad-Tenant-Id + User)",
+        "Bearer JWT A&D requerido (Authorization: Bearer …)",
       );
     }
 
