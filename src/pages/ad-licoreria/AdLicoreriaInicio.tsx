@@ -1,10 +1,12 @@
-import { Link } from "react-router";
-import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import { Link, useNavigate } from "react-router";
+import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import { prepaidAvailable } from "@/lib/ad-licoreria/conversions";
 import { rangeForPreset } from "@/lib/ad-licoreria/report-presets";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
 export default function AdLicoreriaInicio() {
+  const navigate = useNavigate();
+  const routes = getAdLicoreriaRoutes();
   const {
     products,
     inventory,
@@ -17,7 +19,9 @@ export default function AdLicoreriaInicio() {
     dailyClosures,
     inventoryClosures,
     paymentMethods,
+    hasPermission,
   } = useAdLicoreria();
+  const canTv = hasPermission("tv.view");
 
   const { from: todayFrom, to: todayTo } = rangeForPreset("hoy");
   const todaySales = sales.filter((s) => {
@@ -203,32 +207,75 @@ export default function AdLicoreriaInicio() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="ad-panel">
-          <h2 className="ad-panel-title">Operación rápida</h2>
+          <h2 className="ad-panel-title">Accesos rápidos</h2>
           <div className="flex flex-wrap gap-2">
-            <Link to={AD_LICORERIA_ROUTES.ventas} className="ad-btn ad-btn--gold">
+            <button
+              type="button"
+              className="ad-btn ad-btn--gold"
+              onClick={() => navigate(routes.ventas)}
+            >
               Ventas
-            </Link>
-            <Link to={AD_LICORERIA_ROUTES.mesonera} className="ad-btn ad-btn--primary">
+            </button>
+            {canTv ? (
+              <button
+                type="button"
+                className="ad-btn ad-btn--gold"
+                onClick={() => navigate(routes.tv)}
+              >
+                TV
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="ad-btn ad-btn--primary"
+              onClick={() => navigate(routes.mesonera)}
+            >
               Mesonera
-            </Link>
-            <Link to={AD_LICORERIA_ROUTES.cop} className="ad-btn">
+            </button>
+            <button
+              type="button"
+              className="ad-btn"
+              onClick={() => navigate(routes.cop)}
+            >
               COP
-            </Link>
-            <Link to={AD_LICORERIA_ROUTES.cuentas} className="ad-btn">
+            </button>
+            <button
+              type="button"
+              className="ad-btn"
+              onClick={() => navigate(routes.cuentas)}
+            >
               Cuentas
-            </Link>
-            <Link to={AD_LICORERIA_ROUTES.prepagos} className="ad-btn">
+            </button>
+            <button
+              type="button"
+              className="ad-btn"
+              onClick={() => navigate(routes.prepagos)}
+            >
               Prepagos
-            </Link>
-            <Link to={AD_LICORERIA_ROUTES.cierres} className="ad-btn">
+            </button>
+            <button
+              type="button"
+              className="ad-btn"
+              onClick={() => navigate(routes.cierres)}
+            >
               Cierres
-            </Link>
-            <Link to={AD_LICORERIA_ROUTES.reportes} className="ad-btn">
+            </button>
+            <button
+              type="button"
+              className="ad-btn"
+              onClick={() => navigate(routes.reportes)}
+            >
               Reportes
-            </Link>
-            <Link to={AD_LICORERIA_ROUTES.tv} className="ad-btn">
-              TV
-            </Link>
+            </button>
+            {canTv ? (
+              <button
+                type="button"
+                className="ad-btn"
+                onClick={() => navigate(routes.tvControl)}
+              >
+                Control TV
+              </button>
+            ) : null}
           </div>
           <p className="mt-3 text-xs text-[var(--ad-muted)]">
             Efectivo Bs esperado hoy: {expectedCashBs.toLocaleString("es-VE")} ·
