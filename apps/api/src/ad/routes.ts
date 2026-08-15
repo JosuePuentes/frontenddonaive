@@ -7,9 +7,9 @@ import {
   createProductSchema,
   createSaleSchema,
   createWarehouseSchema,
-  loginOperatorSchema,
   parseBody,
   setStockSchema,
+  voidSaleSchema,
 } from "./validation.js";
 
 import { adOpsRouter } from "./ops.routes.js";
@@ -17,7 +17,7 @@ import { adPortalRouter } from "./portal.routes.js";
 
 export const adRouter = Router();
 
-/** Health A&D — requiere DB (montado bajo /api/v1). */
+/** Health A&D — requiere DB; no exige JWT. */
 adRouter.get("/health", async (_req, res, next) => {
   try {
     const data = await adService.health();
@@ -27,17 +27,7 @@ adRouter.get("/health", async (_req, res, next) => {
   }
 });
 
-/** Login operador A&D (password hasheado en backend). Requiere auth Core. */
-adRouter.post("/auth/login", async (req, res, next) => {
-  try {
-    const body = parseBody(loginOperatorSchema, req.body);
-    const data = await adService.loginOperator(body);
-    res.json({ data });
-  } catch (err) {
-    next(err);
-  }
-});
-
+/** A partir de aquí: JWT A&D obligatorio (Fase 4). */
 adRouter.use(adContextMiddleware);
 
 /** Núcleo operativo Fase 2 */
@@ -168,6 +158,17 @@ adRouter.post("/sales", async (req, res, next) => {
     const body = parseBody(createSaleSchema, req.body);
     const data = await adService.createSale(ctx, body);
     res.status(201).json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adRouter.post("/sales/:id/void", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(voidSaleSchema, req.body);
+    const data = await adService.voidSale(ctx, req.params.id, body);
+    res.json({ data });
   } catch (err) {
     next(err);
   }

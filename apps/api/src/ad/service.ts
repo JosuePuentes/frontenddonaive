@@ -7,11 +7,13 @@ import {
 } from "../errors/app-error.js";
 import {
   assertSameWarehouseSale,
+  hasAdPermission,
   requireAdPermission,
   requireWarehouseAccess,
   resolveEffectiveWarehouseId,
   type AdRequestContext,
 } from "./authorization.js";
+import { computeOperationalAvailability } from "./availability.js";
 import {
   buildSaleLineSnapshots,
   sumSaleTotals,
@@ -29,6 +31,7 @@ function toNum(value: Prisma.Decimal | number): number {
 export async function writeAdAudit(input: {
   tenantId: string;
   operatorId?: string | null;
+  warehouseId?: string | null;
   action: string;
   entity: string;
   entityId?: string | null;
@@ -41,6 +44,7 @@ export async function writeAdAudit(input: {
     data: {
       tenantId: input.tenantId,
       operatorId: input.operatorId ?? null,
+      warehouseId: input.warehouseId ?? null,
       action: input.action,
       entity: input.entity,
       entityId: input.entityId ?? null,
@@ -387,6 +391,10 @@ export const adService = {
         reference?: string;
         bank?: string;
       }[];
+      continueWithShortage?: boolean;
+      shortageReasonCode?: string;
+      shortageReasonNote?: string;
+      shortageDecision?: string;
     },
   ) {
     requireAdPermission(ctx, "pos.sell");
@@ -430,6 +438,117 @@ export const adService = {
     const lineSnapshots = buildSaleLineSnapshots(input.lines, presentationMap);
     const totals = sumSaleTotals(lineSnapshots);
 
+    /** Disponibilidad operativa: compromiso activo NO es stock físico. */
+    const productIds = [...new Set(lineSnapshots.map((l) => l.productId))];
+    const [stocks, accounts, allPresentations, transfers, commitments] =
+      await Promise.all([
+        prisma.adStock.findMany({
+          where: { warehouseId, productId: { in: productIds } },
+        }),
+        prisma.adAccount.findMany({
+          where: { tenantId: ctx.tenantId, warehouseId },
+          include: { lines: true },
+        }),
+        prisma.adPresentation.findMany({
+          where: { product: { tenantId: ctx.tenantId } },
+        }),
+        prisma.adStockTransfer.findMany({
+          where: { tenantId: ctx.tenantId, fromWarehouseId: warehouseId },
+          include: { lines: true },
+        }),
+        prisma.adCustomerCommitment.findMany({
+          where: {
+            tenantId: ctx.tenantId,
+            status: "PENDIENTE",
+            productId: { in: productIds },
+          },
+        }),
+      ]);
+
+    const shortageLines: {
+      productId: string;
+      requestedBase: number;
+      availableOperational: number;
+      physical: number;
+      shortfall: number;
+    }[] = [];
+
+    for (const productId of productIds) {
+      const requestedBase = lineSnapshots
+        .filter((l) => l.productId === productId)
+        .reduce((a, l) => a + l.qtyBase, 0);
+      const av = computeOperationalAvailability({
+        productId,
+        stocks: stocks.map((s) => ({
+          warehouseId: s.warehouseId,
+          productId: s.productId,
+          qtyBase: toNum(s.qtyBase),
+        })),
+        accounts: accounts.map((a) => ({
+          status: a.status,
+          warehouseId: a.warehouseId,
+          lines: a.lines.map((l) => ({
+            productId: l.productId,
+            presentationId: l.presentationId,
+            qtyOrdered: toNum(l.qtyOrdered),
+            qtyServed: toNum(l.qtyServed),
+          })),
+        })),
+        presentations: allPresentations.map((p) => ({
+          id: p.id,
+          unitsPerPresentation: toNum(p.unitsPerPresentation),
+        })),
+        transfers: transfers.map((t) => ({
+          status: t.status,
+          fromWarehouseId: t.fromWarehouseId,
+          lines: t.lines.map((l) => ({
+            productId: l.productId,
+            presentationId: l.presentationId ?? "",
+            qty: toNum(l.qty),
+            qtyBase: toNum(l.qtyBase),
+          })),
+        })),
+        commitments: commitments.map((c) => ({
+          productId: c.productId,
+          status: c.status,
+          qtyBaseRemaining: toNum(c.qtyBaseRemaining),
+        })),
+        warehouseIds: [warehouseId],
+        preferredWarehouseId: warehouseId,
+        requestedBase,
+      });
+      const wh = av.byWarehouse.find((w) => w.warehouseId === warehouseId);
+      const availableOperational = wh?.availableOperational ?? 0;
+      const physical = wh?.physical ?? 0;
+      if (requestedBase > availableOperational) {
+        shortageLines.push({
+          productId,
+          requestedBase,
+          availableOperational,
+          physical,
+          shortfall: requestedBase - availableOperational,
+        });
+      }
+    }
+
+    if (shortageLines.length > 0) {
+      if (!input.continueWithShortage) {
+        throw new ValidationError(
+          `La operación supera la disponibilidad operativa. Se requiere pos.shortage_override + motivo para continuar.`,
+        );
+      }
+      if (!hasAdPermission(ctx, "pos.shortage_override")) {
+        throw new ForbiddenError("Permiso A&D requerido: pos.shortage_override");
+      }
+      const reasonCode =
+        input.shortageReasonCode ?? input.shortageDecision ?? "";
+      if (!reasonCode.trim()) {
+        throw new ValidationError(
+          "Motivo obligatorio para override de faltante (shortageReasonCode)",
+        );
+      }
+    }
+
     const sale = await prisma.$transaction(async (tx) => {
       for (const line of lineSnapshots) {
         const stock = await tx.adStock.findUnique({
@@ -443,7 +562,7 @@ export const adService = {
         const qty = stock ? toNum(stock.qtyBase) : 0;
         if (qty < line.qtyBase) {
           throw new ValidationError(
-            `Stock insuficiente para producto ${line.productId}`,
+            `Stock físico insuficiente para producto ${line.productId}`,
           );
         }
       }
@@ -516,9 +635,30 @@ export const adService = {
       });
     });
 
+    if (shortageLines.length > 0 && input.continueWithShortage) {
+      await writeAdAudit({
+        tenantId: ctx.tenantId,
+        operatorId: ctx.operator.id,
+        warehouseId,
+        action: "shortage_override",
+        entity: "sale",
+        entityId: sale.id,
+        detail:
+          input.shortageReasonCode ??
+          input.shortageDecision ??
+          "shortage_override",
+        after: {
+          reasonCode: input.shortageReasonCode ?? input.shortageDecision,
+          reasonNote: input.shortageReasonNote,
+          shortageLines,
+        },
+      });
+    }
+
     await writeAdAudit({
       tenantId: ctx.tenantId,
       operatorId: ctx.operator.id,
+      warehouseId,
       action: "create",
       entity: "sale",
       entityId: sale.id,
@@ -527,10 +667,106 @@ export const adService = {
         totalUsd: toNum(sale.totalUsd),
         totalBs: toNum(sale.totalBs),
         lines: sale.lines,
+        withShortage: shortageLines.length > 0,
       },
     });
 
     return sale;
+  },
+
+  async voidSale(
+    ctx: AdRequestContext,
+    saleId: string,
+    input: { reason: string },
+  ) {
+    requireAdPermission(ctx, "pos.refund");
+    if (!input.reason.trim()) {
+      throw new ValidationError("Motivo obligatorio para anular venta");
+    }
+    const prisma = getPrisma();
+
+    const voided = await prisma.$transaction(async (tx) => {
+      const sale = await tx.adSale.findFirst({
+        where: { id: saleId, tenantId: ctx.tenantId },
+        include: { lines: true },
+      });
+      if (!sale) throw new NotFoundError("Venta no encontrada");
+      if (sale.status === "voided") {
+        throw new ValidationError("Venta ya anulada");
+      }
+      requireWarehouseAccess(ctx, sale.warehouseId);
+
+      const before = {
+        status: sale.status,
+        totalUsd: toNum(sale.totalUsd),
+        lines: sale.lines.map((l) => ({
+          productId: l.productId,
+          qtyBase: toNum(l.qtyBase),
+        })),
+      };
+
+      if (sale.status === "completed") {
+        for (const line of sale.lines) {
+          const qtyBase = toNum(line.qtyBase);
+          if (qtyBase <= 0) continue;
+          await tx.adStock.upsert({
+            where: {
+              warehouseId_productId: {
+                warehouseId: sale.warehouseId,
+                productId: line.productId,
+              },
+            },
+            create: {
+              warehouseId: sale.warehouseId,
+              productId: line.productId,
+              qtyBase: dec(qtyBase),
+            },
+            update: { qtyBase: { increment: dec(qtyBase) } },
+          });
+          await tx.adInventoryMovement.create({
+            data: {
+              warehouseId: sale.warehouseId,
+              productId: line.productId,
+              type: "VOID_REVERSAL",
+              qtyBase: dec(qtyBase),
+              presentationId: line.presentationId,
+              qtyPresentation: dec(toNum(line.qty)),
+              operatorId: ctx.operator.id,
+              reference: sale.id,
+              reason: input.reason,
+            },
+          });
+        }
+      }
+
+      const updated = await tx.adSale.update({
+        where: { id: sale.id },
+        data: {
+          status: "voided",
+          voidedAt: new Date(),
+          notes: sale.notes
+            ? `${sale.notes}\n[ANULADA] ${input.reason}`
+            : `[ANULADA] ${input.reason}`,
+        },
+        include: { lines: true, payments: true },
+      });
+
+      return { updated, before, warehouseId: sale.warehouseId };
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      warehouseId: voided.warehouseId,
+      action: "void",
+      entity: "sale",
+      entityId: voided.updated.id,
+      detail: input.reason,
+      before: voided.before,
+      after: { status: "voided", reason: input.reason },
+    });
+
+    return voided.updated;
   },
 
   async listAudit(ctx: AdRequestContext, limit = 50) {

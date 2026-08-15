@@ -67,6 +67,15 @@ export const createSaleSchema = z.object({
       }),
     )
     .optional(),
+  /** Override de faltante operativo (no físico negativo). */
+  continueWithShortage: z.boolean().optional(),
+  shortageReasonCode: z.string().min(1).max(80).optional(),
+  shortageReasonNote: z.string().max(500).optional(),
+  shortageDecision: z.string().max(80).optional(),
+});
+
+export const voidSaleSchema = z.object({
+  reason: z.string().min(1).max(500),
 });
 
 export const loginOperatorSchema = z.object({
