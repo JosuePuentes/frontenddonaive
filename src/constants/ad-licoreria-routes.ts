@@ -36,6 +36,8 @@ const AD_SEGMENTS = {
   tvContenido: "/tv/contenido",
   tvGrupos: "/tv/grupos",
   tvControl: "/tv/control",
+  /** Alias canónico del reproductor (pairing / playback). */
+  tvReproductor: "/tv/reproductor",
 } as const;
 
 export type AdLicoreriaRoutes = {
@@ -67,6 +69,7 @@ export type AdLicoreriaRoutes = {
   tvContenido: string;
   tvGrupos: string;
   tvControl: string;
+  tvReproductor: string;
 };
 
 function joinPath(base: "" | "/licoreria", segment: string): string {
@@ -106,6 +109,7 @@ export function getAdLicoreriaRoutes(
     tvContenido: joinPath(base, AD_SEGMENTS.tvContenido),
     tvGrupos: joinPath(base, AD_SEGMENTS.tvGrupos),
     tvControl: joinPath(base, AD_SEGMENTS.tvControl),
+    tvReproductor: joinPath(base, AD_SEGMENTS.tvReproductor),
   };
 }
 
@@ -113,6 +117,17 @@ export const AD_LICORERIA_ROUTES = getAdLicoreriaRoutes();
 
 /** URL del reproductor de una pantalla (por código TV-001 o id). */
 export function adTvPlayerPath(
+  screenIdOrCode: string,
+  base = getAdLicoreriaBasePath(),
+): string {
+  return joinPath(
+    base,
+    `/tv/reproductor/${encodeURIComponent(screenIdOrCode)}`,
+  );
+}
+
+/** Alias histórico: /tv/pantalla/:id */
+export function adTvPantallaPath(
   screenIdOrCode: string,
   base = getAdLicoreriaBasePath(),
 ): string {

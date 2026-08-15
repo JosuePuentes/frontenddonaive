@@ -36,10 +36,18 @@ export default function AdLicoreriaMesonera() {
     getAccountsForMesonera,
     setCurrentOperator,
     getCurrentOperator,
+    hasPermission,
   } = useAdLicoreria();
 
   const mesoneras = operators.filter((o) => o.role === "mesonera" && o.active);
   const session = getCurrentOperator();
+  const canMesonera =
+    !!session &&
+    (hasPermission("accounts.open") ||
+      hasPermission("accounts.serve") ||
+      hasPermission("tables.manage") ||
+      session.role === "admin");
+
   const [mesoneraId, setMesoneraId] = useState(
     session?.role === "mesonera" ? session.id : (mesoneras[0]?.id ?? ""),
   );
@@ -73,6 +81,22 @@ export default function AdLicoreriaMesonera() {
   const availablePres = getPresentationsFor(productId);
   const pres =
     presentations.find((p) => p.id === presentationId) ?? availablePres[0];
+
+  if (!canMesonera) {
+    return (
+      <div className="ad-panel m-4 space-y-2">
+        <h1 className="ad-panel-title">Acceso no autorizado</h1>
+        <p className="text-sm text-[var(--ad-muted)]">
+          {session
+            ? `${session.name} no tiene acceso a Mis mesas.`
+            : "Sin sesión activa."}
+        </p>
+        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.inicio}>
+          Volver
+        </Link>
+      </div>
+    );
+  }
 
   const myTables = tables.filter(
     (t) =>

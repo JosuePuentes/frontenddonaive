@@ -90,6 +90,12 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
     prefix === ""
       ? "/tv/pantalla/:id"
       : `${prefix}/tv/pantalla/:id`;
+  const tvReproductor =
+    prefix === ""
+      ? "/tv/reproductor/:id"
+      : `${prefix}/tv/reproductor/:id`;
+  const tvReproductorIndex =
+    prefix === "" ? "/tv/reproductor" : `${prefix}/tv/reproductor`;
 
   return (
     <>
@@ -190,6 +196,8 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
         element={<AdTvControl />}
       />
       <Route path={tvPlayer} element={<AdTvPlayer />} />
+      <Route path={tvReproductor} element={<AdTvPlayer />} />
+      <Route path={tvReproductorIndex} element={<AdTvHub />} />
       <Route
         path={adLicoreriaRouterPath(prefix, "mesonera")}
         element={<AdLicoreriaMesonera />}

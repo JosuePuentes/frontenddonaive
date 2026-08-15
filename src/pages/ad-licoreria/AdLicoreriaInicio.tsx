@@ -211,6 +211,9 @@ export default function AdLicoreriaInicio() {
             <Link to={AD_LICORERIA_ROUTES.mesonera} className="ad-btn ad-btn--primary">
               Mesonera
             </Link>
+            <Link to={AD_LICORERIA_ROUTES.cop} className="ad-btn">
+              COP
+            </Link>
             <Link to={AD_LICORERIA_ROUTES.cuentas} className="ad-btn">
               Cuentas
             </Link>
@@ -222,6 +225,9 @@ export default function AdLicoreriaInicio() {
             </Link>
             <Link to={AD_LICORERIA_ROUTES.reportes} className="ad-btn">
               Reportes
+            </Link>
+            <Link to={AD_LICORERIA_ROUTES.tv} className="ad-btn">
+              TV
             </Link>
           </div>
           <p className="mt-3 text-xs text-[var(--ad-muted)]">

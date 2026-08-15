@@ -182,6 +182,9 @@ export default function AdLicoreriaConfiguracion() {
         <Link className="ad-btn" to={AD_LICORERIA_ROUTES.configPermisos}>
           Matriz de permisos
         </Link>
+        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.tv}>
+          TV / Pantallas
+        </Link>
         <Link className="ad-btn" to={AD_LICORERIA_ROUTES.mesas}>
           Espacios / mesas
         </Link>

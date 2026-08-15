@@ -41,7 +41,10 @@ export const AD_ROUTE_ACCESS_RULES: AdRouteAccessRule[] = [
 ];
 
 export function isTvPlayerPath(normalizedPath: string): boolean {
-  return /^\/tv\/pantalla(\/|$)/.test(normalizedPath);
+  return (
+    /^\/tv\/pantalla(\/|$)/.test(normalizedPath) ||
+    /^\/tv\/reproductor(\/[^/]+)/.test(normalizedPath)
+  );
 }
 
 export function requiredPermissionsForPath(
