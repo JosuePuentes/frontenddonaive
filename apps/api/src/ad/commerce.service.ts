@@ -21,6 +21,7 @@ import {
   aggregateBuiltLines,
   buildPurchaseLineFromPresentation,
   moneyDoc,
+  type BuiltPurchaseLine,
   type RawPurchaseLineInput,
 } from "./commerce-purchase.js";
 import { weightedAverageCost } from "./availability.js";
@@ -405,7 +406,7 @@ export const adCommerceService = {
       }
     }
 
-    const built = [];
+    const built: BuiltPurchaseLine[] = [];
     for (const raw of input.lines) {
       const pres = await prisma.adPresentation.findUniqueOrThrow({
         where: { id: raw.presentationId },
@@ -637,7 +638,7 @@ export const adCommerceService = {
       }
     }
 
-    const built = [];
+    const built: BuiltPurchaseLine[] = [];
     for (const raw of input.lines) {
       const pres = await prisma.adPresentation.findUniqueOrThrow({
         where: { id: raw.presentationId },
