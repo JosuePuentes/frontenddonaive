@@ -16,6 +16,7 @@ import { adOpsRouter } from "./ops.routes.js";
 import { adPortalRouter } from "./portal.routes.js";
 import { adCommerceRouter } from "./commerce.routes.js";
 import { adFinanceRouter } from "./finance.routes.js";
+import { adDashboardRouter } from "./dashboard.routes.js";
 
 export const adRouter = Router();
 
@@ -40,6 +41,8 @@ adRouter.use(adPortalRouter);
 adRouter.use(adCommerceRouter);
 /** Finanzas Fase 7 — bancos, movimientos, casa de cambio */
 adRouter.use(adFinanceRouter);
+/** Dashboard Fase 8 */
+adRouter.use(adDashboardRouter);
 
 adRouter.get("/context", async (req, res, next) => {
   try {

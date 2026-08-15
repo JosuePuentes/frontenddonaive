@@ -64,6 +64,16 @@ export const adFinanceClient = {
     financeFetch("POST", "/api/v1/ad/finance/accounts", body),
   listMovements: (qs = "") =>
     financeFetch<unknown[]>("GET", `/api/v1/ad/finance/movements${qs}`),
+  getDashboard: (qs = "") =>
+    financeFetch<Record<string, unknown>>(
+      "GET",
+      `/api/v1/ad/finance/dashboard${qs}`,
+    ),
+  drillDashboard: (qs: string) =>
+    financeFetch<{ section: string; items: unknown[] }>(
+      "GET",
+      `/api/v1/ad/finance/dashboard/drill${qs}`,
+    ),
   createTransfer: (body: Record<string, unknown>) =>
     financeFetch("POST", "/api/v1/ad/finance/transfers", body),
   createExchange: (body: Record<string, unknown>) =>

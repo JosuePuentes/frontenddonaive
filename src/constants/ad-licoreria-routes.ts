@@ -175,6 +175,7 @@ export function getAdLicoreriaNavItems(base = getAdLicoreriaBasePath()) {
     { key: "inventario", label: "Inventario", to: r.inventario },
     { key: "productos", label: "Productos", to: r.productos },
     { key: "compras", label: "Compras", to: r.compras },
+    { key: "finanzas", label: "Finanzas", to: r.finanzas },
     { key: "bancos", label: "Bancos", to: r.bancos },
     { key: "depositos", label: "Depósitos", to: r.depositos },
     { key: "cierres", label: "Cierres", to: r.cierres },

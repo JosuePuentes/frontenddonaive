@@ -53,6 +53,7 @@ export type AdPermission =
   | "finance.parallel_rate"
   | "finance.expenses"
   | "finance.withdrawals"
+  | "finance.dashboard.view"
   | "cop.read"
   | "cop.transfer"
   | "cop.purchase_request"

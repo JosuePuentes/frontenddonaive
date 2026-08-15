@@ -29,7 +29,7 @@ export const AD_ROUTE_ACCESS_RULES: AdRouteAccessRule[] = [
   { prefix: "/casa-cambio", anyOf: ["finance.exchange", "finance.manage"] },
   { prefix: "/finanzas/movimientos", anyOf: ["finance.view"] },
   { prefix: "/finanzas/configuracion", anyOf: ["finance.manage"] },
-  { prefix: "/finanzas", anyOf: ["finance.view", "finance.manage"] },
+  { prefix: "/finanzas", anyOf: ["finance.dashboard.view", "finance.view", "reports.read"] },
   { prefix: "/productos", anyOf: ["inventory.read", "settings.manage", "products.manage"] },
   { prefix: "/presentaciones", anyOf: ["inventory.read", "settings.manage"] },
   { prefix: "/cop", anyOf: ["cop.read"] },
