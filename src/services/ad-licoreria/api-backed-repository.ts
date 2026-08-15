@@ -771,6 +771,8 @@ export const adApiBackedRepository = {
         qty: i.qty,
       })),
       payments: input.payments,
+      continueWithShortage: input.continueWithShortage,
+      shortageReasonCode: input.shortageReasonCode,
     });
     if (!r.ok) return r;
     await hydrate();
@@ -1558,7 +1560,35 @@ export const adApiBackedRepository = {
   reopenAccount: adLicoreriaRepository.reopenAccount.bind(
     adLicoreriaRepository,
   ),
-  voidSale: adLicoreriaRepository.voidSale.bind(adLicoreriaRepository),
+  async voidSale(input: {
+    saleId: string;
+    userName: string;
+    reason: string;
+    authorizedBy: string;
+  }) {
+    if (!input.reason.trim()) {
+      return { ok: false as const, error: "Motivo obligatorio" };
+    }
+    const r = await apiJson<{
+      id: string;
+      status: string;
+      receiptNumber?: string;
+    }>("POST", `/api/v1/ad/sales/${input.saleId}/void`, {
+      reason: `${input.reason} (auth: ${input.authorizedBy || input.userName})`,
+    });
+    if (!r.ok) return r;
+    await hydrate();
+    const sale = state.sales.find((s) => s.id === input.saleId);
+    if (sale) return { ok: true as const, data: { ...sale, status: "voided" as const } };
+    return {
+      ok: true as const,
+      data: {
+        id: r.data.id,
+        status: "voided" as const,
+        receiptNumber: r.data.receiptNumber ?? "",
+      } as import("@/types/ad-licoreria").AdSale,
+    };
+  },
   findReceipt(numberOrId: string) {
     const q = numberOrId.trim().toLowerCase();
     return state.receipts.find(

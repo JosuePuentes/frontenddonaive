@@ -1,12 +1,14 @@
 /**
- * Sesión A&D (modo API).
- * JWT pendiente — headers de desarrollo acordados en F1/F2.
+ * Sesión A&D (modo API) — JWT Fase 4.
  */
 import { API_BASE_URL } from "@/config/api";
 
 const STORAGE_KEY = "ad_licoreria_api_session_v1";
 
 export type AdApiSession = {
+  accessToken: string;
+  tokenType: "Bearer";
+  expiresAt: string;
   tenantId: string;
   tenantSlug: string;
   tenantName: string;
@@ -19,7 +21,6 @@ export type AdApiSession = {
   role: string;
   warehouseId: string | null;
   permissions: string[];
-  headers: Record<string, string>;
 };
 
 let memorySession: AdApiSession | null = null;
@@ -60,8 +61,10 @@ export function clearAdSession() {
 
 export function getAdSessionHeaders(): Record<string, string> {
   const s = loadAdSession();
-  if (!s) return {};
-  return { ...s.headers };
+  if (!s?.accessToken) return {};
+  return {
+    Authorization: `Bearer ${s.accessToken}`,
+  };
 }
 
 export async function adLoginRequest(input: {
@@ -116,8 +119,14 @@ export async function adLoginRequest(input: {
       role: string;
       warehouseId: string | null;
     };
-    const sessionHeaders = data.sessionHeaders as Record<string, string>;
+    const accessToken = String(data.accessToken ?? "");
+    if (!accessToken) {
+      return { ok: false, error: "Login sin accessToken (API F4 requerida)" };
+    }
     const session: AdApiSession = {
+      accessToken,
+      tokenType: "Bearer",
+      expiresAt: String(data.expiresAt ?? ""),
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
       tenantName: tenant.name,
@@ -130,7 +139,6 @@ export async function adLoginRequest(input: {
       role: operator.role,
       warehouseId: operator.warehouseId,
       permissions: (data.permissions as string[]) ?? [],
-      headers: sessionHeaders,
     };
     saveAdSession(session);
     return { ok: true, session };
@@ -179,4 +187,24 @@ export async function adBootstrapRequest(input: {
       error: err instanceof Error ? err.message : "Error de red",
     };
   }
+}
+
+export async function adLogoutRequest(): Promise<void> {
+  const s = loadAdSession();
+  if (!API_BASE_URL || !s?.accessToken) {
+    clearAdSession();
+    return;
+  }
+  try {
+    await fetch(`${API_BASE_URL.replace(/\/+$/, "")}/api/v1/ad/auth/logout`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${s.accessToken}`,
+      },
+    });
+  } catch {
+    /* ignore */
+  }
+  clearAdSession();
 }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   adBootstrapRequest,
   adLoginRequest,
-  clearAdSession,
+  adLogoutRequest,
   loadAdSession,
 } from "@/services/ad-licoreria/session";
 import { getAdDataSourceMode } from "@/services/ad-licoreria/repository-adapter";
@@ -64,8 +64,7 @@ export function AdApiLoginPanel() {
           type="button"
           style={{ marginLeft: 12 }}
           onClick={() => {
-            clearAdSession();
-            setMsg("Sesión cerrada");
+            void adLogoutRequest().then(() => setMsg("Sesión cerrada"));
           }}
         >
           Cerrar sesión API
