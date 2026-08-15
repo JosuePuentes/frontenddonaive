@@ -531,13 +531,12 @@ export const adApiBackedRepository = {
     requestedBase = 0,
     preferredWarehouseId?: string,
   ) {
-    return fulfillmentMessage(
-      this.getOperationalAvailability(
-        productId,
-        requestedBase,
-        preferredWarehouseId,
-      ),
+    const av = this.getOperationalAvailability(
+      productId,
+      requestedBase,
+      preferredWarehouseId,
     );
+    return { availability: av, message: fulfillmentMessage(av) };
   },
 
   async createWarehouse(input: {
@@ -579,7 +578,7 @@ export const adApiBackedRepository = {
     warehouseId: string;
     active: boolean;
     userName: string;
-  }): Promise<AdResult> {
+  }): Promise<AdResult<AdWarehouse>> {
     const r = await apiJson(
       "PATCH",
       `/api/v1/ad/warehouses/${input.warehouseId}`,
@@ -587,7 +586,10 @@ export const adApiBackedRepository = {
     );
     if (!r.ok) return r;
     await hydrate();
-    return okVoid();
+    const wh = state.warehouses.find((w) => w.id === input.warehouseId);
+    return wh
+      ? { ok: true, data: wh }
+      : { ok: false, error: "Depósito no encontrado tras actualizar" };
   },
 
   async upsertOperator(operator: AdOperator): Promise<AdResult<AdOperator>> {
@@ -736,7 +738,7 @@ export const adApiBackedRepository = {
       if (line.qtyBase > physical && !input.continueWithShortage) {
         return {
           ok: false,
-          error: `Stock físico insuficiente (${physical}). ${this.getAvailabilityMessage(line.productId, line.qtyBase, input.warehouseId)}`,
+          error: `Stock físico insuficiente (${physical}). ${this.getAvailabilityMessage(line.productId, line.qtyBase, input.warehouseId).message}`,
         };
       }
       if (
@@ -750,7 +752,7 @@ export const adApiBackedRepository = {
             line.productId,
             line.qtyBase,
             input.warehouseId,
-          ),
+          ).message,
         };
       }
     }
@@ -984,11 +986,11 @@ export const adApiBackedRepository = {
     warehouseId?: string;
     items: { productId: string; presentationId: string; qty: number }[];
     userName: string;
-  }): Promise<AdResult> {
+  }): Promise<AdResult<import("@/types/ad-licoreria").AdPrepaidAccount>> {
     if (!input.customerId) {
       return { ok: false, error: "customerId requerido en modo API" };
     }
-    const r = await apiJson("POST", "/api/v1/ad/prepaids", {
+    const r = await apiJson<Record<string, unknown>>("POST", "/api/v1/ad/prepaids", {
       customerId: input.customerId,
       warehouseId: input.warehouseId,
       items: input.items.map((i) => ({
@@ -998,7 +1000,37 @@ export const adApiBackedRepository = {
     });
     if (!r.ok) return r;
     await hydrate();
-    return okVoid();
+    const found =
+      state.prepaids.find((p) => p.id === String(r.data.id)) ??
+      state.prepaids.find((p) => p.customerId === input.customerId);
+    if (found) return { ok: true, data: found };
+    const now = new Date().toISOString();
+    return {
+      ok: true,
+      data: {
+        id: String(r.data.id ?? `pp-${Date.now()}`),
+        code: String(r.data.code ?? "PP-API"),
+        qrToken: String(r.data.qrToken ?? ""),
+        receiptNumber: String(r.data.receiptRef ?? r.data.code ?? ""),
+        customerId: input.customerId,
+        customerName: input.customerName,
+        customerPhone: input.customerPhone,
+        customerDocumentId: input.customerDocumentId,
+        warehouseId: input.warehouseId,
+        status: "ACTIVO",
+        items: input.items.map((it, i) => ({
+          id: `ppi-${i}`,
+          productId: it.productId,
+          presentationId: it.presentationId,
+          qtyPurchased: it.qty,
+          qtyConsumed: 0,
+          unitPrice: { usd: 0, bs: 0 },
+          qtyBasePerUnit: 1,
+        })),
+        createdAt: now,
+        updatedAt: now,
+      },
+    };
   },
 
   async consumePrepaid(input: {
@@ -1052,7 +1084,7 @@ export const adApiBackedRepository = {
       unitCostBs: number;
     }[];
     userName: string;
-  }): Promise<AdResult> {
+  }): Promise<AdResult<import("@/types/ad-licoreria").AdPurchase>> {
     const created = await apiJson<{ id: string }>("POST", "/api/v1/ad/purchases", {
       supplierName: input.supplierName,
       invoiceNumber: input.invoiceNumber,
@@ -1071,7 +1103,38 @@ export const adApiBackedRepository = {
     );
     if (!received.ok) return received;
     await hydrate();
-    return okVoid();
+    const purchase: import("@/types/ad-licoreria").AdPurchase = {
+      id: created.data.id,
+      supplierName: input.supplierName,
+      invoiceNumber: input.invoiceNumber,
+      date: input.date,
+      warehouseId: input.warehouseId,
+      items: input.items.map((it, i) => {
+        const pres = state.presentations.find((p) => p.id === it.presentationId);
+        const qtyBase = (pres?.unitsPerPresentation ?? 1) * it.qty;
+        return {
+          id: `pli-${i}`,
+          productId: it.productId,
+          presentationId: it.presentationId,
+          qty: it.qty,
+          qtyBase,
+          unitCost: { usd: it.unitCostUsd, bs: it.unitCostBs },
+          lineCost: {
+            usd: it.unitCostUsd * it.qty,
+            bs: it.unitCostBs * it.qty,
+          },
+        };
+      }),
+      totalCost: {
+        usd: input.items.reduce((s, it) => s + it.unitCostUsd * it.qty, 0),
+        bs: input.items.reduce((s, it) => s + it.unitCostBs * it.qty, 0),
+      },
+      userName: input.userName,
+      createdAt: new Date().toISOString(),
+    };
+    state = { ...state, purchases: [purchase, ...state.purchases] };
+    emit();
+    return { ok: true, data: purchase };
   },
 
   async createTransferDraft(input: {
@@ -1080,8 +1143,8 @@ export const adApiBackedRepository = {
     lines: { productId: string; presentationId: string; qty: number }[];
     createdBy: string;
     reason?: string;
-  }): Promise<AdResult> {
-    const r = await apiJson("POST", "/api/v1/ad/transfers", {
+  }): Promise<AdResult<import("@/types/ad-licoreria").AdStockTransfer>> {
+    const r = await apiJson<Record<string, unknown>>("POST", "/api/v1/ad/transfers", {
       fromWarehouseId: input.fromWarehouseId,
       toWarehouseId: input.toWarehouseId,
       reason: input.reason,
@@ -1092,20 +1155,48 @@ export const adApiBackedRepository = {
     });
     if (!r.ok) return r;
     await hydrate();
-    return okVoid();
+    const found =
+      state.stockTransfers.find((t) => t.id === String(r.data.id)) ??
+      state.stockTransfers[0];
+    if (found) return { ok: true, data: found };
+    const now = new Date().toISOString();
+    const transfer: import("@/types/ad-licoreria").AdStockTransfer = {
+      id: String(r.data.id ?? `tr-${Date.now()}`),
+      number: String(r.data.documentNumber ?? "TR-DRAFT"),
+      provisional: true,
+      fromWarehouseId: input.fromWarehouseId,
+      toWarehouseId: input.toWarehouseId,
+      lines: input.lines.map((l, i) => ({
+        id: `trl-${i}`,
+        productId: l.productId,
+        presentationId: l.presentationId,
+        qty: l.qty,
+        qtyBase: l.qty,
+      })),
+      status: "BORRADOR",
+      createdBy: input.createdBy,
+      createdAt: now,
+      updatedAt: now,
+    };
+    return { ok: true, data: transfer };
   },
 
   async confirmTransfer(input: {
     transferId: string;
     userName: string;
-  }): Promise<AdResult> {
+  }): Promise<AdResult<import("@/types/ad-licoreria").AdStockTransfer>> {
     const r = await apiJson(
       "POST",
       `/api/v1/ad/transfers/${input.transferId}/receive`,
     );
     if (!r.ok) return r;
     await hydrate();
-    return okVoid();
+    const found = state.stockTransfers.find((t) => t.id === input.transferId);
+    if (found) return { ok: true, data: found };
+    return {
+      ok: false,
+      error: "Transferencia confirmada pero no visible en snapshot",
+    };
   },
 
   async createPurchaseRequest(input: {
@@ -1119,23 +1210,51 @@ export const adApiBackedRepository = {
     relatedDraftId?: string;
     relatedTransferId?: string;
     notes?: string;
-  }): Promise<AdResult> {
+  }): Promise<AdResult<import("@/types/ad-licoreria").AdPurchaseRequest>> {
     const pres = state.presentations.find((p) => p.id === input.presentationId);
     const qtyBase = pres
       ? input.qty * Number(pres.unitsPerPresentation || 1)
       : input.qty;
-    const r = await apiJson("POST", "/api/v1/ad/cop/purchase-requests", {
+    const r = await apiJson<Record<string, unknown>>(
+      "POST",
+      "/api/v1/ad/cop/purchase-requests",
+      {
+        productId: input.productId,
+        presentationId: input.presentationId,
+        qty: input.qty,
+        qtyBaseNeeded: qtyBase,
+        warehouseId: input.warehouseId,
+        reason: input.reason,
+        notes: input.notes,
+      },
+    );
+    if (!r.ok) return r;
+    await hydrate();
+    const now = new Date().toISOString();
+    const req: import("@/types/ad-licoreria").AdPurchaseRequest = {
+      id: String(r.data.id ?? `preq-${Date.now()}`),
+      number: String(r.data.number ?? `SC-${Date.now()}`),
       productId: input.productId,
       presentationId: input.presentationId,
       qty: input.qty,
-      qtyBaseNeeded: qtyBase,
+      qtyBase,
       warehouseId: input.warehouseId,
+      status: "SOLICITADA",
+      relatedAccountId: input.relatedAccountId,
+      relatedDraftId: input.relatedDraftId,
+      relatedTransferId: input.relatedTransferId,
       reason: input.reason,
       notes: input.notes,
-    });
-    if (!r.ok) return r;
-    await hydrate();
-    return okVoid();
+      createdBy: input.createdBy,
+      createdAt: now,
+      updatedAt: now,
+    };
+    state = {
+      ...state,
+      purchaseRequests: [req, ...state.purchaseRequests],
+    };
+    emit();
+    return { ok: true, data: req };
   },
 
   async createDailyClosure(input: {
@@ -1144,16 +1263,52 @@ export const adApiBackedRepository = {
     countedCashBs: number;
     warehouseId?: string;
     notes?: string;
-  }): Promise<AdResult> {
-    const r = await apiJson("POST", "/api/v1/ad/closures/cash", {
-      warehouseId: input.warehouseId,
-      countedCashUsd: input.countedCashUsd,
-      countedCashBs: input.countedCashBs,
-      notes: input.notes,
-    });
+  }): Promise<AdResult<import("@/types/ad-licoreria").AdDailyClosure>> {
+    const r = await apiJson<Record<string, unknown>>(
+      "POST",
+      "/api/v1/ad/closures/cash",
+      {
+        warehouseId: input.warehouseId,
+        countedCashUsd: input.countedCashUsd,
+        countedCashBs: input.countedCashBs,
+        notes: input.notes,
+      },
+    );
     if (!r.ok) return r;
     await hydrate();
-    return okVoid();
+    const closure: import("@/types/ad-licoreria").AdDailyClosure = {
+      id: String(r.data.id ?? `dc-${Date.now()}`),
+      date: String(r.data.periodStart ?? new Date().toISOString()).slice(0, 10),
+      warehouseId: input.warehouseId,
+      salesCount: num(r.data.salesCount),
+      totalUsd: 0,
+      totalBs: 0,
+      collectedUsd: 0,
+      collectedBs: 0,
+      pendingUsd: 0,
+      discountUsd: 0,
+      voidedCount: 0,
+      expectedCashUsd: num(r.data.expectedCashUsd),
+      countedCashUsd: input.countedCashUsd,
+      cashDifferenceUsd: num(r.data.cashDifferenceUsd),
+      expectedCashBs: num(r.data.expectedCashBs),
+      countedCashBs: input.countedCashBs,
+      cashDifferenceBs: num(r.data.cashDifferenceBs),
+      openAccounts: 0,
+      closedAccounts: 0,
+      prepaidsActive: 0,
+      byMethod: {},
+      byMesonera: [],
+      createdAt: String(r.data.createdAt ?? new Date().toISOString()),
+      createdBy: input.userName,
+      notes: input.notes,
+    };
+    state = {
+      ...state,
+      dailyClosures: [closure, ...state.dailyClosures],
+    };
+    emit();
+    return { ok: true, data: closure };
   },
 
   async createInventoryClosure(input: {
@@ -1168,19 +1323,36 @@ export const adApiBackedRepository = {
     warehouseId?: string;
     notes?: string;
     applyAdjustments?: boolean;
-  }): Promise<AdResult> {
-    const r = await apiJson("POST", "/api/v1/ad/closures/inventory", {
-      warehouseId: input.warehouseId,
-      applyAdjustments: input.applyAdjustments,
-      notes: input.notes,
-      lines: input.lines.map((l) => ({
-        productId: l.productId,
-        physicalBase: l.physicalBase,
-      })),
-    });
+  }): Promise<AdResult<import("@/types/ad-licoreria").AdInventoryClosure>> {
+    const r = await apiJson<Record<string, unknown>>(
+      "POST",
+      "/api/v1/ad/closures/inventory",
+      {
+        warehouseId: input.warehouseId,
+        applyAdjustments: input.applyAdjustments,
+        notes: input.notes,
+        lines: input.lines.map((l) => ({
+          productId: l.productId,
+          physicalBase: l.physicalBase,
+        })),
+      },
+    );
     if (!r.ok) return r;
     await hydrate();
-    return okVoid();
+    const closure: import("@/types/ad-licoreria").AdInventoryClosure = {
+      id: String(r.data.id ?? `ic-${Date.now()}`),
+      warehouseId: input.warehouseId,
+      lines: input.lines,
+      createdAt: String(r.data.createdAt ?? new Date().toISOString()),
+      createdBy: input.createdBy,
+      notes: input.notes,
+    };
+    state = {
+      ...state,
+      inventoryClosures: [closure, ...state.inventoryClosures],
+    };
+    emit();
+    return { ok: true, data: closure };
   },
 
   getAccountsForMesonera(mesoneraId: string) {
@@ -1215,33 +1387,97 @@ export const adApiBackedRepository = {
   },
 
   getCopDashboard() {
-    const critical = state.products
-      .filter((p) => p.active)
-      .map((p) => {
-        const av = this.getOperationalAvailability(p.id, 0);
-        return { product: p, availability: av };
-      })
-      .filter(
-        (row) =>
-          row.availability.customerCommitmentDeficit > 0 ||
-          row.availability.status !== "OK",
-      );
+    const openAccounts = state.accounts.filter(
+      (a) =>
+        a.status === "ABIERTA" ||
+        a.status === "PREPAGADA" ||
+        a.status === "PARCIALMENTE_PAGADA",
+    );
+    const occupiedTables = state.tables.filter(
+      (t) =>
+        t.status === "ocupada" ||
+        t.status === "cuenta_abierta" ||
+        t.status === "cuenta_prepagada",
+    );
+    const mesoneras = new Set(
+      openAccounts.map((a) => a.mesoneraName).filter(Boolean),
+    );
+    const critical: {
+      productId: string;
+      name: string;
+      availability: ReturnType<
+        typeof adApiBackedRepository.getOperationalAvailability
+      >;
+    }[] = [];
+    for (const p of state.products.filter((x) => x.active)) {
+      const av = this.getOperationalAvailability(p.id, 0);
+      if (
+        av.availableOperationalTotal <= 10 ||
+        av.customerCommitmentDeficit > 0 ||
+        av.committedActiveTotal > 0
+      ) {
+        critical.push({
+          productId: p.id,
+          name: p.name,
+          availability: av,
+        });
+      }
+    }
+    const pendingTransfers = state.stockTransfers.filter(
+      (t) => t.status !== "RECIBIDA" && t.status !== "CANCELADA",
+    );
+    const pendingPurchases = state.purchaseRequests.filter(
+      (p) =>
+        p.status === "SOLICITADA" ||
+        p.status === "APROBADA" ||
+        p.status === "ORDENADA",
+    );
+    const preliminars = state.invoiceDrafts.filter(
+      (d) => d.status === "PRELIMINAR",
+    );
+    const deficits = state.customerCommitments.filter((c) => {
+      if (c.status !== "PENDIENTE") return false;
+      const av = this.getOperationalAvailability(c.productId);
+      return av.customerCommitmentDeficit > 0;
+    });
+
     return {
-      warehouses: state.warehouses,
-      openAccounts: state.accounts.filter(
-        (a) =>
-          a.status === "ABIERTA" ||
-          a.status === "PARCIALMENTE_PAGADA" ||
-          a.status === "PREPAGADA",
-      ).length,
-      pendingCommitments: state.customerCommitments.filter(
-        (c) => c.status === "PENDIENTE",
-      ).length,
-      pendingTransfers: state.stockTransfers.filter(
-        (t) => t.status !== "RECIBIDA" && t.status !== "CANCELADA",
-      ).length,
-      purchaseRequests: state.purchaseRequests,
-      critical,
+      operation: {
+        openAccounts: openAccounts.length,
+        occupiedTables: occupiedTables.length,
+        workingMesoneras: mesoneras.size,
+        completedSalesToday: state.sales.filter(
+          (s) =>
+            s.status === "completed" &&
+            s.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10),
+        ).length,
+      },
+      inventory: {
+        critical,
+        activeCommitments: openAccounts.reduce(
+          (a, acc) =>
+            a +
+            acc.items.reduce(
+              (x, it) => x + Math.max(0, it.qty - it.qtyServed),
+              0,
+            ),
+          0,
+        ),
+        customerCommitments: state.customerCommitments.filter(
+          (c) => c.status === "PENDIENTE",
+        ).length,
+        deficits: deficits.length,
+      },
+      supply: {
+        pendingTransfers,
+        pendingPurchases,
+      },
+      documents: {
+        preliminars,
+        transfers: state.stockTransfers.slice(0, 20),
+        purchases: state.purchases.slice(0, 20),
+        purchaseRequests: state.purchaseRequests.slice(0, 20),
+      },
     };
   },
 

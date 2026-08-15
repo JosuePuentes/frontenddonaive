@@ -261,7 +261,7 @@ export default function AdLicoreriaVentas() {
     setMsg("");
   }
 
-  function openPrelim() {
+  async function openPrelim() {
     if (!canSell || !posWarehouseId || !cashierId) {
       setMsg("Sesión POS inválida: usuario con depósito asignado requerido");
       return;
@@ -278,39 +278,37 @@ export default function AdLicoreriaVentas() {
       setMsg("Descuento requiere autorización");
       return;
     }
-    void (async () => {
-      const result = await resolveAdResult(
-        createInvoiceDraft({
-          items: cart,
-          payments,
-          warehouseId: posWarehouseId,
-          operatorId: cashierId,
-          cashierName: cashier?.name ?? "Cajero",
-          tableId: tableId || undefined,
-          mesoneraName: mesonera?.name,
-          customerId: customer?.id,
-          customerName: customer?.name,
-          customerPhone: customer?.phone,
-          customerDocumentId: customer?.documentId,
-          discountUsd,
-          notes: notes.trim() || undefined,
-        }),
-      );
-      if (!result.ok) {
-        setMsg(result.error);
-        return;
-      }
-      setDraft(result.data);
-      setConfirmedReceipt(null);
-      setMsg(`Preliminar ${result.data.provisionalNumber}`);
-    })();
+    const result = await resolveAdResult(
+      createInvoiceDraft({
+        items: cart,
+        payments,
+        warehouseId: posWarehouseId,
+        operatorId: cashierId,
+        cashierName: cashier?.name ?? "Cajero",
+        tableId: tableId || undefined,
+        mesoneraName: mesonera?.name,
+        customerId: customer?.id,
+        customerName: customer?.name,
+        customerPhone: customer?.phone,
+        customerDocumentId: customer?.documentId,
+        discountUsd,
+        notes: notes.trim() || undefined,
+      }),
+    );
+    if (!result.ok) {
+      setMsg(result.error);
+      return;
+    }
+    setDraft(result.data);
+    setConfirmedReceipt(null);
+    setMsg(`Preliminar ${result.data.provisionalNumber}`);
   }
 
   const canShortageOverride =
     hasPermission("pos.shortage_override") ||
     hasPermission("pos.shortage_override", cashier?.id);
 
-  function confirmDraft(continueWithShortage = false) {
+  async function confirmDraft(continueWithShortage = false) {
     if (!draft) return;
     if (continueWithShortage) {
       if (!canShortageOverride) {
@@ -328,39 +326,37 @@ export default function AdLicoreriaVentas() {
         return;
       }
     }
-    void (async () => {
-      const result = await resolveAdResult(
-        confirmInvoiceDraft({
-          draftId: draft.id,
-          userName: cashier?.name ?? mesonera?.name ?? "Cajero",
-          continueWithShortage,
-          shortageDecision: continueWithShortage ? shortageReason : undefined,
-          shortageReasonCode: continueWithShortage ? shortageReason : undefined,
-          shortageReasonNote:
-            continueWithShortage && shortageReason === "otro"
-              ? shortageNote.trim()
-              : continueWithShortage
-                ? shortageNote.trim() || undefined
-                : undefined,
-        }),
-      );
-      if (!result.ok) {
-        setMsg(result.error);
-        return;
-      }
-      setConfirmedReceipt(result.data.receiptNumber);
-      setConfirmedSale(result.data);
-      setCart([]);
-      setPayments([]);
-      setNotes("");
-      setDiscountUsd(0);
-      setDiscountAuth("");
-      setShortageReason("");
-      setShortageNote("");
-      setDraft(null);
-      setPosStep("productos");
-      setMsg(`Factura confirmada ${result.data.receiptNumber}`);
-    })();
+    const result = await resolveAdResult(
+      confirmInvoiceDraft({
+        draftId: draft.id,
+        userName: cashier?.name ?? mesonera?.name ?? "Cajero",
+        continueWithShortage,
+        shortageDecision: continueWithShortage ? shortageReason : undefined,
+        shortageReasonCode: continueWithShortage ? shortageReason : undefined,
+        shortageReasonNote:
+          continueWithShortage && shortageReason === "otro"
+            ? shortageNote.trim()
+            : continueWithShortage
+              ? shortageNote.trim() || undefined
+              : undefined,
+      }),
+    );
+    if (!result.ok) {
+      setMsg(result.error);
+      return;
+    }
+    setConfirmedReceipt(result.data.receiptNumber);
+    setConfirmedSale(result.data);
+    setCart([]);
+    setPayments([]);
+    setNotes("");
+    setDiscountUsd(0);
+    setDiscountAuth("");
+    setShortageReason("");
+    setShortageNote("");
+    setDraft(null);
+    setPosStep("productos");
+    setMsg(`Factura confirmada ${result.data.receiptNumber}`);
   }
 
   async function leaveOpen() {
@@ -864,18 +860,18 @@ export default function AdLicoreriaVentas() {
           <button
             type="button"
             className="ad-btn ad-btn--gold"
-            onClick={openPrelim}
+            onClick={() => void openPrelim()}
           >
             Facturar (preliminar)
           </button>
           <button
             type="button"
             className="ad-btn ad-btn--primary"
-            onClick={leaveOpen}
+            onClick={() => void leaveOpen()}
           >
             Abrir cuenta (servir después)
           </button>
-          <button type="button" className="ad-btn" onClick={toPrepaid}>
+          <button type="button" className="ad-btn" onClick={() => void toPrepaid()}>
             Prepago + QR
           </button>
         </div>
@@ -912,14 +908,20 @@ export default function AdLicoreriaVentas() {
               }
               warehouseName={warehouseLabel(draft.warehouseId, warehouses)}
               onBack={() => {
-                cancelInvoiceDraft({
-                  draftId: draft.id,
-                  userName: cashier?.name ?? "Cajero",
-                });
-                setDraft(null);
+                void (async () => {
+                  await resolveAdResult(
+                    cancelInvoiceDraft({
+                      draftId: draft.id,
+                      userName: cashier?.name ?? "Cajero",
+                    }),
+                  );
+                  setDraft(null);
+                })();
               }}
               onConfirm={() =>
-                confirmDraft(draft.supplyAlerts.some((a) => a.shortfall > 0))
+                void confirmDraft(
+                  draft.supplyAlerts.some((a) => a.shortfall > 0),
+                )
               }
               confirmDisabled={
                 draft.supplyAlerts.some((a) => a.shortfall > 0) &&

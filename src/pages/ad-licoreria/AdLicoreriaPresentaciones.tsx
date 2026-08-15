@@ -47,8 +47,11 @@ export default function AdLicoreriaPresentaciones() {
     if (r.ok) setName("");
   }
 
-  function toggle(p: AdPresentation) {
-    upsertPresentation({ ...p, active: !p.active });
+  async function toggle(p: AdPresentation) {
+    const r = await resolveAdResult(
+      upsertPresentation({ ...p, active: !p.active }),
+    );
+    if (!r.ok) setMsg(r.error);
   }
 
   return (
@@ -138,7 +141,7 @@ export default function AdLicoreriaPresentaciones() {
                       className={
                         pres.active ? "ad-badge ad-badge--ok" : "ad-badge"
                       }
-                      onClick={() => toggle(pres)}
+                      onClick={() => void toggle(pres)}
                     >
                       {pres.active ? "Activa" : "Inactiva"}
                     </button>

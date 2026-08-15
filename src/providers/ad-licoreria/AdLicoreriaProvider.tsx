@@ -270,7 +270,7 @@ type AdStore = AdRepositoryState & {
     productId: string,
     requestedBase?: number,
     preferredWarehouseId?: string,
-  ) => string;
+  ) => ReturnType<typeof adLicoreriaRepository.getAvailabilityMessage>;
   createInvoiceDraft: (input: {
     kind?: "pos_sale" | "account_close";
     items: AdSaleItem[];

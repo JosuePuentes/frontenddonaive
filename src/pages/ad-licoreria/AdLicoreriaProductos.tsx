@@ -42,8 +42,11 @@ export default function AdLicoreriaProductos() {
     }
   }
 
-  function toggle(p: AdProduct) {
-    upsertProduct({ ...p, active: !p.active });
+  async function toggle(p: AdProduct) {
+    const r = await resolveAdResult(
+      upsertProduct({ ...p, active: !p.active }),
+    );
+    if (!r.ok) setMsg(r.error);
   }
 
   return (
@@ -146,7 +149,7 @@ export default function AdLicoreriaProductos() {
                       className={
                         p.active ? "ad-badge ad-badge--ok" : "ad-badge"
                       }
-                      onClick={() => toggle(p)}
+                      onClick={() => void toggle(p)}
                     >
                       {p.active ? "Activo" : "Inactivo"}
                     </button>

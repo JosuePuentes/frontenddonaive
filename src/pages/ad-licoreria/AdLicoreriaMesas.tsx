@@ -4,6 +4,7 @@ import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { uid } from "@/lib/ad-licoreria/conversions";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import type { AdSpaceType, AdTable } from "@/types/ad-licoreria";
 
 const SPACE_TYPES: AdSpaceType[] = [
@@ -26,10 +27,11 @@ export default function AdLicoreriaMesas() {
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
   const [reassignAccountId, setReassignAccountId] = useState("");
   const [newMesoneraId, setNewMesoneraId] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const mesoneras = operators.filter((o) => o.role === "mesonera" && o.active);
 
-  function createSpace() {
+  async function createSpace() {
     const table: AdTable = {
       id: uid("spc"),
       number: number || code,
@@ -40,16 +42,22 @@ export default function AdLicoreriaMesas() {
       active: true,
       warehouseId: warehouseId || null,
     };
-    const r = upsertTable(table);
+    setBusy(true);
+    const r = await resolveAdResult(upsertTable(table));
+    setBusy(false);
     setMsg(r.ok ? `Espacio ${r.data.code ?? r.data.number} creado` : r.error);
   }
 
-  function doReassign() {
-    const r = reassignMesonera({
-      accountId: reassignAccountId,
-      newMesoneraId,
-      userName: "Supervisor A&D",
-    });
+  async function doReassign() {
+    setBusy(true);
+    const r = await resolveAdResult(
+      reassignMesonera({
+        accountId: reassignAccountId,
+        newMesoneraId,
+        userName: "Supervisor A&D",
+      }),
+    );
+    setBusy(false);
     setMsg(r.ok ? `Reasignada a ${r.data.mesoneraName}` : r.error);
   }
 
@@ -133,7 +141,12 @@ export default function AdLicoreriaMesas() {
             </option>
           ))}
         </select>
-        <button type="button" className="ad-btn ad-btn--gold" onClick={createSpace}>
+        <button
+          type="button"
+          className="ad-btn ad-btn--gold"
+          disabled={busy}
+          onClick={() => void createSpace()}
+        >
           Crear espacio
         </button>
         <input
@@ -176,7 +189,12 @@ export default function AdLicoreriaMesas() {
               </option>
             ))}
           </select>
-          <button type="button" className="ad-btn" onClick={doReassign}>
+          <button
+            type="button"
+            className="ad-btn"
+            disabled={busy}
+            onClick={() => void doReassign()}
+          >
             Reasignar (audita)
           </button>
         </div>
