@@ -2,7 +2,8 @@
 
 > **Estado:** diseño funcional y de datos.  
 > **No implementar** todavía PostgreSQL / Prisma / `apps/api` / migraciones.  
-> **Mock actual:** portal `/licoreria`, repositorio en memoria, suite de aceptación 14/14 PASS (Fase 3).  
+> **Mock actual:** portal `/licoreria`, repositorio en memoria, suite Fase 3 (14/14) + escenario COP Fase 7 (25/25).  
+> **Fase 7:** COP `/licoreria/cop`, `getOperationalAvailability()`, transferencias multiproducto, pre-factura, compromisos cliente.  
 > **Objetivo:** contrato estable para sustituir `adLicoreriaRepository` por API real sin rehacer la UI.
 
 ---

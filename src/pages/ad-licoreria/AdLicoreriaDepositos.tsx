@@ -66,7 +66,7 @@ export default function AdLicoreriaDepositos() {
   return (
     <div className="space-y-5">
       <p className="max-w-2xl text-sm text-[var(--ad-muted)]">
-        Depósito 1 y Depósito 2 con inventario independiente. Traslados y
+        Bodegón y Licorería con inventario independiente. Traslados y
 
         ajustes quedan en kardex con usuario y motivo.
       </p>
