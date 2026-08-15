@@ -12,6 +12,8 @@ import {
   setStockSchema,
 } from "./validation.js";
 
+import { adOpsRouter } from "./ops.routes.js";
+
 export const adRouter = Router();
 
 /** Health A&D — requiere DB (montado bajo /api/v1). */
@@ -36,6 +38,9 @@ adRouter.post("/auth/login", async (req, res, next) => {
 });
 
 adRouter.use(adContextMiddleware);
+
+/** Núcleo operativo Fase 2 */
+adRouter.use(adOpsRouter);
 
 adRouter.get("/context", async (req, res, next) => {
   try {

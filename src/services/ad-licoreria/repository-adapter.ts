@@ -1,9 +1,8 @@
 /**
  * Adapter de repository A&D.
  *
- * Fase 1: la UI sigue usando `adLicoreriaRepository` (MOCK).
- * Este módulo expone el punto de extensión para migrar módulo a módulo
- * cuando `VITE_AD_DATA_SOURCE=api`.
+ * - `mock` (default): UI usa repository.ts
+ * - `api`: bridge HTTP para módulos F1/F2 ya preparados (pantallas aún no migradas en bloque)
  */
 
 import { adLicoreriaRepository } from "./repository";
@@ -12,13 +11,28 @@ import { adApiClient, type AdApiAuthHeaders } from "./api-client";
 
 export type AdRepositoryPort = typeof adLicoreriaRepository;
 
+/** Módulos con cliente API listo (Fase 2). La UI sigue en MOCK hasta Fase 3. */
+export const AD_API_READY_MODULES = [
+  "accounts",
+  "inventory",
+  "purchases",
+  "transfers",
+  "prepaids",
+  "qr",
+  "cop",
+  "closures",
+  "audit",
+  "catalog",
+  "sales",
+] as const;
+
+export type AdApiReadyModule = (typeof AD_API_READY_MODULES)[number];
+
 /**
  * Repository activo para la UI.
- * En Fase 1 siempre retorna el MOCK — la migración de pantallas es Fase 2+.
- * El flag `api` habilita el cliente HTTP para pruebas / módulos futuros.
+ * Fase 2: sigue retornando MOCK — no migrar pantallas todavía.
  */
 export function getAdRepository(): AdRepositoryPort {
-  // Mantener MOCK como fuente de verdad de UI en F1.
   return adLicoreriaRepository;
 }
 
@@ -26,9 +40,14 @@ export function getAdDataSourceMode(): AdDataSource {
   return getAdDataSource();
 }
 
+export function isAdApiModuleReady(module: AdApiReadyModule): boolean {
+  if (getAdDataSource() !== "api") return false;
+  return (AD_API_READY_MODULES as readonly string[]).includes(module);
+}
+
 /**
- * Acceso al cliente API cuando el flag está en `api`.
- * No sustituye todavía al repository MOCK de las pantallas.
+ * Bridge API cuando `VITE_AD_DATA_SOURCE=api`.
+ * No sustituye al repository MOCK de las pantallas en F2.
  */
 export function getAdApiBridge(auth: AdApiAuthHeaders) {
   if (getAdDataSource() !== "api") {
@@ -37,6 +56,7 @@ export function getAdApiBridge(auth: AdApiAuthHeaders) {
   return {
     client: adApiClient,
     auth,
+    readyModules: AD_API_READY_MODULES,
   };
 }
 

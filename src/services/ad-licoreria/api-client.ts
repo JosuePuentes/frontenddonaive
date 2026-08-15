@@ -164,4 +164,175 @@ export const adApiClient = {
   listAudit(auth: AdApiAuthHeaders) {
     return adRequestJson<unknown[]>("GET", "/api/v1/ad/audit", auth);
   },
+
+  /* ─── Fase 2 — módulos operativos (usar solo si VITE_AD_DATA_SOURCE=api) ─── */
+
+  createAccount(auth: AdApiAuthHeaders, body: Record<string, unknown>) {
+    return adRequestJson<unknown>("POST", "/api/v1/ad/accounts", auth, body);
+  },
+
+  addAccountItem(
+    auth: AdApiAuthHeaders,
+    accountId: string,
+    body: Record<string, unknown>,
+  ) {
+    return adRequestJson<unknown>(
+      "POST",
+      `/api/v1/ad/accounts/${accountId}/items`,
+      auth,
+      body,
+    );
+  },
+
+  serveAccountItem(
+    auth: AdApiAuthHeaders,
+    accountId: string,
+    body: Record<string, unknown>,
+  ) {
+    return adRequestJson<unknown>(
+      "POST",
+      `/api/v1/ad/accounts/${accountId}/serve`,
+      auth,
+      body,
+    );
+  },
+
+  closeAccount(
+    auth: AdApiAuthHeaders,
+    accountId: string,
+    body?: Record<string, unknown>,
+  ) {
+    return adRequestJson<unknown>(
+      "POST",
+      `/api/v1/ad/accounts/${accountId}/close`,
+      auth,
+      body ?? {},
+    );
+  },
+
+  voidAccount(
+    auth: AdApiAuthHeaders,
+    accountId: string,
+    body: Record<string, unknown>,
+  ) {
+    return adRequestJson<unknown>(
+      "POST",
+      `/api/v1/ad/accounts/${accountId}/void`,
+      auth,
+      body,
+    );
+  },
+
+  inventoryAvailability(
+    auth: AdApiAuthHeaders,
+    productId: string,
+    opts?: { requestedBase?: number; warehouseId?: string },
+  ) {
+    const q = new URLSearchParams({ productId });
+    if (opts?.requestedBase != null) {
+      q.set("requestedBase", String(opts.requestedBase));
+    }
+    if (opts?.warehouseId) q.set("warehouseId", opts.warehouseId);
+    return adRequestJson<unknown>(
+      "GET",
+      `/api/v1/ad/inventory/availability?${q}`,
+      auth,
+    );
+  },
+
+  createPurchase(auth: AdApiAuthHeaders, body: Record<string, unknown>) {
+    return adRequestJson<unknown>("POST", "/api/v1/ad/purchases", auth, body);
+  },
+
+  receivePurchase(auth: AdApiAuthHeaders, purchaseId: string) {
+    return adRequestJson<unknown>(
+      "POST",
+      `/api/v1/ad/purchases/${purchaseId}/receive`,
+      auth,
+    );
+  },
+
+  createTransfer(auth: AdApiAuthHeaders, body: Record<string, unknown>) {
+    return adRequestJson<unknown>("POST", "/api/v1/ad/transfers", auth, body);
+  },
+
+  confirmTransfer(auth: AdApiAuthHeaders, transferId: string) {
+    return adRequestJson<unknown>(
+      "POST",
+      `/api/v1/ad/transfers/${transferId}/receive`,
+      auth,
+    );
+  },
+
+  createPrepaid(auth: AdApiAuthHeaders, body: Record<string, unknown>) {
+    return adRequestJson<unknown>("POST", "/api/v1/ad/prepaids", auth, body);
+  },
+
+  consumePrepaid(
+    auth: AdApiAuthHeaders,
+    prepaidId: string,
+    body: Record<string, unknown>,
+  ) {
+    return adRequestJson<unknown>(
+      "POST",
+      `/api/v1/ad/prepaids/${prepaidId}/consume`,
+      auth,
+      body,
+    );
+  },
+
+  findQr(auth: AdApiAuthHeaders, token: string) {
+    return adRequestJson<unknown>(
+      "GET",
+      `/api/v1/ad/qr/${encodeURIComponent(token)}`,
+      auth,
+    );
+  },
+
+  copAvailability(
+    auth: AdApiAuthHeaders,
+    productId: string,
+    opts?: { requestedBase?: number; warehouseId?: string },
+  ) {
+    const q = new URLSearchParams({ productId });
+    if (opts?.requestedBase != null) {
+      q.set("requestedBase", String(opts.requestedBase));
+    }
+    if (opts?.warehouseId) q.set("warehouseId", opts.warehouseId);
+    return adRequestJson<unknown>(
+      "GET",
+      `/api/v1/ad/cop/availability?${q}`,
+      auth,
+    );
+  },
+
+  createPurchaseRequest(auth: AdApiAuthHeaders, body: Record<string, unknown>) {
+    return adRequestJson<unknown>(
+      "POST",
+      "/api/v1/ad/cop/purchase-requests",
+      auth,
+      body,
+    );
+  },
+
+  createCashClosure(auth: AdApiAuthHeaders, body: Record<string, unknown>) {
+    return adRequestJson<unknown>(
+      "POST",
+      "/api/v1/ad/closures/cash",
+      auth,
+      body,
+    );
+  },
+
+  createInventoryClosure(
+    auth: AdApiAuthHeaders,
+    body: Record<string, unknown>,
+  ) {
+    return adRequestJson<unknown>(
+      "POST",
+      "/api/v1/ad/closures/inventory",
+      auth,
+      body,
+    );
+  },
 };

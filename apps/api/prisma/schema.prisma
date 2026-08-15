@@ -825,6 +825,9 @@ enum AdInventoryMovementType {
   VOID_REVERSAL
   PURCHASE
   COUNT
+  PREPAID_CONSUME
+  ADJUST_IN
+  ADJUST_OUT
 
   @@schema("ad_licoreria")
 }
@@ -832,9 +835,39 @@ enum AdInventoryMovementType {
 enum AdTransferStatus {
   DRAFT
   PRELIMINARY
+  REQUESTED
+  AUTHORIZED
+  SENT
   CONFIRMED
   RECEIVED
   CANCELLED
+
+  @@schema("ad_licoreria")
+}
+
+enum AdPurchaseStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+
+  @@schema("ad_licoreria")
+}
+
+enum AdPurchaseRequestStatus {
+  REQUESTED
+  APPROVED
+  ORDERED
+  CANCELLED
+  FULFILLED
+
+  @@schema("ad_licoreria")
+}
+
+enum AdCommitmentStatus {
+  PENDIENTE
+  CUMPLIDO
+  ANULADO
 
   @@schema("ad_licoreria")
 }
@@ -852,6 +885,7 @@ enum AdAccountStatus {
   ABIERTA
   PREPAGADA
   PARCIALMENTE_PAGADA
+  PAGADA
   CERRADA
   ANULADA
 
@@ -885,29 +919,34 @@ enum AdMoneyCurrency {
 /// Tenant operativo A&D (1:1 conceptual con Project de donaive_core).
 model AdTenant {
   id        String   @id @default(uuid())
-  /// UUID del Project en donaive_core (sin FK cross-schema en F1 — integridad app-level).
+  /// UUID del Project en donaive_core (sin FK cross-schema — integridad app-level + índice unique).
   projectId String   @unique
   name      String
   slug      String   @unique
   active    Boolean  @default(true)
   /// Tasa informativa; NO implica conversión automática USD↔Bs.
   exchangeRateUsdToBs Decimal? @db.Decimal(18, 6)
+  /// Zona horaria IANA para período HOY en cierres (no confiar en frontend).
+  timezone  String   @default("America/Caracas")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  warehouses   AdWarehouse[]
-  operators    AdOperator[]
-  categories   AdCategory[]
-  products     AdProduct[]
-  customers    AdCustomer[]
-  sales        AdSale[]
-  accounts     AdAccount[]
-  tables       AdTableSpace[]
-  prepaids     AdPrepaid[]
-  transfers    AdStockTransfer[]
-  cashClosures AdCashClosure[]
-  invClosures  AdInventoryClosure[]
-  auditEvents  AdAuditEvent[]
+  warehouses        AdWarehouse[]
+  operators         AdOperator[]
+  categories        AdCategory[]
+  products          AdProduct[]
+  customers         AdCustomer[]
+  sales             AdSale[]
+  accounts          AdAccount[]
+  tables            AdTableSpace[]
+  prepaids          AdPrepaid[]
+  transfers         AdStockTransfer[]
+  purchases         AdPurchase[]
+  purchaseRequests  AdPurchaseRequest[]
+  commitments       AdCustomerCommitment[]
+  cashClosures      AdCashClosure[]
+  invClosures       AdInventoryClosure[]
+  auditEvents       AdAuditEvent[]
 
   @@schema("ad_licoreria")
 }
@@ -929,6 +968,7 @@ model AdWarehouse {
   accounts        AdAccount[]
   transfersFrom   AdStockTransfer[] @relation("TransferFrom")
   transfersTo     AdStockTransfer[] @relation("TransferTo")
+  purchases       AdPurchase[]
   cashClosures    AdCashClosure[]
   invClosures     AdInventoryClosure[]
 
@@ -1004,16 +1044,23 @@ model AdProduct {
   description   String?
   baseUnitLabel String   @default("u")
   minStockBase  Decimal  @default(0) @db.Decimal(18, 4)
+  /// Costo promedio ponderado (CPP) — monedas independientes.
+  avgCostUsd    Decimal  @default(0) @db.Decimal(18, 6)
+  avgCostBs     Decimal  @default(0) @db.Decimal(18, 6)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  presentations AdPresentation[]
-  stocks        AdStock[]
-  movements     AdInventoryMovement[]
-  saleLines     AdSaleLine[]
-  accountLines  AdAccountLine[]
-  transferLines AdStockTransferLine[]
+  presentations     AdPresentation[]
+  stocks            AdStock[]
+  movements         AdInventoryMovement[]
+  saleLines         AdSaleLine[]
+  accountLines      AdAccountLine[]
+  transferLines     AdStockTransferLine[]
+  purchaseLines     AdPurchaseLine[]
+  prepaidItems      AdPrepaidItem[]
+  commitments       AdCustomerCommitment[]
+  purchaseRequests  AdPurchaseRequest[]
 
   @@index([tenantId])
   @@index([categoryId])
@@ -1041,6 +1088,9 @@ model AdPresentation {
   saleLines     AdSaleLine[]
   accountLines  AdAccountLine[]
   transferLines AdStockTransferLine[]
+  purchaseLines AdPurchaseLine[]
+  prepaidItems  AdPrepaidItem[]
+  commitments   AdCustomerCommitment[]
 
   @@index([productId])
   @@schema("ad_licoreria")
@@ -1091,7 +1141,10 @@ model AdStockTransfer {
   toWarehouse     AdWarehouse      @relation("TransferTo", fields: [toWarehouseId], references: [id])
   status          AdTransferStatus @default(DRAFT)
   createdById     String?
+  receivedById    String?
   reason          String?
+  /// Idempotencia: evita doble confirmación/recepción.
+  stockMoved      Boolean          @default(false)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   confirmedAt     DateTime?
@@ -1103,6 +1156,7 @@ model AdStockTransfer {
   @@index([tenantId])
   @@index([fromWarehouseId])
   @@index([toWarehouseId])
+  @@index([status])
   @@schema("ad_licoreria")
 }
 
@@ -1132,9 +1186,10 @@ model AdCustomer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sales    AdSale[]
-  accounts AdAccount[]
-  prepaids AdPrepaid[]
+  sales        AdSale[]
+  accounts     AdAccount[]
+  prepaids     AdPrepaid[]
+  commitments  AdCustomerCommitment[]
 
   @@index([tenantId])
   @@index([tenantId, phone])
@@ -1230,21 +1285,35 @@ model AdAccount {
   table         AdTableSpace?   @relation(fields: [tableId], references: [id])
   mesoneraId    String?
   mesonera      AdOperator?     @relation("AccountMesonera", fields: [mesoneraId], references: [id])
+  openedById    String?
   customerId    String?
   customer      AdCustomer?     @relation(fields: [customerId], references: [id])
   customerName  String?
   customerPhone String?
+  accountNumber Int
   status        AdAccountStatus @default(ABIERTA)
+  discountUsd   Decimal         @default(0) @db.Decimal(18, 4)
+  discountBs    Decimal         @default(0) @db.Decimal(18, 4)
   notes         String?
+  receiptNumber String?
+  closedAt      DateTime?
+  closedById    String?
+  voidedAt      DateTime?
+  voidReason    String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  closedAt      DateTime?
 
-  lines AdAccountLine[]
+  lines        AdAccountLine[]
+  payments     AdAccountPayment[]
+  serviceLogs  AdServiceLog[]
+  commitments  AdCustomerCommitment[]
+  prepaidLinks AdPrepaid[]
 
+  @@unique([tenantId, accountNumber])
   @@index([tenantId])
   @@index([warehouseId])
   @@index([mesoneraId])
+  @@index([status])
   @@schema("ad_licoreria")
 }
 
@@ -1265,42 +1334,200 @@ model AdAccountLine {
   @@schema("ad_licoreria")
 }
 
+model AdAccountPayment {
+  id         String          @id @default(uuid())
+  accountId  String
+  account    AdAccount       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  method     String
+  currency   AdMoneyCurrency
+  amount     Decimal         @db.Decimal(18, 4)
+  reference  String?
+  bank       String?
+  createdAt  DateTime        @default(now())
+  operatorId String?
+
+  @@index([accountId])
+  @@schema("ad_licoreria")
+}
+
+model AdServiceLog {
+  id             String     @id @default(uuid())
+  accountId      String?
+  account        AdAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  prepaidId      String?
+  prepaid        AdPrepaid? @relation(fields: [prepaidId], references: [id], onDelete: SetNull)
+  productId      String
+  presentationId String
+  qtyServed      Decimal    @db.Decimal(18, 4)
+  qtyBase        Decimal    @db.Decimal(18, 4)
+  operatorId     String?
+  warehouseId    String?
+  createdAt      DateTime   @default(now())
+
+  @@index([accountId])
+  @@index([prepaidId])
+  @@schema("ad_licoreria")
+}
+
 model AdPrepaid {
-  id            String          @id @default(uuid())
-  tenantId      String
-  tenant        AdTenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customerId    String
-  customer      AdCustomer      @relation(fields: [customerId], references: [id])
-  /// Token opaco — nunca exponer IDs internos en el QR.
-  qrToken       String          @unique
-  receiptRef    String?
-  status        AdPrepaidStatus @default(ACTIVE)
-  totalQtyBase  Decimal         @db.Decimal(18, 4)
-  remainingBase Decimal         @db.Decimal(18, 4)
-  payload       Json?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id               String          @id @default(uuid())
+  tenantId         String
+  tenant           AdTenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId       String
+  customer         AdCustomer      @relation(fields: [customerId], references: [id])
+  warehouseId      String?
+  qrToken          String          @unique
+  code             String
+  receiptRef       String?
+  status           AdPrepaidStatus @default(ACTIVE)
+  customerPhone    String
+  customerDocument String?
+  sourceAccountId  String?
+  sourceAccount    AdAccount?      @relation(fields: [sourceAccountId], references: [id])
+  version          Int             @default(0)
+  totalQtyBase     Decimal         @default(0) @db.Decimal(18, 4)
+  remainingBase    Decimal         @default(0) @db.Decimal(18, 4)
+  payload          Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
+  items        AdPrepaidItem[]
   consumptions AdPrepaidConsumption[]
+  serviceLogs  AdServiceLog[]
 
+  @@unique([tenantId, code])
   @@index([tenantId])
   @@index([customerId])
   @@schema("ad_licoreria")
 }
 
-model AdPrepaidConsumption {
-  id              String    @id @default(uuid())
-  prepaidId       String
-  prepaid         AdPrepaid @relation(fields: [prepaidId], references: [id], onDelete: Cascade)
-  qtyBase         Decimal   @db.Decimal(18, 4)
-  operatorId      String?
-  verifiedPhone   String?
-  verifiedDocument String?
-  createdAt       DateTime  @default(now())
+model AdPrepaidItem {
+  id             String         @id @default(uuid())
+  prepaidId      String
+  prepaid        AdPrepaid      @relation(fields: [prepaidId], references: [id], onDelete: Cascade)
+  productId      String
+  product        AdProduct      @relation(fields: [productId], references: [id])
+  presentationId String
+  presentation   AdPresentation @relation(fields: [presentationId], references: [id])
+  qtyPurchased   Decimal        @db.Decimal(18, 4)
+  qtyConsumed    Decimal        @default(0) @db.Decimal(18, 4)
+  unitPriceUsd   Decimal        @db.Decimal(18, 4)
+  unitPriceBs    Decimal        @db.Decimal(18, 4)
+  qtyBasePerUnit Decimal        @db.Decimal(18, 6)
 
   @@index([prepaidId])
   @@schema("ad_licoreria")
 }
+
+model AdPrepaidConsumption {
+  id               String    @id @default(uuid())
+  prepaidId        String
+  prepaid          AdPrepaid @relation(fields: [prepaidId], references: [id], onDelete: Cascade)
+  productId        String?
+  presentationId   String?
+  qty              Decimal   @default(0) @db.Decimal(18, 4)
+  qtyBase          Decimal   @db.Decimal(18, 4)
+  operatorId       String?
+  verifiedPhone    String?
+  verifiedDocument String?
+  createdAt        DateTime  @default(now())
+
+  @@index([prepaidId])
+  @@schema("ad_licoreria")
+}
+
+model AdCustomerCommitment {
+  id               String             @id @default(uuid())
+  tenantId         String
+  tenant           AdTenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId       String?
+  customer         AdCustomer?        @relation(fields: [customerId], references: [id])
+  accountId        String
+  account          AdAccount          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  productId        String
+  product          AdProduct          @relation(fields: [productId], references: [id])
+  presentationId   String
+  presentation     AdPresentation     @relation(fields: [presentationId], references: [id])
+  qtyRemaining     Decimal            @db.Decimal(18, 4)
+  qtyBaseRemaining Decimal            @db.Decimal(18, 4)
+  status           AdCommitmentStatus @default(PENDIENTE)
+  blocksSales      Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([tenantId, status])
+  @@index([productId])
+  @@index([accountId])
+  @@schema("ad_licoreria")
+}
+
+model AdPurchase {
+  id            String           @id @default(uuid())
+  tenantId      String
+  tenant        AdTenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  warehouseId   String
+  warehouse     AdWarehouse      @relation(fields: [warehouseId], references: [id])
+  supplierName  String
+  invoiceNumber String
+  status        AdPurchaseStatus @default(DRAFT)
+  currencyNote  String?
+  reference     String?
+  notes         String?
+  totalCostUsd  Decimal          @default(0) @db.Decimal(18, 4)
+  totalCostBs   Decimal          @default(0) @db.Decimal(18, 4)
+  createdById   String?
+  receivedById  String?
+  receivedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  lines AdPurchaseLine[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([warehouseId])
+  @@index([status])
+  @@schema("ad_licoreria")
+}
+
+model AdPurchaseLine {
+  id             String         @id @default(uuid())
+  purchaseId     String
+  purchase       AdPurchase     @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId      String
+  product        AdProduct      @relation(fields: [productId], references: [id])
+  presentationId String
+  presentation   AdPresentation @relation(fields: [presentationId], references: [id])
+  qty            Decimal        @db.Decimal(18, 4)
+  qtyBase        Decimal        @db.Decimal(18, 4)
+  unitCostUsd    Decimal        @db.Decimal(18, 6)
+  unitCostBs     Decimal        @db.Decimal(18, 6)
+  lineCostUsd    Decimal        @db.Decimal(18, 4)
+  lineCostBs     Decimal        @db.Decimal(18, 4)
+
+  @@index([purchaseId])
+  @@schema("ad_licoreria")
+}
+
+model AdPurchaseRequest {
+  id            String                  @id @default(uuid())
+  tenantId      String
+  tenant        AdTenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId     String
+  product       AdProduct               @relation(fields: [productId], references: [id])
+  warehouseId   String?
+  qtyBaseNeeded Decimal                 @db.Decimal(18, 4)
+  status        AdPurchaseRequestStatus @default(REQUESTED)
+  reason        String?
+  createdById   String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@index([tenantId, status])
+  @@index([productId])
+  @@schema("ad_licoreria")
+}
+
 
 model AdCashClosure {
   id              String          @id @default(uuid())
