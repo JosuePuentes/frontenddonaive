@@ -464,6 +464,15 @@ export const adTvRepository = {
       pairingLock = null;
       return { ok: true, data: screen };
     }
+    /** Ya hay código: no regenerar ni empujar (evita parpadeos en la TV). */
+    if (screen.status === "PAIRING" && screen.pairingCode) {
+      pairingLock = {
+        screenId: screen.id,
+        pairingCode: screen.pairingCode,
+        token: screen.pairingToken || uid("pair"),
+      };
+      return { ok: true, data: screen };
+    }
     const code = screen.pairingCode || pairingCode();
     const token = screen.pairingToken || uid("pair");
     const next: AdTvScreen = {

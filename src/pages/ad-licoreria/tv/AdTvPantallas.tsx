@@ -62,7 +62,7 @@ export default function AdTvPantallas() {
     void adTvRepository.refreshFromSync();
     const t = window.setInterval(() => {
       void adTvRepository.refreshFromSync();
-    }, 2000);
+    }, 3000);
     return () => window.clearInterval(t);
   }, []);
 

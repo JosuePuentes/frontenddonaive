@@ -16,7 +16,7 @@ import {
 } from "@/services/ad-licoreria/tv/repository";
 import { adTvRealtime } from "@/services/ad-licoreria/tv/realtime";
 
-type AdTvStore = AdTvRepositoryState & {
+type AdTvActions = {
   listScreens: typeof adTvRepository.listScreens;
   getScreen: typeof adTvRepository.getScreen;
   listContents: typeof adTvRepository.listContents;
@@ -40,11 +40,39 @@ type AdTvStore = AdTvRepositoryState & {
   realtime: typeof adTvRealtime;
 };
 
+type AdTvStore = AdTvRepositoryState & AdTvActions;
+
 const AdTvContext = createContext<AdTvStore | null>(null);
 
 function getSnapshot() {
   return adTvRepository.getState();
 }
+
+/** Acciones estables: no recrear en cada sync (evita reinicios del reproductor). */
+const TV_ACTIONS: AdTvActions = {
+  listScreens: () => adTvRepository.listScreens(),
+  getScreen: (id) => adTvRepository.getScreen(id),
+  listContents: () => adTvRepository.listContents(),
+  listGroups: () => adTvRepository.listGroups(),
+  listAudit: () => adTvRepository.listAudit(),
+  createScreen: (input) => adTvRepository.createScreen(input),
+  updateScreen: (input) => adTvRepository.updateScreen(input),
+  deleteScreen: (input) => adTvRepository.deleteScreen(input),
+  beginPairing: (input) => adTvRepository.beginPairing(input),
+  pairWithCode: (input) => adTvRepository.pairWithCode(input),
+  pairWithCodeRemote: (input) => adTvRepository.pairWithCodeRemote(input),
+  unpairScreen: (input) => adTvRepository.unpairScreen(input),
+  heartbeat: (id) => adTvRepository.heartbeat(id),
+  createContent: (input) => adTvRepository.createContent(input),
+  createGroup: (input) => adTvRepository.createGroup(input),
+  setGroupScreens: (input) => adTvRepository.setGroupScreens(input),
+  addScreenToGroup: (input) => adTvRepository.addScreenToGroup(input),
+  removeScreenFromGroup: (input) =>
+    adTvRepository.removeScreenFromGroup(input),
+  dispatchCommand: (input) => adTvRepository.dispatchCommand(input),
+  reset: () => adTvRepository.reset(),
+  realtime: adTvRealtime,
+};
 
 export function AdTvProvider({ children }: { children: ReactNode }) {
   const snap = useSyncExternalStore(
@@ -56,28 +84,7 @@ export function AdTvProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AdTvStore>(
     () => ({
       ...snap,
-      listScreens: () => adTvRepository.listScreens(),
-      getScreen: (id) => adTvRepository.getScreen(id),
-      listContents: () => adTvRepository.listContents(),
-      listGroups: () => adTvRepository.listGroups(),
-      listAudit: () => adTvRepository.listAudit(),
-      createScreen: (input) => adTvRepository.createScreen(input),
-      updateScreen: (input) => adTvRepository.updateScreen(input),
-      deleteScreen: (input) => adTvRepository.deleteScreen(input),
-      beginPairing: (input) => adTvRepository.beginPairing(input),
-      pairWithCode: (input) => adTvRepository.pairWithCode(input),
-      pairWithCodeRemote: (input) => adTvRepository.pairWithCodeRemote(input),
-      unpairScreen: (input) => adTvRepository.unpairScreen(input),
-      heartbeat: (id) => adTvRepository.heartbeat(id),
-      createContent: (input) => adTvRepository.createContent(input),
-      createGroup: (input) => adTvRepository.createGroup(input),
-      setGroupScreens: (input) => adTvRepository.setGroupScreens(input),
-      addScreenToGroup: (input) => adTvRepository.addScreenToGroup(input),
-      removeScreenFromGroup: (input) =>
-        adTvRepository.removeScreenFromGroup(input),
-      dispatchCommand: (input) => adTvRepository.dispatchCommand(input),
-      reset: () => adTvRepository.reset(),
-      realtime: adTvRealtime,
+      ...TV_ACTIONS,
     }),
     [snap],
   );

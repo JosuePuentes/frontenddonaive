@@ -6,8 +6,8 @@ import type { AdTvCommand } from "@/types/ad-tv";
 
 /**
  * Reproductor fullscreen para el televisor.
- * Solo espera: muestra el código → cuando el móvil vincula y manda play, reproduce.
- * En la TV no hay que configurar nada más.
+ * 1) Muestra un código fijo hasta vincular.
+ * 2) Vinculada: espera contenido del móvil (sin regenerar código ni recargar).
  */
 export default function AdTvPlayer() {
   const { id = "" } = useParams();
@@ -28,22 +28,30 @@ export default function AdTvPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [pairedFlash, setPairedFlash] = useState(false);
   const [bootMsg, setBootMsg] = useState("Preparando pantalla…");
-  /** Código fijado en UI para que no desaparezca por carreras de sync. */
+  /** Código fijo de esta sesión (no cambia hasta vincular). */
   const [lockedCode, setLockedCode] = useState<string | null>(null);
-  const wasPaired = useRef(false);
-  const bootedFor = useRef<string | null>(null);
+  /** Una vez vinculada en esta pestaña, no volver a pantalla de código. */
+  const stickyPaired = useRef(false);
+  const bootedRef = useRef(false);
+  const flashShown = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
-    bootedFor.current = decoded;
+    stickyPaired.current = false;
+    flashShown.current = false;
+    bootedRef.current = false;
     setLockedCode(null);
     setBootMsg("Conectando…");
+  }, [decoded]);
+
+  useEffect(() => {
+    if (bootedRef.current) return;
+    let cancelled = false;
 
     void (async () => {
       await adTvRepository.refreshFromSync();
-      if (cancelled || bootedFor.current !== decoded) return;
+      if (cancelled) return;
 
-      let s = adTvRepository.getScreen(decoded);
+      const s = adTvRepository.getScreen(decoded);
       if (!s) {
         setBootMsg(
           "Pantalla no encontrada. Abra /tv/reproductor/TV-001 (o TV-002 / TV-003).",
@@ -51,26 +59,24 @@ export default function AdTvPlayer() {
         return;
       }
 
+      bootedRef.current = true;
+
       if (s.paired) {
-        setBootMsg("");
+        stickyPaired.current = true;
         setLockedCode(null);
-        wasPaired.current = true;
+        setBootMsg("");
         return;
       }
 
       const r = beginPairing({ screenId: s.id });
       if (!r.ok) {
         setBootMsg(r.error);
+        bootedRef.current = false;
         return;
       }
-      const code = r.data.pairingCode;
-      if (code) setLockedCode(code);
+      if (r.data.pairingCode) setLockedCode(r.data.pairingCode);
       setBootMsg("");
       await adTvRepository.flushSync();
-      if (cancelled) return;
-      /** Relee sin pisar el código bloqueado en UI. */
-      s = adTvRepository.getScreen(decoded);
-      if (s?.pairingCode) setLockedCode(s.pairingCode);
     })();
 
     return () => {
@@ -79,44 +85,35 @@ export default function AdTvPlayer() {
   }, [decoded, beginPairing]);
 
   useEffect(() => {
-    if (!screen || screen.paired) return;
-    if (screen.pairingCode) {
-      setLockedCode((prev) => prev || screen.pairingCode || null);
+    if (!screen) return;
+    if (screen.paired) {
+      stickyPaired.current = true;
+      setLockedCode(null);
       return;
     }
-    if (screen.status !== "PAIRING") {
-      const r = beginPairing({ screenId: screen.id });
-      if (r.ok && r.data.pairingCode) {
-        setLockedCode(r.data.pairingCode);
-        void adTvRepository.flushSync();
-      }
+    /** Ya vinculada en esta sesión: ignorar flappers de sync. */
+    if (stickyPaired.current) return;
+    if (screen.pairingCode) {
+      setLockedCode((prev) => prev ?? screen.pairingCode ?? null);
     }
-  }, [
-    screen?.id,
-    screen?.paired,
-    screen?.pairingCode,
-    screen?.status,
-    beginPairing,
-  ]);
+  }, [screen?.paired, screen?.pairingCode, screen]);
 
   useEffect(() => {
     if (!screen) return;
+    /** Heartbeat silencioso: no debe regenerar código ni empujar pairing. */
     const t = window.setInterval(() => {
       heartbeat(screen.id);
-    }, 8000);
-    heartbeat(screen.id);
+    }, 12000);
     return () => window.clearInterval(t);
   }, [screen?.id, heartbeat]);
 
   useEffect(() => {
-    if (screen?.paired && !wasPaired.current) {
-      setPairedFlash(true);
-      setLockedCode(null);
-      const t = window.setTimeout(() => setPairedFlash(false), 2200);
-      wasPaired.current = true;
-      return () => window.clearTimeout(t);
-    }
-    if (!screen?.paired) wasPaired.current = false;
+    if (!screen?.paired || flashShown.current) return;
+    flashShown.current = true;
+    stickyPaired.current = true;
+    setPairedFlash(true);
+    const t = window.setTimeout(() => setPairedFlash(false), 2000);
+    return () => window.clearTimeout(t);
   }, [screen?.paired]);
 
   useEffect(() => {
@@ -170,6 +167,7 @@ export default function AdTvPlayer() {
     screen?.currentContentId,
   ]);
 
+  const isPaired = Boolean(screen?.paired || stickyPaired.current);
   const shownCode = lockedCode || screen?.pairingCode || null;
 
   if (!screen) {
@@ -182,7 +180,7 @@ export default function AdTvPlayer() {
     );
   }
 
-  if (!screen.paired) {
+  if (!isPaired) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1510_0%,#0a0a0c_70%)] text-white px-4">
         <p className="mb-2 text-sm uppercase tracking-[0.35em] text-amber-200/70">
@@ -195,8 +193,7 @@ export default function AdTvPlayer() {
           {screen.name} · {screen.code}
         </p>
         <p className="mt-4 max-w-lg text-center text-base text-amber-100/80 md:text-lg">
-          Anote este código en el teléfono. Luego elija el contenido allí: en
-          esta TV no hay que hacer nada más.
+          Anote este código en el teléfono. En esta TV no hay que hacer nada más.
         </p>
         <p
           className="mt-10 font-mono text-6xl tracking-[0.2em] text-amber-200 md:text-8xl"
@@ -210,34 +207,33 @@ export default function AdTvPlayer() {
           </p>
         ) : (
           <p className="mt-8 max-w-md text-center text-sm opacity-50">
-            Teléfono → TV → Pantallas → escriba el código → Vincular → Control TV
-            → Reproducir.
+            El código no cambia. Teléfono → Pantallas → Vincular → Control TV.
           </p>
         )}
       </div>
     );
   }
 
-  const idle =
-    !content ||
-    screen.playbackState === "IDLE" ||
-    screen.playbackState === "STOPPED";
+  const playing =
+    Boolean(content) && screen.playbackState === "PLAYING";
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-black text-white">
       {pairedFlash ? (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80">
-          <p className="text-3xl text-emerald-300">✓ Vinculada · espere el contenido</p>
+          <p className="text-3xl text-emerald-300">
+            ✓ Vinculada · esperando contenido
+          </p>
         </div>
       ) : null}
 
-      {idle ? (
+      {!playing ? (
         <div className="flex h-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,#121018_0%,#000_75%)] px-6 text-center">
           <p className="font-[Cormorant_Garamond,serif] text-5xl md:text-6xl">
             Pantalla lista
           </p>
           <p className="mt-4 max-w-md text-base tracking-wide text-amber-100/70">
-            Esperando lo que elija en el teléfono (Control TV).
+            Vinculada. Esperando lo que elija en el teléfono.
           </p>
           <p className="mt-10 text-xs opacity-35">
             {screen.name} · {screen.code}
