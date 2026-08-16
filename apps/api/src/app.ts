@@ -24,7 +24,8 @@ export function createApp() {
     }),
   );
   app.use(cors(buildCorsOptions()));
-  app.use(express.json({ limit: "12mb" }));
+  app.use(express.json({ limit: "40mb" }));
+  app.use(express.raw({ type: "application/octet-stream", limit: "40mb" }));
 
   app.use(healthRouter);
   /** A&D público: login/bootstrap/logout (JWT). */

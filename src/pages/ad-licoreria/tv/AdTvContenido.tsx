@@ -7,7 +7,10 @@ import {
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
-import { uploadTvAsset } from "@/services/ad-licoreria/tv/sync-client";
+import {
+  uploadTvAsset,
+  uploadTvFile,
+} from "@/services/ad-licoreria/tv/sync-client";
 import type { AdTvContentType } from "@/types/ad-tv";
 
 const TYPES: AdTvContentType[] = [
@@ -18,15 +21,26 @@ const TYPES: AdTvContentType[] = [
   "PROMOTION",
 ];
 
-const MAX_BYTES = 4.5 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 35 * 1024 * 1024;
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
-    reader.readAsDataURL(file);
-  });
+function friendlyTitle(file: File, kind: "image" | "video") {
+  const base = file.name.replace(/\.[^.]+$/, "").trim();
+  const looksLikeId =
+    !base ||
+    /^[0-9A-F-]{10,}$/i.test(base) ||
+    /^IMG_\d+/i.test(base) ||
+    base.length > 48;
+  if (looksLikeId) {
+    const stamp = new Date().toLocaleString("es", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return kind === "video" ? `Video ${stamp}` : `Imagen ${stamp}`;
+  }
+  return base.slice(0, 60);
 }
 
 export default function AdTvContenido() {
@@ -39,6 +53,7 @@ export default function AdTvContenido() {
     hasPermission("tv.content.manage") || hasPermission("tv.manage");
   const canView = hasPermission("tv.view");
   const fileRef = useRef<HTMLInputElement>(null);
+  const pickedFileRef = useRef<File | null>(null);
 
   const [name, setName] = useState("");
   const [type, setType] = useState<AdTvContentType>("IMAGE");
@@ -47,11 +62,18 @@ export default function AdTvContenido() {
   const [msg, setMsg] = useState("");
   const [fileLabel, setFileLabel] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     void adTvRepository.refreshFromSync();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (videoPreview) URL.revokeObjectURL(videoPreview);
+    };
+  }, [videoPreview]);
 
   const demoScreen = screens[0];
   const playerExample = demoScreen
@@ -68,29 +90,53 @@ export default function AdTvContenido() {
 
   async function onPickFile(file: File | null) {
     if (!file) return;
-    if (file.size > MAX_BYTES) {
-      setMsg("Archivo muy grande (máx. ~4,5 MB en modo demo).");
+    const isVideo = file.type.startsWith("video/");
+    const isImage = file.type.startsWith("image/");
+    if (!isVideo && !isImage) {
+      setMsg("Solo imagen (JPG/PNG/WebP) o video (MP4).");
+      return;
+    }
+    const max = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    if (file.size > max) {
+      setMsg(
+        isVideo
+          ? "Video muy grande (máx. ~35 MB). Prefiera MP4 comprimido."
+          : "Imagen muy grande (máx. ~8 MB).",
+      );
       return;
     }
     setBusy(true);
     setMsg("");
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      setUrl(dataUrl);
+      pickedFileRef.current = file;
       setFileLabel(file.name);
-      setPreview(file.type.startsWith("image/") ? dataUrl : null);
-      if (file.type.startsWith("video/")) {
+      if (videoPreview) URL.revokeObjectURL(videoPreview);
+      setVideoPreview(null);
+      setPreview(null);
+      setUrl("");
+
+      if (isVideo) {
         setType("VIDEO");
-        setPreview(null);
-      } else if (file.type.startsWith("image/")) {
-        if (type === "VIDEO" || type === "TEXT") setType("IMAGE");
+        setDuration(30);
+        setVideoPreview(URL.createObjectURL(file));
+        setName((prev) => prev.trim() || friendlyTitle(file, "video"));
+        setMsg(`Video listo: ${file.name}. Pulse «Guardar contenido».`);
+      } else {
+        setType("IMAGE");
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(String(reader.result ?? ""));
+          reader.onerror = () => reject(new Error("No se pudo leer"));
+          reader.readAsDataURL(file);
+        });
+        setUrl(dataUrl);
+        setPreview(dataUrl);
+        setName((prev) => prev.trim() || friendlyTitle(file, "image"));
+        setMsg("Imagen lista. Pulse «Guardar contenido».");
       }
-      if (!name.trim()) {
-        setName(file.name.replace(/\.[^.]+$/, "").slice(0, 60));
-      }
-      setMsg(`Archivo listo: ${file.name}. Pulse «Guardar contenido».`);
     } catch {
       setMsg("No se pudo cargar el archivo");
+      pickedFileRef.current = null;
     } finally {
       setBusy(false);
     }
@@ -98,29 +144,37 @@ export default function AdTvContenido() {
 
   async function save() {
     if (!name.trim()) {
-      setMsg("Escriba un nombre");
+      setMsg("Escriba un nombre corto (ej. Promo viernes)");
       return;
     }
-    if (type !== "TEXT" && !url.trim()) {
+    const file = pickedFileRef.current;
+    if (type !== "TEXT" && !file && !url.trim()) {
       setMsg("Suba una imagen/video o pegue una URL");
       return;
     }
     setBusy(true);
-    setMsg("Subiendo al servidor…");
+    setMsg(type === "VIDEO" ? "Subiendo video…" : "Subiendo…");
     try {
       let finalUrl = url.trim();
-      if (finalUrl.startsWith("data:")) {
-        const uploaded = await uploadTvAsset(finalUrl);
+      if (file) {
+        const uploaded = await uploadTvFile(file);
         if (!uploaded) {
           setMsg(
-            "No se pudo subir la imagen al servidor. Revise la conexión e intente de nuevo.",
+            "No se pudo subir el archivo. Intente de nuevo o use un MP4 más liviano.",
           );
+          return;
+        }
+        finalUrl = uploaded;
+      } else if (finalUrl.startsWith("data:")) {
+        const uploaded = await uploadTvAsset(finalUrl);
+        if (!uploaded) {
+          setMsg("No se pudo subir al servidor. Revise la conexión.");
           return;
         }
         finalUrl = uploaded;
       }
       const r = createContent({
-        name,
+        name: name.trim(),
         type,
         url: finalUrl,
         durationSec: duration,
@@ -132,13 +186,14 @@ export default function AdTvContenido() {
       }
       await adTvRepository.flushSync();
       await adTvRepository.refreshFromSync();
-      setMsg(
-        `✓ Guardado: ${r.data.name}. Ya está en la lista — vaya a Control TV y pulse ▶.`,
-      );
+      setMsg(`✓ Guardado: ${r.data.name}. Vaya a Control TV y pulse ▶.`);
       setName("");
       setUrl("");
       setFileLabel("");
       setPreview(null);
+      if (videoPreview) URL.revokeObjectURL(videoPreview);
+      setVideoPreview(null);
+      pickedFileRef.current = null;
       if (fileRef.current) fileRef.current.value = "";
     } finally {
       setBusy(false);
@@ -154,7 +209,7 @@ export default function AdTvContenido() {
             Contenido
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Suba la imagen, pulse Guardar, luego reprodúzcala desde Control TV.
+            Suba imagen o video, guarde, y reprodúzcalo desde Control TV.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -171,10 +226,10 @@ export default function AdTvContenido() {
         <h2 className="ad-panel-title">Cómo verlo en el TV</h2>
         <ol className="list-decimal space-y-2 pl-5 text-sm text-[var(--ad-muted)]">
           <li>
-            <strong className="text-[var(--ad-text)]">Guarde el contenido</strong>{" "}
-            aquí (imagen + botón Guardar).
+            <strong className="text-[var(--ad-text)]">Guarde</strong> imagen o
+            video aquí.
           </li>
-          <li>TV vinculada (código en el televisor → Pantallas → Vincular).</li>
+          <li>TV vinculada en Pantallas.</li>
           <li>
             <Link
               className="text-[var(--ad-gold-soft)] underline"
@@ -182,12 +237,11 @@ export default function AdTvContenido() {
             >
               Control TV
             </Link>{" "}
-            → elija la imagen →{" "}
-            <strong className="text-[var(--ad-text)]">▶ Reproducir</strong>.
+            → elija → ▶ Reproducir.
           </li>
         </ol>
         <p className="text-xs text-[var(--ad-muted)]">
-          Reproductor TV:{" "}
+          Reproductor:{" "}
           <Link
             className="text-[var(--ad-gold-soft)] underline"
             to={playerExample}
@@ -200,7 +254,7 @@ export default function AdTvContenido() {
 
       {canManage ? (
         <section className="ad-panel space-y-3">
-          <h2 className="ad-panel-title">Agregar contenido</h2>
+          <h2 className="ad-panel-title">Agregar imagen o video</h2>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <input
               className="ad-input"
@@ -231,13 +285,13 @@ export default function AdTvContenido() {
 
           <div className="space-y-2 rounded border border-[var(--ad-line)] p-3">
             <p className="text-xs uppercase tracking-wide text-[var(--ad-gold)]">
-              Subir imagen o video
+              Subir archivo
             </p>
             <input
               ref={fileRef}
               className="ad-input"
               type="file"
-              accept="image/*,video/*"
+              accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
               disabled={busy}
               onChange={(e) => void onPickFile(e.target.files?.[0] ?? null)}
             />
@@ -245,7 +299,7 @@ export default function AdTvContenido() {
               <p className="text-sm text-[var(--ad-gold-soft)]">{fileLabel}</p>
             ) : (
               <p className="text-xs text-[var(--ad-muted)]">
-                JPG, PNG, WebP o MP4 · máx. ~4,5 MB.
+                Imagen hasta ~8 MB · Video MP4 hasta ~35 MB (recomendado MP4).
               </p>
             )}
             {preview ? (
@@ -255,15 +309,24 @@ export default function AdTvContenido() {
                 className="mt-2 max-h-48 w-full rounded object-contain bg-black/40"
               />
             ) : null}
+            {videoPreview ? (
+              <video
+                src={videoPreview}
+                className="mt-2 max-h-48 w-full rounded bg-black/40"
+                controls
+                playsInline
+              />
+            ) : null}
           </div>
 
           <label className="ad-pos__field">
-            <span>O pegar URL (opcional si ya subió archivo)</span>
+            <span>O pegar URL (imagen o .mp4)</span>
             <input
               className="ad-input"
-              placeholder="https://… imagen o .mp4"
+              placeholder="https://… imagen o video"
               value={url.startsWith("data:") ? "" : url}
               onChange={(e) => {
+                pickedFileRef.current = null;
                 setUrl(e.target.value);
                 setFileLabel("");
                 setPreview(
@@ -271,13 +334,13 @@ export default function AdTvContenido() {
                     ? e.target.value
                     : null,
                 );
+                if (videoPreview) URL.revokeObjectURL(videoPreview);
+                setVideoPreview(null);
+                if (/\.(mp4|webm)(\?|$)/i.test(e.target.value)) {
+                  setType("VIDEO");
+                }
               }}
             />
-            {url.startsWith("data:") ? (
-              <span className="text-xs text-[var(--ad-muted)]">
-                Archivo listo — pulse Guardar contenido
-              </span>
-            ) : null}
           </label>
 
           <button
@@ -338,36 +401,42 @@ export default function AdTvContenido() {
                     return (b.updatedAt || "").localeCompare(a.updatedAt || "");
                   })
                   .map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      {c.url &&
-                      (c.type === "IMAGE" ||
-                        c.type === "PROMOTION" ||
-                        c.type === "MENU" ||
-                        c.url.includes("/tv/assets/") ||
-                        c.url.startsWith("data:image")) ? (
-                        <img
-                          src={c.url}
-                          alt=""
-                          className="h-10 w-14 rounded object-cover"
-                        />
-                      ) : (
-                        <span className="text-xs text-[var(--ad-muted)]">—</span>
-                      )}
-                    </td>
-                    <td>{c.name}</td>
-                    <td>{c.type}</td>
-                    <td>{c.durationSec}s</td>
-                    <td className="max-w-[180px] truncate text-xs">
-                      {c.url.includes("/tv/assets/")
-                        ? "Servidor TV"
-                        : c.url.startsWith("data:")
-                          ? "Archivo local"
-                          : c.url || "—"}
-                    </td>
-                    <td>{c.active ? "Sí" : "No"}</td>
-                  </tr>
-                ))}
+                    <tr key={c.id}>
+                      <td>
+                        {c.type === "VIDEO" ? (
+                          <span className="text-xs text-[var(--ad-gold-soft)]">
+                            VIDEO
+                          </span>
+                        ) : c.url &&
+                          (c.type === "IMAGE" ||
+                            c.type === "PROMOTION" ||
+                            c.type === "MENU" ||
+                            c.url.includes("/tv/assets/") ||
+                            c.url.startsWith("data:image")) ? (
+                          <img
+                            src={c.url}
+                            alt=""
+                            className="h-10 w-14 rounded object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs text-[var(--ad-muted)]">
+                            —
+                          </span>
+                        )}
+                      </td>
+                      <td>{c.name}</td>
+                      <td>{c.type}</td>
+                      <td>{c.durationSec}s</td>
+                      <td className="max-w-[180px] truncate text-xs">
+                        {c.url.includes("/tv/assets/")
+                          ? "Servidor TV"
+                          : c.url.startsWith("data:")
+                            ? "Archivo local"
+                            : c.url || "—"}
+                      </td>
+                      <td>{c.active ? "Sí" : "No"}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

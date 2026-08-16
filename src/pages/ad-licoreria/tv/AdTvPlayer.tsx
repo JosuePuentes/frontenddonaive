@@ -152,7 +152,11 @@ export default function AdTvPlayer() {
     el.volume = Math.max(0, Math.min(1, screen.volume / 100));
     el.muted = screen.isMuted;
     if (screen.playbackState === "PLAYING") {
-      void el.play().catch(() => undefined);
+      void el.play().catch(() => {
+        /** Muchos TV exigen mute para autoplay. */
+        el.muted = true;
+        void el.play().catch(() => undefined);
+      });
     } else if (
       screen.playbackState === "PAUSED" ||
       screen.playbackState === "STOPPED"
@@ -233,20 +237,19 @@ export default function AdTvPlayer() {
             Pantalla lista
           </p>
           <p className="mt-4 max-w-md text-base tracking-wide text-amber-100/70">
-            Vinculada. Esperando lo que elija en el teléfono.
-          </p>
-          <p className="mt-10 text-xs opacity-35">
-            {screen.name} · {screen.code}
+            Esperando contenido del teléfono
           </p>
         </div>
       ) : content?.type === "VIDEO" ? (
         <video
           ref={videoRef}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain bg-black"
           src={content.url}
           autoPlay
           playsInline
           loop
+          muted={screen.isMuted}
+          controls={false}
         />
       ) : content?.type === "TEXT" ? (
         <div className="flex h-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a120c_0%,#050505_70%)] px-8 text-center">
@@ -255,16 +258,13 @@ export default function AdTvPlayer() {
           </p>
         </div>
       ) : (
-        <div className="relative flex h-full w-full items-center justify-center bg-black">
+        <div className="flex h-full w-full items-center justify-center bg-black">
           <img
             src={content?.url}
-            alt={content?.name ?? "Contenido TV"}
+            alt=""
             className="max-h-full max-w-full object-contain"
             draggable={false}
           />
-          <div className="pointer-events-none absolute bottom-6 left-6 right-6">
-            <p className="text-lg font-semibold drop-shadow">{content?.name}</p>
-          </div>
         </div>
       )}
     </div>

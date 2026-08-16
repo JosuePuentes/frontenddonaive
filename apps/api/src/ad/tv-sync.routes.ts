@@ -360,6 +360,41 @@ adTvSyncRouter.post("/tv/assets", (req, res) => {
   });
 });
 
+/**
+ * Subida binaria (mejor para videos grandes; body = octetos).
+ * Query: tenant, mimeType
+ */
+adTvSyncRouter.post("/tv/assets/binary", (req, res) => {
+  const key = tenantKey(req);
+  const mimeType = String(
+    req.query.mimeType ||
+      req.headers["x-mime-type"] ||
+      "application/octet-stream",
+  ).trim();
+  const buf = Buffer.isBuffer(req.body)
+    ? req.body
+    : Buffer.from((req.body as ArrayBuffer) || []);
+  if (!buf.length) {
+    res.status(400).json({ error: { message: "archivo vacío" } });
+    return;
+  }
+  if (buf.length > 40 * 1024 * 1024) {
+    res.status(413).json({ error: { message: "Archivo muy grande (máx. 40 MB)" } });
+    return;
+  }
+  const id = `asset-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const meta = writeAsset(key, id, mimeType, buf);
+  res.json({
+    data: {
+      id: meta.id,
+      tenant: key,
+      mimeType: meta.mimeType,
+      bytes: meta.bytes,
+      path: `/api/v1/ad/tv/assets/${encodeURIComponent(id)}?tenant=${encodeURIComponent(key)}`,
+    },
+  });
+});
+
 adTvSyncRouter.get("/tv/assets/:id", (req, res) => {
   const key = tenantKey(req);
   const id = String(req.params.id ?? "");
@@ -373,5 +408,6 @@ adTvSyncRouter.get("/tv/assets/:id", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Content-Type", asset.meta.mimeType);
   res.setHeader("Cache-Control", "public, max-age=3600");
+  res.setHeader("Accept-Ranges", "bytes");
   res.send(asset.buf);
 });

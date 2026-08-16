@@ -94,6 +94,34 @@ export async function uploadTvAsset(dataUrl: string): Promise<string | null> {
   }
 }
 
+/** Sube File (imagen/video) en binario — preferido para videos. */
+export async function uploadTvFile(file: File): Promise<string | null> {
+  const root = baseUrl();
+  if (!root) return null;
+  const mime = file.type || "application/octet-stream";
+  try {
+    const res = await fetch(
+      `${root}/api/v1/ad/tv/assets/binary?tenant=${encodeURIComponent(TENANT)}&mimeType=${encodeURIComponent(mime)}`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/octet-stream",
+          "X-Mime-Type": mime,
+        },
+        body: file,
+      },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data: { path: string } };
+    const path = json.data?.path;
+    if (!path) return null;
+    return `${root}${path.startsWith("/") ? path : `/${path}`}`;
+  } catch {
+    return null;
+  }
+}
+
 export type TvPairResult = {
   ok: true;
   version: number;
