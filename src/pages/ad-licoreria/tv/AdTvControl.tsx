@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
   adTvPlayerPath,
@@ -6,6 +6,7 @@ import {
 } from "@/constants/ad-licoreria-routes";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
+import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
 
 /**
  * Centro de mando: elegir contenido y mandarlo a cada TV vinculada.
@@ -20,16 +21,30 @@ export default function AdTvControl() {
   const canView = hasPermission("tv.view");
 
   const activeContents = useMemo(
-    () => contents.filter((c) => c.active),
+    () => contents.filter((c) => c.active !== false),
     [contents],
   );
-  const [globalContentId, setGlobalContentId] = useState(
-    activeContents[0]?.id ?? "",
-  );
+  const [globalContentId, setGlobalContentId] = useState("");
   const [perScreenContent, setPerScreenContent] = useState<
     Record<string, string>
   >({});
   const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    void adTvRepository.refreshFromSync();
+  }, []);
+
+  useEffect(() => {
+    if (!activeContents.length) {
+      setGlobalContentId("");
+      return;
+    }
+    setGlobalContentId((prev) =>
+      prev && activeContents.some((c) => c.id === prev)
+        ? prev
+        : activeContents[0].id,
+    );
+  }, [activeContents]);
 
   const linked = useMemo(
     () => screens.filter((s) => s.paired || s.status === "ONLINE"),
@@ -52,16 +67,21 @@ export default function AdTvControl() {
   }
 
   function contentFor(screenId: string) {
-    return perScreenContent[screenId] || globalContentId || activeContents[0]?.id || "";
+    return (
+      perScreenContent[screenId] ||
+      globalContentId ||
+      activeContents[0]?.id ||
+      ""
+    );
   }
 
   function playOn(screenIds: string[], contentId: string) {
     if (!contentId) {
-      setMsg("Seleccione un contenido");
+      setMsg("Seleccione un contenido (o cree uno en Contenido)");
       return;
     }
     if (!screenIds.length) {
-      setMsg("No hay pantallas vinculadas");
+      setMsg("No hay pantallas vinculadas. Vincule el TV primero.");
       return;
     }
     const r = dispatchCommand({
@@ -71,11 +91,14 @@ export default function AdTvControl() {
       position: 0,
       screenIds,
     });
-    setMsg(
-      r.ok
-        ? `▶ Reproduciendo en ${r.data.screenIds.length} TV`
-        : r.error,
-    );
+    if (r.ok) {
+      void adTvRepository.flushSync();
+      const name =
+        activeContents.find((c) => c.id === contentId)?.name ?? contentId;
+      setMsg(`▶ Enviado «${name}» a ${r.data.screenIds.length} TV`);
+    } else {
+      setMsg(r.error);
+    }
   }
 
   function stopOn(screenIds: string[]) {
@@ -84,7 +107,32 @@ export default function AdTvControl() {
       userName,
       screenIds,
     });
-    setMsg(r.ok ? `⏹ Detenido` : r.error);
+    if (r.ok) void adTvRepository.flushSync();
+    setMsg(r.ok ? "⏹ Detenido" : r.error);
+  }
+
+  function thumb(url: string, type: string) {
+    if (
+      !url ||
+      type === "TEXT" ||
+      type === "VIDEO" ||
+      !(
+        url.includes("/tv/assets/") ||
+        url.startsWith("data:image") ||
+        type === "IMAGE" ||
+        type === "PROMOTION" ||
+        type === "MENU"
+      )
+    ) {
+      return null;
+    }
+    return (
+      <img
+        src={url}
+        alt=""
+        className="h-16 w-24 shrink-0 rounded object-cover bg-black/40"
+      />
+    );
   }
 
   return (
@@ -96,15 +144,15 @@ export default function AdTvControl() {
             Control TV
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Elija contenido y envíelo a cada TV ya vinculada.
+            Elija la imagen y mándela a la TV vinculada.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link className="ad-btn" to={routes.tvPantallas}>
             Vincular
           </Link>
-          <Link className="ad-btn" to={routes.tvContenido}>
-            Contenido
+          <Link className="ad-btn ad-btn--gold" to={routes.tvContenido}>
+            + Contenido
           </Link>
           <Link className="ad-btn" to={routes.tv}>
             ← Hub
@@ -113,41 +161,87 @@ export default function AdTvControl() {
       </header>
 
       <section className="ad-panel space-y-3">
-        <h2 className="ad-panel-title">Contenido a enviar</h2>
-        <select
-          className="ad-select"
-          value={globalContentId}
-          onChange={(e) => setGlobalContentId(e.target.value)}
-        >
-          {activeContents.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} · {c.type}
-            </option>
-          ))}
-        </select>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="ad-btn ad-btn--gold"
-            onClick={() =>
-              playOn(
-                linked.map((s) => s.id),
-                globalContentId,
-              )
-            }
-            disabled={!linked.length}
-          >
-            ▶ Reproducir en todas las TV vinculadas
-          </button>
-          <button
-            type="button"
-            className="ad-btn"
-            onClick={() => stopOn(linked.map((s) => s.id))}
-            disabled={!linked.length}
-          >
-            ⏹ Detener todas
-          </button>
-        </div>
+        <h2 className="ad-panel-title">
+          Contenido a enviar ({activeContents.length})
+        </h2>
+
+        {!activeContents.length ? (
+          <div className="space-y-2 text-sm text-[var(--ad-muted)]">
+            <p>
+              Está vacío porque aún no hay contenido guardado en el servidor.
+            </p>
+            <p>
+              Vaya a{" "}
+              <Link
+                className="text-[var(--ad-gold-soft)] underline"
+                to={routes.tvContenido}
+              >
+                Contenido
+              </Link>
+              , suba la imagen y pulse <strong className="text-[var(--ad-text)]">Guardar contenido</strong>.
+              Luego vuelva aquí.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-2">
+              {activeContents.map((c) => {
+                const selected = globalContentId === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={[
+                      "flex w-full items-center gap-3 rounded border p-3 text-left transition",
+                      selected
+                        ? "border-[var(--ad-gold)] bg-[var(--ad-gold)]/10"
+                        : "border-[var(--ad-line)]",
+                    ].join(" ")}
+                    onClick={() => setGlobalContentId(c.id)}
+                  >
+                    {thumb(c.url, c.type)}
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium text-[var(--ad-gold-soft)]">
+                        {c.name}
+                      </span>
+                      <span className="block text-xs text-[var(--ad-muted)]">
+                        {c.type} · {c.durationSec}s
+                      </span>
+                    </span>
+                    {selected ? (
+                      <span className="text-xs text-[var(--ad-gold-soft)]">
+                        Elegido
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="ad-btn ad-btn--gold"
+                onClick={() =>
+                  playOn(
+                    linked.map((s) => s.id),
+                    globalContentId,
+                  )
+                }
+                disabled={!linked.length || !globalContentId}
+              >
+                ▶ Reproducir en todas las TV vinculadas
+              </button>
+              <button
+                type="button"
+                className="ad-btn"
+                onClick={() => stopOn(linked.map((s) => s.id))}
+                disabled={!linked.length}
+              >
+                ⏹ Detener todas
+              </button>
+            </div>
+          </>
+        )}
         {msg ? (
           <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p>
         ) : null}
@@ -160,15 +254,15 @@ export default function AdTvControl() {
             <p>Ninguna TV enlazada todavía.</p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>
-                En el televisor abra el reproductor (ej.{" "}
+                En el televisor abra{" "}
                 <Link
                   className="text-[var(--ad-gold-soft)] underline"
                   to={adTvPlayerPath("TV-001")}
                   target="_blank"
                 >
-                  Abrir TV-001
+                  el reproductor TV-001
                 </Link>
-                ).
+                .
               </li>
               <li>Anote el código A&amp;D-####.</li>
               <li>
@@ -219,29 +313,32 @@ export default function AdTvControl() {
                       {playing?.name ?? "Sin contenido"}
                     </span>
                   </p>
-                  <label className="ad-pos__field">
-                    <span>Contenido para esta TV</span>
-                    <select
-                      className="ad-select"
-                      value={cid}
-                      onChange={(e) =>
-                        setPerScreenContent((prev) => ({
-                          ...prev,
-                          [s.id]: e.target.value,
-                        }))
-                      }
-                    >
-                      {activeContents.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} · {c.type}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {activeContents.length ? (
+                    <label className="ad-pos__field">
+                      <span>Contenido para esta TV</span>
+                      <select
+                        className="ad-select"
+                        value={cid}
+                        onChange={(e) =>
+                          setPerScreenContent((prev) => ({
+                            ...prev,
+                            [s.id]: e.target.value,
+                          }))
+                        }
+                      >
+                        {activeContents.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} · {c.type}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       className="ad-btn ad-btn--gold"
+                      disabled={!cid}
                       onClick={() => playOn([s.id], cid)}
                     >
                       ▶ Reproducir aquí

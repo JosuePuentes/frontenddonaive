@@ -6,6 +6,8 @@ import {
 } from "@/constants/ad-licoreria-routes";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
+import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
+import { uploadTvAsset } from "@/services/ad-licoreria/tv/sync-client";
 import type { AdTvContentType } from "@/types/ad-tv";
 
 const TYPES: AdTvContentType[] = [
@@ -82,7 +84,7 @@ export default function AdTvContenido() {
       if (!name.trim()) {
         setName(file.name.replace(/\.[^.]+$/, "").slice(0, 60));
       }
-      setMsg(`Archivo listo: ${file.name}`);
+      setMsg(`Archivo listo: ${file.name}. Pulse «Guardar contenido».`);
     } catch {
       setMsg("No se pudo cargar el archivo");
     } finally {
@@ -90,7 +92,7 @@ export default function AdTvContenido() {
     }
   }
 
-  function save() {
+  async function save() {
     if (!name.trim()) {
       setMsg("Escriba un nombre");
       return;
@@ -99,20 +101,42 @@ export default function AdTvContenido() {
       setMsg("Suba una imagen/video o pegue una URL");
       return;
     }
-    const r = createContent({
-      name,
-      type,
-      url,
-      durationSec: duration,
-      userName,
-    });
-    setMsg(r.ok ? `✓ Creado: ${r.data.name}` : r.error);
-    if (r.ok) {
+    setBusy(true);
+    setMsg("Subiendo al servidor…");
+    try {
+      let finalUrl = url.trim();
+      if (finalUrl.startsWith("data:")) {
+        const uploaded = await uploadTvAsset(finalUrl);
+        if (!uploaded) {
+          setMsg(
+            "No se pudo subir la imagen al servidor. Revise la conexión e intente de nuevo.",
+          );
+          return;
+        }
+        finalUrl = uploaded;
+      }
+      const r = createContent({
+        name,
+        type,
+        url: finalUrl,
+        durationSec: duration,
+        userName,
+      });
+      if (!r.ok) {
+        setMsg(r.error);
+        return;
+      }
+      await adTvRepository.flushSync();
+      setMsg(
+        `✓ Guardado: ${r.data.name}. Vaya a Control TV y pulse ▶ Reproducir.`,
+      );
       setName("");
       setUrl("");
       setFileLabel("");
       setPreview(null);
       if (fileRef.current) fileRef.current.value = "";
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -125,13 +149,17 @@ export default function AdTvContenido() {
             Contenido
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Suba una imagen desde el teléfono o pegue una URL. Luego reprodúzcala
-            en la pantalla TV.
+            Suba la imagen, pulse Guardar, luego reprodúzcala desde Control TV.
           </p>
         </div>
-        <Link className="ad-btn" to={routes.tv}>
-          ← Hub
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link className="ad-btn ad-btn--gold" to={routes.tvControl}>
+            Control TV
+          </Link>
+          <Link className="ad-btn" to={routes.tv}>
+            ← Hub
+          </Link>
+        </div>
       </header>
 
       <section className="ad-panel space-y-3">
@@ -139,43 +167,30 @@ export default function AdTvContenido() {
         <ol className="list-decimal space-y-2 pl-5 text-sm text-[var(--ad-muted)]">
           <li>
             <strong className="text-[var(--ad-text)]">Guarde el contenido</strong>{" "}
-            aquí (imagen subida o URL).
+            aquí (imagen + botón Guardar).
           </li>
+          <li>TV vinculada (código en el televisor → Pantallas → Vincular).</li>
           <li>
-            <strong className="text-[var(--ad-text)]">En el televisor</strong>{" "}
-            abra el navegador (Chrome/Safari) y entre a esta URL del reproductor
-            (no es el login admin):
-            <div className="mt-2">
-              <Link
-                className="ad-btn ad-btn--gold"
-                to={playerExample}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Abrir como TV
-                {demoScreen ? ` · ${demoScreen.code}` : " · TV-001"}
-              </Link>
-            </div>
-            <p className="mt-2 text-xs">
-              Ruta: <code className="text-[var(--ad-gold-soft)]">{playerExample}</code>
-            </p>
-          </li>
-          <li>
-            La TV muestra un código <code>A&amp;D-####</code>. En el celular/admin
-            vaya a{" "}
-            <Link className="text-[var(--ad-gold-soft)] underline" to={routes.tvPantallas}>
-              Pantallas
-            </Link>{" "}
-            → pegue el código → <strong className="text-[var(--ad-text)]">Vincular</strong>.
-          </li>
-          <li>
-            Vaya a{" "}
-            <Link className="text-[var(--ad-gold-soft)] underline" to={routes.tvControl}>
+            <Link
+              className="text-[var(--ad-gold-soft)] underline"
+              to={routes.tvControl}
+            >
               Control TV
-            </Link>
-            , elija este contenido y pulse <strong className="text-[var(--ad-text)]">▶ Reproducir</strong>.
+            </Link>{" "}
+            → elija la imagen →{" "}
+            <strong className="text-[var(--ad-text)]">▶ Reproducir</strong>.
           </li>
         </ol>
+        <p className="text-xs text-[var(--ad-muted)]">
+          Reproductor TV:{" "}
+          <Link
+            className="text-[var(--ad-gold-soft)] underline"
+            to={playerExample}
+            target="_blank"
+          >
+            {playerExample}
+          </Link>
+        </p>
       </section>
 
       {canManage ? (
@@ -225,7 +240,7 @@ export default function AdTvContenido() {
               <p className="text-sm text-[var(--ad-gold-soft)]">{fileLabel}</p>
             ) : (
               <p className="text-xs text-[var(--ad-muted)]">
-                JPG, PNG, WebP o MP4 · máx. ~4,5 MB (demo local, sin nube).
+                JPG, PNG, WebP o MP4 · máx. ~4,5 MB.
               </p>
             )}
             {preview ? (
@@ -255,7 +270,7 @@ export default function AdTvContenido() {
             />
             {url.startsWith("data:") ? (
               <span className="text-xs text-[var(--ad-muted)]">
-                Usando archivo cargado en este dispositivo
+                Archivo listo — pulse Guardar contenido
               </span>
             ) : null}
           </label>
@@ -264,9 +279,9 @@ export default function AdTvContenido() {
             type="button"
             className="ad-btn ad-btn--gold"
             disabled={busy}
-            onClick={save}
+            onClick={() => void save()}
           >
-            Guardar contenido
+            {busy ? "Guardando…" : "Guardar contenido"}
           </button>
           {msg ? (
             <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p>
@@ -282,51 +297,60 @@ export default function AdTvContenido() {
       )}
 
       <section className="ad-panel">
-        <h2 className="ad-panel-title">Catálogo</h2>
-        <div className="ad-table-wrap">
-          <table className="ad-table">
-            <thead>
-              <tr>
-                <th>Vista</th>
-                <th>Nombre</th>
-                <th>Tipo</th>
-                <th>Duración</th>
-                <th>Origen</th>
-                <th>Activo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contents.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    {c.url &&
-                    (c.type === "IMAGE" ||
-                      c.type === "PROMOTION" ||
-                      c.type === "MENU" ||
-                      c.url.startsWith("data:image")) ? (
-                      <img
-                        src={c.url}
-                        alt=""
-                        className="h-10 w-14 rounded object-cover"
-                      />
-                    ) : (
-                      <span className="text-xs text-[var(--ad-muted)]">—</span>
-                    )}
-                  </td>
-                  <td>{c.name}</td>
-                  <td>{c.type}</td>
-                  <td>{c.durationSec}s</td>
-                  <td className="max-w-[180px] truncate text-xs">
-                    {c.url.startsWith("data:")
-                      ? "Archivo local"
-                      : c.url || "—"}
-                  </td>
-                  <td>{c.active ? "Sí" : "No"}</td>
+        <h2 className="ad-panel-title">Catálogo ({contents.length})</h2>
+        {!contents.length ? (
+          <p className="text-sm text-[var(--ad-muted)]">
+            Aún no hay contenido guardado.
+          </p>
+        ) : (
+          <div className="ad-table-wrap">
+            <table className="ad-table">
+              <thead>
+                <tr>
+                  <th>Vista</th>
+                  <th>Nombre</th>
+                  <th>Tipo</th>
+                  <th>Duración</th>
+                  <th>Origen</th>
+                  <th>Activo</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {contents.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      {c.url &&
+                      (c.type === "IMAGE" ||
+                        c.type === "PROMOTION" ||
+                        c.type === "MENU" ||
+                        c.url.includes("/tv/assets/") ||
+                        c.url.startsWith("data:image")) ? (
+                        <img
+                          src={c.url}
+                          alt=""
+                          className="h-10 w-14 rounded object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs text-[var(--ad-muted)]">—</span>
+                      )}
+                    </td>
+                    <td>{c.name}</td>
+                    <td>{c.type}</td>
+                    <td>{c.durationSec}s</td>
+                    <td className="max-w-[180px] truncate text-xs">
+                      {c.url.includes("/tv/assets/")
+                        ? "Servidor TV"
+                        : c.url.startsWith("data:")
+                          ? "Archivo local"
+                          : c.url || "—"}
+                    </td>
+                    <td>{c.active ? "Sí" : "No"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

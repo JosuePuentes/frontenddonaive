@@ -136,10 +136,43 @@ function mergePairingLock(remote: AdTvRepositoryState): AdTvRepositoryState {
   return { ...remote, screens };
 }
 
+/**
+ * Une contenidos locales + remotos para que un push de la TV
+ * no borre la imagen que acaba de guardar el móvil.
+ */
+function mergeContents(
+  remote: AdTvRepositoryState,
+  local: AdTvRepositoryState,
+): { state: AdTvRepositoryState; preservedLocal: boolean } {
+  const map = new Map<string, AdTvContent>();
+  for (const c of remote.contents ?? []) map.set(c.id, c);
+  let preservedLocal = false;
+  for (const c of local.contents ?? []) {
+    const existing = map.get(c.id);
+    if (!existing) {
+      map.set(c.id, c);
+      preservedLocal = true;
+      continue;
+    }
+    if ((c.updatedAt || "") > (existing.updatedAt || "")) {
+      map.set(c.id, c);
+      preservedLocal = true;
+    }
+  }
+  return {
+    state: { ...remote, contents: [...map.values()] },
+    preservedLocal,
+  };
+}
+
 function applyRemoteState(remote: AdTvRepositoryState, version: number) {
   applyingRemote = true;
+  let preservedLocal = false;
   try {
-    state = mergePairingLock(remote);
+    const withPairing = mergePairingLock(remote);
+    const merged = mergeContents(withPairing, state);
+    preservedLocal = merged.preservedLocal;
+    state = merged.state;
     syncVersion = version;
     for (const l of listeners) l();
     if (state.lastCommand) {
@@ -147,6 +180,9 @@ function applyRemoteState(remote: AdTvRepositoryState, version: number) {
     }
   } finally {
     applyingRemote = false;
+  }
+  if (preservedLocal) {
+    schedulePush();
   }
 }
 
@@ -539,6 +575,9 @@ export const adTvRepository = {
     userName: string;
   }): AdTvResult<AdTvContent> {
     if (!input.name.trim()) return { ok: false, error: "Nombre obligatorio" };
+    if (input.type !== "TEXT" && !input.url.trim()) {
+      return { ok: false, error: "URL o archivo obligatorio" };
+    }
     const content: AdTvContent = {
       id: uid("tvc"),
       name: input.name.trim(),
@@ -557,6 +596,7 @@ export const adTvRepository = {
       `Contenido ${content.name} (${content.type})`,
     );
     emit();
+    void pushNow();
     return { ok: true, data: content };
   },
 

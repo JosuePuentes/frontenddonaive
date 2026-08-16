@@ -61,3 +61,29 @@ export async function publishTvSyncState(
     return null;
   }
 }
+
+/** Sube data URL al API y devuelve URL pública corta para el TV. */
+export async function uploadTvAsset(dataUrl: string): Promise<string | null> {
+  const root = baseUrl();
+  if (!root) return null;
+  if (!dataUrl.startsWith("data:")) return dataUrl;
+  try {
+    const res = await fetch(`${root}/api/v1/ad/tv/assets`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ tenant: TENANT, dataUrl }),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      data: { path: string };
+    };
+    const path = json.data?.path;
+    if (!path) return null;
+    return `${root}${path.startsWith("/") ? path : `/${path}`}`;
+  } catch {
+    return null;
+  }
+}
