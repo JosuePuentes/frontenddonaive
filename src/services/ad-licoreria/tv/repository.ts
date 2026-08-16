@@ -11,6 +11,7 @@ import {
 import { adTvRealtime } from "@/services/ad-licoreria/tv/realtime";
 import {
   fetchTvSyncState,
+  pairTvOnServer,
   publishTvSyncState,
 } from "@/services/ad-licoreria/tv/sync-client";
 import type {
@@ -93,13 +94,13 @@ function schedulePush() {
   }, 200);
 }
 
-async function pushNow() {
+async function pushNow(opts?: { allowUnpair?: boolean }) {
   if (pushing || applyingRemote) return;
   pushing = true;
   let needsRepush = false;
   try {
     syncVersion = Math.max(syncVersion + 1, Date.now());
-    const published = await publishTvSyncState(syncVersion, state);
+    const published = await publishTvSyncState(syncVersion, state, opts);
     if (!published) return;
     if (published.conflict && published.state && published.version) {
       applyRemoteState(published.state as AdTvRepositoryState, published.version);
@@ -483,18 +484,25 @@ export const adTvRepository = {
     return { ok: true, data: next };
   },
 
-  /** Admin introduce código A&D-####. */
+  /** Admin introduce código A&D-#### (o solo los 4 dígitos). */
   pairWithCode(input: {
     pairingCode: string;
     userName: string;
   }): AdTvResult<AdTvScreen> {
-    const code = input.pairingCode.trim().toUpperCase().replace(/\s+/g, "");
+    const normalized = input.pairingCode
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "");
+    const digits = input.pairingCode.replace(/\D/g, "").slice(-4);
     const screen = state.screens.find((s) => {
-      const pc = (s.pairingCode ?? "").toUpperCase().replace(/\s+/g, "");
-      return (
-        (s.status === "PAIRING" || Boolean(s.pairingCode)) &&
-        pc === code
-      );
+      const pc = (s.pairingCode ?? "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+      const pd = (s.pairingCode ?? "").replace(/\D/g, "").slice(-4);
+      if (!pc && !pd) return false;
+      if (normalized && pc === normalized) return true;
+      if (digits.length === 4 && pd === digits) return true;
+      return false;
     });
     if (!screen) {
       return {
@@ -520,6 +528,40 @@ export const adTvRepository = {
     return { ok: true, data: next };
   },
 
+  /**
+   * Vincula vía API (recomendado): aplica el estado del servidor
+   * para que la TV y el móvil vean lo mismo al instante.
+   */
+  async pairWithCodeRemote(input: {
+    pairingCode: string;
+    userName: string;
+  }): Promise<AdTvResult<AdTvScreen>> {
+    await pullOnce();
+    const remote = await pairTvOnServer({
+      pairingCode: input.pairingCode,
+      userName: input.userName,
+    });
+    if (!remote.ok) {
+      /** Fallback local por si el endpoint aún no recargó. */
+      const local = this.pairWithCode(input);
+      if (local.ok) {
+        await pushNow();
+        return local;
+      }
+      return { ok: false, error: remote.error };
+    }
+    pairingLock = null;
+    applyRemoteState(remote.state, remote.version);
+    audit(
+      "TV_PAIRED",
+      input.userName,
+      `Vinculó ${remote.screen.code}`,
+      remote.screen,
+    );
+    notifyLocal();
+    return { ok: true, data: remote.screen };
+  },
+
   unpairScreen(input: {
     screenId: string;
     userName: string;
@@ -539,7 +581,8 @@ export const adTvRepository = {
       s.id === screen.id ? next : s,
     );
     audit("TV_UNPAIRED", input.userName, `Desvinculó ${next.code}`, next);
-    emit();
+    notifyLocal();
+    void pushNow({ allowUnpair: true });
     return { ok: true, data: next };
   },
 

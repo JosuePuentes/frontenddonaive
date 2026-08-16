@@ -27,6 +27,7 @@ type AdTvStore = AdTvRepositoryState & {
   deleteScreen: typeof adTvRepository.deleteScreen;
   beginPairing: typeof adTvRepository.beginPairing;
   pairWithCode: typeof adTvRepository.pairWithCode;
+  pairWithCodeRemote: typeof adTvRepository.pairWithCodeRemote;
   unpairScreen: typeof adTvRepository.unpairScreen;
   heartbeat: typeof adTvRepository.heartbeat;
   createContent: typeof adTvRepository.createContent;
@@ -65,6 +66,7 @@ export function AdTvProvider({ children }: { children: ReactNode }) {
       deleteScreen: (input) => adTvRepository.deleteScreen(input),
       beginPairing: (input) => adTvRepository.beginPairing(input),
       pairWithCode: (input) => adTvRepository.pairWithCode(input),
+      pairWithCodeRemote: (input) => adTvRepository.pairWithCodeRemote(input),
       unpairScreen: (input) => adTvRepository.unpairScreen(input),
       heartbeat: (id) => adTvRepository.heartbeat(id),
       createContent: (input) => adTvRepository.createContent(input),

@@ -35,6 +35,87 @@ function assetKey(tenant: string, id: string) {
   return `${tenant}::${id}`;
 }
 
+function normalizePairCode(raw: string) {
+  return String(raw || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function pairCodeDigits(raw: string) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  return digits.length >= 4 ? digits.slice(-4) : digits;
+}
+
+type TvScreenLike = {
+  id?: string;
+  code?: string;
+  paired?: boolean;
+  status?: string;
+  pairingCode?: string | null;
+  pairingToken?: string | null;
+  name?: string;
+  [key: string]: unknown;
+};
+
+type TvStateLike = {
+  screens?: TvScreenLike[];
+  contents?: unknown[];
+  [key: string]: unknown;
+};
+
+/** No permitir que un push viejo de la TV desvincule una pantalla ya paired. */
+function protectPairedScreens(
+  incoming: TvStateLike,
+  previous: TvStateLike | null,
+  opts?: { allowUnpair?: boolean },
+): TvStateLike {
+  if (!previous?.screens?.length || !incoming.screens?.length) return incoming;
+  if (opts?.allowUnpair) return incoming;
+  const prevById = new Map(previous.screens.map((s) => [s.id, s]));
+  return {
+    ...incoming,
+    screens: incoming.screens.map((s) => {
+      const prev = prevById.get(s.id);
+      if (prev?.paired && !s.paired) {
+        return {
+          ...s,
+          paired: true,
+          status: "ONLINE",
+          pairingCode: null,
+        };
+      }
+      return s;
+    }),
+  };
+}
+
+function mergeContentsServer(
+  incoming: TvStateLike,
+  previous: TvStateLike | null,
+): TvStateLike {
+  const prevList = (previous?.contents ?? []) as Array<{
+    id?: string;
+    updatedAt?: string;
+  }>;
+  const nextList = (incoming.contents ?? []) as Array<{
+    id?: string;
+    updatedAt?: string;
+  }>;
+  if (!prevList.length) return incoming;
+  const map = new Map<string, { id?: string; updatedAt?: string }>();
+  for (const c of nextList) {
+    if (c?.id) map.set(String(c.id), c);
+  }
+  for (const c of prevList) {
+    if (!c?.id) continue;
+    const id = String(c.id);
+    const cur = map.get(id);
+    if (!cur) map.set(id, c);
+    else if ((c.updatedAt || "") > (cur.updatedAt || "")) map.set(id, c);
+  }
+  return { ...incoming, contents: [...map.values()] };
+}
+
 adTvSyncRouter.get("/tv/state", (req, res) => {
   const key = tenantKey(req);
   const cur = stores.get(key);
@@ -53,6 +134,7 @@ adTvSyncRouter.put("/tv/state", (req, res) => {
   const body = (req.body ?? {}) as {
     version?: number;
     state?: unknown;
+    allowUnpair?: boolean;
   };
   if (!body.state || typeof body.state !== "object") {
     res.status(400).json({
@@ -66,13 +148,91 @@ adTvSyncRouter.put("/tv/state", (req, res) => {
     res.json({ data: { ...cur, tenant: key }, conflict: true });
     return;
   }
+  const prevState = (cur?.state ?? null) as TvStateLike | null;
+  let nextState = body.state as TvStateLike;
+  nextState = protectPairedScreens(nextState, prevState, {
+    allowUnpair: Boolean(body.allowUnpair),
+  });
+  nextState = mergeContentsServer(nextState, prevState);
   const next: TvSyncBlob = {
     version,
-    state: body.state,
+    state: nextState,
     updatedAt: new Date().toISOString(),
   };
   stores.set(key, next);
   res.json({ data: { ...next, tenant: key } });
+});
+
+/**
+ * Vincula una TV por código en el servidor (evita carreras móvil ↔ TV).
+ * Acepta "A&D-3230", "AD-3230", "3230", etc.
+ */
+adTvSyncRouter.post("/tv/pair", (req, res) => {
+  const key = tenantKey(req);
+  const body = (req.body ?? {}) as {
+    pairingCode?: string;
+    userName?: string;
+  };
+  const raw = String(body.pairingCode ?? "");
+  const want = normalizePairCode(raw);
+  const wantDigits = pairCodeDigits(raw);
+  if (!want && !wantDigits) {
+    res.status(400).json({ error: { message: "Código requerido" } });
+    return;
+  }
+  const cur = stores.get(key);
+  if (!cur?.state || typeof cur.state !== "object") {
+    res.status(404).json({
+      error: {
+        message:
+          "Aún no hay estado TV. Abra el reproductor en el televisor y reintente.",
+      },
+    });
+    return;
+  }
+  const state = structuredClone(cur.state) as TvStateLike;
+  const screens = state.screens ?? [];
+  const screen = screens.find((s) => {
+    const pc = normalizePairCode(String(s.pairingCode ?? ""));
+    const digits = pairCodeDigits(String(s.pairingCode ?? ""));
+    if (!pc && !digits) return false;
+    if (want && pc === want) return true;
+    if (wantDigits && digits === wantDigits) return true;
+    return false;
+  });
+  if (!screen) {
+    const waiting = screens
+      .filter((s) => s.pairingCode)
+      .map((s) => `${s.code}:${s.pairingCode}`)
+      .join(", ");
+    res.status(404).json({
+      error: {
+        message: waiting
+          ? `Código no coincide. En espera: ${waiting}`
+          : "Código inválido. Abra el reproductor en la TV para generar uno.",
+      },
+    });
+    return;
+  }
+  screen.paired = true;
+  screen.status = "ONLINE";
+  screen.pairingCode = null;
+  screen.updatedAt = new Date().toISOString();
+  screen.lastSeenAt = new Date().toISOString();
+  const next: TvSyncBlob = {
+    version: Math.max(Date.now(), cur.version + 1),
+    state,
+    updatedAt: new Date().toISOString(),
+  };
+  stores.set(key, next);
+  res.json({
+    data: {
+      ...next,
+      tenant: key,
+      screen,
+      userName: body.userName ?? null,
+    },
+  });
 });
 
 /**
