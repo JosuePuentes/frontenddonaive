@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import {
   adTvPlayerPath,
@@ -48,6 +48,10 @@ export default function AdTvContenido() {
   const [fileLabel, setFileLabel] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void adTvRepository.refreshFromSync();
+  }, []);
 
   const demoScreen = screens[0];
   const playerExample = demoScreen
@@ -127,8 +131,9 @@ export default function AdTvContenido() {
         return;
       }
       await adTvRepository.flushSync();
+      await adTvRepository.refreshFromSync();
       setMsg(
-        `✓ Guardado: ${r.data.name}. Vaya a Control TV y pulse ▶ Reproducir.`,
+        `✓ Guardado: ${r.data.name}. Ya está en la lista — vaya a Control TV y pulse ▶.`,
       );
       setName("");
       setUrl("");
@@ -297,7 +302,16 @@ export default function AdTvContenido() {
       )}
 
       <section className="ad-panel">
-        <h2 className="ad-panel-title">Catálogo ({contents.length})</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="ad-panel-title">Catálogo ({contents.length})</h2>
+          <button
+            type="button"
+            className="ad-btn"
+            onClick={() => void adTvRepository.refreshFromSync()}
+          >
+            Actualizar
+          </button>
+        </div>
         {!contents.length ? (
           <p className="text-sm text-[var(--ad-muted)]">
             Aún no hay contenido guardado.
@@ -316,7 +330,14 @@ export default function AdTvContenido() {
                 </tr>
               </thead>
               <tbody>
-                {contents.map((c) => (
+                {[...contents]
+                  .sort((a, b) => {
+                    const aUser = a.url.includes("/tv/assets/") ? 1 : 0;
+                    const bUser = b.url.includes("/tv/assets/") ? 1 : 0;
+                    if (aUser !== bUser) return bUser - aUser;
+                    return (b.updatedAt || "").localeCompare(a.updatedAt || "");
+                  })
+                  .map((c) => (
                   <tr key={c.id}>
                     <td>
                       {c.url &&
