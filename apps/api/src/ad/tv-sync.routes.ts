@@ -3,6 +3,8 @@
  * Estado + assets de imagen/video para que el móvil mande contenido al TV.
  */
 import { Router } from "express";
+import fs from "node:fs";
+import path from "node:path";
 
 export const adTvSyncRouter = Router();
 
@@ -12,15 +14,110 @@ type TvSyncBlob = {
   updatedAt: string;
 };
 
-type TvAsset = {
+type TvAssetMeta = {
   id: string;
   mimeType: string;
-  dataUrl: string;
   createdAt: string;
+  bytes: number;
 };
 
+const DATA_ROOT = path.join(process.cwd(), ".data", "ad-tv");
+const STATE_DIR = path.join(DATA_ROOT, "state");
+const ASSET_DIR = path.join(DATA_ROOT, "assets");
+
+function ensureDirs() {
+  fs.mkdirSync(STATE_DIR, { recursive: true });
+  fs.mkdirSync(ASSET_DIR, { recursive: true });
+}
+
+ensureDirs();
+
 const stores = new Map<string, TvSyncBlob>();
-const assets = new Map<string, TvAsset>();
+
+function stateFile(tenant: string) {
+  return path.join(STATE_DIR, `${tenant}.json`);
+}
+
+function loadState(tenant: string): TvSyncBlob | null {
+  if (stores.has(tenant)) return stores.get(tenant) ?? null;
+  try {
+    const raw = fs.readFileSync(stateFile(tenant), "utf8");
+    const parsed = JSON.parse(raw) as TvSyncBlob;
+    stores.set(tenant, parsed);
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveState(tenant: string, blob: TvSyncBlob) {
+  stores.set(tenant, blob);
+  try {
+    fs.writeFileSync(stateFile(tenant), JSON.stringify(blob));
+  } catch (err) {
+    console.warn("[ad-tv] no se pudo persistir state", err);
+  }
+}
+
+function assetPaths(tenant: string, id: string) {
+  const safeTenant = tenant.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const base = path.join(ASSET_DIR, safeTenant, safeId);
+  return {
+    bin: `${base}.bin`,
+    meta: `${base}.json`,
+  };
+}
+
+function writeAsset(
+  tenant: string,
+  id: string,
+  mimeType: string,
+  buf: Buffer,
+): TvAssetMeta {
+  const paths = assetPaths(tenant, id);
+  fs.mkdirSync(path.dirname(paths.bin), { recursive: true });
+  fs.writeFileSync(paths.bin, buf);
+  const meta: TvAssetMeta = {
+    id,
+    mimeType,
+    createdAt: new Date().toISOString(),
+    bytes: buf.length,
+  };
+  fs.writeFileSync(paths.meta, JSON.stringify(meta));
+  return meta;
+}
+
+function readAsset(
+  tenant: string,
+  id: string,
+): { meta: TvAssetMeta; buf: Buffer } | null {
+  const paths = assetPaths(tenant, id);
+  try {
+    const meta = JSON.parse(
+      fs.readFileSync(paths.meta, "utf8"),
+    ) as TvAssetMeta;
+    const buf = fs.readFileSync(paths.bin);
+    return { meta, buf };
+  } catch {
+    return null;
+  }
+}
+
+function decodeDataUrl(dataUrl: string): { mimeType: string; buf: Buffer } | null {
+  if (!dataUrl.startsWith("data:")) return null;
+  const comma = dataUrl.indexOf(",");
+  if (comma < 0) return null;
+  const meta = dataUrl.slice(0, comma);
+  const payload = dataUrl.slice(comma + 1);
+  const mimeMatch = /^data:([^;,]+)/.exec(meta);
+  const mimeType = mimeMatch?.[1] || "application/octet-stream";
+  const isBase64 = /;base64/i.test(meta);
+  const buf = isBase64
+    ? Buffer.from(payload, "base64")
+    : Buffer.from(decodeURIComponent(payload), "utf8");
+  return { mimeType, buf };
+}
 
 function tenantKey(req: { query: Record<string, unknown>; body?: unknown }) {
   const q = req.query.tenant;
@@ -29,10 +126,6 @@ function tenantKey(req: { query: Record<string, unknown>; body?: unknown }) {
       ? (req.body as { tenant?: string }).tenant
       : undefined;
   return String(q || b || "ad-licoreria").trim() || "ad-licoreria";
-}
-
-function assetKey(tenant: string, id: string) {
-  return `${tenant}::${id}`;
 }
 
 function normalizePairCode(raw: string) {
@@ -118,7 +211,7 @@ function mergeContentsServer(
 
 adTvSyncRouter.get("/tv/state", (req, res) => {
   const key = tenantKey(req);
-  const cur = stores.get(key);
+  const cur = loadState(key);
   res.json({
     data: cur ?? {
       version: 0,
@@ -143,7 +236,7 @@ adTvSyncRouter.put("/tv/state", (req, res) => {
     return;
   }
   const version = Number(body.version) || Date.now();
-  const cur = stores.get(key);
+  const cur = loadState(key);
   if (cur && version < cur.version) {
     res.json({ data: { ...cur, tenant: key }, conflict: true });
     return;
@@ -159,7 +252,7 @@ adTvSyncRouter.put("/tv/state", (req, res) => {
     state: nextState,
     updatedAt: new Date().toISOString(),
   };
-  stores.set(key, next);
+  saveState(key, next);
   res.json({ data: { ...next, tenant: key } });
 });
 
@@ -180,7 +273,7 @@ adTvSyncRouter.post("/tv/pair", (req, res) => {
     res.status(400).json({ error: { message: "Código requerido" } });
     return;
   }
-  const cur = stores.get(key);
+  const cur = loadState(key);
   if (!cur?.state || typeof cur.state !== "object") {
     res.status(404).json({
       error: {
@@ -224,7 +317,7 @@ adTvSyncRouter.post("/tv/pair", (req, res) => {
     state,
     updatedAt: new Date().toISOString(),
   };
-  stores.set(key, next);
+  saveState(key, next);
   res.json({
     data: {
       ...next,
@@ -236,8 +329,7 @@ adTvSyncRouter.post("/tv/pair", (req, res) => {
 });
 
 /**
- * Sube imagen/video (data URL) para no meter MB en el blob de sync.
- * GET posterior sirve el asset al reproductor TV.
+ * Sube imagen/video (data URL) y lo guarda en disco (sobrevive reinicios).
  */
 adTvSyncRouter.post("/tv/assets", (req, res) => {
   const key = tenantKey(req);
@@ -246,29 +338,22 @@ adTvSyncRouter.post("/tv/assets", (req, res) => {
     dataUrl?: string;
     mimeType?: string;
   };
-  const dataUrl = String(body.dataUrl ?? "");
-  if (!dataUrl.startsWith("data:")) {
+  const decoded = decodeDataUrl(String(body.dataUrl ?? ""));
+  if (!decoded || !decoded.buf.length) {
     res.status(400).json({ error: { message: "dataUrl inválido" } });
     return;
   }
-  const mimeMatch = /^data:([^;,]+)/.exec(dataUrl);
-  const mimeType =
-    String(body.mimeType || mimeMatch?.[1] || "application/octet-stream").trim();
+  const mimeType = String(body.mimeType || decoded.mimeType).trim();
   const id =
     String(body.id || "").trim() ||
     `asset-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  const asset: TvAsset = {
-    id,
-    mimeType,
-    dataUrl,
-    createdAt: new Date().toISOString(),
-  };
-  assets.set(assetKey(key, id), asset);
+  const meta = writeAsset(key, id, mimeType, decoded.buf);
   res.json({
     data: {
-      id,
+      id: meta.id,
       tenant: key,
-      mimeType,
+      mimeType: meta.mimeType,
+      bytes: meta.bytes,
       /** El cliente antepone VITE_API_BASE_URL. */
       path: `/api/v1/ad/tv/assets/${encodeURIComponent(id)}?tenant=${encodeURIComponent(key)}`,
     },
@@ -278,26 +363,15 @@ adTvSyncRouter.post("/tv/assets", (req, res) => {
 adTvSyncRouter.get("/tv/assets/:id", (req, res) => {
   const key = tenantKey(req);
   const id = String(req.params.id ?? "");
-  const asset = assets.get(assetKey(key, id));
+  const asset = readAsset(key, id);
   if (!asset) {
     res.status(404).json({ error: { message: "Asset no encontrado" } });
     return;
   }
-  const comma = asset.dataUrl.indexOf(",");
-  if (comma < 0) {
-    res.status(500).json({ error: { message: "Asset corrupto" } });
-    return;
-  }
-  const meta = asset.dataUrl.slice(0, comma);
-  const payload = asset.dataUrl.slice(comma + 1);
-  const isBase64 = /;base64/i.test(meta);
-  const buf = isBase64
-    ? Buffer.from(payload, "base64")
-    : Buffer.from(decodeURIComponent(payload), "utf8");
   /** Permite que el FE (otro túnel) muestre la imagen en <img> / CSS. */
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Content-Type", asset.mimeType);
+  res.setHeader("Content-Type", asset.meta.mimeType);
   res.setHeader("Cache-Control", "public, max-age=3600");
-  res.send(buf);
+  res.send(asset.buf);
 });
