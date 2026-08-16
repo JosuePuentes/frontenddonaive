@@ -61,9 +61,14 @@ function AdRouteGate({ children }: { children: ReactNode }) {
     return children;
   }
 
-  if (mode === "api" && !isPublicAdPath(path)) {
-    if (!isAdSessionValid(apiSession)) {
-      if (apiSession) clearAdSession();
+  const needsAuth = !isPublicAdPath(path);
+  if (needsAuth) {
+    if (mode === "api") {
+      if (!isAdSessionValid(apiSession)) {
+        if (apiSession) clearAdSession();
+        return <Navigate to={routes.login} replace />;
+      }
+    } else if (!session) {
       return <Navigate to={routes.login} replace />;
     }
   }
@@ -80,15 +85,9 @@ function AdRouteGate({ children }: { children: ReactNode }) {
         <Link className="ad-btn" to={routes.home}>
           Volver al Home
         </Link>
-        {mode === "api" ? (
-          <Link className="ad-btn ad-btn--gold" to={routes.login}>
-            Iniciar sesión
-          </Link>
-        ) : (
-          <Link className="ad-btn" to={routes.inicio}>
-            Volver al inicio
-          </Link>
-        )}
+        <Link className="ad-btn ad-btn--gold" to={routes.login}>
+          Iniciar sesión
+        </Link>
       </div>
     );
   }

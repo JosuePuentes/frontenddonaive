@@ -9,18 +9,21 @@ import {
   isAdSessionValid,
   loadAdSession,
 } from "@/services/ad-licoreria/session";
+import { adMockLogin } from "@/services/ad-licoreria/mock-login";
 import { getAdDataSourceMode } from "@/services/ad-licoreria/repository-adapter";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
 /**
- * Login real A&D (JWT). Acceso principal desde Home → «Iniciar sesión».
- * No muestra credenciales demo en la UI pública.
+ * Login A&D — siempre pide usuario y contraseña.
+ * API: JWT. Sin API: valida operadores demo (admin / AdDemo#2026).
+ * No muestra credenciales en la UI pública.
  */
 export default function AdLicoreriaLogin() {
   const navigate = useNavigate();
   const mode = getAdDataSourceMode();
-  const { hydrateApi } = useAdLicoreria();
+  const { hydrateApi, getCurrentOperator } = useAdLicoreria();
   const existing = loadAdSession();
+  const mockSession = getCurrentOperator();
   const [tenantSlug, setTenantSlug] = useState("ad-licoreria");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,50 +33,46 @@ export default function AdLicoreriaLogin() {
   useEffect(() => {
     if (mode === "api" && isAdSessionValid(existing)) {
       navigate(roleHomePath(existing!.role as AdRole), { replace: true });
+      return;
     }
-  }, [mode, existing, navigate]);
+    if (mode !== "api" && mockSession) {
+      navigate(roleHomePath(mockSession.role), { replace: true });
+    }
+  }, [mode, existing, mockSession, navigate]);
 
-  if (mode !== "api") {
-    return (
-      <div className="ad-login-page">
-        <div className="ad-login-card">
-          <AdLicoreriaBrandMark size="lg" showText />
-          <h1 className="ad-display mt-4 text-3xl">Modo mock</h1>
-          <p className="mt-2 text-sm text-[var(--ad-muted)]">
-            El login JWT requiere{" "}
-            <code>VITE_AD_DATA_SOURCE=api</code> y{" "}
-            <code>VITE_API_BASE_URL</code>. En mock use el selector de sesión del
-            panel operativo.
-          </p>
-          <Link className="ad-btn ad-btn--gold mt-4 inline-flex" to={AD_LICORERIA_ROUTES.inicio}>
-            Ir al inicio operativo
-          </Link>
-          <Link className="ad-btn mt-2 inline-flex" to={AD_LICORERIA_ROUTES.home}>
-            Volver al Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (isAdSessionValid(existing)) {
+  if (mode === "api" && isAdSessionValid(existing)) {
     return (
       <Navigate to={roleHomePath(existing!.role as AdRole)} replace />
     );
+  }
+  if (mode !== "api" && mockSession) {
+    return <Navigate to={roleHomePath(mockSession.role)} replace />;
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setMsg("");
-    const r = await adLoginRequest({ tenantSlug, username, password });
-    setBusy(false);
-    if (!r.ok) {
-      setMsg(r.error);
-      return;
+    try {
+      if (mode === "api") {
+        const r = await adLoginRequest({ tenantSlug, username, password });
+        if (!r.ok) {
+          setMsg(r.error);
+          return;
+        }
+        await hydrateApi();
+        navigate(roleHomePath(r.session.role as AdRole), { replace: true });
+        return;
+      }
+      const r = adMockLogin({ username, password });
+      if (!r.ok) {
+        setMsg(r.error);
+        return;
+      }
+      navigate(roleHomePath(r.operator.role), { replace: true });
+    } finally {
+      setBusy(false);
     }
-    await hydrateApi();
-    navigate(roleHomePath(r.session.role as AdRole), { replace: true });
   }
 
   return (
@@ -87,16 +86,18 @@ export default function AdLicoreriaLogin() {
           Acceso operativo A&amp;D Licorería &amp; Bodegón
         </p>
         <form onSubmit={onSubmit} className="mt-6 grid gap-3">
-          <label className="text-sm text-[var(--ad-muted)]">
-            Tenant
-            <input
-              className="ad-input mt-1"
-              value={tenantSlug}
-              onChange={(e) => setTenantSlug(e.target.value)}
-              autoComplete="organization"
-              required
-            />
-          </label>
+          {mode === "api" ? (
+            <label className="text-sm text-[var(--ad-muted)]">
+              Tenant
+              <input
+                className="ad-input mt-1"
+                value={tenantSlug}
+                onChange={(e) => setTenantSlug(e.target.value)}
+                autoComplete="organization"
+                required
+              />
+            </label>
+          ) : null}
           <label className="text-sm text-[var(--ad-muted)]">
             Usuario
             <input

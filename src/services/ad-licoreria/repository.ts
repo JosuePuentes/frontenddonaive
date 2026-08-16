@@ -176,7 +176,8 @@ function cloneState(): AdRepositoryState {
     purchaseRequests: [],
     customerCommitments: [],
     invoiceDrafts: [],
-    currentOperatorId: "op-maria",
+    /** Sin sesión automática: el usuario debe autenticarse en /login. */
+    currentOperatorId: null,
     rolePermissionOverrides: {},
     accountSeq: 186,
     prepaidSeq: 126,

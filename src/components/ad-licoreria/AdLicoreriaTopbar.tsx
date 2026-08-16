@@ -5,6 +5,7 @@ import { normalizeAdLicoreriaPathname } from "@/lib/ad-licoreria-host";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { adLogoutRequest } from "@/services/ad-licoreria/session";
+import { adMockLogout } from "@/services/ad-licoreria/mock-login";
 import { getAdDataSourceMode } from "@/services/ad-licoreria/repository-adapter";
 
 const titles: Record<string, string> = {
@@ -45,8 +46,7 @@ function AdLicoreriaTopbar({ onOpenMenu }: Props) {
   const routes = getAdLicoreriaRoutes();
   const path = normalizeAdLicoreriaPathname(pathname);
   const title = titles[path] ?? "A&D";
-  const { getCurrentOperator, warehouses, setCurrentOperator, operators } =
-    useAdLicoreria();
+  const { getCurrentOperator, warehouses } = useAdLicoreria();
   const session = getCurrentOperator();
   const mode = getAdDataSourceMode();
   const warehouseLocked = Boolean(session?.warehouseId);
@@ -100,22 +100,25 @@ function AdLicoreriaTopbar({ onOpenMenu }: Props) {
           >
             Salir
           </button>
-        ) : (
-          <select
-            className="ad-select max-w-[12rem]"
-            value={session?.id ?? ""}
-            onChange={(e) => setCurrentOperator(e.target.value || null)}
-            aria-label="Usuario demo en sesión (modo mock)"
+        ) : session ? (
+          <button
+            type="button"
+            className="ad-btn"
+            onClick={() => {
+              adMockLogout();
+              navigate(routes.login, { replace: true });
+            }}
           >
-            <option value="">Sin sesión</option>
-            {operators
-              .filter((o) => o.active)
-              .map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name} · {AD_ROLE_LABELS[o.role]}
-                </option>
-              ))}
-          </select>
+            Salir
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="ad-btn ad-btn--gold"
+            onClick={() => navigate(routes.login)}
+          >
+            Entrar
+          </button>
         )}
       </div>
     </header>
