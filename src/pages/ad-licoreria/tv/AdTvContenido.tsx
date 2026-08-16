@@ -8,6 +8,7 @@ import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
 import {
+  compressImageToDataUrl,
   uploadTvAsset,
   uploadTvFile,
 } from "@/services/ad-licoreria/tv/sync-client";
@@ -153,18 +154,44 @@ export default function AdTvContenido() {
       return;
     }
     setBusy(true);
-    setMsg(type === "VIDEO" ? "Subiendo video…" : "Subiendo…");
+    setMsg(type === "VIDEO" ? "Subiendo video…" : "Subiendo imagen…");
     try {
       let finalUrl = url.trim();
-      if (file) {
-        const uploaded = await uploadTvFile(file);
+
+      if (file && file.type.startsWith("image/")) {
+        /** Imágenes: comprimir + data URL (más fiable en móvil/túnel). */
+        setMsg("Preparando imagen…");
+        let dataUrl = finalUrl.startsWith("data:") ? finalUrl : "";
+        try {
+          dataUrl = await compressImageToDataUrl(file);
+        } catch {
+          if (!dataUrl) {
+            const reader = new FileReader();
+            dataUrl = await new Promise<string>((resolve, reject) => {
+              reader.onload = () => resolve(String(reader.result ?? ""));
+              reader.onerror = () => reject(new Error("read"));
+              reader.readAsDataURL(file);
+            });
+          }
+        }
+        const uploaded = await uploadTvAsset(dataUrl);
         if (!uploaded) {
           setMsg(
-            "No se pudo subir el archivo. Intente de nuevo o use un MP4 más liviano.",
+            "No se pudo subir la imagen. Revise la conexión e intente de nuevo.",
           );
           return;
         }
         finalUrl = uploaded;
+      } else if (file && file.type.startsWith("video/")) {
+        setMsg("Subiendo video…");
+        const uploaded = await uploadTvFile(file);
+        if (!uploaded.ok) {
+          setMsg(
+            `${uploaded.error}. Pruebe un MP4 más liviano (máx. ~35 MB).`,
+          );
+          return;
+        }
+        finalUrl = uploaded.url;
       } else if (finalUrl.startsWith("data:")) {
         const uploaded = await uploadTvAsset(finalUrl);
         if (!uploaded) {
@@ -173,6 +200,7 @@ export default function AdTvContenido() {
         }
         finalUrl = uploaded;
       }
+
       const r = createContent({
         name: name.trim(),
         type,

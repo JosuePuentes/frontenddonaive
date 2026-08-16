@@ -95,9 +95,11 @@ export async function uploadTvAsset(dataUrl: string): Promise<string | null> {
 }
 
 /** Sube File (imagen/video) en binario — preferido para videos. */
-export async function uploadTvFile(file: File): Promise<string | null> {
+export async function uploadTvFile(
+  file: File,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const root = baseUrl();
-  if (!root) return null;
+  if (!root) return { ok: false, error: "API no configurada" };
   const mime = file.type || "application/octet-stream";
   try {
     const res = await fetch(
@@ -107,19 +109,50 @@ export async function uploadTvFile(file: File): Promise<string | null> {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/octet-stream",
-          "X-Mime-Type": mime,
         },
         body: file,
       },
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return {
+        ok: false,
+        error: `Error al subir (${res.status})${text ? `: ${text.slice(0, 120)}` : ""}`,
+      };
+    }
     const json = (await res.json()) as { data: { path: string } };
     const path = json.data?.path;
-    if (!path) return null;
-    return `${root}${path.startsWith("/") ? path : `/${path}`}`;
+    if (!path) return { ok: false, error: "Respuesta inválida del servidor" };
+    return {
+      ok: true,
+      url: `${root}${path.startsWith("/") ? path : `/${path}`}`,
+    };
   } catch {
-    return null;
+    return { ok: false, error: "Sin conexión al subir el archivo" };
   }
+}
+
+/** Comprime imagen a JPEG data URL (máx. lado ~1600) para subidas estables. */
+export async function compressImageToDataUrl(
+  file: File,
+  maxSide = 1600,
+  quality = 0.82,
+): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("No es imagen");
+  }
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas no disponible");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
 export type TvPairResult = {

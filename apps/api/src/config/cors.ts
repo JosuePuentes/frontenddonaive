@@ -21,7 +21,10 @@ export function buildCorsOptions(): CorsOptions {
         "X-User-Email",
         "X-User-Roles",
         "X-Accessible-Project-Ids",
+        "X-Mime-Type",
+        "Accept",
       ],
+      maxAge: 86400,
     };
   }
 
@@ -38,5 +41,16 @@ export function buildCorsOptions(): CorsOptions {
   return {
     origin: true,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-User-Id",
+      "X-User-Email",
+      "X-User-Roles",
+      "X-Accessible-Project-Ids",
+      "X-Mime-Type",
+      "Accept",
+    ],
   };
 }
