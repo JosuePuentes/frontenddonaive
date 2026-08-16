@@ -56,6 +56,13 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       // Preview / túneles temporales (trycloudflare, port-forward)
       allowedHosts: true,
+      /** Un solo túnel FE: /api → API local (assets TV no dependen de otro dominio). */
+      proxy: {
+        "/api": {
+          target: "http://127.0.0.1:3001",
+          changeOrigin: true,
+        },
+      },
     },
   };
 });
