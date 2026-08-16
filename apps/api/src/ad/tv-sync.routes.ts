@@ -294,6 +294,9 @@ adTvSyncRouter.get("/tv/assets/:id", (req, res) => {
   const buf = isBase64
     ? Buffer.from(payload, "base64")
     : Buffer.from(decodeURIComponent(payload), "utf8");
+  /** Permite que el FE (otro túnel) muestre la imagen en <img> / CSS. */
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Content-Type", asset.mimeType);
   res.setHeader("Cache-Control", "public, max-age=3600");
   res.send(buf);

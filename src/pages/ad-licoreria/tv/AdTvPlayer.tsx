@@ -259,15 +259,14 @@ export default function AdTvPlayer() {
           </p>
         </div>
       ) : (
-        <div
-          className="h-full w-full bg-cover bg-center"
-          style={{
-            backgroundImage: content?.url
-              ? `url(${content.url})`
-              : undefined,
-          }}
-        >
-          <div className="absolute bottom-6 left-6 right-6">
+        <div className="relative flex h-full w-full items-center justify-center bg-black">
+          <img
+            src={content?.url}
+            alt={content?.name ?? "Contenido TV"}
+            className="max-h-full max-w-full object-contain"
+            draggable={false}
+          />
+          <div className="pointer-events-none absolute bottom-6 left-6 right-6">
             <p className="text-lg font-semibold drop-shadow">{content?.name}</p>
           </div>
         </div>
