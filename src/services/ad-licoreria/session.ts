@@ -86,12 +86,6 @@ export async function adLoginRequest(input: {
   username: string;
   password: string;
 }): Promise<{ ok: true; session: AdApiSession } | { ok: false; error: string }> {
-  if (!API_BASE_URL) {
-    return {
-      ok: false,
-      error: "VITE_API_BASE_URL no configurada",
-    };
-  }
   try {
     const res = await fetch(
       `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/ad/auth/login`,
@@ -170,9 +164,6 @@ export async function adBootstrapRequest(input: {
   adminPassword: string;
   adminUsername?: string;
 }): Promise<{ ok: true; data: unknown } | { ok: false; error: string }> {
-  if (!API_BASE_URL) {
-    return { ok: false, error: "VITE_API_BASE_URL no configurada" };
-  }
   try {
     const res = await fetch(
       `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/ad/bootstrap`,

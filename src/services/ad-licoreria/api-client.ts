@@ -38,16 +38,6 @@ async function adRequestJson<T>(
   auth: AdApiAuthHeaders,
   body?: unknown,
 ): Promise<ApiResult<T>> {
-  if (!API_BASE_URL) {
-    return {
-      ok: false,
-      error: {
-        message:
-          "VITE_API_BASE_URL no está configurada. Configura el frontend para usar API A&D.",
-      },
-    };
-  }
-
   const url = joinUrl(API_BASE_URL, path);
 
   try {

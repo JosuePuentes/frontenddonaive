@@ -107,9 +107,6 @@ async function apiJson<T>(
   path: string,
   body?: unknown,
 ): Promise<AdResult<T>> {
-  if (!API_BASE_URL) {
-    return { ok: false, error: "VITE_API_BASE_URL no configurada" };
-  }
   const session = loadAdSession();
   if (!session) {
     return { ok: false, error: "Sesión A&D requerida (inicie sesión API)" };

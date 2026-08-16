@@ -9,9 +9,6 @@ async function commerceFetch<T>(
   path: string,
   body?: unknown,
 ): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
-  if (!API_BASE_URL) {
-    return { ok: false, error: "VITE_API_BASE_URL no configurada" };
-  }
   if (!loadAdSession()?.accessToken) {
     return { ok: false, error: "Sesión API requerida" };
   }

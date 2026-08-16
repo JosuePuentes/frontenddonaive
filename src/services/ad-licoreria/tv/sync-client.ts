@@ -99,7 +99,6 @@ export async function uploadTvFile(
   file: File,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const root = baseUrl();
-  if (!root) return { ok: false, error: "API no configurada" };
   const mime = file.type || "application/octet-stream";
   try {
     const res = await fetch(
