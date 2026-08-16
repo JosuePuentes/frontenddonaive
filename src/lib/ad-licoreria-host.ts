@@ -6,8 +6,21 @@ export const AD_LICORERIA_HOSTNAMES = [
 ] as const;
 
 /**
- * Dev/local: VITE_AD_LICORERIA_HOST=true simula el dominio propio sin DNS.
- * No inventar dominios reales hasta que el cliente los asigne.
+ * Hosts del proyecto Vercel `ad-licoreria` (equipo donaive).
+ * Cubre producción (`ad-licoreria.vercel.app`) y deployments
+ * (`ad-licoreria-<id>-donaive.vercel.app`) sin hardcodear un hash concreto.
+ * No coincide con frontenddonaive / polisur / www.donaive.com.ve.
+ */
+export function isAdLicoreriaVercelHostname(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase();
+  if (!host.endsWith(".vercel.app")) return false;
+  return host === "ad-licoreria.vercel.app" || host.startsWith("ad-licoreria-");
+}
+
+/**
+ * Dev/local/túnel: VITE_AD_LICORERIA_HOST=true simula el dominio propio.
+ * Debe ser exactamente la cadena "true" (boolean Vite), nunca una URL.
+ * Producción Vercel A&D: se reconoce por hostname del proyecto `ad-licoreria`.
  */
 export function isAdLicoreriaHost(
   hostname = typeof window !== "undefined" ? window.location.hostname : "",
@@ -20,10 +33,13 @@ export function isAdLicoreriaHost(
     return true;
   }
   const host = hostname.trim().toLowerCase();
-  return (AD_LICORERIA_HOSTNAMES as readonly string[]).includes(host);
+  if ((AD_LICORERIA_HOSTNAMES as readonly string[]).includes(host)) {
+    return true;
+  }
+  return isAdLicoreriaVercelHostname(host);
 }
 
-/** Prefijo: vacío en dominio propio futuro, `/licoreria` en Donaive. */
+/** Prefijo: vacío en dominio propio / Vercel A&D, `/licoreria` en Donaive. */
 export function getAdLicoreriaBasePath(): "" | "/licoreria" {
   return isAdLicoreriaHost() ? "" : "/licoreria";
 }
