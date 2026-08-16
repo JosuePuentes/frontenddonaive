@@ -102,17 +102,17 @@ function AdLicoreriaTopbar({ onOpenMenu }: Props) {
           </button>
         ) : (
           <select
-            className="ad-select max-w-[11rem] ad-topbar__desktop-only"
+            className="ad-select max-w-[12rem]"
             value={session?.id ?? ""}
             onChange={(e) => setCurrentOperator(e.target.value || null)}
-            aria-label="Usuario en sesión"
+            aria-label="Usuario demo en sesión (modo mock)"
           >
             <option value="">Sin sesión</option>
             {operators
               .filter((o) => o.active)
               .map((o) => (
                 <option key={o.id} value={o.id}>
-                  {o.name}
+                  {o.name} · {AD_ROLE_LABELS[o.role]}
                 </option>
               ))}
           </select>
