@@ -73,6 +73,9 @@ let pushing = false;
 let applyingRemote = false;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
+/** Mientras la TV espera vínculo, no dejar que un pull viejo borre el código. */
+let pairingLock: { screenId: string; pairingCode: string; token: string } | null =
+  null;
 
 function notifyLocal() {
   for (const l of listeners) l();
@@ -93,25 +96,50 @@ function schedulePush() {
 async function pushNow() {
   if (pushing || applyingRemote) return;
   pushing = true;
+  let needsRepush = false;
   try {
     syncVersion = Math.max(syncVersion + 1, Date.now());
     const published = await publishTvSyncState(syncVersion, state);
     if (!published) return;
     if (published.conflict && published.state && published.version) {
-      /** Alguien escribió antes: adoptar remoto y no pisar. */
       applyRemoteState(published.state as AdTvRepositoryState, published.version);
+      /** Si seguimos en pairing, republicar el código que el TV está mostrando. */
+      if (pairingLock) needsRepush = true;
       return;
     }
     if (published.version) syncVersion = published.version;
   } finally {
     pushing = false;
   }
+  if (needsRepush) {
+    await pushNow();
+  }
+}
+
+function mergePairingLock(remote: AdTvRepositoryState): AdTvRepositoryState {
+  if (!pairingLock) return remote;
+  const lock = pairingLock;
+  const screens = remote.screens.map((s) => {
+    if (s.id !== lock.screenId) return s;
+    if (s.paired) {
+      pairingLock = null;
+      return s;
+    }
+    return {
+      ...s,
+      status: "PAIRING" as const,
+      paired: false,
+      pairingCode: s.pairingCode || lock.pairingCode,
+      pairingToken: s.pairingToken || lock.token,
+    };
+  });
+  return { ...remote, screens };
 }
 
 function applyRemoteState(remote: AdTvRepositoryState, version: number) {
   applyingRemote = true;
   try {
-    state = remote;
+    state = mergePairingLock(remote);
     syncVersion = version;
     for (const l of listeners) l();
     if (state.lastCommand) {
@@ -271,9 +299,19 @@ export const adTvRepository = {
     await pullOnce();
   },
 
+  /** Publica el estado local ya (pairing / play). */
+  async flushSync() {
+    if (pushTimer) {
+      clearTimeout(pushTimer);
+      pushTimer = null;
+    }
+    await pushNow();
+  },
+
   reset() {
     state = cloneState();
     syncVersion = Date.now();
+    pairingLock = null;
     emit();
   },
 
@@ -385,16 +423,22 @@ export const adTvRepository = {
   beginPairing(input: { screenId: string }): AdTvResult<AdTvScreen> {
     const screen = state.screens.find((s) => s.id === input.screenId);
     if (!screen) return { ok: false, error: "Pantalla no encontrada" };
-    if (screen.paired) return { ok: true, data: screen };
+    if (screen.paired) {
+      pairingLock = null;
+      return { ok: true, data: screen };
+    }
+    const code = screen.pairingCode || pairingCode();
+    const token = screen.pairingToken || uid("pair");
     const next: AdTvScreen = {
       ...screen,
       status: "PAIRING",
-      pairingCode: screen.pairingCode || pairingCode(),
-      pairingToken: screen.pairingToken || uid("pair"),
+      pairingCode: code,
+      pairingToken: token,
       paired: false,
       lastSeenAt: nowIso(),
       updatedAt: nowIso(),
     };
+    pairingLock = { screenId: next.id, pairingCode: code, token };
     state.screens = state.screens.map((s) =>
       s.id === screen.id ? next : s,
     );
@@ -430,6 +474,7 @@ export const adTvRepository = {
       lastSeenAt: nowIso(),
       updatedAt: nowIso(),
     };
+    if (pairingLock?.screenId === screen.id) pairingLock = null;
     state.screens = state.screens.map((s) =>
       s.id === screen.id ? next : s,
     );
