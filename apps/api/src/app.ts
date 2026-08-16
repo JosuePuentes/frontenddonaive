@@ -10,6 +10,7 @@ import {
   errorHandler,
 } from "./middleware/error.middleware.js";
 import { adPublicAuthRouter } from "./ad/public-auth.routes.js";
+import { adTvSyncRouter } from "./ad/tv-sync.routes.js";
 import { adRouter } from "./ad/routes.js";
 
 export function createApp() {
@@ -18,11 +19,13 @@ export function createApp() {
   app.disable("x-powered-by");
   app.use(helmet());
   app.use(cors(buildCorsOptions()));
-  app.use(express.json({ limit: "1mb" }));
+  app.use(express.json({ limit: "12mb" }));
 
   app.use(healthRouter);
   /** A&D público: login/bootstrap/logout (JWT). */
   app.use("/api/v1/ad", databaseGuard, adPublicAuthRouter);
+  /** A&D TV sync MOCK multi-dispositivo (reproductor sin JWT). */
+  app.use("/api/v1/ad", adTvSyncRouter);
   /**
    * A&D protegido con JWT propio (Fase 4) — sin exigir X-User-Id Core.
    * El router aplica adContextMiddleware internamente.

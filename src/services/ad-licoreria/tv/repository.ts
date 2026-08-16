@@ -9,6 +9,10 @@ import {
   AD_DEMO_TV_SCREENS,
 } from "@/content/ad-licoreria/tv/demo-data";
 import { adTvRealtime } from "@/services/ad-licoreria/tv/realtime";
+import {
+  fetchTvSyncState,
+  publishTvSyncState,
+} from "@/services/ad-licoreria/tv/sync-client";
 import type {
   AdTvAuditEvent,
   AdTvCommand,
@@ -64,9 +68,85 @@ function cloneState(): AdTvRepositoryState {
 
 let state = cloneState();
 const listeners = new Set<Listener>();
+let syncVersion = 0;
+let pushing = false;
+let applyingRemote = false;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function notifyLocal() {
+  for (const l of listeners) l();
+}
 
 function emit() {
-  for (const l of listeners) l();
+  notifyLocal();
+  if (!applyingRemote) schedulePush();
+}
+
+function schedulePush() {
+  if (pushTimer) clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    void pushNow();
+  }, 200);
+}
+
+async function pushNow() {
+  if (pushing || applyingRemote) return;
+  pushing = true;
+  try {
+    syncVersion = Math.max(syncVersion + 1, Date.now());
+    const published = await publishTvSyncState(syncVersion, state);
+    if (!published) return;
+    if (published.conflict && published.state && published.version) {
+      /** Alguien escribió antes: adoptar remoto y no pisar. */
+      applyRemoteState(published.state as AdTvRepositoryState, published.version);
+      return;
+    }
+    if (published.version) syncVersion = published.version;
+  } finally {
+    pushing = false;
+  }
+}
+
+function applyRemoteState(remote: AdTvRepositoryState, version: number) {
+  applyingRemote = true;
+  try {
+    state = remote;
+    syncVersion = version;
+    for (const l of listeners) l();
+    if (state.lastCommand) {
+      adTvRealtime.broadcastCommand(state.lastCommand);
+    }
+  } finally {
+    applyingRemote = false;
+  }
+}
+
+async function pullOnce() {
+  const remote = await fetchTvSyncState();
+  if (!remote?.state || !remote.version) return;
+  if (remote.version <= syncVersion) return;
+  applyRemoteState(remote.state as AdTvRepositoryState, remote.version);
+}
+
+export function startAdTvSync() {
+  if (pollTimer != null) return;
+  void (async () => {
+    const remote = await fetchTvSyncState();
+    if (remote?.state && remote.version > 0) {
+      applyRemoteState(remote.state as AdTvRepositoryState, remote.version);
+    } else {
+      await pushNow();
+    }
+  })();
+  pollTimer = setInterval(() => {
+    void pullOnce();
+  }, 1200);
+}
+
+export function stopAdTvSync() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
 }
 
 function audit(
@@ -178,6 +258,7 @@ function applyCommandToScreen(
 export const adTvRepository = {
   subscribe(listener: Listener) {
     listeners.add(listener);
+    startAdTvSync();
     return () => listeners.delete(listener);
   },
 
@@ -185,8 +266,14 @@ export const adTvRepository = {
     return state;
   },
 
+  /** Fuerza pull inmediato (útil en el reproductor). */
+  async refreshFromSync() {
+    await pullOnce();
+  },
+
   reset() {
     state = cloneState();
+    syncVersion = Date.now();
     emit();
   },
 
@@ -298,11 +385,12 @@ export const adTvRepository = {
   beginPairing(input: { screenId: string }): AdTvResult<AdTvScreen> {
     const screen = state.screens.find((s) => s.id === input.screenId);
     if (!screen) return { ok: false, error: "Pantalla no encontrada" };
+    if (screen.paired) return { ok: true, data: screen };
     const next: AdTvScreen = {
       ...screen,
       status: "PAIRING",
-      pairingCode: pairingCode(),
-      pairingToken: uid("pair"),
+      pairingCode: screen.pairingCode || pairingCode(),
+      pairingToken: screen.pairingToken || uid("pair"),
       paired: false,
       lastSeenAt: nowIso(),
       updatedAt: nowIso(),
@@ -311,6 +399,7 @@ export const adTvRepository = {
       s.id === screen.id ? next : s,
     );
     emit();
+    void pushNow();
     return { ok: true, data: next };
   },
 
@@ -319,14 +408,19 @@ export const adTvRepository = {
     pairingCode: string;
     userName: string;
   }): AdTvResult<AdTvScreen> {
-    const code = input.pairingCode.trim().toUpperCase();
-    const screen = state.screens.find(
-      (s) =>
-        s.status === "PAIRING" &&
-        (s.pairingCode ?? "").toUpperCase() === code,
-    );
+    const code = input.pairingCode.trim().toUpperCase().replace(/\s+/g, "");
+    const screen = state.screens.find((s) => {
+      const pc = (s.pairingCode ?? "").toUpperCase().replace(/\s+/g, "");
+      return (
+        (s.status === "PAIRING" || Boolean(s.pairingCode)) &&
+        pc === code
+      );
+    });
     if (!screen) {
-      return { ok: false, error: "Código inválido o expirado" };
+      return {
+        ok: false,
+        error: "Código inválido o aún no sincronizado. Espere 2 s y reintente.",
+      };
     }
     const next: AdTvScreen = {
       ...screen,
@@ -341,6 +435,7 @@ export const adTvRepository = {
     );
     audit("TV_PAIRED", input.userName, `Vinculó ${next.code}`, next);
     emit();
+    void pushNow();
     return { ok: true, data: next };
   },
 
@@ -367,7 +462,11 @@ export const adTvRepository = {
     return { ok: true, data: next };
   },
 
-  /** Heartbeat del reproductor. */
+  /**
+   * Heartbeat del reproductor.
+   * Solo actualiza lastSeen localmente: no hace push (evita pisar
+   * el código de vinculación / comandos del móvil por last-write-wins).
+   */
   heartbeat(screenId: string): AdTvResult<AdTvScreen> {
     const screen = state.screens.find((s) => s.id === screenId);
     if (!screen) return { ok: false, error: "Pantalla no encontrada" };
@@ -382,7 +481,7 @@ export const adTvRepository = {
     state.screens = state.screens.map((s) =>
       s.id === screen.id ? next : s,
     );
-    emit();
+    notifyLocal();
     return { ok: true, data: next };
   },
 
@@ -570,6 +669,7 @@ export const adTvRepository = {
     /** MOCK realtime broadcast (futuro WebSocket). */
     adTvRealtime.broadcastCommand(cmd);
     emit();
+    void pushNow();
     return { ok: true, data: cmd };
   },
 };

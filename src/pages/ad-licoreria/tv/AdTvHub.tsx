@@ -101,9 +101,9 @@ export default function AdTvHub() {
               className="text-[var(--ad-gold-soft)] underline"
               to={AD_LICORERIA_ROUTES.tvControl}
             >
-              Control
+              Control TV
             </Link>
-            , elija el contenido y ▶ Reproducir.
+            elija el contenido y pulse ▶ en una TV o en todas las vinculadas.
           </li>
         </ol>
         {!canManageContent ? (

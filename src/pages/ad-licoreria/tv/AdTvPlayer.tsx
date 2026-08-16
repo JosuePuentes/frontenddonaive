@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
+import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import type { AdTvCommand } from "@/types/ad-tv";
 
 /**
  * Reproductor fullscreen para navegador de TV.
  * Sin menú, sin sidebar, sin UI administrativa.
+ * Estado compartido vía API sync (móvil ↔ TV).
  */
 export default function AdTvPlayer() {
   const { id = "" } = useParams();
@@ -17,27 +19,57 @@ export default function AdTvPlayer() {
     realtime,
   } = useAdTv();
 
-  const screen = getScreen(decodeURIComponent(id));
+  const decoded = decodeURIComponent(id);
+  const screen = getScreen(decoded);
   const content = useMemo(
     () => contents.find((c) => c.id === screen?.currentContentId),
     [contents, screen?.currentContentId],
   );
   const videoRef = useRef<HTMLVideoElement>(null);
   const [pairedFlash, setPairedFlash] = useState(false);
+  const [bootMsg, setBootMsg] = useState("Conectando pantalla…");
   const wasPaired = useRef(screen?.paired ?? false);
 
   useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setBootMsg("Sincronizando con el servidor…");
+      await adTvRepository.refreshFromSync();
+      if (cancelled) return;
+      const s = adTvRepository.getScreen(decoded);
+      if (!s) {
+        setBootMsg("Pantalla no encontrada. Use TV-001, TV-002 o TV-003.");
+        return;
+      }
+      if (!s.paired) {
+        const r = beginPairing({ screenId: s.id });
+        if (r.ok) {
+          setBootMsg("");
+          await adTvRepository.refreshFromSync();
+        } else {
+          setBootMsg(r.error);
+        }
+      } else {
+        setBootMsg("");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [decoded, beginPairing]);
+
+  useEffect(() => {
     if (!screen) return;
-    if (!screen.paired && screen.status !== "PAIRING") {
+    if (!screen.paired && !screen.pairingCode && screen.status !== "PAIRING") {
       beginPairing({ screenId: screen.id });
     }
-  }, [screen?.id, screen?.paired, screen?.status, beginPairing]);
+  }, [screen?.id, screen?.paired, screen?.pairingCode, screen?.status, beginPairing]);
 
   useEffect(() => {
     if (!screen) return;
     const t = window.setInterval(() => {
       heartbeat(screen.id);
-    }, 5000);
+    }, 4000);
     heartbeat(screen.id);
     return () => window.clearInterval(t);
   }, [screen?.id, heartbeat]);
@@ -103,14 +135,15 @@ export default function AdTvPlayer() {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0a0a0c] text-white">
         <p className="text-2xl tracking-wide">Pantalla A&D</p>
-        <p className="mt-2 text-sm opacity-60">Pantalla no encontrada</p>
+        <p className="mt-2 text-sm opacity-60">{bootMsg || "Cargando…"}</p>
+        <p className="mt-4 text-xs opacity-40">Código pedido: {decoded}</p>
       </div>
     );
   }
 
   if (!screen.paired) {
     return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1510_0%,#0a0a0c_70%)] text-white">
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1510_0%,#0a0a0c_70%)] text-white px-4">
         <p className="mb-2 text-sm uppercase tracking-[0.35em] text-amber-200/70">
           Vincular pantalla
         </p>
@@ -123,10 +156,16 @@ export default function AdTvPlayer() {
         <p className="mt-10 font-mono text-5xl tracking-widest text-amber-200 md:text-6xl">
           {screen.pairingCode ?? "…"}
         </p>
-        <p className="mt-6 max-w-md text-center text-sm opacity-55">
-          En el panel admin: TV → Pantallas → Vincular pantalla e introduce este
-          código. No se requiere contraseña en el TV.
-        </p>
+        {!screen.pairingCode ? (
+          <p className="mt-3 text-sm text-amber-100/70">
+            {bootMsg || "Generando código…"}
+          </p>
+        ) : (
+          <p className="mt-6 max-w-md text-center text-sm opacity-55">
+            En el móvil (admin): TV → Pantallas → escriba este código → Vincular.
+            Luego Control TV → elija contenido → Reproducir.
+          </p>
+        )}
       </div>
     );
   }
@@ -150,7 +189,7 @@ export default function AdTvPlayer() {
             Pantalla A&D
           </p>
           <p className="mt-3 text-sm tracking-wide opacity-50">
-            Esperando contenido
+            Esperando contenido · use Control TV en el móvil
           </p>
           <p className="mt-8 text-xs opacity-35">
             {screen.name} · {screen.code} · {screen.playbackState}
@@ -180,15 +219,8 @@ export default function AdTvPlayer() {
               : undefined,
           }}
         >
-          <div className="flex h-full items-end bg-gradient-to-t from-black/70 to-transparent p-10">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] opacity-60">
-                {content?.type}
-              </p>
-              <p className="font-[Cormorant_Garamond,serif] text-4xl md:text-5xl">
-                {content?.name}
-              </p>
-            </div>
+          <div className="absolute bottom-6 left-6 right-6">
+            <p className="text-lg font-semibold drop-shadow">{content?.name}</p>
           </div>
         </div>
       )}

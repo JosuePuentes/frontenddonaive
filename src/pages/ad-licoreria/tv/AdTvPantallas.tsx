@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import {
-  AD_LICORERIA_ROUTES,
   adTvPlayerPath,
+  getAdLicoreriaRoutes,
 } from "@/constants/ad-licoreria-routes";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
+import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
 
 function statusDot(status: string) {
   if (status === "ONLINE") return "🟢";
@@ -31,6 +32,7 @@ export default function AdTvPantallas() {
     pairWithCode,
     unpairScreen,
   } = useAdTv();
+  const routes = getAdLicoreriaRoutes();
 
   const session = getCurrentOperator();
   const userName = session?.name ?? "Admin TV";
@@ -46,13 +48,14 @@ export default function AdTvPantallas() {
   const [renameName, setRenameName] = useState("");
   const [renameLoc, setRenameLoc] = useState("");
 
+  useEffect(() => {
+    void adTvRepository.refreshFromSync();
+  }, []);
+
   if (!canView) {
     return (
       <div className="ad-panel">
         <h1 className="ad-panel-title">Acceso no autorizado</h1>
-        <p className="text-sm text-[var(--ad-muted)]">
-          Se requiere permiso tv.view.
-        </p>
       </div>
     );
   }
@@ -60,6 +63,18 @@ export default function AdTvPantallas() {
   function contentName(id?: string | null) {
     if (!id) return "Sin contenido";
     return contents.find((c) => c.id === id)?.name ?? id;
+  }
+
+  async function onPair() {
+    setMsg("Sincronizando…");
+    await adTvRepository.refreshFromSync();
+    const r = pairWithCode({ pairingCode: pairCode, userName });
+    setMsg(
+      r.ok
+        ? `✓ Vinculada ${r.data.code} · ${r.data.name}. Vaya a Control TV para reproducir.`
+        : r.error,
+    );
+    if (r.ok) setPairCode("");
   }
 
   return (
@@ -70,23 +85,45 @@ export default function AdTvPantallas() {
           <h1 className="ad-display text-4xl text-[var(--ad-gold-soft)]">
             Pantallas
           </h1>
+          <p className="mt-1 text-sm text-[var(--ad-muted)]">
+            Vincule el televisor con el código A&amp;D-#### y luego reproduzca
+            desde Control TV.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.tv}>
+          <Link className="ad-btn" to={routes.tv}>
             ← Hub
           </Link>
-          <Link
-            className="ad-btn ad-btn--gold"
-            to={AD_LICORERIA_ROUTES.tvControl}
-          >
-            Control
+          <Link className="ad-btn ad-btn--gold" to={routes.tvControl}>
+            Control TV
           </Link>
         </div>
       </header>
 
       {canManage ? (
         <section className="ad-panel space-y-3">
-          <h2 className="ad-panel-title">Crear pantalla</h2>
+          <h2 className="ad-panel-title">Vincular TV (código del televisor)</h2>
+          <div className="flex flex-wrap gap-2">
+            <input
+              className="ad-input"
+              placeholder="A&D-1234"
+              value={pairCode}
+              onChange={(e) => setPairCode(e.target.value)}
+              autoCapitalize="characters"
+            />
+            <button
+              type="button"
+              className="ad-btn ad-btn--gold"
+              onClick={() => void onPair()}
+            >
+              Vincular pantalla
+            </button>
+          </div>
+          <p className="text-xs text-[var(--ad-muted)]">
+            El código aparece en el TV al abrir el reproductor.
+          </p>
+
+          <h2 className="ad-panel-title pt-2">Crear pantalla</h2>
           <div className="flex flex-wrap gap-2">
             <input
               className="ad-input"
@@ -102,7 +139,7 @@ export default function AdTvPantallas() {
             />
             <button
               type="button"
-              className="ad-btn ad-btn--gold"
+              className="ad-btn"
               onClick={() => {
                 const r = createScreen({ name, location, userName });
                 setMsg(r.ok ? `Creada ${r.data.code}` : r.error);
@@ -113,29 +150,6 @@ export default function AdTvPantallas() {
               }}
             >
               Crear
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2 border-t border-[var(--ad-line)] pt-3">
-            <input
-              className="ad-input"
-              placeholder="Código A&D-####"
-              value={pairCode}
-              onChange={(e) => setPairCode(e.target.value)}
-            />
-            <button
-              type="button"
-              className="ad-btn ad-btn--gold"
-              onClick={() => {
-                const r = pairWithCode({ pairingCode: pairCode, userName });
-                setMsg(
-                  r.ok
-                    ? `✓ Pantalla vinculada · ${r.data.code} ${r.data.name}`
-                    : r.error,
-                );
-                if (r.ok) setPairCode("");
-              }}
-            >
-              Vincular pantalla
             </button>
           </div>
         </section>
@@ -161,6 +175,11 @@ export default function AdTvPantallas() {
                 {statusDot(s.status)} {s.status}
               </span>
             </div>
+            {s.pairingCode ? (
+              <p className="font-mono text-lg text-amber-200">
+                Código: {s.pairingCode}
+              </p>
+            ) : null}
             <p className="text-sm">
               Contenido:{" "}
               <span className="text-[var(--ad-gold-soft)]">
@@ -201,7 +220,7 @@ export default function AdTvPantallas() {
               </div>
             ) : null}
             <div className="flex flex-wrap gap-1">
-              <Link className="ad-btn" to={AD_LICORERIA_ROUTES.tvControl}>
+              <Link className="ad-btn" to={routes.tvControl}>
                 CONTROLAR
               </Link>
               <Link
@@ -222,18 +241,7 @@ export default function AdTvPantallas() {
                       setRenameLoc(s.location);
                     }}
                   >
-                    RENOMBRAR
-                  </button>
-                  <button
-                    type="button"
-                    className="ad-btn"
-                    onClick={() => {
-                      setRenameId(s.id);
-                      setRenameName(s.name);
-                      setRenameLoc(s.location);
-                    }}
-                  >
-                    CAMBIAR UBICACIÓN
+                    Editar
                   </button>
                   {s.paired ? (
                     <button
@@ -247,13 +255,9 @@ export default function AdTvPantallas() {
                         setMsg(r.ok ? "Desvinculada" : r.error);
                       }}
                     >
-                      DESVINCULAR
+                      Desvincular
                     </button>
-                  ) : (
-                    <span className="ad-btn opacity-60">
-                      VINCULAR (código en TV)
-                    </span>
-                  )}
+                  ) : null}
                 </>
               ) : null}
             </div>
