@@ -10,6 +10,11 @@ function baseUrl() {
   return (API_BASE_URL ?? "").replace(/\/+$/, "");
 }
 
+/** true si hay API remota para sync/subidas TV. */
+export function isTvApiConfigured(): boolean {
+  return Boolean(baseUrl());
+}
+
 export type TvSyncPayload = {
   version: number;
   state: AdTvRepositoryState | null;
@@ -68,11 +73,14 @@ export async function publishTvSyncState(
   }
 }
 
-/** Sube data URL al API y devuelve URL pública corta para el TV. */
+/**
+ * Sube data URL al API y devuelve URL pública corta para el TV.
+ * Sin API: conserva la data URL (solo este dispositivo).
+ */
 export async function uploadTvAsset(dataUrl: string): Promise<string | null> {
   const root = baseUrl();
-  if (!root) return null;
   if (!dataUrl.startsWith("data:")) return dataUrl;
+  if (!root) return dataUrl;
   try {
     const res = await fetch(`${root}/api/v1/ad/tv/assets`, {
       method: "POST",
@@ -100,6 +108,26 @@ export async function uploadTvFile(
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const root = baseUrl();
   const mime = file.type || "application/octet-stream";
+  if (!root) {
+    if (mime.startsWith("image/")) {
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result ?? ""));
+          reader.onerror = () => reject(new Error("read"));
+          reader.readAsDataURL(file);
+        });
+        return { ok: true, url: dataUrl };
+      } catch {
+        return { ok: false, error: "No se pudo leer la imagen" };
+      }
+    }
+    return {
+      ok: false,
+      error:
+        "Falta la API del servidor (VITE_API_BASE_URL). Los videos necesitan API para el TV",
+    };
+  }
   try {
     const res = await fetch(
       `${root}/api/v1/ad/tv/assets/binary?tenant=${encodeURIComponent(TENANT)}&mimeType=${encodeURIComponent(mime)}`,

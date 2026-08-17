@@ -11,6 +11,7 @@ import {
   compressImageToDataUrl,
   uploadTvAsset,
   uploadTvFile,
+  isTvApiConfigured,
 } from "@/services/ad-licoreria/tv/sync-client";
 import type { AdTvContentType } from "@/types/ad-tv";
 
@@ -177,7 +178,7 @@ export default function AdTvContenido() {
         const uploaded = await uploadTvAsset(dataUrl);
         if (!uploaded) {
           setMsg(
-            "No se pudo subir la imagen. Revise la conexión e intente de nuevo.",
+            "No se pudo guardar la imagen. Si persiste, falta configurar la API del servidor.",
           );
           return;
         }
@@ -195,7 +196,9 @@ export default function AdTvContenido() {
       } else if (finalUrl.startsWith("data:")) {
         const uploaded = await uploadTvAsset(finalUrl);
         if (!uploaded) {
-          setMsg("No se pudo subir al servidor. Revise la conexión.");
+          setMsg(
+            "No se pudo guardar. Falta la API del servidor (no es la señal del móvil).",
+          );
           return;
         }
         finalUrl = uploaded;
@@ -214,7 +217,12 @@ export default function AdTvContenido() {
       }
       await adTvRepository.flushSync();
       await adTvRepository.refreshFromSync();
-      setMsg(`✓ Guardado: ${r.data.name}. Vaya a Control TV y pulse ▶.`);
+      const localOnly = !isTvApiConfigured();
+      setMsg(
+        localOnly
+          ? `✓ Guardado en este teléfono: ${r.data.name}. Para que el TV lo vea hace falta la API (VITE_API_BASE_URL).`
+          : `✓ Guardado: ${r.data.name}. Vaya a Control TV y pulse ▶.`,
+      );
       setName("");
       setUrl("");
       setFileLabel("");
