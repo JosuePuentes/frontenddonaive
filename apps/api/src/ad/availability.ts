@@ -202,7 +202,13 @@ export function computeOperationalAvailability(input: {
   };
 }
 
-/** CPP — monedas independientes. */
+/**
+ * CPP (costo promedio ponderado) — USD y Bs independientes, sin conversión.
+ *
+ * `prevQty` DEBE ser la existencia total del producto (todos los depósitos).
+ * El CPP vive en el producto, no en el almacén: una compra en Licorería
+ * también promedia contra lo que hay en Bodegón.
+ */
 export function weightedAverageCost(
   prevQty: number,
   prevAvg: number,

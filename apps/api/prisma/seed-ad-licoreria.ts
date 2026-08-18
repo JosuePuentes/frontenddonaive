@@ -154,6 +154,8 @@ async function main() {
     }[];
     stockLic: number;
     stockBod: number;
+    avgCostUsd: number;
+    avgCostBs: number;
   }) {
     let product = await prisma.adProduct.findFirst({
       where: { tenantId: tenant.id, sku: input.sku },
@@ -168,7 +170,17 @@ async function main() {
           sku: input.sku,
           baseUnitLabel: input.baseUnitLabel,
           minStockBase: 12,
+          avgCostUsd: input.avgCostUsd,
+          avgCostBs: input.avgCostBs,
           active: true,
+        },
+      });
+    } else if (Number(product.avgCostUsd) === 0 && Number(product.avgCostBs) === 0) {
+      product = await prisma.adProduct.update({
+        where: { id: product.id },
+        data: {
+          avgCostUsd: input.avgCostUsd,
+          avgCostBs: input.avgCostBs,
         },
       });
     }
@@ -218,6 +230,8 @@ async function main() {
     ],
     stockLic: 120,
     stockBod: 48,
+    avgCostUsd: 0.8,
+    avgCostBs: 320,
   });
 
   await ensureProduct({
@@ -233,6 +247,8 @@ async function main() {
     ],
     stockLic: 96,
     stockBod: 36,
+    avgCostUsd: 0.72,
+    avgCostBs: 288,
   });
 
   await ensureProduct({
@@ -247,6 +263,8 @@ async function main() {
     ],
     stockLic: 24,
     stockBod: 6,
+    avgCostUsd: 12,
+    avgCostBs: 4800,
   });
 
   await ensureProduct({
@@ -261,6 +279,8 @@ async function main() {
     ],
     stockLic: 40,
     stockBod: 80,
+    avgCostUsd: 0.45,
+    avgCostBs: 180,
   });
 
   await ensureProduct({
@@ -275,6 +295,8 @@ async function main() {
     ],
     stockLic: 30,
     stockBod: 100,
+    avgCostUsd: 0.9,
+    avgCostBs: 360,
   });
 
   // Espacios demo

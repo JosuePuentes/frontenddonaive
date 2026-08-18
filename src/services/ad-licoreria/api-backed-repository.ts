@@ -481,6 +481,10 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
         qty: num(l.qty),
         unitPrice: { usd: num(l.unitPriceUsd), bs: num(l.unitPriceBs) },
         qtyBase: num(l.qtyBase),
+        unitCost: {
+          usd: num(l.unitCostUsdSnapshot ?? l.cppUsdSnapshot),
+          bs: num(l.unitCostBsSnapshot ?? l.cppBsSnapshot),
+        },
       })),
       payments: payments.map((p) => ({
         id: String(p.id),

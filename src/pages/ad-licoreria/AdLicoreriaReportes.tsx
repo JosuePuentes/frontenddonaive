@@ -149,7 +149,7 @@ export default function AdLicoreriaReportes() {
         const cur = map.get(it.productId) ?? { qty: 0, usd: 0, cost: 0 };
         cur.qty += it.qtyBase;
         cur.usd += it.unitPrice.usd * it.qty;
-        cur.cost += (prod?.cost.usd ?? 0) * it.qtyBase;
+        cur.cost += (it.unitCost?.usd ?? prod?.cost.usd ?? 0) * it.qtyBase;
         map.set(it.productId, cur);
       }
     }

@@ -246,6 +246,14 @@ export class AdOpsEngine {
     return this.stocks.get(this.stockKey(wh, productId)) ?? 0;
   }
 
+  getTotalStock(productId: string) {
+    let total = 0;
+    for (const [key, qty] of this.stocks) {
+      if (key.endsWith(`:${productId}`)) total += qty;
+    }
+    return total;
+  }
+
   private setStock(wh: string, productId: string, qty: number) {
     this.stocks.set(this.stockKey(wh, productId), qty);
   }
@@ -791,7 +799,8 @@ export class AdOpsEngine {
     }
     for (const line of purchase.lines) {
       const product = this.products.find((p) => p.id === line.productId)!;
-      const prevQty = this.getStock(purchase.warehouseId, line.productId);
+      const warehouseQty = this.getStock(purchase.warehouseId, line.productId);
+      const prevQty = this.getTotalStock(line.productId);
       product.avgCostUsd = weightedAverageCost(
         prevQty,
         product.avgCostUsd,
@@ -807,7 +816,7 @@ export class AdOpsEngine {
       this.setStock(
         purchase.warehouseId,
         line.productId,
-        prevQty + line.qtyBase,
+        warehouseQty + line.qtyBase,
       );
     }
     purchase.status = "RECEIVED";

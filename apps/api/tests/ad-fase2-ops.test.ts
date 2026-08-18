@@ -227,7 +227,32 @@ describe("A&D Fase 2 — escenarios operativos", () => {
     expect(eng.getStock(ids.whA, productId)).toBe(110);
     const product = eng.products.find((p) => p.id === productId)!;
     expect(product.avgCostUsd).toBeCloseTo(
-      weightedAverageCost(100, 0, 10, 0.5),
+      weightedAverageCost(150, 0, 10, 0.5),
+    );
+  });
+
+  it("10b. CPP promedia contra existencia total (Licorería + Bodegón)", () => {
+    const product = eng.products.find((p) => p.id === productId)!;
+    product.avgCostUsd = 1;
+    const purchase = eng.createPurchase({
+      operatorId: ids.adminId,
+      supplierName: "X",
+      invoiceNumber: "CPP-2WH",
+      warehouseId: ids.whA,
+      lines: [
+        {
+          presentationId,
+          qty: 50,
+          unitCostUsd: 2,
+          unitCostBs: 80,
+        },
+      ],
+    });
+    eng.receivePurchase({ operatorId: ids.adminId, purchaseId: purchase.id });
+    /** 100+50 existentes a $1, entran 50 a $2 → (150*1 + 50*2)/200 = 1.25 */
+    expect(product.avgCostUsd).toBeCloseTo(1.25);
+    expect(product.avgCostUsd).not.toBeCloseTo(
+      weightedAverageCost(100, 1, 50, 2),
     );
   });
 

@@ -623,15 +623,12 @@ export const adOpsService = {
       }
 
       for (const line of purchase.lines) {
-        const stock = await tx.adStock.findUnique({
-          where: {
-            warehouseId_productId: {
-              warehouseId: purchase.warehouseId,
-              productId: line.productId,
-            },
-          },
+        const totalStock = await tx.adStock.aggregate({
+          where: { productId: line.productId },
+          _sum: { qtyBase: true },
         });
-        const prevQty = stock ? num(stock.qtyBase) : 0;
+        /** CPP del producto: existencia de TODOS los depósitos. */
+        const prevQty = num(totalStock._sum.qtyBase ?? 0);
         const product = await tx.adProduct.findUniqueOrThrow({
           where: { id: line.productId },
         });

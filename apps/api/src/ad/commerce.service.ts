@@ -1102,15 +1102,12 @@ export const adCommerceService = {
 
     const result = await prisma.$transaction(async (tx) => {
       for (const line of before.lines) {
-        const stock = await tx.adStock.findUnique({
-          where: {
-            warehouseId_productId: {
-              warehouseId: before.warehouseId,
-              productId: line.productId,
-            },
-          },
+        const totalStock = await tx.adStock.aggregate({
+          where: { productId: line.productId },
+          _sum: { qtyBase: true },
         });
-        const prevQty = stock ? num(stock.qtyBase) : 0;
+        /** CPP del producto: existencia de TODOS los depósitos, no solo el de la factura. */
+        const prevQty = num(totalStock._sum.qtyBase);
         const product = await tx.adProduct.findUniqueOrThrow({
           where: { id: line.productId },
         });

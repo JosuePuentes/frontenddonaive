@@ -473,6 +473,8 @@ export type AdSaleItem = {
   qty: number;
   unitPrice: AdPrice;
   qtyBase: number;
+  /** CPP snapshot al vender (por unidad base). Histórico; no se recalcula. */
+  unitCost?: AdPrice;
 };
 
 export type AdSale = {
