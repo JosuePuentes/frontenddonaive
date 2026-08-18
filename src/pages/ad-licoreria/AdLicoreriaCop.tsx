@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import {
-  AD_WH_BODEGON,
-  AD_WH_LICORERIA,
+  resolveCanonicalWarehouseId,
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
@@ -23,6 +22,7 @@ export default function AdLicoreriaCop() {
     createPurchaseRequest,
     hasPermission,
     getCurrentOperator,
+    warehouses,
   } = useAdLicoreria();
 
   const session = getCurrentOperator();
@@ -31,20 +31,34 @@ export default function AdLicoreriaCop() {
     hasPermission("cop.transfer") || hasPermission("inventory.transfer");
   const canPurchaseReq = hasPermission("cop.purchase_request");
   const warehouseLocked = Boolean(session?.warehouseId);
+  const licId = resolveCanonicalWarehouseId("LIC", warehouses);
+  const bodId = resolveCanonicalWarehouseId("BOD", warehouses);
 
   const dash = getCopDashboard();
-  const [productId, setProductId] = useState("prod-regional");
+  const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [warehouseId, setWarehouseId] = useState(
-    session?.warehouseId ?? AD_WH_LICORERIA,
+    session?.warehouseId ?? licId,
   );
   const [requestQty, setRequestQty] = useState(20);
   const [msg, setMsg] = useState("");
   const [query, setQuery] = useState("");
 
+  useEffect(() => {
+    if (!products.some((p) => p.id === productId)) {
+      setProductId(products[0]?.id ?? "");
+    }
+  }, [products, productId]);
+
+  useEffect(() => {
+    const ids = warehouses.map((w) => w.id);
+    if (warehouseId && ids.includes(warehouseId)) return;
+    setWarehouseId(session?.warehouseId || licId);
+  }, [warehouses, session?.warehouseId, warehouseId, licId]);
+
   const av = getOperationalAvailability(productId, requestQty, warehouseId);
   const product = products.find((p) => p.id === productId);
-  const lic = av.byWarehouse.find((w) => w.warehouseId === AD_WH_LICORERIA);
-  const bod = av.byWarehouse.find((w) => w.warehouseId === AD_WH_BODEGON);
+  const lic = av.byWarehouse.find((w) => w.warehouseId === licId);
+  const bod = av.byWarehouse.find((w) => w.warehouseId === bodId);
   const defaultPres = getPresentationsFor(productId)[0];
 
   const filteredCritical = useMemo(() => {
@@ -250,8 +264,13 @@ export default function AdLicoreriaCop() {
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
             >
-              <option value={AD_WH_LICORERIA}>Servicio: Licorería</option>
-              <option value={AD_WH_BODEGON}>Servicio: Bodegón</option>
+              {warehouses
+                .filter((w) => w.active)
+                .map((w) => (
+                  <option key={w.id} value={w.id}>
+                    Servicio: {w.name}
+                  </option>
+                ))}
             </select>
             <input
               className="ad-input"
@@ -327,7 +346,7 @@ export default function AdLicoreriaCop() {
             <div className="ad-cop__alert">
               <p>
                 {av.plan.transferSuggestion > 0
-                  ? `Sugerencia: transferir ${av.plan.transferSuggestion} · ${warehouseLabel(av.plan.transferFromId ?? AD_WH_BODEGON)} → ${warehouseLabel(warehouseId)}`
+                  ? `Sugerencia: transferir ${av.plan.transferSuggestion} · ${warehouseLabel(av.plan.transferFromId ?? bodId, warehouses)} → ${warehouseLabel(warehouseId, warehouses)}`
                   : null}
               </p>
               {av.plan.purchaseNeeded > 0 ? (
@@ -456,27 +475,23 @@ export default function AdLicoreriaCop() {
 
       <section className="ad-panel space-y-3">
         <h2 className="ad-panel-title">
-          Vista por depósito · {warehouseLabel(warehouseId)}
+          Vista por depósito · {warehouseLabel(warehouseId, warehouses)}
           {warehouseLocked ? " · fijado" : ""}
         </h2>
         <div className="flex gap-2">
           <button
             type="button"
-            className={`ad-btn ${warehouseId === AD_WH_LICORERIA ? "ad-btn--gold" : ""}`}
-            onClick={() => setWarehouseId(AD_WH_LICORERIA)}
-            disabled={
-              warehouseLocked && session?.warehouseId !== AD_WH_LICORERIA
-            }
+            className={`ad-btn ${warehouseId === licId ? "ad-btn--gold" : ""}`}
+            onClick={() => setWarehouseId(licId)}
+            disabled={warehouseLocked && session?.warehouseId !== licId}
           >
             Licorería
           </button>
           <button
             type="button"
-            className={`ad-btn ${warehouseId === AD_WH_BODEGON ? "ad-btn--gold" : ""}`}
-            onClick={() => setWarehouseId(AD_WH_BODEGON)}
-            disabled={
-              warehouseLocked && session?.warehouseId !== AD_WH_BODEGON
-            }
+            className={`ad-btn ${warehouseId === bodId ? "ad-btn--gold" : ""}`}
+            onClick={() => setWarehouseId(bodId)}
+            disabled={warehouseLocked && session?.warehouseId !== bodId}
           >
             Bodegón
           </button>

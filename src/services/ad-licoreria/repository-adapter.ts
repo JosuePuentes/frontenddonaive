@@ -34,6 +34,7 @@ export const AD_API_READY_MODULES = [
   "closures",
   "audit",
   "reports",
+  "tables",
 ] as const;
 
 export type AdApiReadyModule = (typeof AD_API_READY_MODULES)[number];

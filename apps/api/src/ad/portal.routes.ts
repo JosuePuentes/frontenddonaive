@@ -30,6 +30,30 @@ const patchWarehouseSchema = z.object({
   active: z.boolean().optional(),
 });
 
+const upsertSpaceSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(120).optional(),
+  number: z.string().min(1).max(40).optional(),
+  code: z.string().min(1).max(40).optional(),
+  spaceType: z
+    .enum(["mesa", "barra", "area", "privado", "terraza", "otro"])
+    .optional(),
+  capacity: z.number().int().min(1).max(200).optional(),
+  status: z
+    .enum([
+      "disponible",
+      "ocupada",
+      "cuenta_abierta",
+      "cuenta_prepagada",
+      "reservada",
+      "cerrada",
+      "inactiva",
+    ])
+    .optional(),
+  active: z.boolean().optional(),
+  warehouseId: z.string().uuid().nullable().optional(),
+});
+
 const accountPaymentSchema = z.object({
   method: z.string().min(1).max(64),
   currency: z.enum(["USD", "BS"]),
@@ -95,6 +119,41 @@ adPortalRouter.patch("/warehouses/:id", async (req, res, next) => {
       req.params.id,
       body,
     );
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adPortalRouter.get("/spaces", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const data = await adPortalService.listSpaces(ctx);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adPortalRouter.post("/spaces", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(upsertSpaceSchema, req.body);
+    const data = await adPortalService.upsertSpace(ctx, body);
+    res.status(201).json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adPortalRouter.put("/spaces/:id", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(upsertSpaceSchema, {
+      ...req.body,
+      id: req.params.id,
+    });
+    const data = await adPortalService.upsertSpace(ctx, body);
     res.json({ data });
   } catch (err) {
     next(err);

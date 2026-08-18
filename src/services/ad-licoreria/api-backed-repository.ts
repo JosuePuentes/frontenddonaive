@@ -16,12 +16,23 @@ import {
 import type {
   AdAccount,
   AdCustomer,
+  AdDailyClosure,
+  AdInventoryClosure,
   AdInventoryItem,
+  AdInventoryMovement,
+  AdInventoryMovementType,
   AdOperator,
   AdPermission,
   AdPresentation,
   AdProduct,
+  AdPurchase,
+  AdPurchaseRequest,
+  AdPurchaseRequestStatus,
   AdRole,
+  AdSale,
+  AdSpaceType,
+  AdTable,
+  AdTableStatus,
   AdWarehouse,
 } from "@/types/ad-licoreria";
 import {
@@ -305,6 +316,9 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
       number: String(a.accountNumber ?? a.id),
       tableId: a.tableId ? String(a.tableId) : undefined,
       mesoneraId: a.mesoneraId ? String(a.mesoneraId) : undefined,
+      mesoneraName:
+        (a.mesonera as { name?: string } | undefined)?.name ??
+        (a.mesoneraName ? String(a.mesoneraName) : undefined),
       customerId: a.customerId ? String(a.customerId) : undefined,
       customerName: a.customerName ? String(a.customerName) : undefined,
       customerPhone: a.customerPhone ? String(a.customerPhone) : undefined,
@@ -426,7 +440,235 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
     };
   });
 
+  const tables = (snap.tables as Record<string, unknown>[]) ?? [];
+  next.tables = tables.map((t): AdTable => {
+    const rawStatus = String(t.status ?? "disponible");
+    const status: AdTableStatus =
+      rawStatus === "inactiva" ? "cerrada" : (rawStatus as AdTableStatus);
+    return {
+      id: String(t.id),
+      number: String(t.number ?? t.code ?? t.name ?? ""),
+      code: t.code ? String(t.code) : undefined,
+      label: t.name ? String(t.name) : undefined,
+      spaceType: (t.spaceType ? String(t.spaceType) : "mesa") as AdSpaceType,
+      capacity: num(t.capacity) || 4,
+      status: status || "disponible",
+      active: t.active === false ? false : true,
+      warehouseId: t.warehouseId ? String(t.warehouseId) : null,
+    };
+  });
+
+  const sales = (snap.sales as Record<string, unknown>[]) ?? [];
+  next.sales = sales.map((s): AdSale => {
+    const lines = (s.lines as Record<string, unknown>[]) ?? [];
+    const payments = (s.payments as Record<string, unknown>[]) ?? [];
+    const statusRaw = String(s.status ?? "completed");
+    const status: AdSale["status"] =
+      statusRaw === "voided" ? "voided" : "completed";
+    const total = {
+      usd: num(s.totalUsd),
+      bs: num(s.totalBs),
+    };
+    return {
+      id: String(s.id),
+      receiptNumber: String(s.receiptNumber ?? s.id),
+      warehouseId: String(s.warehouseId ?? ""),
+      operatorId: s.operatorId ? String(s.operatorId) : undefined,
+      customerId: s.customerId ? String(s.customerId) : undefined,
+      items: lines.map((l) => ({
+        productId: String(l.productId),
+        presentationId: String(l.presentationId),
+        qty: num(l.qty),
+        unitPrice: { usd: num(l.unitPriceUsd), bs: num(l.unitPriceBs) },
+        qtyBase: num(l.qtyBase),
+      })),
+      payments: payments.map((p) => ({
+        id: String(p.id),
+        method: String(p.method) as AdSale["payments"][0]["method"],
+        currency: String(p.currency) as "USD" | "BS",
+        amount: num(p.amount),
+        bank: p.bank ? String(p.bank) : undefined,
+        reference: p.reference ? String(p.reference) : undefined,
+        createdAt: String(
+          p.createdAt ?? s.createdAt ?? new Date().toISOString(),
+        ),
+      })),
+      subtotal: total,
+      discountUsd: num(s.discountUsd),
+      discountBs: 0,
+      total,
+      userName: "API",
+      status,
+      notes: s.notes ? String(s.notes) : undefined,
+      createdAt: String(s.createdAt ?? new Date().toISOString()),
+    };
+  });
+
+  const purchases = (snap.purchases as Record<string, unknown>[]) ?? [];
+  next.purchases = purchases.map((p): AdPurchase => {
+    const lines = (p.lines as Record<string, unknown>[]) ?? [];
+    return {
+      id: String(p.id),
+      supplierName: String(p.supplierName ?? ""),
+      invoiceNumber: String(p.invoiceNumber ?? p.id),
+      date: String(
+        p.invoiceDate ?? p.createdAt ?? new Date().toISOString(),
+      ).slice(0, 10),
+      warehouseId: String(p.warehouseId ?? ""),
+      items: lines.map((l) => ({
+        id: String(l.id ?? `${p.id}-${l.productId}`),
+        productId: String(l.productId),
+        presentationId: String(l.presentationId ?? ""),
+        qty: num(l.qty),
+        qtyBase: num(l.qtyBase),
+        unitCost: { usd: num(l.unitCostUsd), bs: num(l.unitCostBs) },
+        lineCost: { usd: num(l.lineCostUsd), bs: num(l.lineCostBs) },
+      })),
+      totalCost: {
+        usd: num(p.grandTotalUsd ?? p.totalCostUsd),
+        bs: num(p.grandTotalBs ?? p.totalCostBs),
+      },
+      reference: p.reference ? String(p.reference) : undefined,
+      userName: "API",
+      createdAt: String(p.createdAt ?? new Date().toISOString()),
+      notes: p.notes ? String(p.notes) : undefined,
+    };
+  });
+
+  const cashClosures =
+    (snap.cashClosures as Record<string, unknown>[]) ?? [];
+  next.dailyClosures = cashClosures.map((c): AdDailyClosure => {
+    const snapJson = (c.snapshot as Record<string, unknown> | null) ?? {};
+    return {
+      id: String(c.id),
+      date: String(
+        c.periodStart ?? c.createdAt ?? new Date().toISOString(),
+      ).slice(0, 10),
+      warehouseId: c.warehouseId ? String(c.warehouseId) : undefined,
+      operatorId: c.operatorId ? String(c.operatorId) : undefined,
+      salesCount: num(snapJson.salesCount ?? c.salesCount),
+      totalUsd: num(snapJson.totalUsd),
+      totalBs: num(snapJson.totalBs),
+      collectedUsd: num(snapJson.collectedUsd),
+      collectedBs: num(snapJson.collectedBs),
+      pendingUsd: num(snapJson.pendingUsd),
+      discountUsd: num(snapJson.discountUsd),
+      voidedCount: num(snapJson.voidedCount),
+      expectedCashUsd: num(c.expectedCashUsd),
+      countedCashUsd: num(c.countedCashUsd),
+      cashDifferenceUsd: num(c.differenceUsd ?? c.cashDifferenceUsd),
+      expectedCashBs: num(c.expectedCashBs),
+      countedCashBs: num(c.countedCashBs),
+      cashDifferenceBs: num(c.differenceBs ?? c.cashDifferenceBs),
+      openAccounts: num(snapJson.openAccounts),
+      closedAccounts: num(snapJson.closedAccounts),
+      prepaidsActive: num(snapJson.prepaidsActive),
+      byMethod: {},
+      byMesonera: [],
+      createdAt: String(c.createdAt ?? new Date().toISOString()),
+      createdBy: "API",
+      notes: c.notes ? String(c.notes) : undefined,
+    };
+  });
+
+  const invClosures =
+    (snap.invClosures as Record<string, unknown>[]) ?? [];
+  next.inventoryClosures = invClosures.map((c): AdInventoryClosure => {
+    const lines = (c.lines as Record<string, unknown>[]) ?? [];
+    return {
+      id: String(c.id),
+      warehouseId: c.warehouseId ? String(c.warehouseId) : undefined,
+      lines: lines.map((l) => ({
+        productId: String(l.productId),
+        warehouseId: String(c.warehouseId ?? l.warehouseId ?? ""),
+        theoreticalBase: num(l.theoreticalBase),
+        physicalBase: num(l.physicalBase),
+        differenceBase: num(l.differenceBase),
+      })),
+      createdAt: String(c.createdAt ?? new Date().toISOString()),
+      createdBy: "API",
+      notes: c.notes ? String(c.notes) : undefined,
+    };
+  });
+
+  const movements =
+    (snap.movements as Record<string, unknown>[]) ?? [];
+  next.movements = movements.map((m): AdInventoryMovement => ({
+    id: String(m.id),
+    type: mapInventoryMovementType(String(m.type)),
+    productId: String(m.productId),
+    presentationId: m.presentationId ? String(m.presentationId) : undefined,
+    qtyPresentation: num(m.qtyPresentation ?? m.qtyBase),
+    qtyBase: num(m.qtyBase),
+    warehouseId: String(m.warehouseId),
+    userName: "API",
+    reason: m.reason ? String(m.reason) : undefined,
+    reference: m.reference ? String(m.reference) : undefined,
+    createdAt: String(m.createdAt ?? new Date().toISOString()),
+  }));
+
+  const purchaseRequests =
+    (snap.purchaseRequests as Record<string, unknown>[]) ?? [];
+  next.purchaseRequests = purchaseRequests.map((p): AdPurchaseRequest => ({
+    id: String(p.id),
+    number: String(p.id).slice(0, 8),
+    productId: String(p.productId),
+    presentationId: String(p.presentationId ?? ""),
+    qty: num(p.qtyBaseNeeded),
+    qtyBase: num(p.qtyBaseNeeded),
+    warehouseId: String(p.warehouseId ?? ""),
+    status: mapPurchaseRequestStatus(String(p.status)),
+    reason: String(p.reason ?? ""),
+    createdBy: String(p.createdById ?? "API"),
+    createdAt: String(p.createdAt ?? new Date().toISOString()),
+    updatedAt: String(p.updatedAt ?? p.createdAt ?? new Date().toISOString()),
+  }));
+
   return next;
+}
+
+function mapInventoryMovementType(type: string): AdInventoryMovementType {
+  switch (type) {
+    case "PURCHASE":
+      return "COMPRA";
+    case "SALE":
+      return "VENTA";
+    case "TRANSFER_IN":
+      return "TRASLADO_ENTRADA";
+    case "TRANSFER_OUT":
+      return "TRASLADO_SALIDA";
+    case "ADJUST_IN":
+    case "IN":
+      return "AJUSTE_ENTRADA";
+    case "ADJUST_OUT":
+    case "OUT":
+    case "ADJUST":
+      return "AJUSTE_SALIDA";
+    case "VOID_REVERSAL":
+      return "DEVOLUCION";
+    case "COUNT":
+      return "CONTEO_FISICO";
+    case "SERVE":
+    case "PREPAID_CONSUME":
+      return "CONSUMO_CUENTA";
+    default:
+      return "AJUSTE_ENTRADA";
+  }
+}
+
+function mapPurchaseRequestStatus(status: string): AdPurchaseRequestStatus {
+  switch (status) {
+    case "APPROVED":
+      return "APROBADA";
+    case "ORDERED":
+      return "ORDENADA";
+    case "FULFILLED":
+      return "RECIBIDA";
+    case "CANCELLED":
+      return "CANCELADA";
+    default:
+      return "SOLICITADA";
+  }
 }
 
 function mapTransferStatus(
@@ -1863,7 +2105,50 @@ export const adApiBackedRepository = {
   reassignMesonera: adLicoreriaRepository.reassignMesonera.bind(
     adLicoreriaRepository,
   ),
-  upsertTable: adLicoreriaRepository.upsertTable.bind(adLicoreriaRepository),
+  async upsertTable(
+    table: AdTable,
+  ): Promise<AdResult<AdTable>> {
+    if (!table.number.trim() && !table.code?.trim()) {
+      return { ok: false, error: "Número o código obligatorio" };
+    }
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      table.id,
+    );
+    const body = {
+      name: table.label ?? table.number ?? table.code,
+      number: table.number,
+      code: table.code,
+      spaceType: table.spaceType ?? "mesa",
+      capacity: table.capacity,
+      status: table.status,
+      active: table.active,
+      warehouseId: table.warehouseId ?? null,
+    };
+    const r = isUuid
+      ? await apiJson<Record<string, unknown>>(
+          "PUT",
+          `/api/v1/ad/spaces/${table.id}`,
+          body,
+        )
+      : await apiJson<Record<string, unknown>>(
+          "POST",
+          "/api/v1/ad/spaces",
+          body,
+        );
+    if (!r.ok) return r;
+    await hydrate();
+    const found = state.tables.find((t) => t.id === String(r.data.id));
+    if (found) return { ok: true, data: found };
+    return {
+      ok: true,
+      data: {
+        ...table,
+        id: String(r.data.id),
+        number: String(r.data.number ?? table.number),
+        code: r.data.code ? String(r.data.code) : table.code,
+      },
+    };
+  },
 };
 
 export type AdApiBackedRepository = typeof adApiBackedRepository;

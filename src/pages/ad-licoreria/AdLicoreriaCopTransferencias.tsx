@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import {
-  AD_WH_BODEGON,
-  AD_WH_LICORERIA,
+  resolveCanonicalWarehouseId,
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
 import {
@@ -33,16 +32,17 @@ export default function AdLicoreriaCopTransferencias() {
     advanceTransferStatus,
     logDocumentAction,
     getCurrentOperator,
+    warehouses,
   } = useAdLicoreria();
 
   const session = getCurrentOperator();
   const warehouseLocked = Boolean(session?.warehouseId);
+  const licId = resolveCanonicalWarehouseId("LIC", warehouses);
+  const bodId = resolveCanonicalWarehouseId("BOD", warehouses);
   const [fromId, setFromId] = useState(
-    session?.warehouseId === AD_WH_LICORERIA ? AD_WH_BODEGON : AD_WH_BODEGON,
+    session?.warehouseId === licId ? bodId : bodId,
   );
-  const [toId, setToId] = useState(
-    session?.warehouseId ?? AD_WH_LICORERIA,
-  );
+  const [toId, setToId] = useState(session?.warehouseId ?? licId);
   const [reason, setReason] = useState("Reposición operativa");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([]);
@@ -51,6 +51,19 @@ export default function AdLicoreriaCopTransferencias() {
   const [qty, setQty] = useState(10);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    const ids = warehouses.map((w) => w.id);
+    if (!ids.length) return;
+    if (!ids.includes(fromId)) setFromId(bodId);
+    if (!ids.includes(toId)) setToId(session?.warehouseId || licId);
+  }, [warehouses, fromId, toId, bodId, licId, session?.warehouseId]);
+
+  useEffect(() => {
+    if (!products.some((p) => p.id === productId)) {
+      setProductId(products[0]?.id ?? "");
+    }
+  }, [products, productId]);
 
   const availablePres = getPresentationsFor(productId);
   const activePres =
@@ -141,8 +154,13 @@ export default function AdLicoreriaCopTransferencias() {
               onChange={(e) => setFromId(e.target.value)}
               disabled={warehouseLocked}
             >
-              <option value={AD_WH_BODEGON}>Origen: Bodegón</option>
-              <option value={AD_WH_LICORERIA}>Origen: Licorería</option>
+              {warehouses
+                .filter((w) => w.active)
+                .map((w) => (
+                  <option key={w.id} value={w.id}>
+                    Origen: {w.name}
+                  </option>
+                ))}
             </select>
             <select
               className="ad-select"
@@ -150,8 +168,13 @@ export default function AdLicoreriaCopTransferencias() {
               onChange={(e) => setToId(e.target.value)}
               disabled={warehouseLocked}
             >
-              <option value={AD_WH_LICORERIA}>Destino: Licorería</option>
-              <option value={AD_WH_BODEGON}>Destino: Bodegón</option>
+              {warehouses
+                .filter((w) => w.active)
+                .map((w) => (
+                  <option key={w.id} value={w.id}>
+                    Destino: {w.name}
+                  </option>
+                ))}
             </select>
           </div>
           <input
@@ -255,10 +278,10 @@ export default function AdLicoreriaCopTransferencias() {
               <p className="ad-display text-2xl">{preview.number}</p>
               <p className="text-sm">
                 Origen:{" "}
-                <strong>{warehouseLabel(preview.fromWarehouseId)}</strong>
+                <strong>{warehouseLabel(preview.fromWarehouseId, warehouses)}</strong>
                 <br />
                 Destino:{" "}
-                <strong>{warehouseLabel(preview.toWarehouseId)}</strong>
+                <strong>{warehouseLabel(preview.toWarehouseId, warehouses)}</strong>
               </p>
               <p className="text-sm text-[var(--ad-muted)]">
                 Estado: {preview.status} · Responsable: {preview.createdBy}
@@ -419,8 +442,8 @@ export default function AdLicoreriaCopTransferencias() {
               {sorted.map((t) => (
                 <tr key={t.id}>
                   <td>{t.number}</td>
-                  <td>{warehouseLabel(t.fromWarehouseId)}</td>
-                  <td>{warehouseLabel(t.toWarehouseId)}</td>
+                  <td>{warehouseLabel(t.fromWarehouseId, warehouses)}</td>
+                  <td>{warehouseLabel(t.toWarehouseId, warehouses)}</td>
                   <td>{t.lines.length}</td>
                   <td>
                     <span className="ad-badge">{t.status}</span>

@@ -35,6 +35,11 @@ describe("A&D Fase 3 — auth público montado sin X-User-Id", () => {
     const res = await request(app).get("/api/v1/ad/snapshot");
     expect([401, 503]).toContain(res.status);
   });
+
+  it("GET /api/v1/ad/spaces exige JWT", async () => {
+    const res = await request(app).get("/api/v1/ad/spaces");
+    expect([401, 503]).toContain(res.status);
+  });
 });
 
 describe("A&D Fase 3 — matriz de roles para FE", () => {

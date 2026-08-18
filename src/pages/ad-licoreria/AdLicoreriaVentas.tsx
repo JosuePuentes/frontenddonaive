@@ -149,7 +149,7 @@ export default function AdLicoreriaVentas() {
         const av = getOperationalAvailability(
           line.productId,
           line.qtyBase,
-          posWarehouseId || "wh-2",
+          posWarehouseId,
         );
         const shortfall = Math.max(
           0,

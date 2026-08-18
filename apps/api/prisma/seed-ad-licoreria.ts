@@ -286,7 +286,7 @@ async function main() {
   ];
   for (const s of spaces) {
     const existing = await prisma.adTableSpace.findFirst({
-      where: { tenantId: tenant.id, code: s.code },
+      where: { tenantId: tenant.id, code: s.code       },
     });
     if (!existing) {
       await prisma.adTableSpace.create({
@@ -303,6 +303,138 @@ async function main() {
         },
       });
     }
+  }
+
+  const bcvExists = await prisma.adExchangeRate.findFirst({
+    where: { tenantId: tenant.id, kind: "BCV" },
+  });
+  if (!bcvExists) {
+    await prisma.adExchangeRate.create({
+      data: {
+        tenantId: tenant.id,
+        kind: "BCV",
+        rate: 40,
+        reason: "seed demo",
+      },
+    });
+  }
+
+  await prisma.adFinanceSettings.upsert({
+    where: { tenantId: tenant.id },
+    update: {},
+    create: { tenantId: tenant.id },
+  });
+
+  async function ensureFinAccount(name: string, currency: "USD" | "BS") {
+    const existing = await prisma.adFinancialAccount.findFirst({
+      where: { tenantId: tenant.id, name },
+    });
+    if (existing) return existing;
+    return prisma.adFinancialAccount.create({
+      data: {
+        tenantId: tenant.id,
+        name,
+        code: currency === "USD" ? "CAJA-USD" : "CAJA-BS",
+        type: "CASH",
+        currency,
+        openingBalance: 0,
+        balance: 0,
+        active: true,
+      },
+    });
+  }
+
+  const cajaUsd = await ensureFinAccount("Caja USD", "USD");
+  const cajaBs = await ensureFinAccount("Caja Bs", "BS");
+
+  const paymentMethods: {
+    code: string;
+    name: string;
+    currency: "USD" | "BS";
+    requiresReference: boolean;
+    financialAccountId?: string;
+    sortOrder: number;
+  }[] = [
+    {
+      code: "efectivo_usd",
+      name: "Efectivo USD",
+      currency: "USD",
+      requiresReference: false,
+      financialAccountId: cajaUsd.id,
+      sortOrder: 10,
+    },
+    {
+      code: "efectivo_bs",
+      name: "Efectivo Bs",
+      currency: "BS",
+      requiresReference: false,
+      financialAccountId: cajaBs.id,
+      sortOrder: 20,
+    },
+    {
+      code: "pago_movil",
+      name: "Pago móvil",
+      currency: "BS",
+      requiresReference: true,
+      sortOrder: 30,
+    },
+    {
+      code: "transferencia",
+      name: "Transferencia",
+      currency: "BS",
+      requiresReference: true,
+      sortOrder: 40,
+    },
+    {
+      code: "zelle",
+      name: "Zelle",
+      currency: "USD",
+      requiresReference: true,
+      sortOrder: 50,
+    },
+  ];
+
+  for (const pm of paymentMethods) {
+    await prisma.adPaymentMethod.upsert({
+      where: {
+        tenantId_code: { tenantId: tenant.id, code: pm.code },
+      },
+      update: {
+        name: pm.name,
+        currency: pm.currency,
+        active: true,
+        requiresReference: pm.requiresReference,
+        sortOrder: pm.sortOrder,
+      },
+      create: {
+        tenantId: tenant.id,
+        code: pm.code,
+        name: pm.name,
+        currency: pm.currency,
+        active: true,
+        requiresReference: pm.requiresReference,
+        financialAccountId: pm.financialAccountId,
+        sortOrder: pm.sortOrder,
+      },
+    });
+  }
+
+  const supplierName = "Distribuidora Polar C.A.";
+  const supplierExists = await prisma.adSupplier.findFirst({
+    where: { tenantId: tenant.id, name: supplierName },
+  });
+  if (!supplierExists) {
+    await prisma.adSupplier.create({
+      data: {
+        tenantId: tenant.id,
+        name: supplierName,
+        identification: "J-00012345-6",
+        phone: "0212-5550000",
+        defaultCurrency: "USD",
+        creditDays: 15,
+        active: true,
+      },
+    });
   }
 
   const fingerprint = createHash("sha256")

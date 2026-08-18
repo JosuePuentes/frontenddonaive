@@ -10,6 +10,7 @@ import {
 } from "../errors/app-error.js";
 import {
   requireAdPermission,
+  requireWarehouseAccess,
   type AdRequestContext,
 } from "./authorization.js";
 import { hashPassword } from "./password.js";
@@ -243,7 +244,7 @@ export const adPortalService = {
       }),
       prisma.adAccount.findMany({
         where: { tenantId: ctx.tenantId },
-        include: { lines: true, payments: true },
+        include: { lines: true, payments: true, mesonera: true },
         take: 300,
         orderBy: { createdAt: "desc" },
       }),
@@ -423,6 +424,94 @@ export const adPortalService = {
       after: payment,
     });
     return payment;
+  },
+
+  async listSpaces(ctx: AdRequestContext) {
+    const prisma = getPrisma();
+    return prisma.adTableSpace.findMany({
+      where: { tenantId: ctx.tenantId },
+      orderBy: [{ spaceType: "asc" }, { code: "asc" }],
+    });
+  },
+
+  async upsertSpace(
+    ctx: AdRequestContext,
+    input: {
+      id?: string;
+      name?: string;
+      number?: string;
+      code?: string;
+      spaceType?: string;
+      capacity?: number;
+      status?: string;
+      active?: boolean;
+      warehouseId?: string | null;
+    },
+  ) {
+    requireAdPermission(ctx, "tables.manage");
+    const prisma = getPrisma();
+    const number = (input.number ?? input.code ?? input.name ?? "").trim();
+    const code = (input.code ?? input.number ?? "").trim().toUpperCase();
+    if (!number && !code) {
+      throw new ValidationError("Número o código obligatorio");
+    }
+    const spaceType = input.spaceType?.trim() || "mesa";
+    const name = (input.name ?? number ?? code).trim();
+    const warehouseId = input.warehouseId ?? null;
+    if (warehouseId) requireWarehouseAccess(ctx, warehouseId);
+
+    if (input.id) {
+      const existing = await prisma.adTableSpace.findFirst({
+        where: { id: input.id, tenantId: ctx.tenantId },
+      });
+      if (!existing) throw new NotFoundError("Espacio no encontrado");
+      const updated = await prisma.adTableSpace.update({
+        where: { id: input.id },
+        data: {
+          name,
+          number: number || existing.number,
+          code: code || existing.code,
+          spaceType,
+          capacity: input.capacity ?? existing.capacity,
+          status: input.status ?? existing.status,
+          active: input.active ?? existing.active,
+          warehouseId,
+        },
+      });
+      await writeAdAudit({
+        tenantId: ctx.tenantId,
+        operatorId: ctx.operator.id,
+        action: "update",
+        entity: "table",
+        entityId: updated.id,
+        before: existing,
+        after: updated,
+      });
+      return updated;
+    }
+
+    const created = await prisma.adTableSpace.create({
+      data: {
+        tenantId: ctx.tenantId,
+        name,
+        number: number || code,
+        code: code || number,
+        spaceType,
+        capacity: input.capacity ?? 4,
+        status: input.status ?? "disponible",
+        active: input.active ?? true,
+        warehouseId,
+      },
+    });
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      action: "create",
+      entity: "table",
+      entityId: created.id,
+      after: created,
+    });
+    return created;
   },
 };
 
