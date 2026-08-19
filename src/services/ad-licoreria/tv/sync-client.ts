@@ -3,6 +3,7 @@
  */
 import { API_BASE_URL } from "@/config/api";
 import type { AdTvRepositoryState } from "@/services/ad-licoreria/tv/repository";
+import { inferTvMediaKind, inferTvMimeType } from "@/services/ad-licoreria/tv/media";
 
 const TENANT = "ad-licoreria";
 
@@ -73,6 +74,137 @@ export async function publishTvSyncState(
   }
 }
 
+function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  ms: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => {
+    clearTimeout(timer);
+  });
+}
+
+async function readUploadError(res: Response): Promise<string> {
+  const text = await res.text().catch(() => "");
+  try {
+    const json = JSON.parse(text) as { error?: { message?: string } };
+    if (json.error?.message) return json.error.message;
+  } catch {
+    /* no JSON */
+  }
+  if (res.status === 413) {
+    return "El servidor rechazó el archivo por tamaño (máx. 80 MB)";
+  }
+  if (res.status === 413 || /payload|too large/i.test(text)) {
+    return "El servidor rechazó el archivo por tamaño (máx. 80 MB)";
+  }
+  return text.trim()
+    ? `Error al subir (${res.status}): ${text.slice(0, 160)}`
+    : `Error al subir (${res.status})`;
+}
+
+function networkUploadError(err: unknown): string {
+  if (err && typeof err === "object" && "name" in err) {
+    const name = String((err as { name?: string }).name);
+    if (name === "AbortError") {
+      return "La subida tardó demasiado. Use WiFi o un video más corto (720p).";
+    }
+  }
+  return "Sin conexión al subir el archivo. Revise WiFi e intente de nuevo.";
+}
+
+async function uploadTvFileChunked(
+  root: string,
+  file: File,
+  mime: string,
+  onProgress?: (pct: number) => void,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const q = `tenant=${encodeURIComponent(TENANT)}&mimeType=${encodeURIComponent(mime)}&filename=${encodeURIComponent(file.name)}`;
+  try {
+    const initRes = await fetchWithTimeout(
+      `${root}/api/v1/ad/tv/assets/binary/init?${q}`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Mime-Type": mime,
+        },
+        body: JSON.stringify({
+          tenant: TENANT,
+          mimeType: mime,
+          filename: file.name,
+        }),
+      },
+      30_000,
+    );
+    if (!initRes.ok) {
+      return { ok: false, error: await readUploadError(initRes) };
+    }
+    const initJson = (await initRes.json()) as { data?: { id?: string } };
+    const id = initJson.data?.id;
+    if (!id) return { ok: false, error: "No se pudo iniciar la subida" };
+
+    const CHUNK = 1.5 * 1024 * 1024;
+    let sent = 0;
+    while (sent < file.size) {
+      const slice = file.slice(sent, sent + CHUNK);
+      const chunkRes = await fetchWithTimeout(
+        `${root}/api/v1/ad/tv/assets/binary/chunk?${q}&id=${encodeURIComponent(id)}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/octet-stream",
+            "X-Mime-Type": mime,
+          },
+          body: slice,
+        },
+        120_000,
+      );
+      if (!chunkRes.ok) {
+        return { ok: false, error: await readUploadError(chunkRes) };
+      }
+      sent += slice.size;
+      onProgress?.(Math.min(99, Math.round((sent / file.size) * 100)));
+    }
+
+    const doneRes = await fetchWithTimeout(
+      `${root}/api/v1/ad/tv/assets/binary/complete?${q}&id=${encodeURIComponent(id)}`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Mime-Type": mime,
+        },
+        body: JSON.stringify({
+          tenant: TENANT,
+          id,
+          mimeType: mime,
+          filename: file.name,
+        }),
+      },
+      60_000,
+    );
+    if (!doneRes.ok) {
+      return { ok: false, error: await readUploadError(doneRes) };
+    }
+    const json = (await doneRes.json()) as { data: { path: string } };
+    const path = json.data?.path;
+    if (!path) return { ok: false, error: "Respuesta inválida del servidor" };
+    onProgress?.(100);
+    return {
+      ok: true,
+      url: `${root}${path.startsWith("/") ? path : `/${path}`}`,
+    };
+  } catch (err) {
+    return { ok: false, error: networkUploadError(err) };
+  }
+}
+
 /**
  * Sube data URL al API y devuelve URL pública corta para el TV.
  * Sin API: conserva la data URL (solo este dispositivo).
@@ -105,11 +237,12 @@ export async function uploadTvAsset(dataUrl: string): Promise<string | null> {
 /** Sube File (imagen/video) en binario — preferido para videos. */
 export async function uploadTvFile(
   file: File,
+  opts?: { onProgress?: (pct: number) => void },
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const root = baseUrl();
-  const mime = file.type || "application/octet-stream";
+  const mime = inferTvMimeType(file);
   if (!root) {
-    if (mime.startsWith("image/")) {
+    if (inferTvMediaKind(file) === "image") {
       try {
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -128,34 +261,39 @@ export async function uploadTvFile(
         "Falta la API del servidor (VITE_API_BASE_URL). Los videos necesitan API para el TV",
     };
   }
+
+  const CHUNK = 1.5 * 1024 * 1024;
+  if (file.size > CHUNK) {
+    return uploadTvFileChunked(root, file, mime, opts?.onProgress);
+  }
+
   try {
-    const res = await fetch(
-      `${root}/api/v1/ad/tv/assets/binary?tenant=${encodeURIComponent(TENANT)}&mimeType=${encodeURIComponent(mime)}`,
+    const res = await fetchWithTimeout(
+      `${root}/api/v1/ad/tv/assets/binary?tenant=${encodeURIComponent(TENANT)}&mimeType=${encodeURIComponent(mime)}&filename=${encodeURIComponent(file.name)}`,
       {
         method: "POST",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/octet-stream",
+          "X-Mime-Type": mime,
         },
         body: file,
       },
+      180_000,
     );
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      return {
-        ok: false,
-        error: `Error al subir (${res.status})${text ? `: ${text.slice(0, 120)}` : ""}`,
-      };
+      return { ok: false, error: await readUploadError(res) };
     }
     const json = (await res.json()) as { data: { path: string } };
     const path = json.data?.path;
     if (!path) return { ok: false, error: "Respuesta inválida del servidor" };
+    opts?.onProgress?.(100);
     return {
       ok: true,
       url: `${root}${path.startsWith("/") ? path : `/${path}`}`,
     };
-  } catch {
-    return { ok: false, error: "Sin conexión al subir el archivo" };
+  } catch (err) {
+    return { ok: false, error: networkUploadError(err) };
   }
 }
 
@@ -165,7 +303,7 @@ export async function compressImageToDataUrl(
   maxSide = 1600,
   quality = 0.82,
 ): Promise<string> {
-  if (!file.type.startsWith("image/")) {
+  if (inferTvMediaKind(file) !== "image") {
     throw new Error("No es imagen");
   }
   const bitmap = await createImageBitmap(file);

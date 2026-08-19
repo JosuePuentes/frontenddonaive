@@ -13,6 +13,14 @@ import {
   uploadTvFile,
   isTvApiConfigured,
 } from "@/services/ad-licoreria/tv/sync-client";
+import {
+  MAX_TV_IMAGE_BYTES,
+  MAX_TV_VIDEO_BYTES,
+  formatFileMb,
+  friendlyTvTitle,
+  inferTvMediaKind,
+  isLikelyHevcOrMov,
+} from "@/services/ad-licoreria/tv/media";
 import type { AdTvContentType } from "@/types/ad-tv";
 
 const TYPES: AdTvContentType[] = [
@@ -22,28 +30,6 @@ const TYPES: AdTvContentType[] = [
   "MENU",
   "PROMOTION",
 ];
-
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 35 * 1024 * 1024;
-
-function friendlyTitle(file: File, kind: "image" | "video") {
-  const base = file.name.replace(/\.[^.]+$/, "").trim();
-  const looksLikeId =
-    !base ||
-    /^[0-9A-F-]{10,}$/i.test(base) ||
-    /^IMG_\d+/i.test(base) ||
-    base.length > 48;
-  if (looksLikeId) {
-    const stamp = new Date().toLocaleString("es", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    return kind === "video" ? `Video ${stamp}` : `Imagen ${stamp}`;
-  }
-  return base.slice(0, 60);
-}
 
 export default function AdTvContenido() {
   const { hasPermission, getCurrentOperator } = useAdLicoreria();
@@ -92,18 +78,19 @@ export default function AdTvContenido() {
 
   async function onPickFile(file: File | null) {
     if (!file) return;
-    const isVideo = file.type.startsWith("video/");
-    const isImage = file.type.startsWith("image/");
-    if (!isVideo && !isImage) {
-      setMsg("Solo imagen (JPG/PNG/WebP) o video (MP4).");
+    const kind = inferTvMediaKind(file);
+    if (!kind) {
+      setMsg(
+        "Ese archivo no se reconoce. Use una imagen (JPG/PNG/WebP) o un video (MP4, MOV, WebM).",
+      );
       return;
     }
-    const max = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    const max = kind === "video" ? MAX_TV_VIDEO_BYTES : MAX_TV_IMAGE_BYTES;
     if (file.size > max) {
       setMsg(
-        isVideo
-          ? "Video muy grande (máx. ~35 MB). Prefiera MP4 comprimido."
-          : "Imagen muy grande (máx. ~8 MB).",
+        kind === "video"
+          ? `Este video pesa ${formatFileMb(file.size)}. El máximo es ${formatFileMb(MAX_TV_VIDEO_BYTES)}. Grabe más corto o en 720p.`
+          : `Esta imagen pesa ${formatFileMb(file.size)}. El máximo es ${formatFileMb(MAX_TV_IMAGE_BYTES)}.`,
       );
       return;
     }
@@ -111,18 +98,23 @@ export default function AdTvContenido() {
     setMsg("");
     try {
       pickedFileRef.current = file;
-      setFileLabel(file.name);
+      setFileLabel(`${file.name} · ${formatFileMb(file.size)}`);
       if (videoPreview) URL.revokeObjectURL(videoPreview);
       setVideoPreview(null);
       setPreview(null);
       setUrl("");
 
-      if (isVideo) {
+      if (kind === "video") {
         setType("VIDEO");
         setDuration(30);
         setVideoPreview(URL.createObjectURL(file));
-        setName((prev) => prev.trim() || friendlyTitle(file, "video"));
-        setMsg(`Video listo: ${file.name}. Pulse «Guardar contenido».`);
+        setName((prev) => prev.trim() || friendlyTvTitle(file, "video"));
+        const hevcHint = isLikelyHevcOrMov(file)
+          ? " Si la TV no lo reproduce, conviértalo a MP4 (H.264)."
+          : "";
+        setMsg(
+          `Video listo (${formatFileMb(file.size)}). Pulse «Guardar contenido».${hevcHint}`,
+        );
       } else {
         setType("IMAGE");
         const reader = new FileReader();
@@ -133,7 +125,7 @@ export default function AdTvContenido() {
         });
         setUrl(dataUrl);
         setPreview(dataUrl);
-        setName((prev) => prev.trim() || friendlyTitle(file, "image"));
+        setName((prev) => prev.trim() || friendlyTvTitle(file, "image"));
         setMsg("Imagen lista. Pulse «Guardar contenido».");
       }
     } catch {
@@ -145,22 +137,26 @@ export default function AdTvContenido() {
   }
 
   async function save() {
-    if (!name.trim()) {
-      setMsg("Escriba un nombre corto (ej. Promo viernes)");
+    const file = pickedFileRef.current;
+    const kind = file ? inferTvMediaKind(file) : null;
+    const title =
+      name.trim() ||
+      (file && kind ? friendlyTvTitle(file, kind) : "") ||
+      (type === "TEXT" ? "Texto" : "");
+    if (!title) {
+      setMsg("Escriba un nombre corto (ej. Promo viernes) o suba un archivo");
       return;
     }
-    const file = pickedFileRef.current;
     if (type !== "TEXT" && !file && !url.trim()) {
-      setMsg("Suba una imagen/video o pegue una URL");
+      setMsg("Suba una imagen o video, o pegue una URL");
       return;
     }
     setBusy(true);
-    setMsg(type === "VIDEO" ? "Subiendo video…" : "Subiendo imagen…");
+    setMsg(kind === "video" ? "Subiendo video…" : "Subiendo imagen…");
     try {
       let finalUrl = url.trim();
 
-      if (file && file.type.startsWith("image/")) {
-        /** Imágenes: comprimir + data URL (más fiable en móvil/túnel). */
+      if (file && kind === "image") {
         setMsg("Preparando imagen…");
         let dataUrl = finalUrl.startsWith("data:") ? finalUrl : "";
         try {
@@ -183,13 +179,12 @@ export default function AdTvContenido() {
           return;
         }
         finalUrl = uploaded;
-      } else if (file && file.type.startsWith("video/")) {
-        setMsg("Subiendo video…");
-        const uploaded = await uploadTvFile(file);
+      } else if (file && kind === "video") {
+        const uploaded = await uploadTvFile(file, {
+          onProgress: (pct) => setMsg(`Subiendo video… ${pct}%`),
+        });
         if (!uploaded.ok) {
-          setMsg(
-            `${uploaded.error}. Pruebe un MP4 más liviano (máx. ~35 MB).`,
-          );
+          setMsg(uploaded.error);
           return;
         }
         finalUrl = uploaded.url;
@@ -205,8 +200,8 @@ export default function AdTvContenido() {
       }
 
       const r = createContent({
-        name: name.trim(),
-        type,
+        name: title,
+        type: kind === "video" ? "VIDEO" : kind === "image" ? "IMAGE" : type,
         url: finalUrl,
         durationSec: duration,
         userName,
@@ -327,7 +322,7 @@ export default function AdTvContenido() {
               ref={fileRef}
               className="ad-input"
               type="file"
-              accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+              accept="image/*,video/*,.mp4,.webm,.mov,.m4v,.avi"
               disabled={busy}
               onChange={(e) => void onPickFile(e.target.files?.[0] ?? null)}
             />
@@ -335,7 +330,8 @@ export default function AdTvContenido() {
               <p className="text-sm text-[var(--ad-gold-soft)]">{fileLabel}</p>
             ) : (
               <p className="text-xs text-[var(--ad-muted)]">
-                Imagen hasta ~8 MB · Video MP4 hasta ~35 MB (recomendado MP4).
+                Imagen hasta 8 MB · Video hasta 80 MB (MP4 H.264 recomendado).
+                Si el celular graba en 4K, recorte o baje a 720p.
               </p>
             )}
             {preview ? (

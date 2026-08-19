@@ -25,7 +25,36 @@ export function createApp() {
   );
   app.use(cors(buildCorsOptions()));
   app.use(express.json({ limit: "40mb" }));
-  app.use(express.raw({ type: "application/octet-stream", limit: "40mb" }));
+  /**
+   * Subidas TV: el navegador a veces manda video/mp4 (o nada) en vez de
+   * application/octet-stream. Si no parseamos raw, el body llega vacío.
+   */
+  app.use(
+    express.raw({
+      limit: "80mb",
+      type: (req) => {
+        const anyReq = req as { originalUrl?: string; url?: string };
+        const url = `${anyReq.originalUrl || anyReq.url || ""}`;
+        const pathOnly = url.split("?")[0] ?? "";
+        const ct = String(req.headers["content-type"] || "").toLowerCase();
+        if (
+          ct.includes("application/json") ||
+          ct.includes("multipart/form-data")
+        ) {
+          return false;
+        }
+        if (
+          pathOnly.endsWith("/tv/assets/binary") ||
+          pathOnly.endsWith("/tv/assets/binary/chunk")
+        ) {
+          return true;
+        }
+        return (
+          ct.includes("application/octet-stream") || ct.startsWith("video/")
+        );
+      },
+    }),
+  );
 
   app.use(healthRouter);
   /** A&D público: login/bootstrap/logout (JWT). */

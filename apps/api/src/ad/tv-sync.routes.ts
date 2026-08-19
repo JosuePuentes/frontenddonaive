@@ -24,10 +24,13 @@ type TvAssetMeta = {
 const DATA_ROOT = path.join(process.cwd(), ".data", "ad-tv");
 const STATE_DIR = path.join(DATA_ROOT, "state");
 const ASSET_DIR = path.join(DATA_ROOT, "assets");
+const PART_DIR = path.join(DATA_ROOT, "parts");
+const MAX_ASSET_BYTES = 80 * 1024 * 1024;
 
 function ensureDirs() {
   fs.mkdirSync(STATE_DIR, { recursive: true });
   fs.mkdirSync(ASSET_DIR, { recursive: true });
+  fs.mkdirSync(PART_DIR, { recursive: true });
 }
 
 ensureDirs();
@@ -119,11 +122,61 @@ function decodeDataUrl(dataUrl: string): { mimeType: string; buf: Buffer } | nul
   return { mimeType, buf };
 }
 
+function inferMimeFromFilename(name: string): string | null {
+  const n = String(name || "").toLowerCase();
+  if (n.endsWith(".mp4") || n.endsWith(".m4v")) return "video/mp4";
+  if (n.endsWith(".webm")) return "video/webm";
+  if (n.endsWith(".mov")) return "video/quicktime";
+  if (n.endsWith(".mkv")) return "video/x-matroska";
+  if (n.endsWith(".png")) return "image/png";
+  if (n.endsWith(".webp")) return "image/webp";
+  if (n.endsWith(".gif")) return "image/gif";
+  if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+  return null;
+}
+
+function readBodyBuffer(body: unknown): Buffer {
+  if (Buffer.isBuffer(body)) return body;
+  if (body instanceof ArrayBuffer) return Buffer.from(body);
+  if (body instanceof Uint8Array) return Buffer.from(body);
+  return Buffer.alloc(0);
+}
+
+function partPath(tenant: string, id: string) {
+  const safeTenant = tenant.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
+  return path.join(PART_DIR, safeTenant, `${safeId}.part`);
+}
+
+function newAssetId() {
+  return `asset-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function resolveUploadMime(
+  req: {
+    query: Record<string, unknown>;
+    headers: Record<string, unknown>;
+    body?: unknown;
+  },
+): string {
+  const q = String(req.query.mimeType || "").trim();
+  if (q && q !== "application/octet-stream") return q;
+  const h = String(req.headers["x-mime-type"] || "").trim();
+  if (h && h !== "application/octet-stream") return h;
+  const fromName = inferMimeFromFilename(String(req.query.filename || ""));
+  if (fromName) return fromName;
+  return q || h || "application/octet-stream";
+}
+
 function tenantKey(req: { query: Record<string, unknown>; body?: unknown }) {
   const q = req.query.tenant;
+  const body = req.body;
   const b =
-    req.body && typeof req.body === "object"
-      ? (req.body as { tenant?: string }).tenant
+    body &&
+    typeof body === "object" &&
+    !Buffer.isBuffer(body) &&
+    !ArrayBuffer.isView(body)
+      ? (body as { tenant?: string }).tenant
       : undefined;
   return String(q || b || "ad-licoreria").trim() || "ad-licoreria";
 }
@@ -360,29 +413,36 @@ adTvSyncRouter.post("/tv/assets", (req, res) => {
   });
 });
 
+function assetPublicPath(id: string, tenant: string) {
+  return `/api/v1/ad/tv/assets/${encodeURIComponent(id)}?tenant=${encodeURIComponent(tenant)}`;
+}
+
 /**
- * Subida binaria (mejor para videos grandes; body = octetos).
- * Query: tenant, mimeType
+ * Subida binaria de un solo request (videos pequeños).
+ * Query: tenant, mimeType, filename
  */
 adTvSyncRouter.post("/tv/assets/binary", (req, res) => {
+  req.setTimeout(180_000);
+  res.setTimeout(180_000);
   const key = tenantKey(req);
-  const mimeType = String(
-    req.query.mimeType ||
-      req.headers["x-mime-type"] ||
-      "application/octet-stream",
-  ).trim();
-  const buf = Buffer.isBuffer(req.body)
-    ? req.body
-    : Buffer.from((req.body as ArrayBuffer) || []);
+  const mimeType = resolveUploadMime(req);
+  const buf = readBodyBuffer(req.body);
   if (!buf.length) {
-    res.status(400).json({ error: { message: "archivo vacío" } });
+    res.status(400).json({
+      error: {
+        message:
+          "El servidor no recibió el archivo. Intente de nuevo o use WiFi.",
+      },
+    });
     return;
   }
-  if (buf.length > 40 * 1024 * 1024) {
-    res.status(413).json({ error: { message: "Archivo muy grande (máx. 40 MB)" } });
+  if (buf.length > MAX_ASSET_BYTES) {
+    res.status(413).json({
+      error: { message: "Archivo muy grande (máx. 80 MB)" },
+    });
     return;
   }
-  const id = `asset-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = newAssetId();
   const meta = writeAsset(key, id, mimeType, buf);
   res.json({
     data: {
@@ -390,7 +450,120 @@ adTvSyncRouter.post("/tv/assets/binary", (req, res) => {
       tenant: key,
       mimeType: meta.mimeType,
       bytes: meta.bytes,
-      path: `/api/v1/ad/tv/assets/${encodeURIComponent(id)}?tenant=${encodeURIComponent(key)}`,
+      path: assetPublicPath(id, key),
+    },
+  });
+});
+
+/** Inicia subida por partes (videos grandes / red lenta). */
+adTvSyncRouter.post("/tv/assets/binary/init", (req, res) => {
+  const key = tenantKey(req);
+  const body = (req.body ?? {}) as { mimeType?: string; filename?: string };
+  const mimeType =
+    resolveUploadMime({
+      query: {
+        ...req.query,
+        mimeType: req.query.mimeType || body.mimeType,
+        filename: req.query.filename || body.filename,
+      },
+      headers: req.headers as Record<string, unknown>,
+    }) || "application/octet-stream";
+  const id = newAssetId();
+  const part = partPath(key, id);
+  fs.mkdirSync(path.dirname(part), { recursive: true });
+  fs.writeFileSync(part, Buffer.alloc(0));
+  res.json({
+    data: {
+      id,
+      tenant: key,
+      mimeType,
+      maxBytes: MAX_ASSET_BYTES,
+    },
+  });
+});
+
+/** Añade un chunk binario a la subida iniciada. Query: tenant, id */
+adTvSyncRouter.post("/tv/assets/binary/chunk", (req, res) => {
+  req.setTimeout(120_000);
+  res.setTimeout(120_000);
+  const key = tenantKey(req);
+  const id = String(req.query.id || "").trim();
+  if (!id) {
+    res.status(400).json({ error: { message: "id de subida requerido" } });
+    return;
+  }
+  const part = partPath(key, id);
+  if (!fs.existsSync(part)) {
+    res.status(404).json({
+      error: { message: "Sesión de subida no encontrada. Intente de nuevo." },
+    });
+    return;
+  }
+  const buf = readBodyBuffer(req.body);
+  const current = fs.statSync(part).size;
+  if (current + buf.length > MAX_ASSET_BYTES) {
+    try {
+      fs.unlinkSync(part);
+    } catch {
+      /* ignore */
+    }
+    res.status(413).json({
+      error: { message: "Archivo muy grande (máx. 80 MB)" },
+    });
+    return;
+  }
+  fs.appendFileSync(part, buf);
+  res.json({
+    data: { id, received: current + buf.length },
+  });
+});
+
+/** Cierra la subida por partes y publica el asset. */
+adTvSyncRouter.post("/tv/assets/binary/complete", (req, res) => {
+  const key = tenantKey(req);
+  const body = (req.body ?? {}) as {
+    id?: string;
+    mimeType?: string;
+    filename?: string;
+  };
+  const id = String(req.query.id || body.id || "").trim();
+  if (!id) {
+    res.status(400).json({ error: { message: "id de subida requerido" } });
+    return;
+  }
+  const part = partPath(key, id);
+  if (!fs.existsSync(part)) {
+    res.status(404).json({
+      error: { message: "Sesión de subida no encontrada. Intente de nuevo." },
+    });
+    return;
+  }
+  const buf = fs.readFileSync(part);
+  try {
+    fs.unlinkSync(part);
+  } catch {
+    /* ignore */
+  }
+  if (!buf.length) {
+    res.status(400).json({ error: { message: "archivo vacío" } });
+    return;
+  }
+  const mimeType = resolveUploadMime({
+    query: {
+      ...req.query,
+      mimeType: req.query.mimeType || body.mimeType,
+      filename: req.query.filename || body.filename,
+    },
+    headers: req.headers as Record<string, unknown>,
+  });
+  const meta = writeAsset(key, id, mimeType, buf);
+  res.json({
+    data: {
+      id: meta.id,
+      tenant: key,
+      mimeType: meta.mimeType,
+      bytes: meta.bytes,
+      path: assetPublicPath(id, key),
     },
   });
 });
