@@ -98,7 +98,7 @@ export function youtubeEmbedUrl(
   const host = opts?.nocookie === false ? "www.youtube.com" : "www.youtube-nocookie.com";
   const params = new URLSearchParams({
     autoplay: opts?.autoplay === false ? "0" : "1",
-    mute: "1",
+    mute: opts?.muted === false ? "0" : "1",
     controls: "1",
     rel: "0",
     modestbranding: "1",

@@ -326,6 +326,8 @@ function applyCommandToScreen(
         positionSec: cmd.position ?? next.positionSec,
         playbackState: "PLAYING",
         status: "ONLINE",
+        isMuted: false,
+        volume: next.volume > 0 ? next.volume : 100,
       };
       break;
     }

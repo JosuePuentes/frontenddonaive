@@ -501,6 +501,28 @@ export default function AdTvControl() {
           >
             ⏹ Detener marcadas
           </button>
+          <button
+            type="button"
+            className="ad-btn"
+            disabled={!selectedIds.length}
+            onClick={() => {
+              const r = dispatchCommand({
+                command: "SET_VOLUME",
+                userName,
+                screenIds: selectedIds,
+                volume: 100,
+                muted: false,
+              });
+              if (r.ok) {
+                void adTvRepository.flushSync();
+                setMsg("🔊 Sonido al 100% en las TV marcadas");
+              } else {
+                setMsg(r.error);
+              }
+            }}
+          >
+            🔊 Sonido
+          </button>
         </div>
         {msg ? (
           <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p>
