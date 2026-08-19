@@ -1,6 +1,8 @@
 /** URLs de YouTube para Contenido TV (watch, youtu.be, Shorts, embed). */
 
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
+const YT_ID_IN_TEXT =
+  /(?:v=|\/embed\/|\/shorts\/|\/live\/|\/e\/|youtu\.be\/)([A-Za-z0-9_-]{11})/i;
 
 function validYouTubeId(raw: string | undefined | null): string | null {
   const id = String(raw || "")
@@ -20,28 +22,55 @@ function isYouTubeHost(hostname: string): boolean {
   );
 }
 
+/** Limpia lo que pegan desde WhatsApp, sin https, o con texto alrededor. */
+export function normalizeYouTubeInput(raw: string): string {
+  let s = String(raw || "")
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/^[\s'"<([¡!]+/, "")
+    .replace(/[>'")\]]+$/, "");
+  const fromText =
+    s.match(/https?:\/\/[^\s<>"']+/i) ||
+    s.match(/(?:www\.)?(?:youtu\.be\/|youtube\.com\/)[^\s<>"']+/i);
+  if (fromText) s = fromText[0];
+  s = s.replace(/[.,;]+$/, "");
+  if (s && !/^https?:\/\//i.test(s) && /youtu/i.test(s)) {
+    s = `https://${s.replace(/^\/+/, "")}`;
+  }
+  return s;
+}
+
+export function looksLikeYouTube(raw: string): boolean {
+  return /youtu\.be|youtube\.com|youtube-nocookie\.com/i.test(String(raw || ""));
+}
+
 export function parseYouTubeVideoId(raw: string): string | null {
-  const trimmed = String(raw || "").trim();
+  const trimmed = normalizeYouTubeInput(raw);
   if (!trimmed) return null;
   if (YT_ID.test(trimmed)) return trimmed;
-  let url: URL;
   try {
-    url = new URL(trimmed);
+    const url = new URL(trimmed);
+    if (isYouTubeHost(url.hostname)) {
+      const host = url.hostname.replace(/^www\./, "").toLowerCase();
+      if (host === "youtu.be") {
+        const id = validYouTubeId(url.pathname.split("/").filter(Boolean)[0]);
+        if (id) return id;
+      }
+      const fromQuery = validYouTubeId(url.searchParams.get("v"));
+      if (fromQuery) return fromQuery;
+      const parts = url.pathname.split("/").filter(Boolean);
+      const markers = new Set(["embed", "shorts", "live", "v", "e"]);
+      const idx = parts.findIndex((p) => markers.has(p.toLowerCase()));
+      if (idx >= 0) {
+        const id = validYouTubeId(parts[idx + 1]);
+        if (id) return id;
+      }
+    }
   } catch {
-    return null;
+    /* seguir con regex */
   }
-  if (!isYouTubeHost(url.hostname)) return null;
-  const host = url.hostname.replace(/^www\./, "").toLowerCase();
-  if (host === "youtu.be") {
-    return validYouTubeId(url.pathname.split("/").filter(Boolean)[0]);
-  }
-  const fromQuery = validYouTubeId(url.searchParams.get("v"));
-  if (fromQuery) return fromQuery;
-  const parts = url.pathname.split("/").filter(Boolean);
-  const markers = new Set(["embed", "shorts", "live", "v", "e"]);
-  const idx = parts.findIndex((p) => markers.has(p.toLowerCase()));
-  if (idx >= 0) return validYouTubeId(parts[idx + 1]);
-  return null;
+  const match = trimmed.match(YT_ID_IN_TEXT);
+  return validYouTubeId(match?.[1] ?? null);
 }
 
 export function isYouTubeUrl(raw: string): boolean {
@@ -54,6 +83,28 @@ export function canonicalYouTubeUrl(videoId: string): string {
 
 export function youtubeThumbUrl(videoId: string): string {
   return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+}
+
+/** Embed que las TVs pueden reproducir (no usar <video src=watch>). */
+export function youtubeEmbedUrl(
+  videoId: string,
+  opts?: { autoplay?: boolean; muted?: boolean; origin?: string },
+): string {
+  const params = new URLSearchParams({
+    autoplay: opts?.autoplay === false ? "0" : "1",
+    mute: opts?.muted ? "1" : "0",
+    controls: "1",
+    rel: "0",
+    modestbranding: "1",
+    playsinline: "1",
+    loop: "1",
+    playlist: videoId,
+    fs: "1",
+    iv_load_policy: "3",
+    enablejsapi: "1",
+  });
+  if (opts?.origin) params.set("origin", opts.origin);
+  return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
 }
 
 export async function fetchYouTubeTitle(videoId: string): Promise<string | null> {
@@ -69,164 +120,4 @@ export async function fetchYouTubeTitle(videoId: string): Promise<string | null>
   } catch {
     return null;
   }
-}
-
-export type YouTubePlayerHandle = {
-  play: () => void;
-  pause: () => void;
-  stop: () => void;
-  seek: (sec: number) => void;
-  setVolume: (n: number) => void;
-  setMuted: (muted: boolean) => void;
-};
-
-type YtPlayer = {
-  playVideo: () => void;
-  pauseVideo: () => void;
-  stopVideo: () => void;
-  seekTo: (sec: number, allowSeekAhead: boolean) => void;
-  setVolume: (n: number) => void;
-  mute: () => void;
-  unMute: () => void;
-  destroy: () => void;
-};
-
-type YtNamespace = {
-  Player: new (
-    el: HTMLElement | string,
-    opts: Record<string, unknown>,
-  ) => YtPlayer;
-  PlayerState: { ENDED: number; PLAYING: number };
-};
-
-declare global {
-  interface Window {
-    YT?: YtNamespace;
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
-
-let youtubeApiPromise: Promise<YtNamespace> | null = null;
-
-export function loadYouTubeIframeApi(): Promise<YtNamespace> {
-  if (typeof window === "undefined") {
-    return Promise.reject(new Error("YouTube no disponible"));
-  }
-  if (window.YT?.Player) return Promise.resolve(window.YT);
-  if (youtubeApiPromise) return youtubeApiPromise;
-  youtubeApiPromise = new Promise((resolve, reject) => {
-    const done = () => {
-      if (window.YT?.Player) resolve(window.YT);
-      else reject(new Error("YouTube no inicializó"));
-    };
-    const prev = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      try {
-        prev?.();
-      } catch {
-        /* ignore */
-      }
-      done();
-    };
-    if (
-      !document.querySelector(
-        'script[src="https://www.youtube.com/iframe_api"]',
-      )
-    ) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      tag.async = true;
-      tag.onerror = () =>
-        reject(new Error("No se pudo cargar el reproductor de YouTube"));
-      document.head.appendChild(tag);
-    }
-    const poll = window.setInterval(() => {
-      if (window.YT?.Player) {
-        window.clearInterval(poll);
-        done();
-      }
-    }, 80);
-    window.setTimeout(() => {
-      window.clearInterval(poll);
-      if (!window.YT?.Player) {
-        reject(new Error("YouTube tardó demasiado en cargar"));
-      }
-    }, 15000);
-  });
-  return youtubeApiPromise;
-}
-
-export function bindYouTubePlayerHandle(player: YtPlayer): YouTubePlayerHandle {
-  return {
-    play: () => player.playVideo(),
-    pause: () => player.pauseVideo(),
-    stop: () => player.stopVideo(),
-    seek: (sec) => player.seekTo(Math.max(0, sec), true),
-    setVolume: (n) => player.setVolume(Math.max(0, Math.min(100, n))),
-    setMuted: (muted) => {
-      if (muted) player.mute();
-      else player.unMute();
-    },
-  };
-}
-
-export function createYouTubePlayer(
-  el: HTMLElement,
-  videoId: string,
-  opts: {
-    volume: number;
-    muted: boolean;
-    autoplay: boolean;
-    origin: string;
-    onReady?: (player: YtPlayer) => void;
-    onError?: () => void;
-  },
-): Promise<YtPlayer> {
-  return loadYouTubeIframeApi().then((YT) => {
-    return new Promise<YtPlayer>((resolve) => {
-      const player = new YT.Player(el, {
-        host: "https://www.youtube-nocookie.com",
-        videoId,
-        width: "100%",
-        height: "100%",
-        playerVars: {
-          autoplay: opts.autoplay ? 1 : 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          iv_load_policy: 3,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          loop: 1,
-          playlist: videoId,
-          origin: opts.origin,
-          mute: opts.muted || opts.autoplay ? 1 : 0,
-        },
-        events: {
-          onReady: () => {
-            player.setVolume(opts.volume);
-            if (opts.muted) player.mute();
-            else if (!opts.autoplay) player.unMute();
-            if (opts.autoplay) player.playVideo();
-            opts.onReady?.(player);
-            resolve(player);
-          },
-          onStateChange: (ev: { data: number }) => {
-            if (ev.data === YT.PlayerState.ENDED) {
-              player.seekTo(0, true);
-              player.playVideo();
-            }
-            if (ev.data === YT.PlayerState.PLAYING && !opts.muted) {
-              player.unMute();
-              player.setVolume(opts.volume);
-            }
-          },
-          onError: () => {
-            opts.onError?.();
-          },
-        },
-      });
-    });
-  });
 }

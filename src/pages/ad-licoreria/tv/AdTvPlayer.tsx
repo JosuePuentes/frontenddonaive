@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
-import { parseYouTubeVideoId, type YouTubePlayerHandle } from "@/services/ad-licoreria/tv/youtube";
+import { isDirectVideoFileUrl } from "@/services/ad-licoreria/tv/media";
+import {
+  looksLikeYouTube,
+  parseYouTubeVideoId,
+} from "@/services/ad-licoreria/tv/youtube";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import type { AdTvCommand } from "@/types/ad-tv";
 import AdTvYouTubeStage from "@/pages/ad-licoreria/tv/AdTvYouTubeStage";
@@ -28,7 +32,6 @@ export default function AdTvPlayer() {
     [contents, screen?.currentContentId],
   );
   const videoRef = useRef<HTMLVideoElement>(null);
-  const youtubeRef = useRef<YouTubePlayerHandle | null>(null);
   const [pairedFlash, setPairedFlash] = useState(false);
   const [bootMsg, setBootMsg] = useState("Preparando pantalla…");
   /** Código fijo de esta sesión (no cambia hasta vincular). */
@@ -125,19 +128,15 @@ export default function AdTvPlayer() {
       const cmd: AdTvCommand = envelope.command;
       if (!cmd.screenIds.includes(screen.id)) return;
       const el = videoRef.current;
-      const yt = youtubeRef.current;
       if (cmd.command === "PLAY") {
         void el?.play().catch(() => undefined);
-        yt?.play();
       }
       if (cmd.command === "PAUSE") {
         el?.pause();
-        yt?.pause();
       }
       if (cmd.command === "STOP") {
         el?.pause();
         if (el) el.currentTime = 0;
-        yt?.stop();
       }
       if (
         cmd.command === "SEEK" ||
@@ -145,19 +144,15 @@ export default function AdTvPlayer() {
         cmd.command === "RESTART"
       ) {
         if (el) el.currentTime = cmd.position ?? 0;
-        yt?.seek(cmd.position ?? 0);
       }
       if (cmd.command === "SET_VOLUME" && cmd.volume != null) {
         if (el) {
           el.volume = Math.max(0, Math.min(1, cmd.volume / 100));
           el.muted = false;
         }
-        yt?.setVolume(cmd.volume);
-        yt?.setMuted(false);
       }
       if (cmd.command === "MUTE") {
         if (el) el.muted = cmd.muted ?? true;
-        yt?.setMuted(cmd.muted ?? true);
       }
     });
   }, [screen?.id, realtime]);
@@ -237,6 +232,8 @@ export default function AdTvPlayer() {
   const playing =
     Boolean(content) && screen.playbackState === "PLAYING";
   const youtubeId = content ? parseYouTubeVideoId(content.url) : null;
+  const youtubeBroken =
+    Boolean(content && looksLikeYouTube(content.url) && !youtubeId);
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-black text-white">
@@ -263,11 +260,18 @@ export default function AdTvPlayer() {
           playing={playing}
           volume={screen.volume}
           muted={screen.isMuted}
-          onBind={(handle) => {
-            youtubeRef.current = handle;
-          }}
         />
-      ) : content?.type === "VIDEO" ? (
+      ) : youtubeBroken ? (
+        <div className="flex h-full flex-col items-center justify-center px-8 text-center">
+          <p className="text-2xl text-amber-100">
+            No se pudo leer el enlace de YouTube
+          </p>
+          <p className="mt-4 max-w-lg text-sm text-amber-100/70">
+            En Contenido pegue el enlace del video (youtube.com/watch o youtu.be)
+            y vuelva a guardar.
+          </p>
+        </div>
+      ) : content?.type === "VIDEO" && isDirectVideoFileUrl(content.url) ? (
         <video
           ref={videoRef}
           className="h-full w-full object-contain bg-black"
@@ -278,6 +282,14 @@ export default function AdTvPlayer() {
           muted={screen.isMuted}
           controls={false}
         />
+      ) : content?.type === "VIDEO" ? (
+        <div className="flex h-full flex-col items-center justify-center px-8 text-center">
+          <p className="text-2xl text-amber-100">Este video no se puede abrir</p>
+          <p className="mt-4 max-w-lg text-sm text-amber-100/70">
+            Use un archivo MP4 o pegue un enlace de YouTube. Una URL de YouTube
+            no se reproduce como archivo de video.
+          </p>
+        </div>
       ) : content?.type === "TEXT" ? (
         <div className="flex h-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a120c_0%,#050505_70%)] px-8 text-center">
           <p className="font-[Cormorant_Garamond,serif] text-4xl md:text-6xl text-amber-100">

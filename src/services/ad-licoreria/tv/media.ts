@@ -10,6 +10,15 @@ export function formatFileMb(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** MP4/WebM subido o URL directa; una URL de YouTube NO es esto. */
+export function isDirectVideoFileUrl(url: string): boolean {
+  const u = String(url || "").trim();
+  if (!u) return false;
+  if (u.startsWith("blob:") || u.startsWith("data:video")) return true;
+  if (u.includes("/tv/assets/")) return true;
+  return /\.(mp4|m4v|webm|ogg|ogv)(\?|#|$)/i.test(u);
+}
+
 export function inferTvMediaKind(file: File): "video" | "image" | null {
   const mime = (file.type || "").toLowerCase().trim();
   if (mime.startsWith("video/")) return "video";

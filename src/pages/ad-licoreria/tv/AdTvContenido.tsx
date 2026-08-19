@@ -25,6 +25,7 @@ import {
   canonicalYouTubeUrl,
   fetchYouTubeTitle,
   isYouTubeUrl,
+  looksLikeYouTube,
   parseYouTubeVideoId,
   youtubeThumbUrl,
 } from "@/services/ad-licoreria/tv/youtube";
@@ -148,6 +149,12 @@ export default function AdTvContenido() {
     const kind = file ? inferTvMediaKind(file) : null;
     const pasted = url.trim();
     const youtubeId = !file ? parseYouTubeVideoId(pasted) : null;
+    if (type === "VIDEO" && pasted && looksLikeYouTube(pasted) && !youtubeId && !file) {
+      setMsg(
+        "Esa URL de YouTube no es válida. Pegue el enlace del video (watch, youtu.be o Shorts).",
+      );
+      return;
+    }
     const title =
       name.trim() ||
       (file && kind ? friendlyTvTitle(file, kind) : "") ||
