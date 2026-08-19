@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
+import { parseYouTubeVideoId, type YouTubePlayerHandle } from "@/services/ad-licoreria/tv/youtube";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import type { AdTvCommand } from "@/types/ad-tv";
+import AdTvYouTubeStage from "@/pages/ad-licoreria/tv/AdTvYouTubeStage";
 
 /**
  * Reproductor fullscreen para el televisor.
@@ -26,6 +28,7 @@ export default function AdTvPlayer() {
     [contents, screen?.currentContentId],
   );
   const videoRef = useRef<HTMLVideoElement>(null);
+  const youtubeRef = useRef<YouTubePlayerHandle | null>(null);
   const [pairedFlash, setPairedFlash] = useState(false);
   const [bootMsg, setBootMsg] = useState("Preparando pantalla…");
   /** Código fijo de esta sesión (no cambia hasta vincular). */
@@ -122,26 +125,39 @@ export default function AdTvPlayer() {
       const cmd: AdTvCommand = envelope.command;
       if (!cmd.screenIds.includes(screen.id)) return;
       const el = videoRef.current;
-      if (!el) return;
-      if (cmd.command === "PLAY") void el.play().catch(() => undefined);
-      if (cmd.command === "PAUSE") el.pause();
+      const yt = youtubeRef.current;
+      if (cmd.command === "PLAY") {
+        void el?.play().catch(() => undefined);
+        yt?.play();
+      }
+      if (cmd.command === "PAUSE") {
+        el?.pause();
+        yt?.pause();
+      }
       if (cmd.command === "STOP") {
-        el.pause();
-        el.currentTime = 0;
+        el?.pause();
+        if (el) el.currentTime = 0;
+        yt?.stop();
       }
       if (
         cmd.command === "SEEK" ||
         cmd.command === "SYNC" ||
         cmd.command === "RESTART"
       ) {
-        el.currentTime = cmd.position ?? 0;
+        if (el) el.currentTime = cmd.position ?? 0;
+        yt?.seek(cmd.position ?? 0);
       }
       if (cmd.command === "SET_VOLUME" && cmd.volume != null) {
-        el.volume = Math.max(0, Math.min(1, cmd.volume / 100));
-        el.muted = false;
+        if (el) {
+          el.volume = Math.max(0, Math.min(1, cmd.volume / 100));
+          el.muted = false;
+        }
+        yt?.setVolume(cmd.volume);
+        yt?.setMuted(false);
       }
       if (cmd.command === "MUTE") {
-        el.muted = cmd.muted ?? true;
+        if (el) el.muted = cmd.muted ?? true;
+        yt?.setMuted(cmd.muted ?? true);
       }
     });
   }, [screen?.id, realtime]);
@@ -220,6 +236,7 @@ export default function AdTvPlayer() {
 
   const playing =
     Boolean(content) && screen.playbackState === "PLAYING";
+  const youtubeId = content ? parseYouTubeVideoId(content.url) : null;
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-black text-white">
@@ -240,6 +257,16 @@ export default function AdTvPlayer() {
             Esperando contenido del teléfono
           </p>
         </div>
+      ) : youtubeId ? (
+        <AdTvYouTubeStage
+          videoId={youtubeId}
+          playing={playing}
+          volume={screen.volume}
+          muted={screen.isMuted}
+          onBind={(handle) => {
+            youtubeRef.current = handle;
+          }}
+        />
       ) : content?.type === "VIDEO" ? (
         <video
           ref={videoRef}

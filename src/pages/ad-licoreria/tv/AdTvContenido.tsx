@@ -21,6 +21,13 @@ import {
   inferTvMediaKind,
   isLikelyHevcOrMov,
 } from "@/services/ad-licoreria/tv/media";
+import {
+  canonicalYouTubeUrl,
+  fetchYouTubeTitle,
+  isYouTubeUrl,
+  parseYouTubeVideoId,
+  youtubeThumbUrl,
+} from "@/services/ad-licoreria/tv/youtube";
 import type { AdTvContentType } from "@/types/ad-tv";
 
 const TYPES: AdTvContentType[] = [
@@ -139,24 +146,56 @@ export default function AdTvContenido() {
   async function save() {
     const file = pickedFileRef.current;
     const kind = file ? inferTvMediaKind(file) : null;
+    const pasted = url.trim();
+    const youtubeId = !file ? parseYouTubeVideoId(pasted) : null;
     const title =
       name.trim() ||
       (file && kind ? friendlyTvTitle(file, kind) : "") ||
+      (youtubeId ? "Video YouTube" : "") ||
       (type === "TEXT" ? "Texto" : "");
     if (!title) {
       setMsg("Escriba un nombre corto (ej. Promo viernes) o suba un archivo");
       return;
     }
-    if (type !== "TEXT" && !file && !url.trim()) {
-      setMsg("Suba una imagen o video, o pegue una URL");
+    if (type !== "TEXT" && !file && !pasted) {
+      setMsg("Suba una imagen o video, o pegue una URL de YouTube");
+      return;
+    }
+    if (
+      pasted &&
+      /youtu\.?be/i.test(pasted) &&
+      !youtubeId &&
+      !file
+    ) {
+      setMsg(
+        "Esa URL de YouTube no es válida. Pegue el enlace del video (watch, youtu.be o Shorts).",
+      );
       return;
     }
     setBusy(true);
-    setMsg(kind === "video" ? "Subiendo video…" : "Subiendo imagen…");
+    setMsg(
+      kind === "video"
+        ? "Subiendo video…"
+        : youtubeId
+          ? "Guardando YouTube…"
+          : file
+            ? "Subiendo imagen…"
+            : "Guardando…",
+    );
     try {
-      let finalUrl = url.trim();
+      let finalUrl = pasted;
+      let resolvedName = title;
+      let resolvedType: AdTvContentType =
+        kind === "video" ? "VIDEO" : kind === "image" ? "IMAGE" : type;
 
-      if (file && kind === "image") {
+      if (youtubeId) {
+        finalUrl = canonicalYouTubeUrl(youtubeId);
+        resolvedType = "VIDEO";
+        if (!name.trim()) {
+          const ytTitle = await fetchYouTubeTitle(youtubeId);
+          if (ytTitle) resolvedName = ytTitle;
+        }
+      } else if (file && kind === "image") {
         setMsg("Preparando imagen…");
         let dataUrl = finalUrl.startsWith("data:") ? finalUrl : "";
         try {
@@ -200,8 +239,8 @@ export default function AdTvContenido() {
       }
 
       const r = createContent({
-        name: title,
-        type: kind === "video" ? "VIDEO" : kind === "image" ? "IMAGE" : type,
+        name: resolvedName,
+        type: resolvedType,
         url: finalUrl,
         durationSec: duration,
         userName,
@@ -240,7 +279,8 @@ export default function AdTvContenido() {
             Contenido
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Suba imagen o video, guarde, y reprodúzcalo desde Control TV.
+            Suba imagen o video, o pegue un enlace de YouTube, y reprodúzcalo
+            desde Control TV.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -257,8 +297,8 @@ export default function AdTvContenido() {
         <h2 className="ad-panel-title">Cómo verlo en el TV</h2>
         <ol className="list-decimal space-y-2 pl-5 text-sm text-[var(--ad-muted)]">
           <li>
-            <strong className="text-[var(--ad-text)]">Guarde</strong> imagen o
-            video aquí.
+            <strong className="text-[var(--ad-text)]">Guarde</strong> imagen,
+            video o un enlace de YouTube aquí.
           </li>
           <li>TV vinculada en Pantallas.</li>
           <li>
@@ -352,23 +392,40 @@ export default function AdTvContenido() {
           </div>
 
           <label className="ad-pos__field">
-            <span>O pegar URL (imagen o .mp4)</span>
+            <span>O pegar URL (YouTube, imagen o MP4)</span>
             <input
               className="ad-input"
-              placeholder="https://… imagen o video"
+              placeholder="https://youtube.com/watch?v=… o imagen"
               value={url.startsWith("data:") ? "" : url}
               onChange={(e) => {
+                const value = e.target.value;
                 pickedFileRef.current = null;
-                setUrl(e.target.value);
+                setUrl(value);
                 setFileLabel("");
-                setPreview(
-                  /\.(png|jpe?g|webp|gif)(\?|$)/i.test(e.target.value)
-                    ? e.target.value
-                    : null,
-                );
                 if (videoPreview) URL.revokeObjectURL(videoPreview);
                 setVideoPreview(null);
-                if (/\.(mp4|webm)(\?|$)/i.test(e.target.value)) {
+                const yt = parseYouTubeVideoId(value);
+                if (yt) {
+                  setType("VIDEO");
+                  setDuration((d) => (d < 30 ? 30 : d));
+                  setPreview(youtubeThumbUrl(yt));
+                  setName((prev) => prev.trim() || "Video YouTube");
+                  setMsg(
+                    "YouTube listo. Pulse «Guardar contenido» y reprodúzcalo en Control TV.",
+                  );
+                  void fetchYouTubeTitle(yt).then((title) => {
+                    if (title) {
+                      setName((prev) =>
+                        !prev.trim() || prev === "Video YouTube" ? title : prev,
+                      );
+                    }
+                  });
+                  return;
+                }
+                setPreview(
+                  /\.(png|jpe?g|webp|gif)(\?|$)/i.test(value) ? value : null,
+                );
+                if (/\.(mp4|webm)(\?|$)/i.test(value)) {
                   setType("VIDEO");
                 }
               }}
@@ -427,15 +484,25 @@ export default function AdTvContenido() {
               <tbody>
                 {[...contents]
                   .sort((a, b) => {
-                    const aUser = a.url.includes("/tv/assets/") ? 1 : 0;
-                    const bUser = b.url.includes("/tv/assets/") ? 1 : 0;
+                    const rank = (u: string) =>
+                      u.includes("/tv/assets/") || isYouTubeUrl(u) ? 1 : 0;
+                    const aUser = rank(a.url);
+                    const bUser = rank(b.url);
                     if (aUser !== bUser) return bUser - aUser;
                     return (b.updatedAt || "").localeCompare(a.updatedAt || "");
                   })
-                  .map((c) => (
+                  .map((c) => {
+                    const yt = parseYouTubeVideoId(c.url);
+                    return (
                     <tr key={c.id}>
                       <td>
-                        {c.type === "VIDEO" ? (
+                        {yt ? (
+                          <img
+                            src={youtubeThumbUrl(yt)}
+                            alt=""
+                            className="h-10 w-14 rounded object-cover"
+                          />
+                        ) : c.type === "VIDEO" ? (
                           <span className="text-xs text-[var(--ad-gold-soft)]">
                             VIDEO
                           </span>
@@ -460,7 +527,9 @@ export default function AdTvContenido() {
                       <td>{c.type}</td>
                       <td>{c.durationSec}s</td>
                       <td className="max-w-[180px] truncate text-xs">
-                        {c.url.includes("/tv/assets/")
+                        {yt
+                          ? "YouTube"
+                          : c.url.includes("/tv/assets/")
                           ? "Servidor TV"
                           : c.url.startsWith("data:")
                             ? "Archivo local"
@@ -468,7 +537,8 @@ export default function AdTvContenido() {
                       </td>
                       <td>{c.active ? "Sí" : "No"}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
               </tbody>
             </table>
           </div>

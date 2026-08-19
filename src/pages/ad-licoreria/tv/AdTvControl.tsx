@@ -7,6 +7,11 @@ import {
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
+import {
+  isYouTubeUrl,
+  parseYouTubeVideoId,
+  youtubeThumbUrl,
+} from "@/services/ad-licoreria/tv/youtube";
 
 const PREVIEW_BASE =
   typeof window !== "undefined" ? window.location.origin : "";
@@ -26,8 +31,10 @@ export default function AdTvControl() {
   const activeContents = useMemo(() => {
     const list = contents.filter((c) => c.active !== false);
     return [...list].sort((a, b) => {
-      const aUser = a.url.includes("/tv/assets/") ? 1 : 0;
-      const bUser = b.url.includes("/tv/assets/") ? 1 : 0;
+      const rank = (u: string) =>
+        u.includes("/tv/assets/") || isYouTubeUrl(u) ? 1 : 0;
+      const aUser = rank(a.url);
+      const bUser = rank(b.url);
       if (aUser !== bUser) return bUser - aUser;
       return (b.updatedAt || "").localeCompare(a.updatedAt || "");
     });
@@ -143,6 +150,16 @@ export default function AdTvControl() {
   }
 
   function thumb(url: string, type: string) {
+    const yt = parseYouTubeVideoId(url);
+    if (yt) {
+      return (
+        <img
+          src={youtubeThumbUrl(yt)}
+          alt=""
+          className="h-16 w-24 shrink-0 rounded object-cover bg-black/40"
+        />
+      );
+    }
     if (
       !url ||
       type === "TEXT" ||
@@ -185,7 +202,8 @@ export default function AdTvControl() {
             Control TV
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Elija contenido, marque las TVs y pulse Reproducir.
+            Elija contenido (imagen, video o YouTube), marque las TVs y pulse
+            Reproducir.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -258,6 +276,7 @@ export default function AdTvControl() {
             {activeContents.map((c) => {
               const selected = globalContentId === c.id;
               const isUpload = c.url.includes("/tv/assets/");
+              const isYt = isYouTubeUrl(c.url);
               return (
                 <button
                   key={c.id}
@@ -277,7 +296,7 @@ export default function AdTvControl() {
                     </span>
                     <span className="block text-xs text-[var(--ad-muted)]">
                       {c.type} · {c.durationSec}s
-                      {isUpload ? " · Su imagen" : ""}
+                      {isYt ? " · YouTube" : isUpload ? " · Su imagen" : ""}
                     </span>
                   </span>
                   {selected ? (
