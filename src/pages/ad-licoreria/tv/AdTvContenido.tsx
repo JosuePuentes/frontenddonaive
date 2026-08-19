@@ -93,7 +93,7 @@ export default function AdTvContenido() {
     if (file.size > max) {
       setMsg(
         kind === "video"
-          ? `Este video pesa ${formatFileMb(file.size)}. El máximo es ${formatFileMb(MAX_TV_VIDEO_BYTES)}. Grabe más corto o en 720p.`
+          ? `Este video pesa ${formatFileMb(file.size)}. El máximo es ${formatFileMb(MAX_TV_VIDEO_BYTES)}. Recorte el video o baje a 720p.`
           : `Esta imagen pesa ${formatFileMb(file.size)}. El máximo es ${formatFileMb(MAX_TV_IMAGE_BYTES)}.`,
       );
       return;
@@ -111,7 +111,9 @@ export default function AdTvContenido() {
       if (kind === "video") {
         setType("VIDEO");
         setDuration(30);
-        setVideoPreview(URL.createObjectURL(file));
+        if (file.size < 48 * 1024 * 1024) {
+          setVideoPreview(URL.createObjectURL(file));
+        }
         setName((prev) => prev.trim() || friendlyTvTitle(file, "video"));
         const hevcHint = isLikelyHevcOrMov(file)
           ? " Si la TV no lo reproduce, conviértalo a MP4 (H.264)."
@@ -393,8 +395,8 @@ export default function AdTvContenido() {
               <p className="text-sm text-[var(--ad-gold-soft)]">{fileLabel}</p>
             ) : (
               <p className="text-xs text-[var(--ad-muted)]">
-                Imagen hasta 8 MB · Video hasta 80 MB (MP4 H.264 recomendado).
-                Si el celular graba en 4K, recorte o baje a 720p.
+                Imagen hasta 12 MB · Video hasta 512 MB (se sube por partes;
+                use WiFi). MP4 H.264 recomendado.
               </p>
             )}
             {preview ? (

@@ -24,14 +24,13 @@ export function createApp() {
     }),
   );
   app.use(cors(buildCorsOptions()));
-  app.use(express.json({ limit: "40mb" }));
+  app.use(express.json({ limit: "12mb" }));
   /**
-   * Subidas TV: el navegador a veces manda video/mp4 (o nada) en vez de
-   * application/octet-stream. Si no parseamos raw, el body llega vacío.
+   * Subidas TV: chunks de ~1.5 MB. El archivo completo se ensambla en disco.
    */
   app.use(
     express.raw({
-      limit: "80mb",
+      limit: "12mb",
       type: (req) => {
         const anyReq = req as { originalUrl?: string; url?: string };
         const url = `${anyReq.originalUrl || anyReq.url || ""}`;

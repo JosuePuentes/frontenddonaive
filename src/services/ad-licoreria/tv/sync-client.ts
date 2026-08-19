@@ -95,10 +95,10 @@ async function readUploadError(res: Response): Promise<string> {
     /* no JSON */
   }
   if (res.status === 413) {
-    return "El servidor rechazó el archivo por tamaño (máx. 80 MB)";
+    return "El servidor rechazó el archivo por tamaño (máx. 512 MB)";
   }
   if (res.status === 413 || /payload|too large/i.test(text)) {
-    return "El servidor rechazó el archivo por tamaño (máx. 80 MB)";
+    return "El servidor rechazó el archivo por tamaño (máx. 512 MB)";
   }
   return text.trim()
     ? `Error al subir (${res.status}): ${text.slice(0, 160)}`
@@ -263,7 +263,7 @@ export async function uploadTvFile(
   }
 
   const CHUNK = 1.5 * 1024 * 1024;
-  if (file.size > CHUNK) {
+  if (file.size > CHUNK || inferTvMediaKind(file) === "video") {
     return uploadTvFileChunked(root, file, mime, opts?.onProgress);
   }
 

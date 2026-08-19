@@ -25,7 +25,9 @@ const DATA_ROOT = path.join(process.cwd(), ".data", "ad-tv");
 const STATE_DIR = path.join(DATA_ROOT, "state");
 const ASSET_DIR = path.join(DATA_ROOT, "assets");
 const PART_DIR = path.join(DATA_ROOT, "parts");
-const MAX_ASSET_BYTES = 80 * 1024 * 1024;
+/** Tope del archivo ensamblado (chunks). Cada chunk es pequeño. */
+const MAX_ASSET_BYTES = 512 * 1024 * 1024;
+const MAX_SINGLE_POST_BYTES = 12 * 1024 * 1024;
 
 function ensureDirs() {
   fs.mkdirSync(STATE_DIR, { recursive: true });
@@ -91,20 +93,30 @@ function writeAsset(
   return meta;
 }
 
-function readAsset(
+function finalizeAssetFromPart(
   tenant: string,
   id: string,
-): { meta: TvAssetMeta; buf: Buffer } | null {
+  mimeType: string,
+  partFile: string,
+): TvAssetMeta | null {
+  const bytes = fs.statSync(partFile).size;
+  if (!bytes) return null;
   const paths = assetPaths(tenant, id);
+  fs.mkdirSync(path.dirname(paths.bin), { recursive: true });
   try {
-    const meta = JSON.parse(
-      fs.readFileSync(paths.meta, "utf8"),
-    ) as TvAssetMeta;
-    const buf = fs.readFileSync(paths.bin);
-    return { meta, buf };
+    fs.unlinkSync(paths.bin);
   } catch {
-    return null;
+    /* no existía */
   }
+  fs.renameSync(partFile, paths.bin);
+  const meta: TvAssetMeta = {
+    id,
+    mimeType,
+    createdAt: new Date().toISOString(),
+    bytes,
+  };
+  fs.writeFileSync(paths.meta, JSON.stringify(meta));
+  return meta;
 }
 
 function decodeDataUrl(dataUrl: string): { mimeType: string; buf: Buffer } | null {
@@ -436,9 +448,12 @@ adTvSyncRouter.post("/tv/assets/binary", (req, res) => {
     });
     return;
   }
-  if (buf.length > MAX_ASSET_BYTES) {
+  if (buf.length > MAX_SINGLE_POST_BYTES) {
     res.status(413).json({
-      error: { message: "Archivo muy grande (máx. 80 MB)" },
+      error: {
+        message:
+          "Use la subida por partes. El archivo supera el envío directo.",
+      },
     });
     return;
   }
@@ -508,7 +523,7 @@ adTvSyncRouter.post("/tv/assets/binary/chunk", (req, res) => {
       /* ignore */
     }
     res.status(413).json({
-      error: { message: "Archivo muy grande (máx. 80 MB)" },
+      error: { message: "Archivo muy grande (máx. 512 MB)" },
     });
     return;
   }
@@ -538,16 +553,6 @@ adTvSyncRouter.post("/tv/assets/binary/complete", (req, res) => {
     });
     return;
   }
-  const buf = fs.readFileSync(part);
-  try {
-    fs.unlinkSync(part);
-  } catch {
-    /* ignore */
-  }
-  if (!buf.length) {
-    res.status(400).json({ error: { message: "archivo vacío" } });
-    return;
-  }
   const mimeType = resolveUploadMime({
     query: {
       ...req.query,
@@ -556,7 +561,16 @@ adTvSyncRouter.post("/tv/assets/binary/complete", (req, res) => {
     },
     headers: req.headers as Record<string, unknown>,
   });
-  const meta = writeAsset(key, id, mimeType, buf);
+  const meta = finalizeAssetFromPart(key, id, mimeType, part);
+  if (!meta) {
+    try {
+      fs.unlinkSync(part);
+    } catch {
+      /* ignore */
+    }
+    res.status(400).json({ error: { message: "archivo vacío" } });
+    return;
+  }
   res.json({
     data: {
       id: meta.id,
@@ -571,16 +585,41 @@ adTvSyncRouter.post("/tv/assets/binary/complete", (req, res) => {
 adTvSyncRouter.get("/tv/assets/:id", (req, res) => {
   const key = tenantKey(req);
   const id = String(req.params.id ?? "");
-  const asset = readAsset(key, id);
-  if (!asset) {
+  const paths = assetPaths(key, id);
+  let meta: TvAssetMeta;
+  let size = 0;
+  try {
+    meta = JSON.parse(fs.readFileSync(paths.meta, "utf8")) as TvAssetMeta;
+    size = fs.statSync(paths.bin).size;
+  } catch {
     res.status(404).json({ error: { message: "Asset no encontrado" } });
     return;
   }
-  /** Permite que el FE (otro túnel) muestre la imagen en <img> / CSS. */
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Content-Type", asset.meta.mimeType);
+  res.setHeader("Content-Type", meta.mimeType);
   res.setHeader("Cache-Control", "public, max-age=3600");
   res.setHeader("Accept-Ranges", "bytes");
-  res.send(asset.buf);
+
+  const range = String(req.headers.range || "");
+  const match = /^bytes=(\d+)-(\d*)$/.exec(range);
+  if (match) {
+    const start = Number(match[1]);
+    const end = match[2] ? Number(match[2]) : size - 1;
+    if (start >= size || start > end) {
+      res.status(416);
+      res.setHeader("Content-Range", `bytes */${size}`);
+      res.end();
+      return;
+    }
+    const safeEnd = Math.min(end, size - 1);
+    res.status(206);
+    res.setHeader("Content-Range", `bytes ${start}-${safeEnd}/${size}`);
+    res.setHeader("Content-Length", String(safeEnd - start + 1));
+    fs.createReadStream(paths.bin, { start, end: safeEnd }).pipe(res);
+    return;
+  }
+
+  res.setHeader("Content-Length", String(size));
+  fs.createReadStream(paths.bin).pipe(res);
 });

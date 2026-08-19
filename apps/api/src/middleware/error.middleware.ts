@@ -29,7 +29,7 @@ export function errorHandler(
     res.status(413).json({
       error: {
         code: "PAYLOAD_TOO_LARGE",
-        message: "Archivo muy grande (máx. 80 MB)",
+        message: "Archivo muy grande (máx. 512 MB)",
       },
     });
     return;

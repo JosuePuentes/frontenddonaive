@@ -1,7 +1,8 @@
 /** Límites y detección de archivos para Contenido TV (móvil suele mandar MIME vacío). */
 
-export const MAX_TV_IMAGE_BYTES = 8 * 1024 * 1024;
-export const MAX_TV_VIDEO_BYTES = 80 * 1024 * 1024;
+export const MAX_TV_IMAGE_BYTES = 12 * 1024 * 1024;
+/** Videos de celular (4K) suelen pasar de 80 MB; se suben por partes. */
+export const MAX_TV_VIDEO_BYTES = 512 * 1024 * 1024;
 
 const VIDEO_EXT = /\.(mp4|m4v|webm|mov|mkv|avi|3gp|3gpp)$/i;
 const IMAGE_EXT = /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i;
