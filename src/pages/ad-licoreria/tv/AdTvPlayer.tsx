@@ -7,7 +7,7 @@ import {
   parseYouTubeVideoId,
 } from "@/services/ad-licoreria/tv/youtube";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
-import type { AdTvCommand } from "@/types/ad-tv";
+import type { AdTvCommand, AdTvContent } from "@/types/ad-tv";
 import AdTvYouTubeStage from "@/pages/ad-licoreria/tv/AdTvYouTubeStage";
 
 /**
@@ -27,10 +27,16 @@ export default function AdTvPlayer() {
 
   const decoded = decodeURIComponent(id).trim() || "TV-001";
   const screen = getScreen(decoded);
-  const content = useMemo(
-    () => contents.find((c) => c.id === screen?.currentContentId),
-    [contents, screen?.currentContentId],
-  );
+  const playlist = useMemo(() => {
+    const ids = screen?.playlistIds?.filter(Boolean) ?? [];
+    const fromList = ids
+      .map((cid) => contents.find((c) => c.id === cid && c.active !== false))
+      .filter((c): c is AdTvContent => Boolean(c));
+    if (fromList.length) return fromList;
+    const one = contents.find((c) => c.id === screen?.currentContentId);
+    return one ? [one] : [];
+  }, [contents, screen?.playlistIds, screen?.currentContentId]);
+  const [slide, setSlide] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [pairedFlash, setPairedFlash] = useState(false);
   const [bootMsg, setBootMsg] = useState("Preparando pantalla…");
@@ -180,7 +186,31 @@ export default function AdTvPlayer() {
     screen?.volume,
     screen?.isMuted,
     screen?.currentContentId,
+    slide,
   ]);
+
+  useEffect(() => {
+    setSlide(0);
+  }, [screen?.playlistIds?.join("|"), screen?.currentContentId]);
+
+  const playing =
+    playlist.length > 0 && screen?.playbackState === "PLAYING";
+
+  const playlistKey = playlist.map((c) => `${c.id}:${c.durationSec}`).join("|");
+
+  useEffect(() => {
+    if (!playing || playlist.length < 2) return;
+    const cur = playlist[slide % playlist.length];
+    const yt = parseYouTubeVideoId(cur.url);
+    const fileVideo =
+      !yt && cur.type === "VIDEO" && isDirectVideoFileUrl(cur.url);
+    if (fileVideo) return;
+    const ms = Math.max(4, cur.durationSec || 12) * 1000;
+    const t = window.setTimeout(() => {
+      setSlide((i) => (i + 1) % playlist.length);
+    }, ms);
+    return () => window.clearTimeout(t);
+  }, [playing, slide, playlistKey, playlist]);
 
   const isPaired = Boolean(screen?.paired || stickyPaired.current);
   const shownCode = lockedCode || screen?.pairingCode || null;
@@ -229,12 +259,13 @@ export default function AdTvPlayer() {
     );
   }
 
-  const playing =
-    Boolean(content) && screen.playbackState === "PLAYING";
-  const youtubeId = content ? parseYouTubeVideoId(content.url) : null;
+  const item = playlist.length
+    ? playlist[slide % playlist.length]
+    : undefined;
+  const youtubeId = item ? parseYouTubeVideoId(item.url) : null;
   const youtubeBroken = Boolean(
-    content &&
-      (content.type === "YOUTUBE" || looksLikeYouTube(content.url)) &&
+    item &&
+      (item.type === "YOUTUBE" || looksLikeYouTube(item.url)) &&
       !youtubeId,
   );
 
@@ -257,55 +288,53 @@ export default function AdTvPlayer() {
             Esperando contenido del teléfono
           </p>
           <p className="mt-8 text-xs uppercase tracking-[0.2em] text-amber-100/40">
-            Reproductor yt-2 · YouTube listo
+            Reproductor yt-3 · YouTube + carrusel
           </p>
         </div>
       ) : youtubeId ? (
-        <AdTvYouTubeStage
-          videoId={youtubeId}
-          playing={playing}
-          volume={screen.volume}
-          muted={screen.isMuted}
-        />
+        <AdTvYouTubeStage videoId={youtubeId} playing={playing} />
       ) : youtubeBroken ? (
         <div className="flex h-full flex-col items-center justify-center px-8 text-center">
           <p className="text-2xl text-amber-100">
             No se pudo leer el enlace de YouTube
           </p>
           <p className="mt-4 max-w-lg text-sm text-amber-100/70">
-            En Contenido pegue el enlace del video (youtube.com/watch o youtu.be)
-            y vuelva a guardar.
+            En Contenido elija «YouTube» y pegue youtube.com/watch o youtu.be.
           </p>
         </div>
-      ) : content?.type === "VIDEO" && isDirectVideoFileUrl(content.url) ? (
+      ) : item?.type === "VIDEO" && isDirectVideoFileUrl(item.url) ? (
         <video
           ref={videoRef}
           className="h-full w-full object-contain bg-black"
-          src={content.url}
+          src={item.url}
           autoPlay
           playsInline
-          loop
+          loop={playlist.length < 2}
           muted={screen.isMuted}
           controls={false}
+          onEnded={() => {
+            if (playlist.length > 1) {
+              setSlide((i) => (i + 1) % playlist.length);
+            }
+          }}
         />
-      ) : content?.type === "VIDEO" ? (
+      ) : item?.type === "VIDEO" ? (
         <div className="flex h-full flex-col items-center justify-center px-8 text-center">
           <p className="text-2xl text-amber-100">Este video no se puede abrir</p>
           <p className="mt-4 max-w-lg text-sm text-amber-100/70">
-            Use un archivo MP4 o pegue un enlace de YouTube. Una URL de YouTube
-            no se reproduce como archivo de video.
+            Use un archivo MP4 o elija el tipo YouTube.
           </p>
         </div>
-      ) : content?.type === "TEXT" ? (
+      ) : item?.type === "TEXT" ? (
         <div className="flex h-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a120c_0%,#050505_70%)] px-8 text-center">
           <p className="font-[Cormorant_Garamond,serif] text-4xl md:text-6xl text-amber-100">
-            {content.notes || content.name}
+            {item.notes || item.name}
           </p>
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-black">
           <img
-            src={content?.url}
+            src={item?.url}
             alt=""
             className="max-h-full max-w-full object-contain"
             draggable={false}

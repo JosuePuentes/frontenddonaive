@@ -37,7 +37,7 @@ import type { AdTvContentType } from "@/types/ad-tv";
 
 export default function AdTvContenido() {
   const { hasPermission, getCurrentOperator } = useAdLicoreria();
-  const { contents, screens, createContent } = useAdTv();
+  const { contents, screens, createContent, deleteContent } = useAdTv();
   const routes = getAdLicoreriaRoutes();
   const session = getCurrentOperator();
   const userName = session?.name ?? "Admin TV";
@@ -518,6 +518,7 @@ export default function AdTvContenido() {
                   <th>Duración</th>
                   <th>Origen</th>
                   <th>Activo</th>
+                  {canManage ? <th></th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -575,6 +576,35 @@ export default function AdTvContenido() {
                             : c.url || "—"}
                       </td>
                       <td>{c.active ? "Sí" : "No"}</td>
+                      {canManage ? (
+                        <td>
+                          <button
+                            type="button"
+                            className="ad-btn"
+                            onClick={() => {
+                              if (
+                                !window.confirm(
+                                  `¿Borrar «${c.name}»? No se puede deshacer.`,
+                                )
+                              ) {
+                                return;
+                              }
+                              const r = deleteContent({
+                                contentId: c.id,
+                                userName,
+                              });
+                              setMsg(
+                                r.ok ? `Borrado: ${c.name}` : r.error,
+                              );
+                              if (r.ok) {
+                                void adTvRepository.flushSync();
+                              }
+                            }}
+                          >
+                            Borrar
+                          </button>
+                        </td>
+                      ) : null}
                     </tr>
                     );
                   })}

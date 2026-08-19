@@ -36,6 +36,8 @@ export type AdTvScreen = {
   pairingToken?: string | null;
   paired: boolean;
   currentContentId?: string | null;
+  /** Lista en bucle (fotos/videos/YouTube) en esta TV. */
+  playlistIds?: string[] | null;
   currentGroupId?: string | null;
   volume: number;
   isMuted: boolean;
@@ -72,6 +74,8 @@ export type AdTvCommand = {
   command: AdTvCommandType;
   screenIds: string[];
   contentId?: string | null;
+  /** Varios ítems: la TV los pasa uno tras otro. */
+  contentIds?: string[] | null;
   position?: number;
   volume?: number;
   muted?: boolean;
@@ -86,6 +90,7 @@ export type AdTvAuditAction =
   | "TV_PAIRED"
   | "TV_UNPAIRED"
   | "CONTENT_CREATED"
+  | "CONTENT_DELETED"
   | "CONTENT_LOADED"
   | "GROUP_CREATED"
   | "GROUP_CHANGED"

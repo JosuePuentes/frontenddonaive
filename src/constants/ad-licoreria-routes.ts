@@ -163,7 +163,7 @@ export function adTvPlayerPath(
   return `${joinPath(
     base,
     `/tv/reproductor/${encodeURIComponent(screenIdOrCode)}`,
-  )}?tv=yt2`;
+  )}?tv=yt3`;
 }
 
 /** Alias histórico: /tv/pantalla/:id */

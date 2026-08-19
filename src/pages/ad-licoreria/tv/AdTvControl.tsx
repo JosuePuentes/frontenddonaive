@@ -22,7 +22,7 @@ const PREVIEW_BASE =
  */
 export default function AdTvControl() {
   const { hasPermission, getCurrentOperator } = useAdLicoreria();
-  const { screens, contents, audit, dispatchCommand } = useAdTv();
+  const { screens, contents, audit, dispatchCommand, deleteContent } = useAdTv();
   const routes = getAdLicoreriaRoutes();
   const session = getCurrentOperator();
   const userName = session?.name ?? "Admin TV";
@@ -41,7 +41,7 @@ export default function AdTvControl() {
     });
   }, [contents]);
 
-  const [globalContentId, setGlobalContentId] = useState("");
+  const [pickedContentIds, setPickedContentIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [msg, setMsg] = useState("");
 
@@ -73,14 +73,16 @@ export default function AdTvControl() {
 
   useEffect(() => {
     if (!activeContents.length) {
-      setGlobalContentId("");
+      setPickedContentIds([]);
       return;
     }
-    setGlobalContentId((prev) =>
-      prev && activeContents.some((c) => c.id === prev)
-        ? prev
-        : activeContents[0].id,
-    );
+    setPickedContentIds((prev) => {
+      const kept = prev.filter((id) =>
+        activeContents.some((c) => c.id === id),
+      );
+      if (kept.length) return kept;
+      return activeContents[0] ? [activeContents[0].id] : [];
+    });
   }, [activeContents]);
 
   useEffect(() => {
@@ -110,9 +112,10 @@ export default function AdTvControl() {
     );
   }
 
-  function playOn(screenIds: string[], contentId: string) {
-    if (!contentId) {
-      setMsg("Seleccione un contenido (o cree uno en Contenido)");
+  function playOn(screenIds: string[], contentIds: string[]) {
+    const ids = contentIds.filter(Boolean);
+    if (!ids.length) {
+      setMsg("Marque al menos una imagen, video o YouTube");
       return;
     }
     if (!screenIds.length) {
@@ -122,15 +125,21 @@ export default function AdTvControl() {
     const r = dispatchCommand({
       command: "PLAY",
       userName,
-      contentId,
+      contentId: ids[0],
+      contentIds: ids,
       position: 0,
       screenIds,
     });
     if (r.ok) {
       void adTvRepository.flushSync();
-      const name =
-        activeContents.find((c) => c.id === contentId)?.name ?? contentId;
-      setMsg(`▶ «${name}» → ${r.data.screenIds.length} TV`);
+      const names = ids
+        .map((id) => activeContents.find((c) => c.id === id)?.name ?? id)
+        .join(", ");
+      setMsg(
+        ids.length > 1
+          ? `▶ Carrusel (${ids.length}): ${names} → ${r.data.screenIds.length} TV`
+          : `▶ «${names}» → ${r.data.screenIds.length} TV`,
+      );
     } else {
       setMsg(r.error);
     }
@@ -204,8 +213,8 @@ export default function AdTvControl() {
             Control TV
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Elija contenido (imagen, video o YouTube), marque las TVs y pulse
-            Reproducir.
+            Elija uno o varios (carrusel foto a foto / video a video), marque las
+            TVs y pulse Reproducir.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -262,6 +271,10 @@ export default function AdTvControl() {
             Actualizar lista
           </button>
         </div>
+        <p className="text-xs text-[var(--ad-muted)]">
+          Marque varios para un carrusel (foto a foto o video a video). La
+          duración de cada foto se edita en Contenido.
+        </p>
 
         {!activeContents.length ? (
           <div className="space-y-2 text-sm text-[var(--ad-muted)]">
@@ -276,37 +289,84 @@ export default function AdTvControl() {
         ) : (
           <div className="grid gap-2">
             {activeContents.map((c) => {
-              const selected = globalContentId === c.id;
+              const selected = pickedContentIds.includes(c.id);
               const isUpload = c.url.includes("/tv/assets/");
               const isYt = isYouTubeUrl(c.url);
               return (
-                <button
+                <div
                   key={c.id}
-                  type="button"
                   className={[
-                    "flex w-full items-center gap-3 rounded border p-3 text-left transition",
+                    "flex w-full items-center gap-3 rounded border p-3 text-left",
                     selected
                       ? "border-[var(--ad-gold)] bg-[var(--ad-gold)]/10"
                       : "border-[var(--ad-line)]",
                   ].join(" ")}
-                  onClick={() => setGlobalContentId(c.id)}
                 >
-                  {thumb(c.url, c.type)}
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium text-[var(--ad-gold-soft)]">
-                      {c.name}
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={selected}
+                    onChange={() => {
+                      setPickedContentIds((prev) => {
+                        const next = prev.includes(c.id)
+                          ? prev.filter((id) => id !== c.id)
+                          : [...prev, c.id];
+                        return next;
+                      });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    onClick={() => {
+                      setPickedContentIds((prev) => {
+                        const next = prev.includes(c.id)
+                          ? prev.filter((id) => id !== c.id)
+                          : [...prev, c.id];
+                        return next;
+                      });
+                    }}
+                  >
+                    {thumb(c.url, c.type)}
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium text-[var(--ad-gold-soft)]">
+                        {c.name}
+                      </span>
+                      <span className="block text-xs text-[var(--ad-muted)]">
+                        {adTvTypeLabel(c.type)} · {c.durationSec}s
+                        {isYt ? " · YouTube" : isUpload ? " · Su archivo" : ""}
+                      </span>
                     </span>
-                    <span className="block text-xs text-[var(--ad-muted)]">
-                      {adTvTypeLabel(c.type)} · {c.durationSec}s
-                      {isYt ? " · YouTube" : isUpload ? " · Su imagen" : ""}
-                    </span>
-                  </span>
-                  {selected ? (
-                    <span className="text-xs text-[var(--ad-gold-soft)]">
-                      Elegido
-                    </span>
-                  ) : null}
-                </button>
+                    {selected ? (
+                      <span className="text-xs text-[var(--ad-gold-soft)]">
+                        En el carrusel
+                      </span>
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
+                    className="ad-btn"
+                    onClick={() => {
+                      if (
+                        !window.confirm(`¿Borrar «${c.name}»?`)
+                      ) {
+                        return;
+                      }
+                      const r = deleteContent({
+                        contentId: c.id,
+                        userName,
+                      });
+                      if (r.ok) {
+                        void adTvRepository.flushSync();
+                        setMsg(`Borrado: ${c.name}`);
+                      } else {
+                        setMsg(r.error);
+                      }
+                    }}
+                  >
+                    Borrar
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -426,10 +486,12 @@ export default function AdTvControl() {
           <button
             type="button"
             className="ad-btn ad-btn--gold"
-            disabled={!selectedIds.length || !globalContentId}
-            onClick={() => playOn(selectedIds, globalContentId)}
+            disabled={!selectedIds.length || !pickedContentIds.length}
+            onClick={() => playOn(selectedIds, pickedContentIds)}
           >
-            ▶ Reproducir en las TV marcadas
+            {pickedContentIds.length > 1
+              ? `▶ Reproducir carrusel (${pickedContentIds.length})`
+              : "▶ Reproducir en las TV marcadas"}
           </button>
           <button
             type="button"

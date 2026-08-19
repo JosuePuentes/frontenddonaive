@@ -266,19 +266,36 @@ function applyCommandToScreen(
       next = {
         ...next,
         currentContentId: cmd.contentId ?? next.currentContentId,
+        playlistIds: cmd.contentIds?.length
+          ? cmd.contentIds
+          : cmd.contentId
+            ? [cmd.contentId]
+            : next.playlistIds ?? null,
         positionSec: cmd.position ?? 0,
         playbackState: "IDLE",
       };
       break;
-    case "PLAY":
+    case "PLAY": {
+      const list =
+        cmd.contentIds && cmd.contentIds.length
+          ? cmd.contentIds
+          : cmd.contentId
+            ? [cmd.contentId]
+            : next.playlistIds?.length
+              ? next.playlistIds
+              : next.currentContentId
+                ? [next.currentContentId]
+                : [];
       next = {
         ...next,
-        currentContentId: cmd.contentId ?? next.currentContentId,
+        currentContentId: list[0] ?? next.currentContentId,
+        playlistIds: list.length ? list : next.playlistIds ?? null,
         positionSec: cmd.position ?? next.positionSec,
         playbackState: "PLAYING",
         status: "ONLINE",
       };
       break;
+    }
     case "PAUSE":
       next = { ...next, playbackState: "PAUSED" };
       break;
@@ -652,6 +669,30 @@ export const adTvRepository = {
     return { ok: true, data: content };
   },
 
+  deleteContent(input: {
+    contentId: string;
+    userName: string;
+  }): AdTvResult {
+    const content = state.contents.find((c) => c.id === input.contentId);
+    if (!content) return { ok: false, error: "Contenido no encontrado" };
+    state.contents = state.contents.filter((c) => c.id !== content.id);
+    state.screens = state.screens.map((s) => {
+      const playlist = (s.playlistIds ?? []).filter((id) => id !== content.id);
+      const currentGone = s.currentContentId === content.id;
+      return {
+        ...s,
+        currentContentId: currentGone ? playlist[0] ?? null : s.currentContentId,
+        playlistIds: playlist.length ? playlist : null,
+        playbackState: currentGone ? "STOPPED" : s.playbackState,
+        updatedAt: nowIso(),
+      };
+    });
+    audit("CONTENT_DELETED", input.userName, `Borró ${content.name}`);
+    emit();
+    void pushNow();
+    return { ok: true, data: undefined };
+  },
+
   createGroup(input: {
     name: string;
     code?: string;
@@ -740,6 +781,7 @@ export const adTvRepository = {
     groupId?: string;
     all?: boolean;
     contentId?: string;
+    contentIds?: string[];
     position?: number;
     volume?: number;
     muted?: boolean;
@@ -748,15 +790,18 @@ export const adTvRepository = {
     if (!targets.length) {
       return { ok: false, error: "Seleccione al menos una pantalla" };
     }
+    const playlist =
+      input.contentIds?.filter(Boolean) ??
+      (input.contentId ? [input.contentId] : []);
     if (
       (input.command === "PLAY" || input.command === "LOAD_CONTENT") &&
-      !input.contentId
+      !playlist.length
     ) {
       const anyMissing = targets.some((id) => {
         const s = state.screens.find((x) => x.id === id);
-        return !s?.currentContentId;
+        return !s?.currentContentId && !s?.playlistIds?.length;
       });
-      if (anyMissing && !input.contentId) {
+      if (anyMissing) {
         return { ok: false, error: "Seleccione contenido" };
       }
     }
@@ -765,7 +810,8 @@ export const adTvRepository = {
       id: uid("tcmd"),
       command: input.command,
       screenIds: targets,
-      contentId: input.contentId ?? null,
+      contentId: playlist[0] ?? input.contentId ?? null,
+      contentIds: playlist.length ? playlist : null,
       position: input.position,
       volume: input.volume,
       muted: input.muted,

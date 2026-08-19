@@ -92,7 +92,7 @@ export function youtubeEmbedUrl(
 ): string {
   const params = new URLSearchParams({
     autoplay: opts?.autoplay === false ? "0" : "1",
-    mute: opts?.muted ? "1" : "0",
+    mute: "1",
     controls: "1",
     rel: "0",
     modestbranding: "1",
@@ -101,9 +101,7 @@ export function youtubeEmbedUrl(
     playlist: videoId,
     fs: "1",
     iv_load_policy: "3",
-    enablejsapi: "1",
   });
-  if (opts?.origin) params.set("origin", opts.origin);
   return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
 }
 

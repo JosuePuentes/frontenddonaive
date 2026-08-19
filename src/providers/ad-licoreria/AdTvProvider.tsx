@@ -31,6 +31,7 @@ type AdTvActions = {
   unpairScreen: typeof adTvRepository.unpairScreen;
   heartbeat: typeof adTvRepository.heartbeat;
   createContent: typeof adTvRepository.createContent;
+  deleteContent: typeof adTvRepository.deleteContent;
   createGroup: typeof adTvRepository.createGroup;
   setGroupScreens: typeof adTvRepository.setGroupScreens;
   addScreenToGroup: typeof adTvRepository.addScreenToGroup;
@@ -64,6 +65,7 @@ const TV_ACTIONS: AdTvActions = {
   unpairScreen: (input) => adTvRepository.unpairScreen(input),
   heartbeat: (id) => adTvRepository.heartbeat(id),
   createContent: (input) => adTvRepository.createContent(input),
+  deleteContent: (input) => adTvRepository.deleteContent(input),
   createGroup: (input) => adTvRepository.createGroup(input),
   setGroupScreens: (input) => adTvRepository.setGroupScreens(input),
   addScreenToGroup: (input) => adTvRepository.addScreenToGroup(input),

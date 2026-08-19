@@ -3,36 +3,28 @@ import { youtubeEmbedUrl } from "@/services/ad-licoreria/tv/youtube";
 type Props = {
   videoId: string;
   playing: boolean;
-  volume: number;
-  muted: boolean;
 };
 
 /**
- * YouTube en la TV: iframe de embed.
- * Nunca usar <video src="https://youtube.com/watch?..."> — el TV lo muestra como dañado.
+ * YouTube en la TV: iframe de embed (mute+autoplay, controles para el control remoto).
+ * Nunca usar <video src="https://youtube.com/watch?...">.
  */
-export default function AdTvYouTubeStage({
-  videoId,
-  playing,
-  muted,
-}: Props) {
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : undefined;
+export default function AdTvYouTubeStage({ videoId, playing }: Props) {
   const src = youtubeEmbedUrl(videoId, {
     autoplay: playing,
-    muted,
-    origin,
+    muted: true,
   });
 
   return (
     <div className="relative h-full w-full bg-black">
       <iframe
+        key={videoId}
         title="YouTube"
         src={src}
         className="absolute inset-0 h-full w-full border-0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
-        referrerPolicy="strict-origin-when-cross-origin"
+        referrerPolicy="origin"
       />
     </div>
   );
