@@ -29,15 +29,11 @@ import {
   parseYouTubeVideoId,
   youtubeThumbUrl,
 } from "@/services/ad-licoreria/tv/youtube";
+import {
+  AD_TV_TYPE_OPTIONS,
+  adTvTypeLabel,
+} from "@/content/ad-licoreria/tv/type-labels";
 import type { AdTvContentType } from "@/types/ad-tv";
-
-const TYPES: AdTvContentType[] = [
-  "IMAGE",
-  "VIDEO",
-  "TEXT",
-  "MENU",
-  "PROMOTION",
-];
 
 export default function AdTvContenido() {
   const { hasPermission, getCurrentOperator } = useAdLicoreria();
@@ -164,7 +160,13 @@ export default function AdTvContenido() {
       setMsg("Escriba un nombre corto (ej. Promo viernes) o suba un archivo");
       return;
     }
-    if (type !== "TEXT" && !file && !pasted) {
+    if (type === "YOUTUBE" && !youtubeId) {
+      setMsg(
+        "Elija «YouTube» y pegue el enlace del video (youtube.com/watch o youtu.be).",
+      );
+      return;
+    }
+    if (type !== "TEXT" && type !== "YOUTUBE" && !file && !pasted) {
       setMsg("Suba una imagen o video, o pegue una URL de YouTube");
       return;
     }
@@ -197,7 +199,7 @@ export default function AdTvContenido() {
 
       if (youtubeId) {
         finalUrl = canonicalYouTubeUrl(youtubeId);
-        resolvedType = "VIDEO";
+        resolvedType = "YOUTUBE";
         if (!name.trim()) {
           const ytTitle = await fetchYouTubeTitle(youtubeId);
           if (ytTitle) resolvedName = ytTitle;
@@ -286,8 +288,8 @@ export default function AdTvContenido() {
             Contenido
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Suba imagen o video, o pegue un enlace de YouTube, y reprodúzcalo
-            desde Control TV.
+            Suba imagen o video de archivo, o elija <strong>YouTube</strong> y
+            pegue el enlace. Luego reprodúzcalo desde Control TV.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -304,8 +306,8 @@ export default function AdTvContenido() {
         <h2 className="ad-panel-title">Cómo verlo en el TV</h2>
         <ol className="list-decimal space-y-2 pl-5 text-sm text-[var(--ad-muted)]">
           <li>
-            <strong className="text-[var(--ad-text)]">Guarde</strong> imagen,
-            video o un enlace de YouTube aquí.
+            <strong className="text-[var(--ad-text)]">Guarde</strong> una
+            imagen, un MP4 o elija <strong>YouTube</strong> y pegue el enlace.
           </li>
           <li>TV vinculada en Pantallas.</li>
           <li>
@@ -332,7 +334,7 @@ export default function AdTvContenido() {
 
       {canManage ? (
         <section className="ad-panel space-y-3">
-          <h2 className="ad-panel-title">Agregar imagen o video</h2>
+          <h2 className="ad-panel-title">Agregar contenido</h2>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <input
               className="ad-input"
@@ -343,11 +345,24 @@ export default function AdTvContenido() {
             <select
               className="ad-select"
               value={type}
-              onChange={(e) => setType(e.target.value as AdTvContentType)}
+              onChange={(e) => {
+                const next = e.target.value as AdTvContentType;
+                setType(next);
+                if (next === "YOUTUBE") {
+                  pickedFileRef.current = null;
+                  setFileLabel("");
+                  if (videoPreview) URL.revokeObjectURL(videoPreview);
+                  setVideoPreview(null);
+                  setDuration(30);
+                  setMsg(
+                    "Pegue el enlace de YouTube y pulse «Guardar contenido».",
+                  );
+                }
+              }}
             >
-              {TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {AD_TV_TYPE_OPTIONS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
                 </option>
               ))}
             </select>
@@ -361,6 +376,7 @@ export default function AdTvContenido() {
             />
           </div>
 
+          {type !== "YOUTUBE" && type !== "TEXT" ? (
           <div className="space-y-2 rounded border border-[var(--ad-line)] p-3">
             <p className="text-xs uppercase tracking-wide text-[var(--ad-gold)]">
               Subir archivo
@@ -397,12 +413,21 @@ export default function AdTvContenido() {
               />
             ) : null}
           </div>
+          ) : null}
 
           <label className="ad-pos__field">
-            <span>O pegar URL (YouTube, imagen o MP4)</span>
+            <span>
+              {type === "YOUTUBE"
+                ? "Enlace de YouTube"
+                : "O pegar URL (YouTube, imagen o MP4)"}
+            </span>
             <input
               className="ad-input"
-              placeholder="https://youtube.com/watch?v=… o imagen"
+              placeholder={
+                type === "YOUTUBE"
+                  ? "https://www.youtube.com/watch?v=… o youtu.be/…"
+                  : "https://youtube.com/watch?v=… o imagen"
+              }
               value={url.startsWith("data:") ? "" : url}
               onChange={(e) => {
                 const value = e.target.value;
@@ -413,12 +438,12 @@ export default function AdTvContenido() {
                 setVideoPreview(null);
                 const yt = parseYouTubeVideoId(value);
                 if (yt) {
-                  setType("VIDEO");
+                  setType("YOUTUBE");
                   setDuration((d) => (d < 30 ? 30 : d));
                   setPreview(youtubeThumbUrl(yt));
                   setName((prev) => prev.trim() || "Video YouTube");
                   setMsg(
-                    "YouTube listo. Pulse «Guardar contenido» y reprodúzcalo en Control TV.",
+                    "YouTube listo. Pulse «Guardar contenido» y en Control TV pulse ▶.",
                   );
                   void fetchYouTubeTitle(yt).then((title) => {
                     if (title) {
@@ -438,6 +463,13 @@ export default function AdTvContenido() {
               }}
             />
           </label>
+          {type === "YOUTUBE" && preview ? (
+            <img
+              src={preview}
+              alt="Vista previa YouTube"
+              className="max-h-48 w-full rounded object-contain bg-black/40"
+            />
+          ) : null}
 
           <button
             type="button"
@@ -509,9 +541,9 @@ export default function AdTvContenido() {
                             alt=""
                             className="h-10 w-14 rounded object-cover"
                           />
-                        ) : c.type === "VIDEO" ? (
+                        ) : c.type === "VIDEO" || c.type === "YOUTUBE" ? (
                           <span className="text-xs text-[var(--ad-gold-soft)]">
-                            VIDEO
+                            {adTvTypeLabel(c.type)}
                           </span>
                         ) : c.url &&
                           (c.type === "IMAGE" ||
@@ -531,7 +563,7 @@ export default function AdTvContenido() {
                         )}
                       </td>
                       <td>{c.name}</td>
-                      <td>{c.type}</td>
+                      <td>{adTvTypeLabel(c.type)}</td>
                       <td>{c.durationSec}s</td>
                       <td className="max-w-[180px] truncate text-xs">
                         {yt

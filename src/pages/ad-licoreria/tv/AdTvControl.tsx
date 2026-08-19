@@ -7,6 +7,7 @@ import {
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import { adTvRepository } from "@/services/ad-licoreria/tv/repository";
+import { adTvTypeLabel } from "@/content/ad-licoreria/tv/type-labels";
 import {
   isYouTubeUrl,
   parseYouTubeVideoId,
@@ -164,6 +165,7 @@ export default function AdTvControl() {
       !url ||
       type === "TEXT" ||
       type === "VIDEO" ||
+      type === "YOUTUBE" ||
       !(
         url.includes("/tv/assets/") ||
         url.startsWith("data:image") ||
@@ -295,7 +297,7 @@ export default function AdTvControl() {
                       {c.name}
                     </span>
                     <span className="block text-xs text-[var(--ad-muted)]">
-                      {c.type} · {c.durationSec}s
+                      {adTvTypeLabel(c.type)} · {c.durationSec}s
                       {isYt ? " · YouTube" : isUpload ? " · Su imagen" : ""}
                     </span>
                   </span>

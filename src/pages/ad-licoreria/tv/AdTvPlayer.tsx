@@ -232,8 +232,11 @@ export default function AdTvPlayer() {
   const playing =
     Boolean(content) && screen.playbackState === "PLAYING";
   const youtubeId = content ? parseYouTubeVideoId(content.url) : null;
-  const youtubeBroken =
-    Boolean(content && looksLikeYouTube(content.url) && !youtubeId);
+  const youtubeBroken = Boolean(
+    content &&
+      (content.type === "YOUTUBE" || looksLikeYouTube(content.url)) &&
+      !youtubeId,
+  );
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-black text-white">
@@ -252,6 +255,9 @@ export default function AdTvPlayer() {
           </p>
           <p className="mt-4 max-w-md text-base tracking-wide text-amber-100/70">
             Esperando contenido del teléfono
+          </p>
+          <p className="mt-8 text-xs uppercase tracking-[0.2em] text-amber-100/40">
+            Reproductor yt-2 · YouTube listo
           </p>
         </div>
       ) : youtubeId ? (

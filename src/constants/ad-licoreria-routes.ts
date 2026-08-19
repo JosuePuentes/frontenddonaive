@@ -160,10 +160,10 @@ export function adTvPlayerPath(
   screenIdOrCode: string,
   base = getAdLicoreriaBasePath(),
 ): string {
-  return joinPath(
+  return `${joinPath(
     base,
     `/tv/reproductor/${encodeURIComponent(screenIdOrCode)}`,
-  );
+  )}?tv=yt2`;
 }
 
 /** Alias histórico: /tv/pantalla/:id */

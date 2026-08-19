@@ -8,6 +8,7 @@ export type AdTvScreenStatus = "ONLINE" | "OFFLINE" | "PAIRING";
 export type AdTvContentType =
   | "IMAGE"
   | "VIDEO"
+  | "YOUTUBE"
   | "TEXT"
   | "MENU"
   | "PROMOTION";
