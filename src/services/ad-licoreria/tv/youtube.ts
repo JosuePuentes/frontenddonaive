@@ -93,9 +93,11 @@ export function youtubeEmbedUrl(
     muted?: boolean;
     /** youtube-nocookie suele funcionar mejor en navegadores de TV. */
     nocookie?: boolean;
+    startSec?: number;
   },
 ): string {
   const host = opts?.nocookie === false ? "www.youtube.com" : "www.youtube-nocookie.com";
+  const start = Math.max(0, Math.floor(opts?.startSec ?? 0));
   const params = new URLSearchParams({
     autoplay: opts?.autoplay === false ? "0" : "1",
     mute: opts?.muted === false ? "0" : "1",
@@ -107,6 +109,7 @@ export function youtubeEmbedUrl(
     fs: "1",
     iv_load_policy: "3",
   });
+  if (start > 0) params.set("start", String(start));
   return `https://${host}/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
 }
 

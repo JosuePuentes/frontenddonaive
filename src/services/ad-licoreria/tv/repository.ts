@@ -34,6 +34,8 @@ export type AdTvRepositoryState = {
   groups: AdTvGroup[];
   audit: AdTvAuditEvent[];
   lastCommand: AdTvCommand | null;
+  /** Último PLAY: las TVs sincronizan el reloj aunque luego haya MUTE/volumen. */
+  lastPlayCommand?: AdTvCommand | null;
   screenSeq: number;
   contentSeq: number;
   groupSeq: number;
@@ -63,6 +65,7 @@ function cloneState(): AdTvRepositoryState {
     groups: structuredClone(AD_DEMO_TV_GROUPS),
     audit: [],
     lastCommand: null,
+    lastPlayCommand: null,
     screenSeq: 4,
     contentSeq: 10,
     groupSeq: 10,
@@ -861,6 +864,9 @@ export const adTvRepository = {
       targets.includes(s.id) ? applyCommandToScreen(s, cmd) : s,
     );
     state.lastCommand = cmd;
+    if (cmd.command === "PLAY") {
+      state.lastPlayCommand = cmd;
+    }
 
     const auditAction =
       input.command === "PLAY"

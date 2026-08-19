@@ -9,6 +9,10 @@ import {
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
 import type { AdTvCommand, AdTvContent } from "@/types/ad-tv";
 import AdTvYouTubeStage from "@/pages/ad-licoreria/tv/AdTvYouTubeStage";
+import {
+  playheadElapsedSec,
+  playlistCursor,
+} from "@/services/ad-licoreria/tv/playhead";
 
 /**
  * Reproductor fullscreen para el televisor.
@@ -20,6 +24,8 @@ export default function AdTvPlayer() {
   const {
     getScreen,
     contents,
+    lastCommand,
+    lastPlayCommand,
     beginPairing,
     heartbeat,
     realtime,
@@ -36,7 +42,6 @@ export default function AdTvPlayer() {
     const one = contents.find((c) => c.id === screen?.currentContentId);
     return one ? [one] : [];
   }, [contents, screen?.playlistIds, screen?.currentContentId]);
-  const [slide, setSlide] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [pairedFlash, setPairedFlash] = useState(false);
   const [bootMsg, setBootMsg] = useState("Preparando pantalla…");
@@ -163,6 +168,26 @@ export default function AdTvPlayer() {
     });
   }, [screen?.id, realtime]);
 
+  const playing =
+    playlist.length > 0 && screen?.playbackState === "PLAYING";
+
+  const [clockMs, setClockMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!playing) return;
+    const t = window.setInterval(() => setClockMs(Date.now()), 500);
+    return () => window.clearInterval(t);
+  }, [playing, lastPlayCommand?.id, lastCommand?.id, lastCommand?.issuedAt]);
+
+  const elapsedSec = playheadElapsedSec(
+    lastPlayCommand ?? (lastCommand?.command === "PLAY" ? lastCommand : null),
+    screen?.id,
+    clockMs,
+  );
+  const cursor = playlistCursor(playlist, elapsedSec);
+  const slide = cursor.slide;
+  const seekSec = cursor.offsetSec;
+  const playlistKey = playlist.map((c) => `${c.id}:${c.durationSec}`).join("|");
+
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !screen) return;
@@ -170,7 +195,6 @@ export default function AdTvPlayer() {
     el.muted = screen.isMuted;
     if (screen.playbackState === "PLAYING") {
       void el.play().catch(() => {
-        /** Muchos TV exigen mute para autoplay. */
         el.muted = true;
         void el.play().catch(() => undefined);
       });
@@ -190,27 +214,14 @@ export default function AdTvPlayer() {
   ]);
 
   useEffect(() => {
-    setSlide(0);
-  }, [screen?.playlistIds?.join("|"), screen?.currentContentId]);
-
-  const playing =
-    playlist.length > 0 && screen?.playbackState === "PLAYING";
-
-  const playlistKey = playlist.map((c) => `${c.id}:${c.durationSec}`).join("|");
-
-  useEffect(() => {
-    if (!playing || playlist.length < 2) return;
-    const cur = playlist[slide % playlist.length];
-    const yt = parseYouTubeVideoId(cur.url);
-    const fileVideo =
-      !yt && cur.type === "VIDEO" && isDirectVideoFileUrl(cur.url);
-    if (fileVideo) return;
-    const ms = Math.max(4, cur.durationSec || 12) * 1000;
-    const t = window.setTimeout(() => {
-      setSlide((i) => (i + 1) % playlist.length);
-    }, ms);
-    return () => window.clearTimeout(t);
-  }, [playing, slide, playlistKey, playlist]);
+    const el = videoRef.current;
+    if (!el || !playing) return;
+    const dur = Number(el.duration);
+    const want = Number.isFinite(dur) && dur > 1 ? seekSec % dur : seekSec;
+    if (Math.abs((el.currentTime || 0) - want) > 1.25) {
+      el.currentTime = want;
+    }
+  }, [playing, seekSec, playlistKey]);
 
   const isPaired = Boolean(screen?.paired || stickyPaired.current);
   const shownCode = lockedCode || screen?.pairingCode || null;
@@ -288,7 +299,7 @@ export default function AdTvPlayer() {
             Esperando contenido del teléfono
           </p>
           <p className="mt-8 text-xs uppercase tracking-[0.2em] text-amber-100/40">
-            Reproductor yt-5 · YouTube + audio
+            Reproductor yt-6 · TVs en sincronía
           </p>
         </div>
       ) : youtubeId ? (
@@ -297,7 +308,8 @@ export default function AdTvPlayer() {
           playing={playing}
           muted={screen.isMuted}
           volume={screen.volume || 100}
-          stageKey={String(slide)}
+          seekSec={seekSec}
+          stageKey={`${item?.id ?? youtubeId}-${slide}`}
         />
       ) : youtubeBroken ? (
         <div className="flex h-full flex-col items-center justify-center px-8 text-center">
@@ -318,11 +330,6 @@ export default function AdTvPlayer() {
           loop={playlist.length < 2}
           muted={screen.isMuted}
           controls={false}
-          onEnded={() => {
-            if (playlist.length > 1) {
-              setSlide((i) => (i + 1) % playlist.length);
-            }
-          }}
         />
       ) : item?.type === "VIDEO" ? (
         <div className="flex h-full flex-col items-center justify-center px-8 text-center">

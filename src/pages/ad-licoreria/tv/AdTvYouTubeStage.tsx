@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { youtubeEmbedUrl } from "@/services/ad-licoreria/tv/youtube";
+import {
+  isTvSoundUnlocked,
+  markTvSoundUnlocked,
+} from "@/services/ad-licoreria/tv/playhead";
 
 type Props = {
   videoId: string;
   playing: boolean;
   muted?: boolean;
   volume?: number;
-  /** Cambia al avanzar carrusel para forzar recarga del iframe en la TV. */
+  /** Posición compartida entre TVs (segundos). */
+  seekSec?: number;
   stageKey?: string;
 };
 
@@ -16,6 +21,9 @@ type YtPlayer = {
   unMute: () => void;
   isMuted: () => boolean;
   setVolume: (n: number) => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
   destroy: () => void;
 };
 
@@ -34,7 +42,7 @@ type YtWindow = Window & {
         };
       },
     ) => YtPlayer;
-    PlayerState?: { PLAYING: number };
+    PlayerState?: { PLAYING: number; ENDED: number };
   };
   onYouTubeIframeAPIReady?: () => void;
 };
@@ -60,6 +68,26 @@ function ensureYouTubeApi(): Promise<void> {
   });
 }
 
+function targetTime(player: YtPlayer, seekSec: number): number {
+  const dur = Number(player.getDuration?.() || 0);
+  const raw = Math.max(0, seekSec);
+  if (dur > 1) return raw % dur;
+  return raw;
+}
+
+function syncSeek(player: YtPlayer, seekSec: number) {
+  const want = targetTime(player, seekSec);
+  let cur = 0;
+  try {
+    cur = Number(player.getCurrentTime?.() || 0);
+  } catch {
+    cur = 0;
+  }
+  if (Math.abs(cur - want) > 1.25) {
+    player.seekTo(want, true);
+  }
+}
+
 function applySound(player: YtPlayer, wantMuted: boolean, volume: number) {
   if (wantMuted) {
     player.mute();
@@ -70,14 +98,15 @@ function applySound(player: YtPlayer, wantMuted: boolean, volume: number) {
 }
 
 /**
- * YouTube en la TV: arranca en silencio (autoplay) y luego activa audio.
- * Nunca usar <video src="https://youtube.com/watch?...">.
+ * YouTube en la TV: todas las pantallas siguen el mismo reloj.
+ * El aviso de sonido NO reinicia el video.
  */
 export default function AdTvYouTubeStage({
   videoId,
   playing,
   muted = false,
   volume = 100,
+  seekSec = 0,
   stageKey = "0",
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -85,13 +114,14 @@ export default function AdTvYouTubeStage({
   const mutedRef = useRef(muted);
   const volumeRef = useRef(volume);
   const playingRef = useRef(playing);
-  const [needsTap, setNeedsTap] = useState(true);
+  const seekRef = useRef(seekSec);
+  const [needsTap, setNeedsTap] = useState(() => !isTvSoundUnlocked());
   const [usePlainIframe, setUsePlainIframe] = useState(false);
-  const [iframeMuted, setIframeMuted] = useState(true);
 
   mutedRef.current = muted;
   volumeRef.current = volume;
   playingRef.current = playing;
+  seekRef.current = seekSec;
 
   useEffect(() => {
     if (usePlainIframe) return;
@@ -117,6 +147,7 @@ export default function AdTvYouTubeStage({
           setUsePlainIframe(true);
           return;
         }
+        const start = Math.max(0, Math.floor(seekRef.current));
         player = new YT.Player(host, {
           videoId,
           width: "100%",
@@ -124,37 +155,30 @@ export default function AdTvYouTubeStage({
           playerVars: {
             autoplay: 1,
             mute: 1,
-            controls: 1,
+            controls: 0,
             rel: 0,
             modestbranding: 1,
             playsinline: 1,
             fs: 1,
             iv_load_policy: 3,
+            start,
           },
           events: {
             onReady: (e) => {
+              e.target.seekTo(targetTime(e.target, seekRef.current), true);
               if (playingRef.current) e.target.playVideo();
               applySound(e.target, mutedRef.current, volumeRef.current);
-              window.setTimeout(() => {
-                try {
-                  setNeedsTap(Boolean(e.target.isMuted()) && !mutedRef.current);
-                } catch {
-                  setNeedsTap(!mutedRef.current);
-                }
-              }, 700);
             },
             onStateChange: (e) => {
-              if (e.data === (YT.PlayerState?.PLAYING ?? 1)) {
+              const ended = YT.PlayerState?.ENDED ?? 0;
+              const playingState = YT.PlayerState?.PLAYING ?? 1;
+              if (e.data === ended && playingRef.current) {
+                e.target.seekTo(targetTime(e.target, seekRef.current), true);
+                e.target.playVideo();
+              }
+              if (e.data === playingState) {
                 applySound(e.target, mutedRef.current, volumeRef.current);
-                window.setTimeout(() => {
-                  try {
-                    setNeedsTap(
-                      Boolean(e.target.isMuted()) && !mutedRef.current,
-                    );
-                  } catch {
-                    setNeedsTap(!mutedRef.current);
-                  }
-                }, 400);
+                syncSeek(e.target, seekRef.current);
               }
             },
           },
@@ -191,33 +215,46 @@ export default function AdTvYouTubeStage({
     }
   }, [muted, volume, playing]);
 
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const player = playerRef.current;
+      if (!player || !playingRef.current) return;
+      try {
+        syncSeek(player, seekRef.current);
+      } catch {
+        /* ignore */
+      }
+    }, 1500);
+    return () => window.clearInterval(t);
+  }, [videoId, stageKey]);
+
   function enableSound() {
+    markTvSoundUnlocked();
+    setNeedsTap(false);
     const player = playerRef.current;
     if (player) {
       applySound(player, false, volume || 100);
       try {
+        syncSeek(player, seekRef.current);
         player.playVideo();
       } catch {
         /* ignore */
       }
-      setNeedsTap(false);
-      return;
     }
-    setIframeMuted(false);
-    setNeedsTap(false);
   }
 
   const iframeSrc = youtubeEmbedUrl(videoId, {
     autoplay: playing,
-    muted: iframeMuted,
+    muted: true,
     nocookie: true,
+    startSec: seekSec,
   });
 
   return (
     <div className="relative h-full w-full bg-black">
       {usePlainIframe ? (
         <iframe
-          key={`${videoId}-${stageKey}-${iframeMuted ? "m" : "s"}`}
+          key={`${videoId}-${stageKey}`}
           title="YouTube"
           src={iframeSrc}
           className="absolute inset-0 h-full w-full border-0"
@@ -231,15 +268,10 @@ export default function AdTvYouTubeStage({
       {playing && needsTap && !muted ? (
         <button
           type="button"
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/55 px-6 text-center"
+          className="absolute bottom-8 right-8 z-10 max-w-[70%] rounded-full border border-amber-200/80 bg-black/75 px-6 py-3 text-lg text-amber-100 md:text-xl"
           onClick={enableSound}
         >
-          <span className="rounded-full border border-amber-200/80 bg-black/70 px-10 py-6 text-3xl text-amber-100 md:text-5xl">
-            🔊 Activar sonido
-          </span>
-          <span className="mt-5 max-w-lg text-base text-amber-100/80 md:text-xl">
-            Pulse OK / Enter en el control del televisor
-          </span>
+          🔊 Sonido (OK)
         </button>
       ) : null}
     </div>

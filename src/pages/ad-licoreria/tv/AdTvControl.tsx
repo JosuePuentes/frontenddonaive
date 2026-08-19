@@ -213,8 +213,8 @@ export default function AdTvControl() {
             Control TV
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Elija uno o varios (carrusel foto a foto / video a video), marque las
-            TVs y pulse Reproducir.
+            Elija uno o varios, marque las TVs y pulse Reproducir: todas
+            arrancan juntas. El aviso de sonido no reinicia el video.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
