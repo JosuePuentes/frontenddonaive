@@ -88,8 +88,14 @@ export function youtubeThumbUrl(videoId: string): string {
 /** Embed que las TVs pueden reproducir (no usar <video src=watch>). */
 export function youtubeEmbedUrl(
   videoId: string,
-  opts?: { autoplay?: boolean; muted?: boolean; origin?: string },
+  opts?: {
+    autoplay?: boolean;
+    muted?: boolean;
+    /** youtube-nocookie suele funcionar mejor en navegadores de TV. */
+    nocookie?: boolean;
+  },
 ): string {
+  const host = opts?.nocookie === false ? "www.youtube.com" : "www.youtube-nocookie.com";
   const params = new URLSearchParams({
     autoplay: opts?.autoplay === false ? "0" : "1",
     mute: "1",
@@ -97,12 +103,11 @@ export function youtubeEmbedUrl(
     rel: "0",
     modestbranding: "1",
     playsinline: "1",
-    loop: "1",
-    playlist: videoId,
+    enablejsapi: "1",
     fs: "1",
     iv_load_policy: "3",
   });
-  return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
+  return `https://${host}/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
 }
 
 export async function fetchYouTubeTitle(videoId: string): Promise<string | null> {

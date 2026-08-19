@@ -288,11 +288,15 @@ export default function AdTvPlayer() {
             Esperando contenido del teléfono
           </p>
           <p className="mt-8 text-xs uppercase tracking-[0.2em] text-amber-100/40">
-            Reproductor yt-3 · YouTube + carrusel
+            Reproductor yt-4 · YouTube + carrusel
           </p>
         </div>
       ) : youtubeId ? (
-        <AdTvYouTubeStage videoId={youtubeId} playing={playing} />
+        <AdTvYouTubeStage
+          videoId={youtubeId}
+          playing={playing}
+          stageKey={String(slide)}
+        />
       ) : youtubeBroken ? (
         <div className="flex h-full flex-col items-center justify-center px-8 text-center">
           <p className="text-2xl text-amber-100">

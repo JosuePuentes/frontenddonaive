@@ -70,3 +70,63 @@ describe("A&D TV asset upload", () => {
     expect(done.body.data?.path).toMatch(/\/api\/v1\/ad\/tv\/assets\//);
   });
 });
+
+describe("A&D TV sync state", () => {
+  const app = createApp();
+  const tenant = `ad-licoreria-delete-${Date.now()}`;
+
+  it("respeta borrado de contenido (no revive ítems eliminados)", async () => {
+    const baseState = {
+      screens: [],
+      contents: [
+        {
+          id: "tvc-keep",
+          name: "Queda",
+          type: "IMAGE",
+          url: "https://example.com/a.jpg",
+          durationSec: 10,
+          active: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          id: "tvc-drop",
+          name: "Borrar",
+          type: "YOUTUBE",
+          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          durationSec: 30,
+          active: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      deletedContentIds: [],
+    };
+
+    const v1 = Date.now();
+    const put1 = await request(app)
+      .put("/api/v1/ad/tv/state")
+      .send({ tenant, version: v1, state: baseState });
+    expect(put1.status).toBe(200);
+
+    const v2 = v1 + 1;
+    const put2 = await request(app)
+      .put("/api/v1/ad/tv/state")
+      .send({
+        tenant,
+        version: v2,
+        state: {
+          ...baseState,
+          contents: baseState.contents.filter((c) => c.id !== "tvc-drop"),
+          deletedContentIds: ["tvc-drop"],
+        },
+      });
+    expect(put2.status).toBe(200);
+
+    const get = await request(app).get("/api/v1/ad/tv/state").query({ tenant });
+    expect(get.status).toBe(200);
+    const contents = get.body.data?.state?.contents ?? [];
+    expect(contents.map((c: { id: string }) => c.id)).toEqual(["tvc-keep"]);
+    expect(get.body.data?.state?.deletedContentIds).toContain("tvc-drop");
+  });
+});

@@ -37,6 +37,8 @@ export type AdTvRepositoryState = {
   screenSeq: number;
   contentSeq: number;
   groupSeq: number;
+  /** IDs borrados en algún dispositivo — evita que el sync los reviva. */
+  deletedContentIds?: string[];
 };
 
 type Listener = () => void;
@@ -64,7 +66,29 @@ function cloneState(): AdTvRepositoryState {
     screenSeq: 4,
     contentSeq: 10,
     groupSeq: 10,
+    deletedContentIds: [],
   };
+}
+
+const MAX_DELETED_CONTENT_IDS = 400;
+
+function mergeDeletedContentIds(
+  ...lists: Array<string[] | undefined>
+): string[] {
+  const set = new Set<string>();
+  for (const list of lists) {
+    for (const id of list ?? []) {
+      if (id) set.add(id);
+    }
+  }
+  return [...set].slice(-MAX_DELETED_CONTENT_IDS);
+}
+
+function filterDeletedContents(
+  contents: AdTvContent[],
+  deletedIds: Set<string>,
+): AdTvContent[] {
+  return contents.filter((c) => !deletedIds.has(c.id));
 }
 
 let state = cloneState();
@@ -145,10 +169,15 @@ function mergeContents(
   remote: AdTvRepositoryState,
   local: AdTvRepositoryState,
 ): { state: AdTvRepositoryState; preservedLocal: boolean } {
+  const deletedIds = new Set(
+    mergeDeletedContentIds(remote.deletedContentIds, local.deletedContentIds),
+  );
   const map = new Map<string, AdTvContent>();
-  for (const c of remote.contents ?? []) map.set(c.id, c);
+  for (const c of filterDeletedContents(remote.contents ?? [], deletedIds)) {
+    map.set(c.id, c);
+  }
   let preservedLocal = false;
-  for (const c of local.contents ?? []) {
+  for (const c of filterDeletedContents(local.contents ?? [], deletedIds)) {
     const existing = map.get(c.id);
     if (!existing) {
       map.set(c.id, c);
@@ -161,7 +190,11 @@ function mergeContents(
     }
   }
   return {
-    state: { ...remote, contents: [...map.values()] },
+    state: {
+      ...remote,
+      contents: [...map.values()],
+      deletedContentIds: [...deletedIds],
+    },
     preservedLocal,
   };
 }
@@ -676,6 +709,9 @@ export const adTvRepository = {
     const content = state.contents.find((c) => c.id === input.contentId);
     if (!content) return { ok: false, error: "Contenido no encontrado" };
     state.contents = state.contents.filter((c) => c.id !== content.id);
+    state.deletedContentIds = mergeDeletedContentIds(state.deletedContentIds, [
+      content.id,
+    ]);
     state.screens = state.screens.map((s) => {
       const playlist = (s.playlistIds ?? []).filter((id) => id !== content.id);
       const currentGone = s.currentContentId === content.id;

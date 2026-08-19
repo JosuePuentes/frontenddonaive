@@ -163,7 +163,7 @@ export function adTvPlayerPath(
   return `${joinPath(
     base,
     `/tv/reproductor/${encodeURIComponent(screenIdOrCode)}`,
-  )}?tv=yt3`;
+  )}?tv=yt4`;
 }
 
 /** Alias histórico: /tv/pantalla/:id */
@@ -171,7 +171,10 @@ export function adTvPantallaPath(
   screenIdOrCode: string,
   base = getAdLicoreriaBasePath(),
 ): string {
-  return joinPath(base, `/tv/pantalla/${encodeURIComponent(screenIdOrCode)}`);
+  return `${joinPath(
+    base,
+    `/tv/pantalla/${encodeURIComponent(screenIdOrCode)}`,
+  )}?tv=yt4`;
 }
 
 export function getAdLicoreriaNavItems(base = getAdLicoreriaBasePath()) {

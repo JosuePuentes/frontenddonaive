@@ -247,6 +247,18 @@ function protectPairedScreens(
   };
 }
 
+function mergeDeletedContentIdsServer(
+  ...lists: Array<string[] | undefined>
+): string[] {
+  const set = new Set<string>();
+  for (const list of lists) {
+    for (const id of list ?? []) {
+      if (id) set.add(String(id));
+    }
+  }
+  return [...set].slice(-400);
+}
+
 function mergeContentsServer(
   incoming: TvStateLike,
   previous: TvStateLike | null,
@@ -259,19 +271,31 @@ function mergeContentsServer(
     id?: string;
     updatedAt?: string;
   }>;
-  if (!prevList.length) return incoming;
+  const deletedIds = new Set(
+    mergeDeletedContentIdsServer(
+      incoming.deletedContentIds as string[] | undefined,
+      previous?.deletedContentIds as string[] | undefined,
+    ),
+  );
+  if (!prevList.length && !deletedIds.size) return incoming;
   const map = new Map<string, { id?: string; updatedAt?: string }>();
   for (const c of nextList) {
-    if (c?.id) map.set(String(c.id), c);
+    if (!c?.id || deletedIds.has(String(c.id))) continue;
+    map.set(String(c.id), c);
   }
   for (const c of prevList) {
     if (!c?.id) continue;
     const id = String(c.id);
+    if (deletedIds.has(id)) continue;
     const cur = map.get(id);
     if (!cur) map.set(id, c);
     else if ((c.updatedAt || "") > (cur.updatedAt || "")) map.set(id, c);
   }
-  return { ...incoming, contents: [...map.values()] };
+  return {
+    ...incoming,
+    contents: [...map.values()],
+    deletedContentIds: [...deletedIds],
+  };
 }
 
 adTvSyncRouter.get("/tv/state", (req, res) => {
