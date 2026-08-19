@@ -142,6 +142,17 @@ export default function AdTvContenido() {
     }
   }
 
+  function removeItem(contentId: string, contentName: string) {
+    if (
+      !window.confirm(`¿Borrar «${contentName}»? No se puede deshacer.`)
+    ) {
+      return;
+    }
+    const r = deleteContent({ contentId, userName });
+    setMsg(r.ok ? `Borrado: ${contentName}` : r.error);
+    if (r.ok) void adTvRepository.flushSync();
+  }
+
   async function save() {
     const file = pickedFileRef.current;
     const kind = file ? inferTvMediaKind(file) : null;
@@ -505,113 +516,85 @@ export default function AdTvContenido() {
             Actualizar
           </button>
         </div>
+        {canManage && contents.length ? (
+          <p className="mb-3 text-sm text-[var(--ad-muted)]">
+            Toque <strong className="text-[var(--ad-text)]">Borrar</strong> en
+            cada pieza para quitarla.
+          </p>
+        ) : null}
         {!contents.length ? (
           <p className="text-sm text-[var(--ad-muted)]">
             Aún no hay contenido guardado.
           </p>
         ) : (
-          <div className="ad-table-wrap">
-            <table className="ad-table">
-              <thead>
-                <tr>
-                  <th>Vista</th>
-                  <th>Nombre</th>
-                  <th>Tipo</th>
-                  <th>Duración</th>
-                  <th>Origen</th>
-                  <th>Activo</th>
-                  {canManage ? <th></th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {[...contents]
-                  .sort((a, b) => {
-                    const rank = (u: string) =>
-                      u.includes("/tv/assets/") || isYouTubeUrl(u) ? 1 : 0;
-                    const aUser = rank(a.url);
-                    const bUser = rank(b.url);
-                    if (aUser !== bUser) return bUser - aUser;
-                    return (b.updatedAt || "").localeCompare(a.updatedAt || "");
-                  })
-                  .map((c) => {
-                    const yt = parseYouTubeVideoId(c.url);
-                    return (
-                    <tr key={c.id}>
-                      <td>
-                        {yt ? (
-                          <img
-                            src={youtubeThumbUrl(yt)}
-                            alt=""
-                            className="h-10 w-14 rounded object-cover"
-                          />
-                        ) : c.type === "VIDEO" || c.type === "YOUTUBE" ? (
-                          <span className="text-xs text-[var(--ad-gold-soft)]">
-                            {adTvTypeLabel(c.type)}
-                          </span>
-                        ) : c.url &&
-                          (c.type === "IMAGE" ||
-                            c.type === "PROMOTION" ||
-                            c.type === "MENU" ||
-                            c.url.includes("/tv/assets/") ||
-                            c.url.startsWith("data:image")) ? (
-                          <img
-                            src={c.url}
-                            alt=""
-                            className="h-10 w-14 rounded object-cover"
-                          />
-                        ) : (
-                          <span className="text-xs text-[var(--ad-muted)]">
-                            —
-                          </span>
-                        )}
-                      </td>
-                      <td>{c.name}</td>
-                      <td>{adTvTypeLabel(c.type)}</td>
-                      <td>{c.durationSec}s</td>
-                      <td className="max-w-[180px] truncate text-xs">
-                        {yt
-                          ? "YouTube"
-                          : c.url.includes("/tv/assets/")
-                          ? "Servidor TV"
-                          : c.url.startsWith("data:")
-                            ? "Archivo local"
-                            : c.url || "—"}
-                      </td>
-                      <td>{c.active ? "Sí" : "No"}</td>
-                      {canManage ? (
-                        <td>
-                          <button
-                            type="button"
-                            className="ad-btn"
-                            onClick={() => {
-                              if (
-                                !window.confirm(
-                                  `¿Borrar «${c.name}»? No se puede deshacer.`,
-                                )
-                              ) {
-                                return;
-                              }
-                              const r = deleteContent({
-                                contentId: c.id,
-                                userName,
-                              });
-                              setMsg(
-                                r.ok ? `Borrado: ${c.name}` : r.error,
-                              );
-                              if (r.ok) {
-                                void adTvRepository.flushSync();
-                              }
-                            }}
-                          >
-                            Borrar
-                          </button>
-                        </td>
-                      ) : null}
-                    </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
+          <div className="grid gap-3">
+            {[...contents]
+              .sort((a, b) => {
+                const rank = (u: string) =>
+                  u.includes("/tv/assets/") || isYouTubeUrl(u) ? 1 : 0;
+                const aUser = rank(a.url);
+                const bUser = rank(b.url);
+                if (aUser !== bUser) return bUser - aUser;
+                return (b.updatedAt || "").localeCompare(a.updatedAt || "");
+              })
+              .map((c) => {
+                const yt = parseYouTubeVideoId(c.url);
+                const origin = yt
+                  ? "YouTube"
+                  : c.url.includes("/tv/assets/")
+                    ? "Servidor TV"
+                    : c.url.startsWith("data:")
+                      ? "Archivo local"
+                      : c.url || "—";
+                return (
+                  <article
+                    key={c.id}
+                    className="flex flex-col gap-3 rounded border border-[var(--ad-line)] p-3 sm:flex-row sm:items-center"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      {yt ? (
+                        <img
+                          src={youtubeThumbUrl(yt)}
+                          alt=""
+                          className="h-16 w-24 shrink-0 rounded object-cover bg-black/40"
+                        />
+                      ) : c.url &&
+                        (c.type === "IMAGE" ||
+                          c.type === "PROMOTION" ||
+                          c.type === "MENU" ||
+                          c.url.includes("/tv/assets/") ||
+                          c.url.startsWith("data:image")) ? (
+                        <img
+                          src={c.url}
+                          alt=""
+                          className="h-16 w-24 shrink-0 rounded object-cover bg-black/40"
+                        />
+                      ) : (
+                        <span className="flex h-16 w-24 shrink-0 items-center justify-center rounded bg-black/40 text-xs text-[var(--ad-gold-soft)]">
+                          {adTvTypeLabel(c.type)}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-[var(--ad-gold-soft)]">
+                          {c.name}
+                        </p>
+                        <p className="text-xs text-[var(--ad-muted)]">
+                          {adTvTypeLabel(c.type)} · {c.durationSec}s · {origin}
+                        </p>
+                      </div>
+                    </div>
+                    {canManage ? (
+                      <button
+                        type="button"
+                        className="ad-btn w-full sm:w-auto"
+                        onClick={() => removeItem(c.id, c.name)}
+                      >
+                        Borrar
+                      </button>
+                    ) : null}
+                  </article>
+                );
+              })}
           </div>
         )}
       </section>

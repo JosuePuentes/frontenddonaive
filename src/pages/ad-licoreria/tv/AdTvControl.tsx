@@ -296,7 +296,7 @@ export default function AdTvControl() {
                 <div
                   key={c.id}
                   className={[
-                    "flex w-full items-center gap-3 rounded border p-3 text-left",
+                    "flex w-full flex-col gap-3 rounded border p-3 sm:flex-row sm:items-center",
                     selected
                       ? "border-[var(--ad-gold)] bg-[var(--ad-gold)]/10"
                       : "border-[var(--ad-line)]",
@@ -345,7 +345,7 @@ export default function AdTvControl() {
                   </button>
                   <button
                     type="button"
-                    className="ad-btn"
+                    className="ad-btn w-full shrink-0 sm:w-auto"
                     onClick={() => {
                       if (
                         !window.confirm(`¿Borrar «${c.name}»?`)
