@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import {
   formatAdPrice,
   toBaseUnits,
@@ -47,7 +47,6 @@ export default function AdLicoreriaVentas() {
     getOperationalAvailability,
     getFloorOperatorsForWarehouse,
     getCurrentOperator,
-    setCurrentOperator,
     openAccount,
     addAccountItem,
     createPrepaid,
@@ -59,26 +58,14 @@ export default function AdLicoreriaVentas() {
 
   const activeMethods = paymentMethods.filter((m) => m.active);
   const sessionUser = getCurrentOperator();
-  const posCashiers = operators.filter(
-    (o) =>
-      o.active &&
-      o.posEnabled !== false &&
-      o.warehouseId &&
-      (o.role === "cajero" || o.role === "mesonera"),
-  );
 
-  const cashierId = sessionUser?.warehouseId
-    ? sessionUser.id
-    : (currentOperatorId ?? "");
+  const cashierId = sessionUser?.id ?? currentOperatorId ?? "";
   const posWarehouseId = sessionUser?.warehouseId ?? "";
   const floorUsers = posWarehouseId
     ? getFloorOperatorsForWarehouse(posWarehouseId)
     : [];
 
   const [query, setQuery] = useState("");
-  const [productId, setProductId] = useState(products[0]?.id ?? "");
-  const [presentationId, setPresentationId] = useState("");
-  const [qty, setQty] = useState(1);
   const [tableId, setTableId] = useState("");
   const [mesoneraId, setMesoneraId] = useState(floorUsers[0]?.id ?? "");
   const [customerId, setCustomerId] = useState("");
@@ -131,7 +118,7 @@ export default function AdLicoreriaVentas() {
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return products.filter((p) => p.active);
+    if (!q) return [];
     return products.filter(
       (p) =>
         p.active &&
@@ -142,13 +129,7 @@ export default function AdLicoreriaVentas() {
     );
   }, [products, query]);
 
-  const availablePres = getPresentationsFor(productId);
-  const pack = findUnitAndBox(availablePres);
-  const needsPackPick = Boolean(pack.unit && pack.box);
-  const activePres =
-    presentations.find((p) => p.id === presentationId) ??
-    (needsPackPick ? undefined : availablePres[0]);
-  const cashier = operators.find((o) => o.id === cashierId) ?? sessionUser;
+  const cashier = sessionUser ?? operators.find((o) => o.id === cashierId);
   const mesonera = operators.find((o) => o.id === mesoneraId);
   const customer = customers.find((c) => c.id === customerId);
   const methodCfg = activeMethods.find((m) => m.code === payMethod);
@@ -160,25 +141,25 @@ export default function AdLicoreriaVentas() {
     .reduce((a, p) => a + p.amount, 0);
 
   const canSell =
-    Boolean(cashier?.warehouseId) &&
+    Boolean(posWarehouseId) &&
+    Boolean(cashier) &&
     cashier?.posEnabled !== false &&
     hasPermission("pos.sell", cashier?.id);
 
-  const qtyAvail = useMemo(() => {
-    if (!activePres || qty <= 0 || !posWarehouseId) return null;
-    const requestedBase = toBaseUnits(activePres, qty);
-    return getOperationalAvailability(
-      productId,
-      requestedBase,
-      posWarehouseId,
-    );
-  }, [
-    activePres,
-    qty,
-    productId,
-    getOperationalAvailability,
-    posWarehouseId,
-  ]);
+  function pickProduct(pid: string) {
+    const presList = getPresentationsFor(pid);
+    const pickPack = findUnitAndBox(presList);
+    if (pickPack.unit && pickPack.box) {
+      setPackPick({ productId: pid });
+      return;
+    }
+    const pres = presList[0];
+    if (pres) {
+      addLineToCart(pid, pres.id, 1);
+      setQuery("");
+      setMsg("");
+    }
+  }
 
   const cartAlerts = useMemo(
     () =>
@@ -227,10 +208,17 @@ export default function AdLicoreriaVentas() {
     setMsg("");
   }
 
-  function addLine() {
-    const pres = activePres;
-    if (!pres || qty <= 0) return;
-    addLineToCart(productId, pres.id, qty);
+  function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    const term = query.trim();
+    if (!term) return;
+    if (/^\d{4,}$/.test(term) || term.length >= 8) {
+      void handleBarcodeScan(term, "wedge");
+      return;
+    }
+    if (filteredProducts.length === 1) {
+      pickProduct(filteredProducts[0].id);
+    }
   }
 
   const handleBarcodeScan = useCallback(
@@ -277,10 +265,7 @@ export default function AdLicoreriaVentas() {
         return;
       }
 
-      setProductId(resolvedProductId);
-
       if (resolvedPresentationId) {
-        setPresentationId(resolvedPresentationId);
         addLineToCart(resolvedProductId, resolvedPresentationId, 1);
         setQuery("");
         return;
@@ -295,7 +280,6 @@ export default function AdLicoreriaVentas() {
 
       const onlyPres = presList[0];
       if (onlyPres) {
-        setPresentationId(onlyPres.id);
         addLineToCart(resolvedProductId, onlyPres.id, 1);
         setQuery("");
       }
@@ -324,8 +308,6 @@ export default function AdLicoreriaVentas() {
     const pickPack = findUnitAndBox(presList);
     const pres = mode === "BOX" ? pickPack.box : pickPack.unit;
     if (!pres) return;
-    setProductId(packPick.productId);
-    setPresentationId(pres.id);
     addLineToCart(packPick.productId, pres.id, 1);
     setPackPick(null);
     setQuery("");
@@ -522,6 +504,7 @@ export default function AdLicoreriaVentas() {
     setPayments([]);
     setNotes("");
     setCobroOpen(false);
+    setExtrasOpen(false);
     setMsg(
       `Cuenta #${opened.data.number} abierta en ${warehouseLabel(posWarehouseId, warehouses)} · pendientes de servir`,
     );
@@ -562,14 +545,11 @@ export default function AdLicoreriaVentas() {
     setPayments([]);
     setNotes("");
     setCobroOpen(false);
+    setExtrasOpen(false);
     setMsg(
       `Prepago ${result.data.code} · Recibo ${result.data.receiptNumber} · QR listo`,
     );
   }
-
-  const qtyShortfall = qtyAvail
-    ? Math.max(0, qtyAvail.requestedBase - qtyAvail.availableOperationalTotal)
-    : 0;
 
   return (
     <div className="ad-pos">
@@ -578,64 +558,33 @@ export default function AdLicoreriaVentas() {
           <p className="ad-eyebrow">Punto de venta</p>
           <h2 className="ad-panel-title">Cobrar rápido</h2>
           <p className="text-sm text-[var(--ad-muted)]">
-            {posWarehouseId
-              ? `Depósito: ${warehouseLabel(posWarehouseId, warehouses)}`
-              : "Seleccione un usuario POS con depósito"}
-            {cashier ? ` · ${cashier.name}` : ""}
-            {" · "}
-            Agregue productos y pulse Cobrar cuando esté listo.
+            {cashier?.name ?? "Inicie sesión con su usuario de caja"}
+            {canSell
+              ? " · Escriba o escanee para agregar al carrito"
+              : ""}
           </p>
         </div>
         {!canSell ? (
           <p className="text-sm text-[var(--ad-danger)]">
-            Sin permiso POS o sin depósito asignado.
+            {!posWarehouseId
+              ? "Su usuario no tiene depósito asignado. Configúrelo en Usuarios."
+              : "Sin permiso para vender en POS."}
           </p>
         ) : null}
       </header>
 
-      {!sessionUser?.warehouseId ? (
-        <section className="ad-panel space-y-2">
-          <p className="text-sm text-[var(--ad-muted)]">Usuario de caja</p>
-          <select
-            className="ad-select"
-            value={cashier?.id ?? ""}
-            onChange={(e) => {
-              const r = setCurrentOperator(e.target.value || null);
-              setCart([]);
-              setPayments([]);
-              setDraft(null);
-              setMsg(
-                r.ok
-                  ? r.data
-                    ? `Sesión POS: ${r.data.name}`
-                    : "Sin sesión"
-                  : r.error,
-              );
-            }}
-          >
-            <option value="">Seleccione usuario POS</option>
-            {posCashiers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} · {warehouseLabel(m.warehouseId ?? "", warehouses)}
-              </option>
-            ))}
-          </select>
-        </section>
-      ) : null}
-
       <section className="ad-panel ad-pos__panel space-y-3">
-          <h3 className="ad-pos__section-title">Buscar y agregar</h3>
+          <h3 className="ad-pos__section-title">Buscar producto</h3>
           <div className="flex flex-wrap gap-2">
             <input
               className="ad-input ad-pos__search min-w-[12rem] flex-1"
-              placeholder="Buscar nombre, marca o código… (escáner USB → Enter)"
+              placeholder="Nombre, marca, SKU o código…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleBarcodeScan(query, "wedge");
-              }}
+              onKeyDown={onSearchKeyDown}
               inputMode="search"
               autoComplete="off"
+              autoFocus
             />
             {cameraSupported ? (
               <button type="button" className="ad-btn" onClick={toggleCamera}>
@@ -655,96 +604,41 @@ export default function AdLicoreriaVentas() {
             <p className="text-sm text-[var(--ad-muted)]">{camMsg}</p>
           ) : null}
 
-          <div className="ad-pos__products">
-            {filteredProducts.slice(0, 24).map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={`ad-pos__product ${productId === p.id ? "is-active" : ""}`}
-                onClick={() => {
-                  setProductId(p.id);
-                  setPresentationId("");
-                }}
-              >
-                <strong>{p.name}</strong>
-                <span>
-                  {p.brand} · {p.sku}
-                </span>
-              </button>
-            ))}
-            {!filteredProducts.length ? (
-              <p className="text-sm text-[var(--ad-muted)]">Sin productos</p>
-            ) : null}
-          </div>
-
-          <div className="ad-pos__add-row">
-            {needsPackPick ? (
-              <div className="grid w-full grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className={`ad-btn ${pack.unit && presentationId === pack.unit.id ? "ad-btn--gold" : ""}`}
-                  onClick={() => pack.unit && setPresentationId(pack.unit.id)}
-                >
-                  Unidad
-                  {pack.unit ? ` · ${formatAdPrice(pack.unit.price)}` : ""}
-                </button>
-                <button
-                  type="button"
-                  className={`ad-btn ${pack.box && presentationId === pack.box.id ? "ad-btn--gold" : ""}`}
-                  onClick={() => pack.box && setPresentationId(pack.box.id)}
-                >
-                  Caja x{pack.box?.unitsPerPresentation}
-                  {pack.box ? ` · ${formatAdPrice(pack.box.price)}` : ""}
-                </button>
-              </div>
-            ) : (
-              <label className="ad-pos__field">
-                <span>Presentación</span>
-                <select
-                  className="ad-select"
-                  value={activePres?.id ?? ""}
-                  onChange={(e) => setPresentationId(e.target.value)}
-                >
-                  {availablePres.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} · {formatAdPrice(p.price)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {!activePres && needsPackPick ? (
-              <p className="w-full text-sm text-[var(--ad-gold-soft)]">
-                ¿Cómo vende: por unidad o por caja?
-              </p>
-            ) : null}
-            <label className="ad-pos__field ad-pos__field--qty">
-              <span>Cantidad</span>
-              <input
-                className="ad-input"
-                type="number"
-                min={1}
-                inputMode="numeric"
-                value={qty}
-                onChange={(e) => setQty(Number(e.target.value))}
-              />
-            </label>
-            <button
-              type="button"
-              className="ad-btn ad-btn--gold ad-pos__add-btn"
-              onClick={addLine}
-              disabled={!canSell || !activePres}
-            >
-              + Agregar
-            </button>
-          </div>
-
-          {qtyAvail ? (
-            <p className="text-xs text-[var(--ad-muted)]">
-              Disponible: {qtyAvail.availableOperationalTotal}
-              {qtyShortfall > 0 ? ` · Faltan ${qtyShortfall}` : " · OK"}
+          {query.trim() ? (
+            <ul className="ad-pos__search-hits max-h-52 overflow-auto rounded border border-[var(--ad-line)] text-sm">
+              {filteredProducts.slice(0, 15).map((p) => {
+                const pres = getPresentationsFor(p.id)[0];
+                return (
+                  <li
+                    key={p.id}
+                    className="border-b border-[var(--ad-line)] last:border-0"
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full flex-col px-3 py-2 text-left hover:bg-white/5"
+                      onClick={() => pickProduct(p.id)}
+                      disabled={!canSell}
+                    >
+                      <span className="font-medium">{p.name}</span>
+                      <span className="text-[var(--ad-muted)]">
+                        {p.brand} · {p.sku}
+                        {pres ? ` · ${formatAdPrice(pres.price)}` : ""}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+              {!filteredProducts.length ? (
+                <li className="px-3 py-2 text-[var(--ad-muted)]">
+                  Sin coincidencias
+                </li>
+              ) : null}
+            </ul>
+          ) : (
+            <p className="text-sm text-[var(--ad-muted)]">
+              Escriba para filtrar o escanee un código de barras.
             </p>
-          ) : null}
+          )}
 
           <h3 className="ad-pos__section-title">
             Carrito ({cart.length})
@@ -960,6 +854,24 @@ export default function AdLicoreriaVentas() {
                 onChange={(e) => setNotes(e.target.value)}
               />
             </label>
+            {usesMesas && cart.length > 0 ? (
+              <div className="rounded border border-[var(--ad-line)] p-3 space-y-2">
+                <p className="text-sm text-[var(--ad-muted)]">
+                  Opcional: dejar productos en cuenta de mesa sin cobrar ahora.
+                </p>
+                <button
+                  type="button"
+                  className="ad-btn ad-btn--primary w-full"
+                  disabled={!canSell}
+                  onClick={() => {
+                    void leaveOpen();
+                    setExtrasOpen(false);
+                  }}
+                >
+                  Abrir cuenta en mesa
+                </button>
+              </div>
+            ) : null}
             <button
               type="button"
               className="ad-btn ad-btn--gold w-full"
@@ -1124,16 +1036,6 @@ export default function AdLicoreriaVentas() {
               >
                 Facturar
               </button>
-              {usesMesas ? (
-                <button
-                  type="button"
-                  className="ad-btn ad-btn--primary ad-btn--touch"
-                  onClick={() => void leaveOpen()}
-                  disabled={!canSell || !cart.length}
-                >
-                  Abrir cuenta
-                </button>
-              ) : null}
               <button
                 type="button"
                 className="ad-btn ad-btn--touch"
