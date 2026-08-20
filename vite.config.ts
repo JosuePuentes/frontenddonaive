@@ -9,6 +9,9 @@ import { createPolisurMediosVitePlugin } from "./scripts/polisur-medios-handler.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error módulo .mjs de herramientas locales
 import { createPolisurPreinscripcionesVitePlugin } from "./scripts/polisur-preinscripciones-handler.mjs";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error módulo .mjs de herramientas locales
+import { createPolisurSiteVitePlugin } from "./scripts/polisur-site-handler.mjs";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -23,6 +26,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       createPolisurMediosVitePlugin(path.resolve(__dirname)),
       createPolisurPreinscripcionesVitePlugin(path.resolve(__dirname)),
+      createPolisurSiteVitePlugin(path.resolve(__dirname)),
     ],
     resolve: {
       alias: {

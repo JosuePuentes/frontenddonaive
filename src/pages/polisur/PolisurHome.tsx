@@ -4,6 +4,7 @@ import { PolisurAbout } from "@/components/polisur/PolisurAbout";
 import { PolisurDivisions } from "@/components/polisur/PolisurDivisions";
 import { PolisurCanina } from "@/components/polisur/PolisurCanina";
 import { PolisurCitizenSection } from "@/components/polisur/PolisurCitizenSection";
+import { PolisurNewsSection } from "@/components/polisur/PolisurNewsSection";
 import { PolisurPreinscriptionCTA } from "@/components/polisur/PolisurPreinscriptionCTA";
 
 export default function PolisurHome() {
@@ -18,6 +19,7 @@ export default function PolisurHome() {
       <PolisurDivisions />
       <PolisurCanina />
       <PolisurCitizenSection />
+      <PolisurNewsSection />
       <PolisurPreinscriptionCTA />
     </>
   );
