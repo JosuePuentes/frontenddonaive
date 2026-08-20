@@ -511,9 +511,13 @@ export default function AdLicoreriaCompras() {
           <button type="button" className="ad-btn" onClick={() => void search()}>
             Buscar
           </button>
+          {(hasPermission("inventory.read") ||
+            hasPermission("pos.sell") ||
+            hasPermission("products.manage")) ? (
           <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.escaner}>
             Visor escáner
           </Link>
+          ) : null}
         </div>
         {msg ? <p className="text-sm text-[var(--ad-muted)]">{msg}</p> : null}
         {hits.length > 0 && (

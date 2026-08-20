@@ -217,7 +217,9 @@ export const AD_ROLE_LABELS: Record<AdRole, string> = {
 
 /**
  * Resuelve permisos efectivos:
- * rol por defecto → overrides de matriz → flags de usuario → custom/deny.
+ * - Si hay `customPermissions` (lista explícita, p. ej. JWT/API): solo esos permisos
+ *   (misma regla que backend `resolveRolePermissions`).
+ * - Si no: defaults del rol + flags mock + overrides de matriz.
  */
 export function resolvePermissions(
   user: Pick<
@@ -233,46 +235,97 @@ export function resolvePermissions(
   >,
   roleOverrides?: Partial<Record<AdRole, AdPermission[]>>,
 ): Set<AdPermission> {
-  const base = roleOverrides?.[user.role] ?? AD_DEFAULT_ROLE_PERMISSIONS[user.role];
-  const set = new Set<AdPermission>(base);
+  const set = new Set<AdPermission>();
 
-  if (user.posEnabled === true) {
-    set.add("pos.sell");
-    set.add("pos.close_account");
-  }
-  if (user.posEnabled === false) {
-    set.delete("pos.sell");
-    set.delete("pos.refund");
-    set.delete("pos.discount");
-    set.delete("pos.close_account");
-  }
-  if (user.inventoryAccess === true) {
-    set.add("inventory.read");
-  }
-  if (user.inventoryAccess === false) {
-    set.delete("inventory.read");
-    set.delete("inventory.adjust");
-    set.delete("inventory.transfer");
-    set.delete("inventory.receive");
-  }
-  if (user.copAccess === true) set.add("cop.read");
-  if (user.copAccess === false) {
-    set.delete("cop.read");
-    set.delete("cop.transfer");
-    set.delete("cop.purchase_request");
-  }
-  if (user.purchaseAccess === true) set.add("purchase.create");
-  if (user.purchaseAccess === false) {
-    set.delete("purchase.create");
-    set.delete("purchase.approve");
-  }
-  if (user.closuresAccess === true) set.add("closures.create");
-  if (user.closuresAccess === false) set.delete("closures.create");
+  if (user.customPermissions?.length) {
+    for (const p of user.customPermissions) set.add(p);
+  } else {
+    const base =
+      roleOverrides?.[user.role] ?? AD_DEFAULT_ROLE_PERMISSIONS[user.role];
+    for (const p of base) set.add(p);
 
-  for (const p of user.customPermissions ?? []) set.add(p);
+    if (user.posEnabled === true) {
+      set.add("pos.sell");
+      set.add("pos.close_account");
+    }
+    if (user.posEnabled === false) {
+      for (const p of AD_ALL_PERMISSIONS) {
+        if (p.startsWith("pos.")) set.delete(p);
+      }
+    }
+    if (user.inventoryAccess === true) set.add("inventory.read");
+    if (user.inventoryAccess === false) {
+      for (const p of AD_ALL_PERMISSIONS) {
+        if (
+          p.startsWith("inventory.") ||
+          p === "products.manage" ||
+          p === "products.cost.manage" ||
+          p === "deposits.manage"
+        ) {
+          set.delete(p);
+        }
+      }
+    }
+    if (user.copAccess === true) set.add("cop.read");
+    if (user.copAccess === false) {
+      set.delete("cop.read");
+      set.delete("cop.transfer");
+      set.delete("cop.purchase_request");
+    }
+    if (user.purchaseAccess === true) {
+      set.add("purchase.create");
+      set.add("purchases.create");
+    }
+    if (user.purchaseAccess === false) {
+      for (const p of [
+        "purchase.create",
+        "purchase.approve",
+        "purchases.create",
+        "purchases.manage",
+        "purchases.approve",
+        "suppliers.manage",
+        "purchase-analysis.view",
+        "purchase-orders.create",
+      ] as AdPermission[]) {
+        set.delete(p);
+      }
+    }
+    if (user.closuresAccess === true) set.add("closures.create");
+    if (user.closuresAccess === false) set.delete("closures.create");
+  }
+
   for (const p of user.deniedPermissions ?? []) set.delete(p);
 
   return set;
+}
+
+export type OperatorAccessFlags = {
+  posEnabled?: boolean;
+  inventoryAccess?: boolean;
+  copAccess?: boolean;
+  purchaseAccess?: boolean;
+  closuresAccess?: boolean;
+};
+
+/** Lista explícita de permisos para persistir (API / mock). */
+export function buildOperatorPermissions(
+  role: AdRole,
+  flags: OperatorAccessFlags,
+  roleOverrides?: Partial<Record<AdRole, AdPermission[]>>,
+): AdPermission[] {
+  return [
+    ...resolvePermissions(
+      {
+        role,
+        posEnabled: flags.posEnabled,
+        inventoryAccess: flags.inventoryAccess,
+        copAccess: flags.copAccess,
+        purchaseAccess: flags.purchaseAccess,
+        closuresAccess: flags.closuresAccess,
+      },
+      roleOverrides,
+    ),
+  ];
 }
 
 export function hasPermission(

@@ -96,6 +96,13 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       group: "operacion",
     },
     {
+      key: "mesas",
+      label: "Espacios / mesas",
+      to: r.mesas,
+      anyOf: ["tables.manage", "accounts.open"],
+      group: "operacion",
+    },
+    {
       key: "escaner",
       label: "Escáner",
       to: r.escaner,
@@ -314,8 +321,12 @@ export function filterNavForUser(
     });
   }
   return catalog.filter((item) => {
-    if (item.roles && !item.roles.includes(user.role) && user.role !== "admin") {
-      /* roles hint: admin siempre pasa si tiene permiso */
+    if (
+      item.roles?.length &&
+      !item.roles.includes(user.role) &&
+      user.role !== "admin"
+    ) {
+      return false;
     }
     if (user.role === "admin") {
       if (item.anyOf?.length) {
@@ -369,6 +380,23 @@ export function groupNavItems(
       items: byGroup.get(id)!,
     }),
   );
+}
+
+/**
+ * Atajos inferiores en móvil (máx. 4) — solo ítems ya autorizados.
+ */
+export function mobilePrimaryNavItems(
+  items: AdNavItem[],
+  role: AdRole | null | undefined,
+  max = 4,
+): AdNavItem[] {
+  const preferred = mobilePrimaryNavKeys(role);
+  const picked = preferred
+    .map((key) => items.find((item) => item.key === key))
+    .filter(Boolean) as AdNavItem[];
+  const seen = new Set(picked.map((item) => item.key));
+  const rest = items.filter((item) => !seen.has(item.key));
+  return [...picked, ...rest].slice(0, max);
 }
 
 /**

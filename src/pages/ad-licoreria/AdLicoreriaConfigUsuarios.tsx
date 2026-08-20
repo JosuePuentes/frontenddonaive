@@ -4,6 +4,7 @@ import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import {
   AD_DEFAULT_ROLE_PERMISSIONS,
   AD_ROLE_LABELS,
+  buildOperatorPermissions,
 } from "@/lib/ad-licoreria/access";
 import { uid } from "@/lib/ad-licoreria/conversions";
 import {
@@ -28,7 +29,7 @@ const ROLES: AdRole[] = [
 ];
 
 export default function AdLicoreriaConfigUsuarios() {
-  const { operators, warehouses, upsertOperator, setCurrentOperator } =
+  const { operators, warehouses, upsertOperator, setCurrentOperator, getRolePermissionMatrix } =
     useAdLicoreria();
   const { screens, groups } = useAdTv();
 
@@ -157,6 +158,7 @@ export default function AdLicoreriaConfigUsuarios() {
     const existing = opId
       ? operators.find((o) => o.id === opId)
       : undefined;
+    const matrix = getRolePermissionMatrix();
     const operator: AdOperator = {
       id: opId ?? uid("op"),
       username: login,
@@ -178,7 +180,17 @@ export default function AdLicoreriaConfigUsuarios() {
         ? existing?.customPermissions?.length
           ? [...existing.customPermissions]
           : [...AD_DEFAULT_ROLE_PERMISSIONS.tv]
-        : existing?.customPermissions,
+        : buildOperatorPermissions(
+            role,
+            {
+              posEnabled: pos,
+              inventoryAccess: inv,
+              copAccess: cop,
+              purchaseAccess: purchase,
+              closuresAccess: closures,
+            },
+            matrix,
+          ),
       deniedPermissions: existing?.deniedPermissions,
     };
     /** Nuevo Administrador TV: permisos amplios del módulo. */

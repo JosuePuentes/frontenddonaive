@@ -16,7 +16,7 @@ import {
 import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import {
   filterNavForUser,
-  mobilePrimaryNavKeys,
+  mobilePrimaryNavItems,
 } from "@/lib/ad-licoreria/nav-by-role";
 import {
   clearAdSession,
@@ -108,13 +108,10 @@ function AdMobileBottomNav({ onOpenMore }: { onOpenMore: () => void }) {
     return filterNavForUser(session, matrix);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionKey]);
-  const keys = mobilePrimaryNavKeys(session?.role);
-  const primary = useMemo(() => {
-    const picked = keys
-      .map((k) => items.find((i) => i.key === k))
-      .filter(Boolean) as typeof items;
-    return picked.slice(0, 4);
-  }, [items, keys]);
+  const primary = useMemo(
+    () => mobilePrimaryNavItems(items, session?.role),
+    [items, session?.role],
+  );
 
   if (!primary.length) return null;
 

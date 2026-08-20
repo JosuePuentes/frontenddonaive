@@ -9,6 +9,7 @@ import { adDesignRepository } from "@/services/ad-licoreria/design/repository";
 import { fulfillmentMessage } from "@/lib/ad-licoreria/operational-availability";
 import { getOperationalAvailability } from "@/lib/ad-licoreria/operational-availability";
 import {
+  AD_ALL_PERMISSIONS,
   AD_DEFAULT_ROLE_PERMISSIONS,
   canAccessWarehouse,
   hasPermission,
@@ -46,6 +47,44 @@ type Listener = () => void;
 
 /** Cache del operador sintetizado desde JWT (evita objetos nuevos por render). */
 let sessionOperatorCache: AdOperator | null = null;
+
+function parseApiPermissions(
+  raw: { permission: string }[] | undefined,
+): AdPermission[] {
+  return (raw ?? [])
+    .map((p) => p.permission)
+    .filter((p): p is AdPermission =>
+      (AD_ALL_PERMISSIONS as readonly string[]).includes(p),
+    );
+}
+
+function mapApiOperator(
+  o: Record<string, unknown>,
+  sessionPerms?: AdPermission[],
+): AdOperator {
+  const fromRecord = parseApiPermissions(
+    o.permissions as { permission: string }[] | undefined,
+  );
+  const perms = fromRecord.length ? fromRecord : (sessionPerms ?? []);
+  const hasExplicit = perms.length > 0;
+  const role = o.role as AdRole;
+  return {
+    id: String(o.id),
+    username: String(o.username),
+    name: String(o.name),
+    role,
+    active: Boolean(o.active),
+    warehouseId: (o.warehouseId as string | null) ?? null,
+    customPermissions: hasExplicit ? perms : undefined,
+    posEnabled: hasExplicit ? perms.includes("pos.sell") : role === "cajero",
+    inventoryAccess: hasExplicit ? perms.includes("inventory.read") : undefined,
+    copAccess: hasExplicit ? perms.includes("cop.read") : undefined,
+    purchaseAccess: hasExplicit
+      ? perms.includes("purchase.create") || perms.includes("purchases.create")
+      : undefined,
+    closuresAccess: hasExplicit ? perms.includes("closures.create") : undefined,
+  };
+}
 
 function emptyState(): AdRepositoryState {
   const published = adDesignRepository.getPublished();
@@ -173,60 +212,41 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
   );
 
   const operators = (snap.operators as Record<string, unknown>[]) ?? [];
-  next.operators = operators.map((o): AdOperator => {
-    const perms = (
-      (o.permissions as { permission: string }[] | undefined) ?? []
-    ).map((p) => p.permission) as AdPermission[];
-    return {
-      id: String(o.id),
-      username: String(o.username),
-      name: String(o.name),
-      role: o.role as AdRole,
-      active: Boolean(o.active),
-      warehouseId: (o.warehouseId as string | null) ?? null,
-      customPermissions: perms.length ? perms : undefined,
-      posEnabled: o.role === "cajero" || o.role === "admin",
-      inventoryAccess: true,
-      copAccess: true,
-      purchaseAccess: true,
-      closuresAccess: true,
-    };
-  });
+  next.operators = operators.map((o) => mapApiOperator(o));
 
   /** Garantiza operador de sesión (permisos JWT) aunque el snapshot venga incompleto. */
   if (session?.operatorId) {
-    const sessionPerms = (session.permissions ?? []).filter(Boolean) as AdPermission[];
+    const sessionPerms = (session.permissions ?? []).filter((p): p is AdPermission =>
+      (AD_ALL_PERMISSIONS as readonly string[]).includes(p),
+    );
     const idx = next.operators.findIndex((o) => o.id === session.operatorId);
     if (idx >= 0) {
       const existing = next.operators[idx];
-      next.operators[idx] = {
-        ...existing,
-        role: (session.role as AdRole) || existing.role,
-        name: session.name || existing.name,
-        username: session.username || existing.username,
-        warehouseId: session.warehouseId ?? existing.warehouseId,
-        customPermissions:
-          existing.customPermissions?.length
-            ? existing.customPermissions
-            : sessionPerms.length
-              ? sessionPerms
-              : existing.customPermissions,
-      };
+      next.operators[idx] = mapApiOperator(
+        {
+          id: existing.id,
+          username: session.username || existing.username,
+          name: session.name || existing.name,
+          role: session.role || existing.role,
+          active: existing.active,
+          warehouseId: session.warehouseId ?? existing.warehouseId,
+        },
+        sessionPerms,
+      );
     } else {
-      next.operators.push({
-        id: session.operatorId,
-        username: session.username,
-        name: session.name,
-        role: (session.role as AdRole) || "admin",
-        active: true,
-        warehouseId: session.warehouseId,
-        customPermissions: sessionPerms.length ? sessionPerms : undefined,
-        posEnabled: true,
-        inventoryAccess: true,
-        copAccess: true,
-        purchaseAccess: true,
-        closuresAccess: true,
-      });
+      next.operators.push(
+        mapApiOperator(
+          {
+            id: session.operatorId,
+            username: session.username,
+            name: session.name,
+            role: session.role,
+            active: true,
+            warehouseId: session.warehouseId,
+          },
+          sessionPerms,
+        ),
+      );
     }
     next.currentOperatorId = session.operatorId;
   }
@@ -774,23 +794,20 @@ export const adApiBackedRepository = {
     ) {
       return cached;
     }
-    const sessionPerms = (session.permissions ?? []).filter(
-      Boolean,
-    ) as AdPermission[];
-    const op: AdOperator = {
-      id: session.operatorId,
-      username: session.username,
-      name: session.name,
-      role: (session.role as AdRole) || "admin",
-      active: true,
-      warehouseId: session.warehouseId,
-      customPermissions: sessionPerms.length ? sessionPerms : undefined,
-      posEnabled: true,
-      inventoryAccess: true,
-      copAccess: true,
-      purchaseAccess: true,
-      closuresAccess: true,
-    };
+    const sessionPerms = (session.permissions ?? []).filter((p): p is AdPermission =>
+      (AD_ALL_PERMISSIONS as readonly string[]).includes(p),
+    );
+    const op = mapApiOperator(
+      {
+        id: session.operatorId,
+        username: session.username,
+        name: session.name,
+        role: session.role,
+        active: true,
+        warehouseId: session.warehouseId,
+      },
+      sessionPerms,
+    );
     sessionOperatorCache = op;
     return op;
   },

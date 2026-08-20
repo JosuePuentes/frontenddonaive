@@ -573,9 +573,13 @@ export default function AdLicoreriaVentas() {
               autoComplete="off"
               autoFocus
             />
+            {(hasPermission("inventory.read") ||
+              hasPermission("pos.sell") ||
+              hasPermission("products.manage")) ? (
             <Link className="ad-btn ad-btn--gold" to={routes.escaner}>
               Visor escáner
             </Link>
+            ) : null}
           </div>
           <p className="text-xs text-[var(--ad-muted)]">
             Para escanear con cámara use el módulo «Visor escáner». Aquí puede

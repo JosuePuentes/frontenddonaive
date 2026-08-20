@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { AD_LICORERIA_MEDIA, adLicoreriaBrand } from "@/content/ad-licoreria/brand";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { AD_ROLE_LABELS } from "@/lib/ad-licoreria/access";
+import { filterNavForUser } from "@/lib/ad-licoreria/nav-by-role";
 import { uid } from "@/lib/ad-licoreria/conversions";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
@@ -37,7 +38,23 @@ export default function AdLicoreriaConfiguracion() {
     upsertWarehouse,
     createWarehouse,
     setWarehouseActive,
+    getCurrentOperator,
+    getRolePermissionMatrix,
   } = useAdLicoreria();
+
+  const session = getCurrentOperator();
+  const configLinks = useMemo(() => {
+    const allowed = new Set(
+      filterNavForUser(session, getRolePermissionMatrix()).map((item) => item.key),
+    );
+    return [
+      { key: "usuarios", label: "Usuarios", to: AD_LICORERIA_ROUTES.configUsuarios },
+      { key: "diseno", label: "Diseño web", to: AD_LICORERIA_ROUTES.configDiseno },
+      { key: "permisos", label: "Matriz de permisos", to: AD_LICORERIA_ROUTES.configPermisos },
+      { key: "tv", label: "TV / Pantallas", to: AD_LICORERIA_ROUTES.tv },
+      { key: "mesas", label: "Espacios / mesas", to: AD_LICORERIA_ROUTES.mesas },
+    ].filter((link) => allowed.has(link.key));
+  }, [getRolePermissionMatrix, session]);
 
   const [rate, setRate] = useState(settings.exchangeRateUsdToBs);
   const [suggest, setSuggest] = useState(settings.suggestBsFromRate);
@@ -177,23 +194,23 @@ export default function AdLicoreriaConfiguracion() {
         WhatsApp. Usuarios y matriz de permisos tienen pantallas dedicadas.
       </p>
 
+      {configLinks.length ? (
       <section className="ad-panel flex flex-wrap gap-2">
-        <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.configUsuarios}>
-          Usuarios
-        </Link>
-        <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.configDiseno}>
-          Diseño web
-        </Link>
-        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.configPermisos}>
-          Matriz de permisos
-        </Link>
-        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.tv}>
-          TV / Pantallas
-        </Link>
-        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.mesas}>
-          Espacios / mesas
-        </Link>
+        {configLinks.map((link) => (
+          <Link
+            key={link.key}
+            className={
+              link.key === "usuarios" || link.key === "diseno"
+                ? "ad-btn ad-btn--gold"
+                : "ad-btn"
+            }
+            to={link.to}
+          >
+            {link.label}
+          </Link>
+        ))}
       </section>
+      ) : null}
 
       <section className="ad-panel space-y-2">
         <h2 className="ad-panel-title">Identidad</h2>

@@ -1,12 +1,12 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router";
-import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import { prepaidAvailable } from "@/lib/ad-licoreria/conversions";
+import { filterNavForUser } from "@/lib/ad-licoreria/nav-by-role";
 import { rangeForPreset } from "@/lib/ad-licoreria/report-presets";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
 export default function AdLicoreriaInicio() {
   const navigate = useNavigate();
-  const routes = getAdLicoreriaRoutes();
   const {
     products,
     inventory,
@@ -20,8 +20,33 @@ export default function AdLicoreriaInicio() {
     inventoryClosures,
     paymentMethods,
     hasPermission,
+    getCurrentOperator,
+    getRolePermissionMatrix,
   } = useAdLicoreria();
-  const canTv = hasPermission("tv.view");
+
+  const session = getCurrentOperator();
+  const matrix = getRolePermissionMatrix();
+  const quickLinks = useMemo(
+    () =>
+      filterNavForUser(session, matrix).filter((item) => item.key !== "inicio"),
+    [matrix, session],
+  );
+
+  const canSeeSales =
+    hasPermission("pos.sell") ||
+    hasPermission("reports.read") ||
+    hasPermission("finance.view") ||
+    hasPermission("finance.dashboard.view");
+  const canSeeInventory = hasPermission("inventory.read");
+  const canSeeAccounts =
+    hasPermission("accounts.open") ||
+    hasPermission("accounts.serve") ||
+    hasPermission("pos.sell") ||
+    hasPermission("pos.close_account");
+  const canSeeAudit =
+    hasPermission("reports.read") ||
+    hasPermission("settings.manage") ||
+    hasPermission("users.manage");
 
   const { from: todayFrom, to: todayTo } = rangeForPreset("hoy");
   const todaySales = sales.filter((s) => {
@@ -139,7 +164,10 @@ export default function AdLicoreriaInicio() {
 
   return (
     <div className="space-y-5">
+      {canSeeSales || canSeeInventory || canSeeAccounts ? (
       <div className="ad-grid-stats">
+        {canSeeSales ? (
+          <>
         <div className="ad-stat">
           <div className="ad-stat__value">${salesUsd.toFixed(0)}</div>
           <div className="ad-stat__label">Ventas del día</div>
@@ -154,6 +182,10 @@ export default function AdLicoreriaInicio() {
           </div>
           <div className="ad-stat__label">Cobrado Bs</div>
         </div>
+          </>
+        ) : null}
+        {canSeeAccounts ? (
+          <>
         <div className="ad-stat">
           <div className="ad-stat__value">${pendingBalance.toFixed(0)}</div>
           <div className="ad-stat__label">Pendiente USD</div>
@@ -166,17 +198,13 @@ export default function AdLicoreriaInicio() {
           <div className="ad-stat__value">{prepaidUnits}</div>
           <div className="ad-stat__label">Prepagos activos (u.)</div>
         </div>
+          </>
+        ) : null}
+        {canSeeSales ? (
+          <>
         <div className="ad-stat">
           <div className="ad-stat__value">{unitsSoldToday}</div>
           <div className="ad-stat__label">Productos vendidos (base)</div>
-        </div>
-        <div className="ad-stat">
-          <div className="ad-stat__value">{lowStock.length}</div>
-          <div className="ad-stat__label">Inventario crítico</div>
-        </div>
-        <div className="ad-stat">
-          <div className="ad-stat__value">{invDiffs}</div>
-          <div className="ad-stat__label">Diff. inventario</div>
         </div>
         <div className="ad-stat">
           <div className="ad-stat__value">${expectedCashUsd.toFixed(0)}</div>
@@ -188,11 +216,28 @@ export default function AdLicoreriaInicio() {
           </div>
           <div className="ad-stat__label">Efectivo USD contado</div>
         </div>
+          </>
+        ) : null}
+        {canSeeInventory ? (
+          <>
+        <div className="ad-stat">
+          <div className="ad-stat__value">{lowStock.length}</div>
+          <div className="ad-stat__label">Inventario crítico</div>
+        </div>
+        <div className="ad-stat">
+          <div className="ad-stat__value">{invDiffs}</div>
+          <div className="ad-stat__label">Diff. inventario</div>
+        </div>
+          </>
+        ) : null}
+        {canSeeAccounts ? (
         <div className="ad-stat">
           <div className="ad-stat__value">{openTables}</div>
           <div className="ad-stat__label">Mesas ocupadas</div>
         </div>
+        ) : null}
       </div>
+      ) : null}
 
       {alerts.length ? (
         <section className="ad-panel">
@@ -206,90 +251,37 @@ export default function AdLicoreriaInicio() {
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {quickLinks.length ? (
         <section className="ad-panel">
           <h2 className="ad-panel-title">Accesos rápidos</h2>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="ad-btn ad-btn--gold"
-              onClick={() => navigate(routes.ventas)}
-            >
-              Ventas
-            </button>
-            <button
-              type="button"
-              className="ad-btn ad-btn--gold"
-              onClick={() => navigate(routes.escaner)}
-            >
-              Escáner
-            </button>
-            {canTv ? (
+            {quickLinks.map((item) => (
               <button
+                key={item.key}
                 type="button"
-                className="ad-btn ad-btn--gold"
-                onClick={() => navigate(routes.tv)}
+                className={
+                  item.key === "ventas" || item.key === "escaner" || item.key === "tv"
+                    ? "ad-btn ad-btn--gold"
+                    : item.key === "mesonera"
+                      ? "ad-btn ad-btn--primary"
+                      : "ad-btn"
+                }
+                onClick={() => navigate(item.to)}
               >
-                TV
+                {item.label}
               </button>
-            ) : null}
-            <button
-              type="button"
-              className="ad-btn ad-btn--primary"
-              onClick={() => navigate(routes.mesonera)}
-            >
-              Mesonera
-            </button>
-            <button
-              type="button"
-              className="ad-btn"
-              onClick={() => navigate(routes.cop)}
-            >
-              COP
-            </button>
-            <button
-              type="button"
-              className="ad-btn"
-              onClick={() => navigate(routes.cuentas)}
-            >
-              Cuentas
-            </button>
-            <button
-              type="button"
-              className="ad-btn"
-              onClick={() => navigate(routes.prepagos)}
-            >
-              Prepagos
-            </button>
-            <button
-              type="button"
-              className="ad-btn"
-              onClick={() => navigate(routes.cierres)}
-            >
-              Cierres
-            </button>
-            <button
-              type="button"
-              className="ad-btn"
-              onClick={() => navigate(routes.reportes)}
-            >
-              Reportes
-            </button>
-            {canTv ? (
-              <button
-                type="button"
-                className="ad-btn"
-                onClick={() => navigate(routes.tvControl)}
-              >
-                Control TV
-              </button>
-            ) : null}
+            ))}
           </div>
+          {canSeeSales ? (
           <p className="mt-3 text-xs text-[var(--ad-muted)]">
             Efectivo Bs esperado hoy: {expectedCashBs.toLocaleString("es-VE")} ·
             pagos digitales (líneas): {digitalToday}
           </p>
+          ) : null}
         </section>
+        ) : null}
 
+        {canSeeInventory ? (
         <section className="ad-panel">
           <h2 className="ad-panel-title">Inventario crítico</h2>
           {lowStock.length ? (
@@ -304,7 +296,9 @@ export default function AdLicoreriaInicio() {
             <p className="text-sm text-[var(--ad-muted)]">Sin alertas de stock</p>
           )}
         </section>
+        ) : null}
 
+        {canSeeSales ? (
         <section className="ad-panel">
           <h2 className="ad-panel-title">Ventas de hoy</h2>
           <ul className="space-y-2 text-sm text-[var(--ad-muted)]">
@@ -317,7 +311,9 @@ export default function AdLicoreriaInicio() {
             {!todaySales.length ? <li>Sin ventas aún</li> : null}
           </ul>
         </section>
+        ) : null}
 
+        {canSeeAudit ? (
         <section className="ad-panel">
           <h2 className="ad-panel-title">Actividad reciente</h2>
           <ul className="space-y-2 text-sm text-[var(--ad-muted)]">
@@ -334,6 +330,7 @@ export default function AdLicoreriaInicio() {
             ))}
           </ul>
         </section>
+        ) : null}
       </div>
     </div>
   );
