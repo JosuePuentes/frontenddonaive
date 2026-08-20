@@ -35,6 +35,8 @@ const AD_SEGMENTS = {
   presentaciones: "/presentaciones",
   prepagos: "/prepagos",
   qr: "/qr",
+  /** Visor dedicado de escaneo (códigos de barras / QR de producto). */
+  escaner: "/escaner",
   mesas: "/mesas",
   /** Fase 7 — Centro de Operaciones */
   cop: "/cop",
@@ -85,6 +87,7 @@ export type AdLicoreriaRoutes = {
   presentaciones: string;
   prepagos: string;
   qr: string;
+  escaner: string;
   mesas: string;
   cop: string;
   copTransferencias: string;
@@ -139,6 +142,7 @@ export function getAdLicoreriaRoutes(
     presentaciones: joinPath(base, AD_SEGMENTS.presentaciones),
     prepagos: joinPath(base, AD_SEGMENTS.prepagos),
     qr: joinPath(base, AD_SEGMENTS.qr),
+    escaner: joinPath(base, AD_SEGMENTS.escaner),
     mesas: joinPath(base, AD_SEGMENTS.mesas),
     cop: joinPath(base, AD_SEGMENTS.cop),
     copTransferencias: joinPath(base, AD_SEGMENTS.copTransferencias),

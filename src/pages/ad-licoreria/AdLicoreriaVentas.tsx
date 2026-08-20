@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { Link } from "react-router";
 import {
   formatAdPrice,
   toBaseUnits,
 } from "@/lib/ad-licoreria/conversions";
+import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import { findUnitAndBox } from "@/lib/ad-licoreria/pack";
 import {
   matchPresentationBarcode,
@@ -16,7 +18,6 @@ import { AD_SHORTAGE_REASON_LABELS } from "@/types/ad-licoreria";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import { isAdApiDataSource } from "@/services/ad-licoreria/data-source";
-import { useAdBarcodeCamera } from "@/hooks/ad-licoreria/useAdBarcodeCamera";
 import { AdPackPickPrompt } from "@/components/ad-licoreria/AdPackPickPrompt";
 import {
   AdPreliminarDocument,
@@ -58,6 +59,7 @@ export default function AdLicoreriaVentas() {
 
   const activeMethods = paymentMethods.filter((m) => m.active);
   const sessionUser = getCurrentOperator();
+  const routes = getAdLicoreriaRoutes();
 
   const cashierId = sessionUser?.id ?? currentOperatorId ?? "";
   const posWarehouseId = sessionUser?.warehouseId ?? "";
@@ -286,21 +288,6 @@ export default function AdLicoreriaVentas() {
     },
     [getPresentationsFor, presentations, products],
   );
-
-  const onCameraScan = useCallback(
-    (code: string) => {
-      void handleBarcodeScan(code, "camera");
-    },
-    [handleBarcodeScan],
-  );
-
-  const {
-    cameraOn,
-    cameraSupported,
-    msg: camMsg,
-    videoRef,
-    toggleCamera,
-  } = useAdBarcodeCamera({ onScan: onCameraScan });
 
   function applyPackPick(mode: "UNIT" | "BOX") {
     if (!packPick) return;
@@ -560,7 +547,7 @@ export default function AdLicoreriaVentas() {
           <p className="text-sm text-[var(--ad-muted)]">
             {cashier?.name ?? "Inicie sesión con su usuario de caja"}
             {canSell
-              ? " · Escriba o escanee para agregar al carrito"
+              ? " · Escriba o use el visor escáner para agregar al carrito"
               : ""}
           </p>
         </div>
@@ -586,23 +573,14 @@ export default function AdLicoreriaVentas() {
               autoComplete="off"
               autoFocus
             />
-            {cameraSupported ? (
-              <button type="button" className="ad-btn" onClick={toggleCamera}>
-                {cameraOn ? "Cerrar cámara" : "Escanear"}
-              </button>
-            ) : null}
+            <Link className="ad-btn ad-btn--gold" to={routes.escaner}>
+              Visor escáner
+            </Link>
           </div>
-          {cameraOn ? (
-            <video
-              ref={videoRef}
-              className="max-h-40 w-full rounded bg-black object-cover"
-              muted
-              playsInline
-            />
-          ) : null}
-          {camMsg ? (
-            <p className="text-sm text-[var(--ad-muted)]">{camMsg}</p>
-          ) : null}
+          <p className="text-xs text-[var(--ad-muted)]">
+            Para escanear con cámara use el módulo «Visor escáner». Aquí puede
+            buscar por nombre o digitar / pistola USB.
+          </p>
 
           {query.trim() ? (
             <ul className="ad-pos__search-hits max-h-52 overflow-auto rounded border border-[var(--ad-line)] text-sm">

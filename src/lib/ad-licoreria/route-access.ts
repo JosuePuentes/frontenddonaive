@@ -43,6 +43,7 @@ export const AD_ROUTE_ACCESS_RULES: AdRouteAccessRule[] = [
   { prefix: "/configuracion", anyOf: ["settings.manage"] },
   { prefix: "/mesonera", anyOf: ["accounts.open", "accounts.serve", "tables.manage"] },
   { prefix: "/mesas", anyOf: ["tables.manage", "accounts.open"] },
+  { prefix: "/escaner", anyOf: ["inventory.read", "pos.sell", "products.manage"] },
   { prefix: "/qr", anyOf: ["accounts.serve", "pos.sell", "clients.read"] },
   { prefix: "/prepagos", anyOf: ["accounts.serve", "pos.sell"] },
   { prefix: "/tv/pantallas", anyOf: ["tv.view", "tv.screen.manage"] },

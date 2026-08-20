@@ -3,6 +3,7 @@
  */
 import { adCommerceClient } from "@/services/ad-licoreria/commerce-client";
 import { isAdApiDataSource } from "@/services/ad-licoreria/data-source";
+import type { AdPresentation, AdProduct } from "@/types/ad-licoreria";
 
 export type AdProductSearchHit = {
   id: string;
@@ -61,4 +62,57 @@ export function matchPresentationBarcode<
   const c = code.trim().toLowerCase();
   if (!c) return undefined;
   return presentations.find((p) => p.barcode?.trim().toLowerCase() === c);
+}
+
+export type ResolvedAdProduct = {
+  productId: string;
+  presentationId?: string;
+  matchedCode: string;
+};
+
+/** Resuelve producto por código (local + API). */
+export async function resolveAdProductByCode(
+  code: string,
+  ctx: {
+    products: AdProduct[];
+    presentations: AdPresentation[];
+  },
+  source: "manual" | "camera" | "wedge" = "camera",
+): Promise<ResolvedAdProduct | null> {
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+
+  const presByCode = matchPresentationBarcode(ctx.presentations, trimmed);
+  if (presByCode) {
+    return {
+      productId: presByCode.productId,
+      presentationId: presByCode.id,
+      matchedCode: trimmed,
+    };
+  }
+
+  const bySkuOrBarcode = ctx.products.find(
+    (p) =>
+      p.active &&
+      (p.barcode?.trim().toLowerCase() === trimmed.toLowerCase() ||
+        p.sku.trim().toLowerCase() === trimmed.toLowerCase()),
+  );
+  if (bySkuOrBarcode) {
+    return { productId: bySkuOrBarcode.id, matchedCode: trimmed };
+  }
+
+  if (isAdApiDataSource()) {
+    const r = await searchAdProducts(trimmed, source);
+    if (r.ok && r.products.length) {
+      const hit = r.products[0];
+      const pres = matchPresentationBarcode(hit.presentations, trimmed);
+      return {
+        productId: hit.id,
+        presentationId: pres?.id,
+        matchedCode: trimmed,
+      };
+    }
+  }
+
+  return null;
 }

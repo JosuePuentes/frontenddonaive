@@ -96,6 +96,13 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       group: "operacion",
     },
     {
+      key: "escaner",
+      label: "Escáner",
+      to: r.escaner,
+      anyOf: ["inventory.read", "pos.sell", "products.manage"],
+      group: "operacion",
+    },
+    {
       key: "qr",
       label: "QR / Prepago",
       to: r.qr,
@@ -371,7 +378,7 @@ export function groupNavItems(
 export function mobilePrimaryNavKeys(role: AdRole | null | undefined): string[] {
   switch (role) {
     case "cajero":
-      return ["inicio", "ventas", "cuentas", "cierres"];
+      return ["inicio", "ventas", "escaner", "cuentas"];
     case "mesonera":
       return ["inicio", "mesonera", "cuentas", "clientes"];
     case "inventario":

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
   AdPurchaseDocument,
@@ -9,7 +9,6 @@ import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { adCommerceClient } from "@/services/ad-licoreria/commerce-client";
 import { findUnitAndBox, pricesFromCost } from "@/lib/ad-licoreria/pack";
 import { searchAdProducts, type AdProductSearchHit } from "@/lib/ad-licoreria/product-lookup";
-import { useAdBarcodeCamera } from "@/hooks/ad-licoreria/useAdBarcodeCamera";
 
 type DraftLine = {
   key: string;
@@ -152,27 +151,6 @@ export default function AdLicoreriaCompras() {
     setHits(r.products);
     setMsg(r.products.length ? "" : "Sin resultados");
   }
-
-  const onScan = useCallback((code: string) => {
-    setQuery(code);
-    void (async () => {
-      const r = await searchAdProducts(code, "camera");
-      if (!r.ok) {
-        setMsg(r.error);
-        return;
-      }
-      setHits(r.products);
-      setMsg(r.products.length ? "" : "Sin resultados");
-    })();
-  }, []);
-
-  const {
-    cameraOn,
-    cameraSupported,
-    msg: camMsg,
-    videoRef,
-    toggleCamera,
-  } = useAdBarcodeCamera({ onScan });
 
   function addHit(p: (typeof hits)[0], prefer: "UNIT" | "BOX" = "BOX") {
     const pack = findUnitAndBox(p.presentations);
@@ -533,21 +511,11 @@ export default function AdLicoreriaCompras() {
           <button type="button" className="ad-btn" onClick={() => void search()}>
             Buscar
           </button>
-          {cameraSupported ? (
-            <button type="button" className="ad-btn" onClick={toggleCamera}>
-              {cameraOn ? "Cerrar cámara" : "Escanear"}
-            </button>
-          ) : null}
+          <Link className="ad-btn ad-btn--gold" to={AD_LICORERIA_ROUTES.escaner}>
+            Visor escáner
+          </Link>
         </div>
-        {cameraOn ? (
-          <video
-            ref={videoRef}
-            className="max-h-40 w-full rounded bg-black object-cover"
-            muted
-            playsInline
-          />
-        ) : null}
-        {camMsg ? <p className="text-sm text-[var(--ad-muted)]">{camMsg}</p> : null}
+        {msg ? <p className="text-sm text-[var(--ad-muted)]">{msg}</p> : null}
         {hits.length > 0 && (
           <ul className="max-h-40 overflow-auto text-sm">
             {hits.map((h) => (

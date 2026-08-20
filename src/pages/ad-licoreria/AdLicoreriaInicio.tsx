@@ -216,6 +216,13 @@ export default function AdLicoreriaInicio() {
             >
               Ventas
             </button>
+            <button
+              type="button"
+              className="ad-btn ad-btn--gold"
+              onClick={() => navigate(routes.escaner)}
+            >
+              Escáner
+            </button>
             {canTv ? (
               <button
                 type="button"
