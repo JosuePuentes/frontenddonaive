@@ -40,7 +40,8 @@ export default function AdLicoreriaInventario() {
         (p) =>
           !q ||
           p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q),
+          p.sku.toLowerCase().includes(q) ||
+          (p.barcode ?? "").toLowerCase().includes(q),
       )
       .map((p) => {
         const av = getOperationalAvailability(p.id, 0, warehouseId);
@@ -101,7 +102,7 @@ export default function AdLicoreriaInventario() {
         </select>
         <input
           className="ad-input max-w-sm"
-          placeholder="Buscar producto / SKU"
+          placeholder="Buscar producto / SKU / código de barras"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -143,7 +144,10 @@ export default function AdLicoreriaInventario() {
                       {r.product.name}
                     </Link>
                     <div className="text-xs text-[var(--ad-muted)]">
-                      {r.product.sku} · {r.product.baseUnitLabel}
+                      {r.product.sku}
+                      {r.product.barcode ? ` · EAN ${r.product.barcode}` : ""}
+                      {" · "}
+                      {r.product.baseUnitLabel}
                     </div>
                   </td>
                   <td>{warehouseLabel(warehouseId)}</td>

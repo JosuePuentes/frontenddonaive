@@ -45,6 +45,8 @@ export const updatePresentationSchema = z.object({
   code: z.string().max(64).optional().nullable(),
   unitsPerPresentation: z.number().positive().optional(),
   active: z.boolean().optional(),
+  sku: z.string().max(64).optional().nullable(),
+  barcode: z.string().max(64).optional().nullable(),
 });
 
 export const createPresentationSchema = z.object({

@@ -56,6 +56,7 @@ export default function AdLicoreriaCompras() {
   const [msg, setMsg] = useState("");
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [newSku, setNewSku] = useState("");
+  const [newBarcode, setNewBarcode] = useState("");
   const [newName, setNewName] = useState("");
   const [newBrand, setNewBrand] = useState("");
   const [newTaxable, setNewTaxable] = useState(false);
@@ -213,6 +214,7 @@ export default function AdLicoreriaCompras() {
     }
     const r = await adCommerceClient.createProduct({
       sku: newSku,
+      barcode: newBarcode.trim() || undefined,
       name: newName,
       brand: newBrand,
       categoryId: newCategoryId || undefined,
@@ -248,6 +250,7 @@ export default function AdLicoreriaCompras() {
     );
     setShowCreateProduct(false);
     setNewSku("");
+    setNewBarcode("");
     setNewName("");
     if (draft) {
       setDraftLine(draft);
@@ -687,9 +690,16 @@ export default function AdLicoreriaCompras() {
             </p>
             <input
               className="ad-input"
-              placeholder="Código"
+              placeholder="SKU / código interno"
               value={newSku}
               onChange={(e) => setNewSku(e.target.value)}
+            />
+            <input
+              className="ad-input"
+              placeholder="Código de barras EAN"
+              value={newBarcode}
+              onChange={(e) => setNewBarcode(e.target.value)}
+              inputMode="numeric"
             />
             <input
               className="ad-input"

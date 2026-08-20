@@ -1019,6 +1019,8 @@ export const adApiBackedRepository = {
           unitsPerPresentation: pres.unitsPerPresentation,
           priceUsd: pres.price.usd,
           priceBs: pres.price.bs,
+          sku: pres.sku,
+          barcode: pres.barcode,
         },
       );
       if (!r.ok) return r;
@@ -1031,6 +1033,8 @@ export const adApiBackedRepository = {
           code: pres.code,
           unitsPerPresentation: pres.unitsPerPresentation,
           active: pres.active,
+          sku: pres.sku ?? null,
+          barcode: pres.barcode ?? null,
         },
       );
       if (!r.ok) return r;

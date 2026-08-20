@@ -453,6 +453,8 @@ export const adService = {
       code?: string | null;
       unitsPerPresentation?: number;
       active?: boolean;
+      sku?: string | null;
+      barcode?: string | null;
     },
   ) {
     requireAdPermission(ctx, "products.manage");
@@ -476,6 +478,8 @@ export const adService = {
           ? { unitsPerPresentation: dec(input.unitsPerPresentation) }
           : {}),
         ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(input.sku !== undefined ? { sku: input.sku } : {}),
+        ...(input.barcode !== undefined ? { barcode: input.barcode } : {}),
       },
     });
     await writeAdAudit({

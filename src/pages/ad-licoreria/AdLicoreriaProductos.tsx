@@ -19,6 +19,7 @@ export default function AdLicoreriaProductos() {
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [sku, setSku] = useState("");
+  const [barcode, setBarcode] = useState("");
   const [baseUnitLabel, setBaseUnitLabel] = useState("unidad");
   const [minStock, setMinStock] = useState(12);
   const [packMode, setPackMode] = useState<"UNIT" | "BOX">("BOX");
@@ -41,6 +42,7 @@ export default function AdLicoreriaProductos() {
       brand: brand.trim() || "—",
       categoryId,
       sku: sku.trim().toUpperCase(),
+      barcode: barcode.trim() || undefined,
       baseUnitLabel,
       cost: { usd: 0, bs: 0 },
       minStockBase: minStock,
@@ -63,6 +65,7 @@ export default function AdLicoreriaProductos() {
         name: "Unidad",
         code: "U",
         unitsPerPresentation: 1,
+        barcode: barcode.trim() || undefined,
         price: { usd: 0, bs: 0 },
         active: true,
       };
@@ -88,6 +91,7 @@ export default function AdLicoreriaProductos() {
     );
     setName("");
     setSku("");
+    setBarcode("");
   }
 
   async function toggle(p: AdProduct) {
@@ -122,9 +126,16 @@ export default function AdLicoreriaProductos() {
         />
         <input
           className="ad-input"
-          placeholder="SKU"
+          placeholder="SKU / código interno"
           value={sku}
           onChange={(e) => setSku(e.target.value)}
+        />
+        <input
+          className="ad-input sm:col-span-2"
+          placeholder="Código de barras EAN (unidad)"
+          value={barcode}
+          onChange={(e) => setBarcode(e.target.value)}
+          inputMode="numeric"
         />
         <select
           className="ad-select"
@@ -209,6 +220,7 @@ export default function AdLicoreriaProductos() {
             <tr>
               <th>Producto</th>
               <th>SKU</th>
+              <th>Cód. barras</th>
               <th>Caja / unidad</th>
               <th>Utilidad cont.</th>
               <th>Costo u.</th>
@@ -233,6 +245,9 @@ export default function AdLicoreriaProductos() {
                     </div>
                   </td>
                   <td>{p.sku}</td>
+                  <td className="font-mono text-xs">
+                    {p.barcode ?? "—"}
+                  </td>
                   <td>
                     {pack.box
                       ? `Caja x${pack.box.unitsPerPresentation} + unidad`

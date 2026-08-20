@@ -27,6 +27,7 @@ export default function AdLicoreriaProductoFicha() {
     getOperationalAvailability,
     canAccessWarehouse,
     upsertProduct,
+    upsertPresentation,
     hasPermission,
   } = useAdLicoreria();
 
@@ -43,6 +44,7 @@ export default function AdLicoreriaProductoFicha() {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [sku, setSku] = useState("");
+  const [barcode, setBarcode] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [baseUnitLabel, setBaseUnitLabel] = useState("");
   const [minStock, setMinStock] = useState(0);
@@ -51,12 +53,19 @@ export default function AdLicoreriaProductoFicha() {
   const [utility, setUtility] = useState(0);
   const [active, setActive] = useState(true);
   const [msg, setMsg] = useState("");
+  const [presBarcodes, setPresBarcodes] = useState<Record<string, string>>({});
+
+  const productPresentations = useMemo(
+    () => (product ? getPresentationsFor(product.id) : []),
+    [product, getPresentationsFor],
+  );
 
   useEffect(() => {
     if (!product) return;
     setName(product.name);
     setBrand(product.brand);
     setSku(product.sku);
+    setBarcode(product.barcode ?? "");
     setCategoryId(product.categoryId);
     setBaseUnitLabel(product.baseUnitLabel);
     setMinStock(product.minStockBase);
@@ -67,7 +76,12 @@ export default function AdLicoreriaProductoFicha() {
     setBoxUnits(
       hasBox ? Math.max(2, pack.box?.unitsPerPresentation ?? 20) : 20,
     );
-  }, [product, pack.box]);
+    const nextBarcodes: Record<string, string> = {};
+    for (const pres of getPresentationsFor(product.id)) {
+      nextBarcodes[pres.id] = pres.barcode ?? "";
+    }
+    setPresBarcodes(nextBarcodes);
+  }, [product, pack.box, getPresentationsFor]);
 
   const unitsPerBox = packMode === "BOX" ? boxUnits : 1;
   const previewPx = product
@@ -100,6 +114,7 @@ export default function AdLicoreriaProductoFicha() {
     setName(product.name);
     setBrand(product.brand);
     setSku(product.sku);
+    setBarcode(product.barcode ?? "");
     setCategoryId(product.categoryId);
     setBaseUnitLabel(product.baseUnitLabel);
     setMinStock(product.minStockBase);
@@ -108,6 +123,11 @@ export default function AdLicoreriaProductoFicha() {
     const hasBox = Boolean(pack.box?.active !== false && pack.box);
     setPackMode(hasBox ? "BOX" : "UNIT");
     setBoxUnits(hasBox ? pack.box!.unitsPerPresentation : 20);
+    const nextBarcodes: Record<string, string> = {};
+    for (const pres of getPresentationsFor(product.id)) {
+      nextBarcodes[pres.id] = pres.barcode ?? "";
+    }
+    setPresBarcodes(nextBarcodes);
     setSearchParams({});
     setMsg("");
   }
@@ -131,6 +151,7 @@ export default function AdLicoreriaProductoFicha() {
       name: name.trim(),
       brand: brand.trim() || "—",
       sku: sku.trim().toUpperCase(),
+      barcode: barcode.trim() || undefined,
       categoryId,
       baseUnitLabel: baseUnitLabel.trim() || "unidad",
       minStockBase: minStock,
@@ -143,6 +164,22 @@ export default function AdLicoreriaProductoFicha() {
     if (!r.ok) {
       setMsg(r.error);
       return;
+    }
+    for (const pres of productPresentations) {
+      const nextBarcode = (presBarcodes[pres.id] ?? "").trim();
+      const prevBarcode = pres.barcode?.trim() ?? "";
+      if (nextBarcode === prevBarcode) continue;
+      const pr = await resolveAdResult(
+        upsertPresentation({
+          ...pres,
+          barcode: nextBarcode || undefined,
+        }),
+      );
+      if (!pr.ok) {
+        setMsg(`Producto guardado; barcode ${pres.name}: ${pr.error}`);
+        setSearchParams({});
+        return;
+      }
     }
     setMsg("Ficha guardada");
     setSearchParams({});
@@ -184,7 +221,8 @@ export default function AdLicoreriaProductoFicha() {
           <p className="ad-eyebrow">Ficha de producto</p>
           <h1 className="ad-panel-title">{product.name}</h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            SKU {product.sku} · {product.brand}
+            SKU {product.sku}
+            {product.barcode ? ` · EAN ${product.barcode}` : ""} · {product.brand}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -237,6 +275,19 @@ export default function AdLicoreriaProductoFicha() {
             <input className="ad-input" value={sku} onChange={(e) => setSku(e.target.value)} />
           ) : (
             product.sku
+          )}
+        </Field>
+        <Field label="Código de barras (producto)">
+          {editing ? (
+            <input
+              className="ad-input font-mono"
+              value={barcode}
+              onChange={(e) => setBarcode(e.target.value)}
+              placeholder="EAN unidad / código escáner"
+              inputMode="numeric"
+            />
+          ) : (
+            <span className="font-mono text-sm">{product.barcode ?? "—"}</span>
           )}
         </Field>
         <Field label="Categoría">
@@ -391,6 +442,12 @@ export default function AdLicoreriaProductoFicha() {
 
       <section className="ad-panel">
         <h2 className="ad-panel-title">Costos y precios</h2>
+        {editing ? (
+          <p className="mt-1 text-xs text-[var(--ad-muted)]">
+            Código de barras por presentación: use el de la caja si escanea
+            empaques; el del producto arriba es para la unidad suelta.
+          </p>
+        ) : null}
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
           <Stat label="Costo unitario (CPP)" value={formatAdPrice(product.cost)} />
           {viewPx && product.cost.usd > 0 ? (
@@ -414,15 +471,34 @@ export default function AdLicoreriaProductoFicha() {
             <thead>
               <tr>
                 <th>Presentación</th>
+                <th>Cód. barras</th>
                 <th>Conversión</th>
                 <th>Precio USD</th>
                 <th>Precio Bs</th>
               </tr>
             </thead>
             <tbody>
-              {getPresentationsFor(product.id).map((pres) => (
+              {productPresentations.map((pres) => (
                 <tr key={pres.id}>
                   <td>{pres.name}</td>
+                  <td className="font-mono text-xs">
+                    {editing ? (
+                      <input
+                        className="ad-input font-mono text-xs"
+                        value={presBarcodes[pres.id] ?? ""}
+                        onChange={(e) =>
+                          setPresBarcodes((prev) => ({
+                            ...prev,
+                            [pres.id]: e.target.value,
+                          }))
+                        }
+                        placeholder="EAN caja/unidad"
+                        inputMode="numeric"
+                      />
+                    ) : (
+                      pres.barcode ?? "—"
+                    )}
+                  </td>
                   <td>{pres.unitsPerPresentation} u. base</td>
                   <td>${pres.price.usd.toFixed(2)}</td>
                   <td>{pres.price.bs.toFixed(2)}</td>

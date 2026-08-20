@@ -25,6 +25,7 @@ export default function AdLicoreriaPresentaciones() {
   } = useAdLicoreria();
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [name, setName] = useState("");
+  const [barcode, setBarcode] = useState("");
   const [units, setUnits] = useState(1);
   const [usd, setUsd] = useState(1);
   const [bs, setBs] = useState(370);
@@ -83,6 +84,7 @@ export default function AdLicoreriaPresentaciones() {
       productId,
       name: name.trim(),
       unitsPerPresentation: units,
+      barcode: barcode.trim() || undefined,
       price: { usd, bs },
       active: true,
     };
@@ -93,6 +95,7 @@ export default function AdLicoreriaPresentaciones() {
         : r.error,
     );
     if (r.ok) setName("");
+    if (r.ok) setBarcode("");
   }
 
   async function applyApiPrice() {
@@ -172,6 +175,13 @@ export default function AdLicoreriaPresentaciones() {
           placeholder="Nombre presentación"
           value={name}
           onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          className="ad-input"
+          placeholder="Código de barras EAN"
+          value={barcode}
+          onChange={(e) => setBarcode(e.target.value)}
+          inputMode="numeric"
         />
         <input
           className="ad-input"
@@ -266,6 +276,7 @@ export default function AdLicoreriaPresentaciones() {
             <div>
               {products.find((x) => x.id === p.productId)?.name} · {p.name} ·{" "}
               {p.unitsPerPresentation} u · {formatAdPrice(p.price)}
+              {p.barcode ? ` · EAN ${p.barcode}` : ""}
               {!p.active ? " (inactiva)" : ""}
             </div>
             <button type="button" className="ad-btn" onClick={() => void toggle(p)}>
