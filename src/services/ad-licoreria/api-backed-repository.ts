@@ -266,6 +266,7 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
       cost: { usd: num(p.avgCostUsd), bs: num(p.avgCostBs) },
       minStockBase: num(p.minStockBase),
       defaultUtilityPercent: num(p.defaultUtilityPercent),
+      taxable: Boolean(p.taxable),
       active: Boolean(p.active),
       createdAt: String(p.createdAt ?? new Date().toISOString()),
     };
@@ -955,6 +956,7 @@ export const adApiBackedRepository = {
       minStockBase: product.minStockBase,
       defaultUtilityPercent: product.defaultUtilityPercent ?? 0,
       active: product.active,
+      taxable: product.taxable ?? false,
     };
     if (product.categoryId && !product.categoryId.startsWith("cat-")) {
       body.categoryId = product.categoryId;

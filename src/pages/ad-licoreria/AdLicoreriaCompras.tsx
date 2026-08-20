@@ -575,6 +575,13 @@ export default function AdLicoreriaCompras() {
                 <div>
                   <div className="font-medium text-[var(--ad-gold-soft)]">
                     {l.productLabel}
+                    {l.taxable ? (
+                      <span className="ml-2 ad-badge ad-badge--ok text-[10px]">
+                        IVA
+                      </span>
+                    ) : (
+                      <span className="ml-2 ad-badge text-[10px]">Exento</span>
+                    )}
                   </div>
                   <div className="text-xs text-[var(--ad-muted)]">
                     {l.presentationLabel} · {l.unitsPerPresentation} u. por caja
@@ -606,6 +613,25 @@ export default function AdLicoreriaCompras() {
                   </button>
                 </div>
               ) : null}
+              <div>
+                <p className="text-xs text-[var(--ad-muted)]">¿Este producto lleva IVA?</p>
+                <div className="mt-1 grid max-w-sm grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className={`ad-btn ${!l.taxable ? "ad-btn--gold" : ""}`}
+                    onClick={() => updateLine(l.key, { taxable: false })}
+                  >
+                    Sin IVA
+                  </button>
+                  <button
+                    type="button"
+                    className={`ad-btn ${l.taxable ? "ad-btn--gold" : ""}`}
+                    onClick={() => updateLine(l.key, { taxable: true })}
+                  >
+                    Con IVA 16%
+                  </button>
+                </div>
+              </div>
               <label className="text-xs text-[var(--ad-muted)]">
                 {l.buyMode === "BOX" ? "¿Cuántas cajas compré?" : "¿Cuántas unidades?"}
                 <input
@@ -680,16 +706,6 @@ export default function AdLicoreriaCompras() {
                   </div>
                 )}
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={l.taxable}
-                  onChange={(e) =>
-                    updateLine(l.key, { taxable: e.target.checked })
-                  }
-                />
-                IVA 16%
-              </label>
             </article>
           );
         })}
@@ -806,14 +822,25 @@ export default function AdLicoreriaCompras() {
               value={newUtility}
               onChange={(e) => setNewUtility(Number(e.target.value))}
             />
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={newTaxable}
-                onChange={(e) => setNewTaxable(e.target.checked)}
-              />
-              Aplica IVA 16%
-            </label>
+            <div>
+              <p className="mb-1 text-xs text-[var(--ad-muted)]">¿Aplica IVA?</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={`ad-btn ${!newTaxable ? "ad-btn--gold" : ""}`}
+                  onClick={() => setNewTaxable(false)}
+                >
+                  Sin IVA
+                </button>
+                <button
+                  type="button"
+                  className={`ad-btn ${newTaxable ? "ad-btn--gold" : ""}`}
+                  onClick={() => setNewTaxable(true)}
+                >
+                  Con IVA 16%
+                </button>
+              </div>
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"

@@ -222,6 +222,8 @@ export type AdProduct = {
   minStockBase: number;
   /** Utilidad contable % (margen sobre PVP, no markup lineal sobre costo). */
   defaultUtilityPercent?: number;
+  /** Aplica IVA 16% por defecto en compras. */
+  taxable?: boolean;
   /** Solo al crear: genera Unidad y, si es BOX, Caja xN. */
   packMode?: "UNIT" | "BOX";
   unitsPerBox?: number;
