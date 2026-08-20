@@ -56,7 +56,10 @@ adPublicAuthRouter.post("/auth/login", async (req, res, next) => {
 
     const op = await prisma.adOperator.findUnique({
       where: {
-        tenantId_username: { tenantId: tenant.id, username },
+        tenantId_username: {
+          tenantId: tenant.id,
+          username: username.trim().toLowerCase(),
+        },
       },
       include: { permissions: true, warehouse: true },
     });

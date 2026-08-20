@@ -17,14 +17,17 @@ export function adMockLogin(input: {
   if (!username || !password) {
     return { ok: false, error: "Usuario y contraseña requeridos" };
   }
-  if (password !== DEMO_PASSWORD) {
-    return { ok: false, error: "Credenciales inválidas" };
-  }
   const operators = adLicoreriaRepository.getState().operators;
   const op = operators.find(
     (o: AdOperator) => o.active && o.username.toLowerCase() === username,
   );
   if (!op) {
+    return { ok: false, error: "Credenciales inválidas" };
+  }
+  const personal = op.mockCredential?.trim();
+  const passwordOk =
+    password === DEMO_PASSWORD || (personal ? password === personal : false);
+  if (!passwordOk) {
     return { ok: false, error: "Credenciales inválidas" };
   }
   const r = adLicoreriaRepository.setCurrentOperator(op.id);

@@ -26,15 +26,24 @@ function num(v: Prisma.Decimal | number) {
   return typeof v === "number" ? v : Number(v);
 }
 
+function withoutPasswordHash<T extends { passwordHash?: string | null }>(
+  row: T,
+) {
+  const { passwordHash: _hash, ...rest } = row;
+  void _hash;
+  return rest;
+}
+
 export const adPortalService = {
   async listOperators(ctx: AdRequestContext) {
     requireAdPermission(ctx, "users.manage");
     const prisma = getPrisma();
-    return prisma.adOperator.findMany({
+    const rows = await prisma.adOperator.findMany({
       where: { tenantId: ctx.tenantId },
       include: { permissions: true, warehouse: true },
       orderBy: { username: "asc" },
     });
+    return rows.map(withoutPasswordHash);
   },
 
   async upsertOperator(
@@ -59,10 +68,23 @@ export const adPortalService = {
         "Cajero/mesonera requieren depósito asignado",
       );
     }
+    if (!input.id && !input.password) {
+      throw new ValidationError("Contraseña requerida al crear el usuario");
+    }
     const prisma = getPrisma();
+    const username = input.username.trim().toLowerCase();
     const passwordHash = input.password
       ? hashPassword(input.password)
       : undefined;
+
+    const uniqueError = (err: unknown) => {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new ValidationError("Ese usuario (login) ya existe");
+      }
+    };
 
     let operator;
     if (input.id) {
@@ -70,29 +92,39 @@ export const adPortalService = {
         where: { id: input.id, tenantId: ctx.tenantId },
       });
       if (!existing) throw new NotFoundError("Operador no encontrado");
-      operator = await prisma.adOperator.update({
-        where: { id: input.id },
-        data: {
-          username: input.username.trim(),
-          name: input.name.trim(),
-          role: input.role,
-          active: input.active ?? true,
-          warehouseId: input.warehouseId ?? null,
-          ...(passwordHash ? { passwordHash } : {}),
-        },
-      });
+      try {
+        operator = await prisma.adOperator.update({
+          where: { id: input.id },
+          data: {
+            username,
+            name: input.name.trim(),
+            role: input.role,
+            active: input.active ?? true,
+            warehouseId: input.warehouseId ?? null,
+            ...(passwordHash ? { passwordHash } : {}),
+          },
+        });
+      } catch (err) {
+        uniqueError(err);
+        throw err;
+      }
     } else {
-      operator = await prisma.adOperator.create({
-        data: {
-          tenantId: ctx.tenantId,
-          username: input.username.trim(),
-          name: input.name.trim(),
-          role: input.role,
-          active: input.active ?? true,
-          warehouseId: input.warehouseId ?? null,
-          passwordHash: passwordHash ?? hashPassword("changeme1"),
-        },
-      });
+      try {
+        operator = await prisma.adOperator.create({
+          data: {
+            tenantId: ctx.tenantId,
+            username,
+            name: input.name.trim(),
+            role: input.role,
+            active: input.active ?? true,
+            warehouseId: input.warehouseId ?? null,
+            passwordHash: passwordHash!,
+          },
+        });
+      } catch (err) {
+        uniqueError(err);
+        throw err;
+      }
     }
 
     if (input.permissions) {
@@ -123,10 +155,11 @@ export const adPortalService = {
       },
     });
 
-    return prisma.adOperator.findUniqueOrThrow({
+    const saved = await prisma.adOperator.findUniqueOrThrow({
       where: { id: operator.id },
       include: { permissions: true },
     });
+    return withoutPasswordHash(saved);
   },
 
   async getRoleMatrix(ctx: AdRequestContext) {

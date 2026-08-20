@@ -921,16 +921,17 @@ export const adApiBackedRepository = {
   },
 
   async upsertOperator(operator: AdOperator): Promise<AdResult<AdOperator>> {
-    const body = {
+    const password = operator.password?.trim() || undefined;
+    const body: Record<string, unknown> = {
       id: operator.id.startsWith("op-") ? undefined : operator.id,
-      username: operator.username,
+      username: operator.username.trim().toLowerCase(),
       name: operator.name,
       role: operator.role,
       active: operator.active,
       warehouseId: operator.warehouseId ?? null,
-      password: operator.mockCredential,
       permissions: operator.customPermissions,
     };
+    if (password) body.password = password;
     const path = body.id
       ? `/api/v1/ad/operators/${body.id}`
       : "/api/v1/ad/operators";

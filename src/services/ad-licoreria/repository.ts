@@ -814,6 +814,15 @@ export const adLicoreriaRepository = {
     if (!operator.username?.trim()) {
       return { ok: false, error: "Usuario (login) obligatorio" };
     }
+    const isNew = !state.operators.some((o) => o.id === operator.id);
+    if (isNew && !(operator.password?.trim() || operator.mockCredential?.trim())) {
+      return { ok: false, error: "Contraseña obligatoria al crear el usuario" };
+    }
+    const credential =
+      operator.password?.trim() || operator.mockCredential?.trim() || undefined;
+    if (credential && credential.length < 6) {
+      return { ok: false, error: "La contraseña debe tener al menos 6 caracteres" };
+    }
     const username = operator.username.trim().toLowerCase();
     if (
       state.operators.some(
@@ -842,6 +851,8 @@ export const adLicoreriaRepository = {
     const normalized: AdOperator = {
       ...operator,
       username,
+      mockCredential: credential ?? operator.mockCredential,
+      password: undefined,
       name: operator.name.trim(),
       warehouseId: operator.role === "tv" ? null : (operator.warehouseId ?? null),
       posEnabled:

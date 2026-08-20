@@ -27,6 +27,8 @@ export default function AdLicoreriaConfigUsuarios() {
 
   const [opId, setOpId] = useState<string | null>(null);
   const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<AdRole>("cajero");
@@ -37,7 +39,6 @@ export default function AdLicoreriaConfigUsuarios() {
   const [purchase, setPurchase] = useState(false);
   const [closures, setClosures] = useState(true);
   const [active, setActive] = useState(true);
-  const [mockCredential, setMockCredential] = useState("");
   const [tvScreenId, setTvScreenId] = useState("");
   const [tvGroupId, setTvGroupId] = useState("");
   const [msg, setMsg] = useState("");
@@ -45,6 +46,8 @@ export default function AdLicoreriaConfigUsuarios() {
   function load(o: AdOperator) {
     setOpId(o.id);
     setUsername(o.username);
+    setPassword("");
+    setPasswordConfirm("");
     setName(o.name);
     setPhone(o.phone ?? "");
     setRole(o.role);
@@ -55,7 +58,6 @@ export default function AdLicoreriaConfigUsuarios() {
     setPurchase(o.purchaseAccess === true);
     setClosures(o.closuresAccess !== false);
     setActive(o.active);
-    setMockCredential(o.mockCredential ?? "");
     setTvScreenId(o.tvScreenId ?? "");
     setTvGroupId(o.tvGroupId ?? "");
   }
@@ -72,15 +74,64 @@ export default function AdLicoreriaConfigUsuarios() {
     }
   }
 
+  function resetForm() {
+    setOpId(null);
+    setUsername("");
+    setPassword("");
+    setPasswordConfirm("");
+    setName("");
+    setPhone("");
+    setTvScreenId("");
+    setTvGroupId("");
+    setRole("cajero");
+    setPos(true);
+    setInv(false);
+    setCop(false);
+    setPurchase(false);
+    setClosures(true);
+    setActive(true);
+    setMsg("");
+  }
+
   async function save() {
     const isTv = role === "tv";
+    const login = username.trim().toLowerCase();
+    if (!login) {
+      setMsg("Indique el usuario (login) con el que va a entrar");
+      return;
+    }
+    if (!name.trim()) {
+      setMsg("Indique el nombre del usuario");
+      return;
+    }
+    const pwd = password.trim();
+    if (!opId) {
+      if (pwd.length < 6) {
+        setMsg("La contraseña debe tener al menos 6 caracteres");
+        return;
+      }
+      if (pwd !== passwordConfirm.trim()) {
+        setMsg("Las contraseñas no coinciden");
+        return;
+      }
+    } else if (pwd) {
+      if (pwd.length < 6) {
+        setMsg("La contraseña debe tener al menos 6 caracteres");
+        return;
+      }
+      if (pwd !== passwordConfirm.trim()) {
+        setMsg("Las contraseñas no coinciden");
+        return;
+      }
+    }
     const existing = opId
       ? operators.find((o) => o.id === opId)
       : undefined;
     const operator: AdOperator = {
       id: opId ?? uid("op"),
-      username,
-      name,
+      username: login,
+      password: pwd || undefined,
+      name: name.trim(),
       phone: phone.trim() || undefined,
       role,
       active,
@@ -90,7 +141,7 @@ export default function AdLicoreriaConfigUsuarios() {
       copAccess: isTv ? false : cop,
       purchaseAccess: isTv ? false : purchase,
       closuresAccess: isTv ? false : closures,
-      mockCredential: mockCredential.trim() || undefined,
+      mockCredential: pwd || existing?.mockCredential,
       tvScreenId: isTv ? tvScreenId || null : null,
       tvGroupId: isTv ? tvGroupId || null : null,
       customPermissions: isTv
@@ -117,15 +168,12 @@ export default function AdLicoreriaConfigUsuarios() {
       ];
     }
     const r = await resolveAdResult(upsertOperator(operator));
-    setMsg(r.ok ? `Usuario ${r.data.username} guardado` : r.error);
     if (r.ok) {
-      setOpId(null);
-      setUsername("");
-      setName("");
-      setPhone("");
-      setMockCredential("");
-      setTvScreenId("");
-      setTvGroupId("");
+      const savedUser = r.data.username;
+      resetForm();
+      setMsg(`Usuario ${savedUser} guardado`);
+    } else {
+      setMsg(r.error);
     }
   }
 
@@ -138,7 +186,8 @@ export default function AdLicoreriaConfigUsuarios() {
             Usuarios
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Incluye tipo TV (solo Digital Signage). Credencial mock opcional.
+            Defina usuario y contraseña de acceso. Al editar, deje la clave
+            vacía si no desea cambiarla.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -226,18 +275,54 @@ export default function AdLicoreriaConfigUsuarios() {
           {opId ? "Editar usuario" : "Crear usuario"}
         </h2>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <input
-            className="ad-input"
-            placeholder="Usuario (login)"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <input
-            className="ad-input"
-            placeholder="Nombre"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <label className="text-xs">
+            Usuario (login)
+            <input
+              className="ad-input mt-1"
+              placeholder="ej. maria.caja"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="none"
+            />
+          </label>
+          <label className="text-xs">
+            Contraseña {opId ? "(opcional)" : ""}
+            <input
+              className="ad-input mt-1"
+              type="password"
+              placeholder={
+                opId
+                  ? "Dejar vacía para no cambiar"
+                  : "Mínimo 6 caracteres"
+              }
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+          </label>
+          <label className="text-xs">
+            Confirmar contraseña
+            <input
+              className="ad-input mt-1"
+              type="password"
+              placeholder={
+                opId ? "Solo si cambia la clave" : "Repita la contraseña"
+              }
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              autoComplete="new-password"
+            />
+          </label>
+          <label className="text-xs">
+            Nombre
+            <input
+              className="ad-input mt-1"
+              placeholder="Nombre visible"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
           <input
             className="ad-input"
             placeholder="Teléfono (opcional)"
@@ -257,12 +342,6 @@ export default function AdLicoreriaConfigUsuarios() {
           </select>
           {role === "tv" ? (
             <>
-              <input
-                className="ad-input"
-                placeholder="Credencial mock"
-                value={mockCredential}
-                onChange={(e) => setMockCredential(e.target.value)}
-              />
               <select
                 className="ad-select"
                 value={tvScreenId}
@@ -359,9 +438,16 @@ export default function AdLicoreriaConfigUsuarios() {
             </p>
           )}
         </div>
-        <button type="button" className="ad-btn ad-btn--gold" onClick={save}>
-          Guardar
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="ad-btn ad-btn--gold" onClick={() => void save()}>
+            {opId ? "Guardar cambios" : "Crear usuario"}
+          </button>
+          {opId ? (
+            <button type="button" className="ad-btn" onClick={resetForm}>
+              Nuevo usuario
+            </button>
+          ) : null}
+        </div>
         {msg ? <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p> : null}
       </section>
     </div>

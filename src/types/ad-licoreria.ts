@@ -168,12 +168,16 @@ export const AD_ROLE_PERMISSIONS: Record<AdRole, AdModulePermission[]> = {
 
 /**
  * Usuario operativo (futuro User + WarehouseUserAssignment).
- * Sin contraseñas en el mock — preparado para auth futura.
  */
 export type AdOperator = {
   id: string;
-  /** Login / handle único (sin password en mock). */
+  /** Login / handle único. */
   username: string;
+  /**
+   * Contraseña en alta o cambio. Solo se envía a la API; no se guarda
+   * en el estado local ni se vuelve a leer.
+   */
+  password?: string;
   name: string;
   phone?: string;
   role: AdRole;
