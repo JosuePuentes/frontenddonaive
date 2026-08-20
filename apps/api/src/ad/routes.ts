@@ -7,6 +7,7 @@ import {
   createProductSchema,
   createSaleSchema,
   createWarehouseSchema,
+  cleanupDemoDataSchema,
   parseBody,
   setStockSchema,
   updatePresentationSchema,
@@ -230,6 +231,18 @@ adRouter.get("/audit", async (req, res, next) => {
     const ctx = getAdContext(req);
     const limit = req.query.limit ? Number(req.query.limit) : 50;
     const data = await adService.listAudit(ctx, limit);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Limpieza total de datos demo/operativos (admin). */
+adRouter.post("/admin/cleanup-demo", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(cleanupDemoDataSchema, req.body);
+    const data = await adService.cleanupDemoData(ctx, body.confirm);
     res.json({ data });
   } catch (err) {
     next(err);

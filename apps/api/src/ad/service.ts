@@ -20,6 +20,7 @@ import {
 } from "./sales-domain.js";
 import { packPresentationCreates } from "./pack-presentations.js";
 import { hashPassword, verifyPassword } from "./password.js";
+import { cleanupAdLicoreriaDemoData } from "./cleanup-demo-data.js";
 
 function dec(n: number): Prisma.Decimal {
   return new Prisma.Decimal(n);
@@ -1008,5 +1009,31 @@ export const adService = {
   /** Utilidad de seed/ops: hashear password de operador (nunca texto plano). */
   hashOperatorPassword(plain: string): string {
     return hashPassword(plain);
+  },
+
+  async cleanupDemoData(ctx: AdRequestContext, confirm: string) {
+    requireAdPermission(ctx, "settings.manage");
+    if (confirm !== "BORRAR-DATOS-DEMO") {
+      throw new ValidationError(
+        'Confirmación requerida: envíe { "confirm": "BORRAR-DATOS-DEMO" }',
+      );
+    }
+    const prisma = getPrisma();
+    const before = {
+      products: await prisma.adProduct.count({ where: { tenantId: ctx.tenantId } }),
+      customers: await prisma.adCustomer.count({ where: { tenantId: ctx.tenantId } }),
+      operators: await prisma.adOperator.count({ where: { tenantId: ctx.tenantId } }),
+      tables: await prisma.adTableSpace.count({ where: { tenantId: ctx.tenantId } }),
+      suppliers: await prisma.adSupplier.count({ where: { tenantId: ctx.tenantId } }),
+    };
+    const deleted = await cleanupAdLicoreriaDemoData(prisma, ctx.tenantId);
+    const after = {
+      products: await prisma.adProduct.count({ where: { tenantId: ctx.tenantId } }),
+      customers: await prisma.adCustomer.count({ where: { tenantId: ctx.tenantId } }),
+      operators: await prisma.adOperator.count({ where: { tenantId: ctx.tenantId } }),
+      tables: await prisma.adTableSpace.count({ where: { tenantId: ctx.tenantId } }),
+      suppliers: await prisma.adSupplier.count({ where: { tenantId: ctx.tenantId } }),
+    };
+    return { before, after, deleted };
   },
 };

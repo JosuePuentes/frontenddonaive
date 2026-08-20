@@ -105,6 +105,10 @@ export const voidSaleSchema = z.object({
   reason: z.string().min(1).max(500),
 });
 
+export const cleanupDemoDataSchema = z.object({
+  confirm: z.literal("BORRAR-DATOS-DEMO"),
+});
+
 export const loginOperatorSchema = z.object({
   tenantId: z.string().uuid(),
   username: z.string().min(1).max(64),
