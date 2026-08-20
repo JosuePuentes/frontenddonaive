@@ -1162,6 +1162,8 @@ model AdProduct {
   replacementCostBs  Decimal @default(0) @db.Decimal(18, 6)
   /// Aplica IVA 16% por defecto al agregar a compras (editable por factura).
   taxable       Boolean  @default(false)
+  /// Utilidad % sobre el costo (ficha). La compra la usa para PVP unidad y caja.
+  defaultUtilityPercent Decimal @default(0) @db.Decimal(8, 4)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

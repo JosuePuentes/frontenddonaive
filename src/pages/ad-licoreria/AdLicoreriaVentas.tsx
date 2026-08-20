@@ -3,6 +3,7 @@ import {
   formatAdPrice,
   toBaseUnits,
 } from "@/lib/ad-licoreria/conversions";
+import { findUnitAndBox } from "@/lib/ad-licoreria/pack";
 import {
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
@@ -109,8 +110,11 @@ export default function AdLicoreriaVentas() {
   }, [products, query]);
 
   const availablePres = getPresentationsFor(productId);
+  const pack = findUnitAndBox(availablePres);
+  const needsPackPick = Boolean(pack.unit && pack.box);
   const activePres =
-    presentations.find((p) => p.id === presentationId) ?? availablePres[0];
+    presentations.find((p) => p.id === presentationId) ??
+    (needsPackPick ? undefined : availablePres[0]);
   const cashier = operators.find((o) => o.id === cashierId) ?? sessionUser;
   const mesonera = operators.find((o) => o.id === mesoneraId);
   const customer = customers.find((c) => c.id === customerId);
@@ -545,20 +549,46 @@ export default function AdLicoreriaVentas() {
           </div>
 
           <div className="ad-pos__add-row">
-            <label className="ad-pos__field">
-              <span>Presentación</span>
-              <select
-                className="ad-select"
-                value={activePres?.id ?? ""}
-                onChange={(e) => setPresentationId(e.target.value)}
-              >
-                {availablePres.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} · {formatAdPrice(p.price)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {needsPackPick ? (
+              <div className="grid w-full grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={`ad-btn ${pack.unit && presentationId === pack.unit.id ? "ad-btn--gold" : ""}`}
+                  onClick={() => pack.unit && setPresentationId(pack.unit.id)}
+                >
+                  Unidad
+                  {pack.unit ? ` · ${formatAdPrice(pack.unit.price)}` : ""}
+                </button>
+                <button
+                  type="button"
+                  className={`ad-btn ${pack.box && presentationId === pack.box.id ? "ad-btn--gold" : ""}`}
+                  onClick={() => pack.box && setPresentationId(pack.box.id)}
+                >
+                  Caja x{pack.box?.unitsPerPresentation}
+                  {pack.box ? ` · ${formatAdPrice(pack.box.price)}` : ""}
+                </button>
+              </div>
+            ) : (
+              <label className="ad-pos__field">
+                <span>Presentación</span>
+                <select
+                  className="ad-select"
+                  value={activePres?.id ?? ""}
+                  onChange={(e) => setPresentationId(e.target.value)}
+                >
+                  {availablePres.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} · {formatAdPrice(p.price)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {!activePres && needsPackPick ? (
+              <p className="w-full text-sm text-[var(--ad-gold-soft)]">
+                ¿Cómo vende: por unidad o por caja?
+              </p>
+            ) : null}
             <label className="ad-pos__field ad-pos__field--qty">
               <span>Cantidad</span>
               <input

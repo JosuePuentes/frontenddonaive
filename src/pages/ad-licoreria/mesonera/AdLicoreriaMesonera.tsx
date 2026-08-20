@@ -8,7 +8,9 @@ import {
   accountAvailable,
   prepaidAvailable,
   multiplyPrice,
+  formatAdPrice,
 } from "@/lib/ad-licoreria/conversions";
+import { findUnitAndBox } from "@/lib/ad-licoreria/pack";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 
@@ -80,8 +82,11 @@ export default function AdLicoreriaMesonera() {
     [findPrepaidByQr, qr, prepaids],
   );
   const availablePres = getPresentationsFor(productId);
+  const pack = findUnitAndBox(availablePres);
+  const needsPackPick = Boolean(pack.unit && pack.box);
   const pres =
-    presentations.find((p) => p.id === presentationId) ?? availablePres[0];
+    presentations.find((p) => p.id === presentationId) ??
+    (needsPackPick ? undefined : availablePres[0]);
 
   if (!canMesonera) {
     return (
@@ -433,17 +438,40 @@ export default function AdLicoreriaMesonera() {
                           </option>
                         ))}
                     </select>
-                    <select
-                      className="ad-select"
-                      value={pres?.id ?? ""}
-                      onChange={(e) => setPresentationId(e.target.value)}
-                    >
-                      {availablePres.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                    {needsPackPick ? (
+                      <div className="grid grid-cols-2 gap-1">
+                        <button
+                          type="button"
+                          className={`ad-btn ${pack.unit && presentationId === pack.unit.id ? "ad-btn--gold" : ""}`}
+                          onClick={() =>
+                            pack.unit && setPresentationId(pack.unit.id)
+                          }
+                        >
+                          Unidad
+                        </button>
+                        <button
+                          type="button"
+                          className={`ad-btn ${pack.box && presentationId === pack.box.id ? "ad-btn--gold" : ""}`}
+                          onClick={() =>
+                            pack.box && setPresentationId(pack.box.id)
+                          }
+                        >
+                          Caja x{pack.box?.unitsPerPresentation}
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        className="ad-select"
+                        value={pres?.id ?? ""}
+                        onChange={(e) => setPresentationId(e.target.value)}
+                      >
+                        {availablePres.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} · {formatAdPrice(p.price)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <input
                       className="ad-input"
                       type="number"

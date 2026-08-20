@@ -7,13 +7,18 @@ import {
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { adCommerceClient } from "@/services/ad-licoreria/commerce-client";
+import { findUnitAndBox, pricesFromCost } from "@/lib/ad-licoreria/pack";
 
 type DraftLine = {
   key: string;
   presentationId: string;
+  unitPresentationId?: string;
+  boxPresentationId?: string;
   productLabel: string;
   presentationLabel: string;
   unitsPerPresentation: number;
+  boxUnits: number;
+  buyMode: "UNIT" | "BOX";
   qty: number;
   qtyBonus: number;
   costMode: "UNIT" | "PRESENTATION" | "TOTAL";
@@ -21,6 +26,7 @@ type DraftLine = {
   presentationCost: number;
   lineTotal: number;
   taxable: boolean;
+  utilityPercent: number;
 };
 
 function lineMoney(l: DraftLine) {
@@ -75,6 +81,7 @@ export default function AdLicoreriaCompras() {
       brand: string | null;
       sku: string | null;
       taxable?: boolean;
+      defaultUtilityPercent?: number;
       presentations: {
         id: string;
         name: string;
@@ -91,8 +98,9 @@ export default function AdLicoreriaCompras() {
   const [newName, setNewName] = useState("");
   const [newBrand, setNewBrand] = useState("");
   const [newTaxable, setNewTaxable] = useState(false);
-  const [newUpp, setNewUpp] = useState(1);
-  const [newPresName, setNewPresName] = useState("Unidad");
+  const [newUpp, setNewUpp] = useState(20);
+  const [newPackMode, setNewPackMode] = useState<"UNIT" | "BOX">("BOX");
+  const [newUtility, setNewUtility] = useState(30);
   const [newCategoryId, setNewCategoryId] = useState(categories[0]?.id ?? "");
 
   const dueDate = useMemo(() => {
@@ -151,30 +159,53 @@ export default function AdLicoreriaCompras() {
     setHits(r.data);
   }
 
-  function addHit(p: (typeof hits)[0], presentationId?: string) {
-    const pr =
-      p.presentations.find((x) => x.id === presentationId) ??
-      p.presentations[0];
-    if (!pr) return;
+  function addHit(p: (typeof hits)[0], prefer: "UNIT" | "BOX" = "BOX") {
+    const pack = findUnitAndBox(p.presentations);
+    const hasBox = Boolean(pack.box);
+    const buyMode: "UNIT" | "BOX" = hasBox ? prefer : "UNIT";
+    const chosen =
+      buyMode === "BOX" && pack.box ? pack.box : pack.unit ?? p.presentations[0];
+    if (!chosen) return;
     setLines((prev) => [
       ...prev,
       {
-        key: `${pr.id}-${Date.now()}`,
-        presentationId: pr.id,
+        key: `${chosen.id}-${Date.now()}`,
+        presentationId: chosen.id,
+        unitPresentationId: pack.unit?.id,
+        boxPresentationId: pack.box?.id,
         productLabel: `${p.sku ?? ""} ${p.name}`.trim(),
-        presentationLabel: pr.name,
-        unitsPerPresentation: pr.unitsPerPresentation || 1,
+        presentationLabel: chosen.name,
+        unitsPerPresentation: chosen.unitsPerPresentation || 1,
+        boxUnits: pack.box?.unitsPerPresentation || chosen.unitsPerPresentation || 1,
+        buyMode,
         qty: 1,
         qtyBonus: 0,
-        costMode: "PRESENTATION",
+        costMode: buyMode === "BOX" ? "PRESENTATION" : "UNIT",
         unitCost: 0,
         presentationCost: 0,
         lineTotal: 0,
         taxable: Boolean(p.taxable),
+        utilityPercent: Number(p.defaultUtilityPercent) || 0,
       },
     ]);
     setHits([]);
     setQuery("");
+  }
+
+  function setBuyMode(line: DraftLine, buyMode: "UNIT" | "BOX") {
+    const nextId =
+      buyMode === "BOX"
+        ? line.boxPresentationId ?? line.presentationId
+        : line.unitPresentationId ?? line.presentationId;
+    const upp = buyMode === "BOX" ? Math.max(2, line.boxUnits || line.unitsPerPresentation) : 1;
+    const label = buyMode === "BOX" ? `Caja x${upp}` : "Unidad";
+    updateLine(line.key, {
+      buyMode,
+      costMode: buyMode === "BOX" ? "PRESENTATION" : "UNIT",
+      presentationId: nextId,
+      presentationLabel: label,
+      unitsPerPresentation: upp,
+    });
   }
 
   function updateLine(key: string, patch: Partial<DraftLine>) {
@@ -198,8 +229,10 @@ export default function AdLicoreriaCompras() {
       brand: newBrand,
       categoryId: newCategoryId || undefined,
       taxable: newTaxable,
-      presentationName: newPresName,
-      unitsPerPresentation: newUpp,
+      packMode: newPackMode,
+      unitsPerBox: newPackMode === "BOX" ? newUpp : 1,
+      unitsPerPresentation: newPackMode === "BOX" ? newUpp : 1,
+      defaultUtilityPercent: newUtility,
     });
     if (!r.ok) {
       setMsg(r.error);
@@ -210,23 +243,33 @@ export default function AdLicoreriaCompras() {
       sku: string;
       taxable: boolean;
       presentations: { id: string; name: string; unitsPerPresentation: number }[];
+      defaultUtilityPercent?: number;
     };
-    const pr = data.presentations[0];
+    const pack = findUnitAndBox(data.presentations);
+    const hasBox = Boolean(pack.box);
+    const buyMode: "UNIT" | "BOX" = hasBox ? "BOX" : "UNIT";
+    const pr =
+      buyMode === "BOX" && pack.box ? pack.box : pack.unit ?? data.presentations[0];
     setLines((prev) => [
       ...prev,
       {
         key: `${pr.id}-${Date.now()}`,
         presentationId: pr.id,
+        unitPresentationId: pack.unit?.id,
+        boxPresentationId: pack.box?.id,
         productLabel: `${data.sku} ${data.name}`,
         presentationLabel: pr.name,
         unitsPerPresentation: Number(pr.unitsPerPresentation) || 1,
+        boxUnits: pack.box?.unitsPerPresentation || Number(pr.unitsPerPresentation) || 1,
+        buyMode,
         qty: 1,
         qtyBonus: 0,
-        costMode: "UNIT",
+        costMode: buyMode === "BOX" ? "PRESENTATION" : "UNIT",
         unitCost: 0,
         presentationCost: 0,
         lineTotal: 0,
         taxable: data.taxable,
+        utilityPercent: Number(data.defaultUtilityPercent) || newUtility,
       },
     ]);
     setShowCreateProduct(false);
@@ -485,151 +528,174 @@ export default function AdLicoreriaCompras() {
                 <span>
                   {h.sku} · {h.name} {h.brand ? `· ${h.brand}` : ""}
                   {h.taxable ? " · IVA" : ""}
+                  {h.defaultUtilityPercent
+                    ? ` · util. ${h.defaultUtilityPercent}%`
+                    : ""}
                 </span>
-                <button
-                  type="button"
-                  className="ad-btn"
-                  onClick={() => addHit(h)}
-                >
-                  Agregar
-                </button>
+                <span className="flex flex-wrap gap-1">
+                  {h.presentations.some((x) => x.unitsPerPresentation > 1) ? (
+                    <button
+                      type="button"
+                      className="ad-btn ad-btn--gold"
+                      onClick={() => addHit(h, "BOX")}
+                    >
+                      Caja
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="ad-btn"
+                    onClick={() => addHit(h, "UNIT")}
+                  >
+                    Unidad
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <section className="ad-panel overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead>
-            <tr className="text-[var(--ad-muted)]">
-              <th className="p-1">Producto</th>
-              <th className="p-1">Cant.</th>
-              <th className="p-1">Bonif.</th>
-              <th className="p-1">Modo</th>
-              <th className="p-1">Costo</th>
-              <th className="p-1">IVA</th>
-              <th className="p-1">Subtotal</th>
-              <th className="p-1" />
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map((l) => {
-              const m = lineMoney(l);
-              return (
-                <tr key={l.key} className="border-t border-[var(--ad-border)]">
-                  <td className="p-1">
-                    <div className="font-medium">{l.productLabel}</div>
-                    <div className="text-xs text-[var(--ad-muted)]">
-                      {l.presentationLabel} · {l.unitsPerPresentation} u
+      <section className="ad-panel space-y-3">
+        <h2 className="ad-panel-title">Líneas de la factura</h2>
+        {lines.map((l) => {
+          const m = lineMoney(l);
+          const px = pricesFromCost(
+            m.unit,
+            Math.max(1, l.boxUnits || l.unitsPerPresentation),
+            l.utilityPercent,
+          );
+          const hasBox = Boolean(l.boxPresentationId) || l.boxUnits > 1;
+          return (
+            <article
+              key={l.key}
+              className="space-y-2 rounded border border-[var(--ad-line)] p-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-medium text-[var(--ad-gold-soft)]">
+                    {l.productLabel}
+                  </div>
+                  <div className="text-xs text-[var(--ad-muted)]">
+                    {l.presentationLabel} · {l.unitsPerPresentation} u. por caja
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="ad-btn"
+                  onClick={() => removeLine(l.key)}
+                >
+                  Quitar
+                </button>
+              </div>
+              {hasBox ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className={`ad-btn ${l.buyMode === "BOX" ? "ad-btn--gold" : ""}`}
+                    onClick={() => setBuyMode(l, "BOX")}
+                  >
+                    Compré por caja
+                  </button>
+                  <button
+                    type="button"
+                    className={`ad-btn ${l.buyMode === "UNIT" ? "ad-btn--gold" : ""}`}
+                    onClick={() => setBuyMode(l, "UNIT")}
+                  >
+                    Compré por unidad
+                  </button>
+                </div>
+              ) : null}
+              <label className="text-xs text-[var(--ad-muted)]">
+                {l.buyMode === "BOX" ? "¿Cuántas cajas compré?" : "¿Cuántas unidades?"}
+                <input
+                  className="ad-input mt-1"
+                  type="number"
+                  min={0}
+                  value={l.qty}
+                  onChange={(e) =>
+                    updateLine(l.key, { qty: Number(e.target.value) })
+                  }
+                />
+              </label>
+              {l.buyMode === "BOX" ? (
+                <label className="text-xs text-[var(--ad-muted)]">
+                  Costo de cada caja ({currency})
+                  <input
+                    className="ad-input mt-1"
+                    type="number"
+                    step="0.01"
+                    value={l.presentationCost}
+                    onChange={(e) =>
+                      updateLine(l.key, {
+                        presentationCost: Number(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+              ) : (
+                <label className="text-xs text-[var(--ad-muted)]">
+                  Costo de cada unidad ({currency})
+                  <input
+                    className="ad-input mt-1"
+                    type="number"
+                    step="0.0001"
+                    value={l.unitCost}
+                    onChange={(e) =>
+                      updateLine(l.key, {
+                        unitCost: Number(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+              )}
+              <div className="rounded bg-black/20 p-2 text-sm leading-6">
+                <div>
+                  Costo por caja: <strong>{px.boxCost.toFixed(2)}</strong>
+                </div>
+                <div>
+                  Costo por unidad: <strong>{m.unit.toFixed(4)}</strong>
+                </div>
+                <div>
+                  Total de esta línea: <strong>{m.subtotal.toFixed(2)}</strong>{" "}
+                  {currency}
+                  {l.taxable ? ` + IVA ${m.tax.toFixed(2)}` : ""}
+                </div>
+                {l.utilityPercent > 0 ? (
+                  <>
+                    <div className="mt-1 text-[var(--ad-gold-soft)]">
+                      Utilidad ficha {l.utilityPercent}%
                     </div>
-                  </td>
-                  <td className="p-1">
-                    <input
-                      className="ad-input w-20"
-                      type="number"
-                      value={l.qty}
-                      onChange={(e) =>
-                        updateLine(l.key, { qty: Number(e.target.value) })
-                      }
-                    />
-                  </td>
-                  <td className="p-1">
-                    <input
-                      className="ad-input w-20"
-                      type="number"
-                      value={l.qtyBonus}
-                      onChange={(e) =>
-                        updateLine(l.key, { qtyBonus: Number(e.target.value) })
-                      }
-                    />
-                  </td>
-                  <td className="p-1">
-                    <select
-                      className="ad-input"
-                      value={l.costMode}
-                      onChange={(e) =>
-                        updateLine(l.key, {
-                          costMode: e.target.value as DraftLine["costMode"],
-                        })
-                      }
-                    >
-                      <option value="UNIT">Unitario</option>
-                      <option value="PRESENTATION">Caja</option>
-                      <option value="TOTAL">Total</option>
-                    </select>
-                  </td>
-                  <td className="p-1">
-                    {l.costMode === "UNIT" && (
-                      <input
-                        className="ad-input w-24"
-                        type="number"
-                        step="0.0001"
-                        value={l.unitCost}
-                        onChange={(e) =>
-                          updateLine(l.key, {
-                            unitCost: Number(e.target.value),
-                          })
-                        }
-                      />
-                    )}
-                    {l.costMode === "PRESENTATION" && (
-                      <input
-                        className="ad-input w-24"
-                        type="number"
-                        step="0.01"
-                        value={l.presentationCost}
-                        onChange={(e) =>
-                          updateLine(l.key, {
-                            presentationCost: Number(e.target.value),
-                          })
-                        }
-                      />
-                    )}
-                    {l.costMode === "TOTAL" && (
-                      <input
-                        className="ad-input w-24"
-                        type="number"
-                        step="0.01"
-                        value={l.lineTotal}
-                        onChange={(e) =>
-                          updateLine(l.key, {
-                            lineTotal: Number(e.target.value),
-                          })
-                        }
-                      />
-                    )}
-                    <div className="text-[10px] text-[var(--ad-muted)]">
-                      u {m.unit.toFixed(4)} · caja {m.box.toFixed(2)}
+                    <div>
+                      PVP unidad: <strong>{px.unitSale.toFixed(2)}</strong>
                     </div>
-                  </td>
-                  <td className="p-1">
-                    <input
-                      type="checkbox"
-                      checked={l.taxable}
-                      onChange={(e) =>
-                        updateLine(l.key, { taxable: e.target.checked })
-                      }
-                    />
-                  </td>
-                  <td className="p-1 tabular-nums">{m.subtotal.toFixed(2)}</td>
-                  <td className="p-1">
-                    <button
-                      type="button"
-                      className="ad-btn"
-                      onClick={() => removeLine(l.key)}
-                    >
-                      Quitar
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <div>
+                      PVP caja: <strong>{px.boxSale.toFixed(2)}</strong>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-[var(--ad-muted)]">
+                    Sin utilidad en la ficha: cárguela en Productos para ver el
+                    PVP.
+                  </div>
+                )}
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={l.taxable}
+                  onChange={(e) =>
+                    updateLine(l.key, { taxable: e.target.checked })
+                  }
+                />
+                IVA 16%
+              </label>
+            </article>
+          );
+        })}
         {!lines.length && (
           <p className="p-2 text-sm text-[var(--ad-muted)]">
-            Agregue productos con el buscador.
+            Busque el producto y elija si lo compró por caja o por unidad.
           </p>
         )}
       </section>
@@ -673,6 +739,10 @@ export default function AdLicoreriaCompras() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="ad-panel w-full max-w-lg space-y-2">
             <h2 className="font-medium">Crear producto</h2>
+            <p className="text-xs text-[var(--ad-muted)]">
+              Indique si entra por caja o unidad y la utilidad. Eso queda en la
+              ficha.
+            </p>
             <input
               className="ad-input"
               placeholder="Código"
@@ -702,18 +772,39 @@ export default function AdLicoreriaCompras() {
                 </option>
               ))}
             </select>
-            <input
-              className="ad-input"
-              placeholder="Presentación"
-              value={newPresName}
-              onChange={(e) => setNewPresName(e.target.value)}
-            />
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className={`ad-btn ${newPackMode === "UNIT" ? "ad-btn--gold" : ""}`}
+                onClick={() => setNewPackMode("UNIT")}
+              >
+                Por unidad
+              </button>
+              <button
+                type="button"
+                className={`ad-btn ${newPackMode === "BOX" ? "ad-btn--gold" : ""}`}
+                onClick={() => setNewPackMode("BOX")}
+              >
+                Por caja
+              </button>
+            </div>
+            {newPackMode === "BOX" ? (
+              <input
+                className="ad-input"
+                type="number"
+                min={2}
+                placeholder="Unidades por caja"
+                value={newUpp}
+                onChange={(e) => setNewUpp(Number(e.target.value))}
+              />
+            ) : null}
             <input
               className="ad-input"
               type="number"
-              placeholder="Unidades / presentación"
-              value={newUpp}
-              onChange={(e) => setNewUpp(Number(e.target.value))}
+              min={0}
+              placeholder="Utilidad %"
+              value={newUtility}
+              onChange={(e) => setNewUtility(Number(e.target.value))}
             />
             <label className="flex items-center gap-2 text-sm">
               <input

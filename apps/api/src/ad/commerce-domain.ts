@@ -240,6 +240,31 @@ export function priceFromUtility(input: PriceFromUtilityInput): {
   return { price, utilityAmount, utilityPercent, marginPercent };
 }
 
+/** PVP unidad y caja a partir del costo unitario y la utilidad de ficha. */
+export function salePricesFromUnitCost(input: {
+  unitCost: number;
+  unitsPerPresentation: number;
+  utilityPercent: number;
+}): {
+  unitCost: number;
+  boxCost: number;
+  unitSale: number;
+  boxSale: number;
+} {
+  const unitCost = Math.max(0, Number(input.unitCost) || 0);
+  const upp = Math.max(1, Number(input.unitsPerPresentation) || 1);
+  const boxCost = unitCost * upp;
+  const unitSale = priceFromUtility({
+    cost: unitCost,
+    utilityPercent: input.utilityPercent,
+  }).price;
+  const boxSale = priceFromUtility({
+    cost: boxCost,
+    utilityPercent: input.utilityPercent,
+  }).price;
+  return { unitCost, boxCost, unitSale, boxSale };
+}
+
 export function utilityFromPrice(cost: number, price: number): {
   price: number;
   utilityAmount: number;

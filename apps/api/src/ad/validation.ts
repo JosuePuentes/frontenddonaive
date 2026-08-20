@@ -16,6 +16,10 @@ export const createProductSchema = z.object({
   baseUnitLabel: z.string().min(1).max(32).default("u"),
   categoryId: z.string().uuid().optional(),
   minStockBase: z.number().nonnegative().optional(),
+  taxable: z.boolean().optional(),
+  defaultUtilityPercent: z.number().min(0).max(1000).optional(),
+  packMode: z.enum(["UNIT", "BOX"]).optional(),
+  unitsPerBox: z.number().positive().optional(),
   tenantId: z.string().uuid().optional(),
 });
 

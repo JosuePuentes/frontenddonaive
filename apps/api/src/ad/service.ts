@@ -18,6 +18,7 @@ import {
   buildSaleLineSnapshots,
   sumSaleTotals,
 } from "./sales-domain.js";
+import { packPresentationCreates } from "./pack-presentations.js";
 import { hashPassword, verifyPassword } from "./password.js";
 
 function dec(n: number): Prisma.Decimal {
@@ -188,6 +189,10 @@ export const adService = {
       baseUnitLabel: string;
       categoryId?: string;
       minStockBase?: number;
+      taxable?: boolean;
+      defaultUtilityPercent?: number;
+      packMode?: "UNIT" | "BOX";
+      unitsPerBox?: number;
     },
   ) {
     requireAdPermission(ctx, "settings.manage");
@@ -203,7 +208,18 @@ export const adService = {
         baseUnitLabel: input.baseUnitLabel,
         categoryId: input.categoryId,
         minStockBase: input.minStockBase ?? 0,
+        taxable: input.taxable ?? false,
+        defaultUtilityPercent: dec(input.defaultUtilityPercent ?? 0),
+        presentations: {
+          create: packPresentationCreates({
+            packMode: input.packMode,
+            unitsPerBox: input.unitsPerBox,
+            sku: input.sku,
+            barcode: input.barcode,
+          }),
+        },
       },
+      include: { presentations: true },
     });
     await writeAdAudit({
       tenantId: ctx.tenantId,

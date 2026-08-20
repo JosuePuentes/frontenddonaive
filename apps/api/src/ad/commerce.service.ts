@@ -14,6 +14,7 @@ import {
 import {
   avgDailyFromWindow,
   priceFromUtility,
+  salePricesFromUnitCost,
   suggestReplenishment,
   utilityFromPrice,
 } from "./commerce-domain.js";
@@ -26,6 +27,7 @@ import {
 } from "./commerce-purchase.js";
 import { weightedAverageCost, computeOperationalAvailability } from "./availability.js";
 import { writeAdAudit } from "./service.js";
+import { packPresentationCreates } from "./pack-presentations.js";
 
 function dec(n: number): Prisma.Decimal {
   return new Prisma.Decimal(n);
@@ -151,6 +153,8 @@ export const adCommerceService = {
       barcode: p.barcode,
       description: p.description,
       active: p.active,
+      taxable: p.taxable,
+      defaultUtilityPercent: num(p.defaultUtilityPercent),
       avgCostUsd: num(p.avgCostUsd),
       avgCostBs: num(p.avgCostBs),
       category: p.category,
@@ -1135,10 +1139,36 @@ export const adCommerceService = {
           qtyIn,
           unitBs,
         );
+        const util = num(product.defaultUtilityPercent);
         await tx.adProduct.update({
           where: { id: line.productId },
           data: { avgCostUsd: dec(avgUsd), avgCostBs: dec(avgBs) },
         });
+        if (util > 0) {
+          const presentations = await tx.adPresentation.findMany({
+            where: { productId: line.productId, active: true },
+          });
+          for (const pr of presentations) {
+            const upp = num(pr.unitsPerPresentation) || 1;
+            const usd = salePricesFromUnitCost({
+              unitCost: unitUsd,
+              unitsPerPresentation: upp,
+              utilityPercent: util,
+            });
+            const bs = salePricesFromUnitCost({
+              unitCost: unitBs,
+              unitsPerPresentation: upp,
+              utilityPercent: util,
+            });
+            await tx.adPresentation.update({
+              where: { id: pr.id },
+              data: {
+                priceUsd: dec(usd.boxSale),
+                priceBs: dec(bs.boxSale),
+              },
+            });
+          }
+        }
         await tx.adStock.upsert({
           where: {
             warehouseId_productId: {
@@ -1311,6 +1341,9 @@ export const adCommerceService = {
       taxable?: boolean;
       presentationName?: string;
       unitsPerPresentation?: number;
+      packMode?: "UNIT" | "BOX";
+      unitsPerBox?: number;
+      defaultUtilityPercent?: number;
       barcode?: string;
       priceUsd?: number;
       priceBs?: number;
@@ -1337,17 +1370,18 @@ export const adCommerceService = {
         description: input.description,
         baseUnitLabel: input.baseUnitLabel ?? "u",
         taxable: input.taxable ?? false,
+        defaultUtilityPercent: dec(input.defaultUtilityPercent ?? 0),
         barcode: input.barcode,
         presentations: {
-          create: {
-            name: input.presentationName ?? "Unidad",
-            code: "U",
-            unitsPerPresentation: dec(input.unitsPerPresentation ?? 1),
-            priceUsd: dec(input.priceUsd ?? 0),
-            priceBs: dec(input.priceBs ?? 0),
+          create: packPresentationCreates({
+            packMode: input.packMode,
+            unitsPerBox: input.unitsPerBox,
+            unitsPerPresentation: input.unitsPerPresentation,
             sku,
             barcode: input.barcode,
-          },
+            priceUsd: input.priceUsd,
+            priceBs: input.priceBs,
+          }),
         },
       },
       include: { presentations: true },
