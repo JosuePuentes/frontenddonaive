@@ -3,6 +3,10 @@ import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router";
 import { AdLicoreriaSidebar } from "@/components/ad-licoreria/AdLicoreriaSidebar";
 import { AdLicoreriaTopbar } from "@/components/ad-licoreria/AdLicoreriaTopbar";
 import {
+  AdFocusModeProvider,
+  useAdFocusMode,
+} from "@/lib/ad-licoreria/focus-mode";
+import {
   AdLicoreriaProvider,
   useAdLicoreria,
 } from "@/providers/ad-licoreria/AdLicoreriaProvider";
@@ -149,6 +153,7 @@ function AdLicoreriaShell() {
   const isDesignPreview = path === "/configuracion/diseno/preview";
   const bare = isLanding || isLogin || isMesonera || isTvPlayer || isDesignPreview;
   const [menuOpen, setMenuOpen] = useState(false);
+  const { focusMode } = useAdFocusMode();
 
   useEffect(() => {
     setMenuOpen(false);
@@ -178,8 +183,18 @@ function AdLicoreriaShell() {
   }
 
   return (
-    <div className={`ad-layout ${menuOpen ? "ad-layout--menu-open" : ""}`}>
-      <AdLicoreriaSidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
+    <div
+      className={[
+        "ad-layout",
+        menuOpen ? "ad-layout--menu-open" : "",
+        focusMode ? "ad-layout--focus" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {!focusMode ? (
+        <AdLicoreriaSidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
+      ) : null}
       <div className="ad-main">
         <AdLicoreriaTopbar onOpenMenu={() => setMenuOpen(true)} />
         <div className="ad-content">
@@ -187,7 +202,9 @@ function AdLicoreriaShell() {
             <Outlet />
           </AdRouteGate>
         </div>
-        <AdMobileBottomNav onOpenMore={() => setMenuOpen(true)} />
+        {!focusMode ? (
+          <AdMobileBottomNav onOpenMore={() => setMenuOpen(true)} />
+        ) : null}
       </div>
     </div>
   );
@@ -197,11 +214,13 @@ function AdLicoreriaLayout() {
   return (
     <AdLicoreriaProvider>
       <AdTvProvider>
-        <AdDesignApplier>
-          <div className="ad-shell">
-            <AdLicoreriaShell />
-          </div>
-        </AdDesignApplier>
+        <AdFocusModeProvider>
+          <AdDesignApplier>
+            <div className="ad-shell">
+              <AdLicoreriaShell />
+            </div>
+          </AdDesignApplier>
+        </AdFocusModeProvider>
       </AdTvProvider>
     </AdLicoreriaProvider>
   );

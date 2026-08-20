@@ -4,74 +4,28 @@ import {
   AdPurchaseDocument,
   type AdPurchasePrintDoc,
 } from "@/components/ad-licoreria/AdDocumentViews";
+import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
+import { AdPurchaseLineForm } from "@/components/ad-licoreria/AdPurchaseLineForm";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import { useAdFocusMode } from "@/lib/ad-licoreria/focus-mode";
+import { findUnitAndBox } from "@/lib/ad-licoreria/pack";
+import {
+  hitToDraftLine,
+  lineMoney,
+  lineToApiPayload,
+  purchaseAmountToDisplay,
+  type DraftLine,
+} from "@/lib/ad-licoreria/purchase-draft";
+import { searchAdProducts, type AdProductSearchHit } from "@/lib/ad-licoreria/product-lookup";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { adCommerceClient } from "@/services/ad-licoreria/commerce-client";
-import { findUnitAndBox, pricesFromCost } from "@/lib/ad-licoreria/pack";
-import { searchAdProducts, type AdProductSearchHit } from "@/lib/ad-licoreria/product-lookup";
-
-type DraftLine = {
-  key: string;
-  presentationId: string;
-  unitPresentationId?: string;
-  boxPresentationId?: string;
-  productLabel: string;
-  presentationLabel: string;
-  unitsPerPresentation: number;
-  boxUnits: number;
-  buyMode: "UNIT" | "BOX";
-  qty: number;
-  qtyBonus: number;
-  costMode: "UNIT" | "PRESENTATION" | "TOTAL";
-  unitCost: number;
-  presentationCost: number;
-  lineTotal: number;
-  taxable: boolean;
-  utilityPercent: number;
-};
-
-function lineMoney(l: DraftLine) {
-  const upp = l.unitsPerPresentation || 1;
-  let unit = l.unitCost;
-  let box = l.presentationCost;
-  let subtotal = 0;
-  if (l.costMode === "UNIT") {
-    box = unit * upp;
-    subtotal = unit * upp * l.qty;
-  } else if (l.costMode === "PRESENTATION") {
-    unit = upp > 0 ? box / upp : 0;
-    subtotal = box * l.qty;
-  } else {
-    subtotal = l.lineTotal;
-    box = l.qty > 0 ? subtotal / l.qty : 0;
-    unit = upp > 0 ? box / upp : 0;
-  }
-  const tax = l.taxable ? subtotal * 0.16 : 0;
-  return { unit, box, subtotal, tax, total: subtotal + tax, upp };
-}
-
-function lineToApiPayload(l: DraftLine, currency: "USD" | "BS") {
-  const m = lineMoney(l);
-  return {
-    presentationId: l.presentationId,
-    qty: l.qty,
-    qtyBonus: l.qtyBonus,
-    costMode: l.costMode,
-    unitCostUsd: currency === "USD" ? m.unit : 0,
-    unitCostBs: currency === "BS" ? m.unit : 0,
-    presentationCostUsd: currency === "USD" ? m.box : 0,
-    presentationCostBs: currency === "BS" ? m.box : 0,
-    lineTotalUsd: currency === "USD" ? m.subtotal : 0,
-    lineTotalBs: currency === "BS" ? m.subtotal : 0,
-    taxable: l.taxable,
-  };
-}
 
 /**
  * Compras F6 — encabezado → líneas editables → resumen vivo → totalizar → confirmar.
  */
 export default function AdLicoreriaCompras() {
   const { warehouses, hasPermission, categories } = useAdLicoreria();
+  const { focusMode, toggleFocusMode } = useAdFocusMode();
   const [suppliers, setSuppliers] = useState<
     { id: string; name: string; creditDays: number }[]
   >([]);
@@ -93,7 +47,10 @@ export default function AdLicoreriaCompras() {
 
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<AdProductSearchHit[]>([]);
+  const [draftLine, setDraftLine] = useState<DraftLine | null>(null);
   const [lines, setLines] = useState<DraftLine[]>([]);
+  const [bcvRate, setBcvRate] = useState(772.54);
+  const [protectedRate, setProtectedRate] = useState(870);
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
   const [prelim, setPrelim] = useState<Record<string, unknown> | null>(null);
   const [msg, setMsg] = useState("");
@@ -132,6 +89,28 @@ export default function AdLicoreriaCompras() {
     return d;
   }, [prelim]);
 
+  const selectedMethod = useMemo(
+    () => methods.find((m) => m.id === paymentMethodId),
+    [methods, paymentMethodId],
+  );
+
+  const rateCtx = useMemo(
+    () => ({
+      currency,
+      bcv: bcvRate,
+      protectedRate,
+      useProtected: Boolean(selectedMethod?.usesSpecialRateRef),
+    }),
+    [currency, bcvRate, protectedRate, selectedMethod],
+  );
+
+  const totalsDisplay = useMemo(() => {
+    const sub = purchaseAmountToDisplay(totals.subtotal, rateCtx);
+    const tax = purchaseAmountToDisplay(totals.tax, rateCtx);
+    const grand = purchaseAmountToDisplay(totals.grandTotal, rateCtx);
+    return { sub, tax, grand };
+  }, [totals, rateCtx]);
+
   useEffect(() => {
     void (async () => {
       const s = await adCommerceClient.listSuppliers();
@@ -151,6 +130,20 @@ export default function AdLicoreriaCompras() {
           setCurrency((active[0].currency as "USD" | "BS") || "USD");
         }
       }
+      const bcv = await adCommerceClient.getBcv();
+      if (bcv.ok) {
+        const d = bcv.data as { current?: { rate: number } };
+        if (d.current?.rate) setBcvRate(d.current.rate);
+      }
+      const prot = await adCommerceClient.getProtected();
+      if (prot.ok) {
+        const d = prot.data as {
+          current?: { rate: number } | number | null;
+        };
+        const cur =
+          typeof d.current === "number" ? d.current : d.current?.rate;
+        if (cur != null && cur > 0) setProtectedRate(cur);
+      }
     })();
   }, []);
 
@@ -169,59 +162,44 @@ export default function AdLicoreriaCompras() {
     setMsg(r.products.length ? "" : "Sin resultados");
   }
 
-  function addHit(p: (typeof hits)[0], prefer: "UNIT" | "BOX" = "BOX") {
-    const pack = findUnitAndBox(p.presentations);
-    const hasBox = Boolean(pack.box);
-    const buyMode: "UNIT" | "BOX" = hasBox ? prefer : "UNIT";
-    const chosen =
-      buyMode === "BOX" && pack.box ? pack.box : pack.unit ?? p.presentations[0];
-    if (!chosen) return;
-    setLines((prev) => [
-      ...prev,
-      {
-        key: `${chosen.id}-${Date.now()}`,
-        presentationId: chosen.id,
-        unitPresentationId: pack.unit?.id,
-        boxPresentationId: pack.box?.id,
-        productLabel: `${p.sku ?? ""} ${p.name}`.trim(),
-        presentationLabel: chosen.name,
-        unitsPerPresentation: chosen.unitsPerPresentation || 1,
-        boxUnits: pack.box?.unitsPerPresentation || chosen.unitsPerPresentation || 1,
-        buyMode,
-        qty: 1,
-        qtyBonus: 0,
-        costMode: buyMode === "BOX" ? "PRESENTATION" : "UNIT",
-        unitCost: 0,
-        presentationCost: 0,
-        lineTotal: 0,
-        taxable: Boolean(p.taxable),
-        utilityPercent: Number(p.defaultUtilityPercent) || 0,
-      },
-    ]);
+  function selectHit(p: (typeof hits)[0], prefer: "UNIT" | "BOX" = "BOX") {
+    const draft = hitToDraftLine(p, prefer);
+    if (!draft) return;
+    setDraftLine(draft);
     setHits([]);
     setQuery("");
+    setMsg("Complete costo y cantidad, luego pulse Agregar.");
   }
 
-  function setBuyMode(line: DraftLine, buyMode: "UNIT" | "BOX") {
-    const nextId =
-      buyMode === "BOX"
-        ? line.boxPresentationId ?? line.presentationId
-        : line.unitPresentationId ?? line.presentationId;
-    const upp = buyMode === "BOX" ? Math.max(2, line.boxUnits || line.unitsPerPresentation) : 1;
-    const label = buyMode === "BOX" ? `Caja x${upp}` : "Unidad";
-    updateLine(line.key, {
-      buyMode,
-      costMode: buyMode === "BOX" ? "PRESENTATION" : "UNIT",
-      presentationId: nextId,
-      presentationLabel: label,
-      unitsPerPresentation: upp,
-    });
+  function patchDraft(patch: Partial<DraftLine>) {
+    setDraftLine((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
-  function updateLine(key: string, patch: Partial<DraftLine>) {
-    setLines((prev) =>
-      prev.map((l) => (l.key === key ? { ...l, ...patch } : l)),
-    );
+  function commitDraftLine() {
+    if (!draftLine) return;
+    if (!draftLine.qty || draftLine.qty <= 0) {
+      setMsg("Indique la cantidad comprada");
+      return;
+    }
+    const m = lineMoney(draftLine);
+    if (m.subtotal <= 0) {
+      setMsg("Indique el costo o total de la línea");
+      return;
+    }
+    setLines((prev) => [
+      ...prev,
+      { ...draftLine, key: `${draftLine.presentationId}-${Date.now()}` },
+    ]);
+    setDraftLine(null);
+    setMsg("Producto agregado a la factura");
+  }
+
+  function editLine(key: string) {
+    const line = lines.find((l) => l.key === key);
+    if (!line) return;
+    setDraftLine({ ...line, key: `draft-${line.presentationId}-${Date.now()}` });
+    setLines((prev) => prev.filter((l) => l.key !== key));
+    setMsg("Editando línea — pulse Agregar al confirmar");
   }
 
   function removeLine(key: string) {
@@ -258,34 +236,23 @@ export default function AdLicoreriaCompras() {
     const pack = findUnitAndBox(data.presentations);
     const hasBox = Boolean(pack.box);
     const buyMode: "UNIT" | "BOX" = hasBox ? "BOX" : "UNIT";
-    const pr =
-      buyMode === "BOX" && pack.box ? pack.box : pack.unit ?? data.presentations[0];
-    setLines((prev) => [
-      ...prev,
+    const draft = hitToDraftLine(
       {
-        key: `${pr.id}-${Date.now()}`,
-        presentationId: pr.id,
-        unitPresentationId: pack.unit?.id,
-        boxPresentationId: pack.box?.id,
-        productLabel: `${data.sku} ${data.name}`,
-        presentationLabel: pr.name,
-        unitsPerPresentation: Number(pr.unitsPerPresentation) || 1,
-        boxUnits: pack.box?.unitsPerPresentation || Number(pr.unitsPerPresentation) || 1,
-        buyMode,
-        qty: 1,
-        qtyBonus: 0,
-        costMode: buyMode === "BOX" ? "PRESENTATION" : "UNIT",
-        unitCost: 0,
-        presentationCost: 0,
-        lineTotal: 0,
+        sku: data.sku,
+        name: data.name,
         taxable: data.taxable,
-        utilityPercent: Number(data.defaultUtilityPercent) || newUtility,
+        defaultUtilityPercent: data.defaultUtilityPercent,
+        presentations: data.presentations,
       },
-    ]);
+      buyMode,
+    );
     setShowCreateProduct(false);
     setNewSku("");
     setNewName("");
-    setMsg("Producto creado y agregado a la compra");
+    if (draft) {
+      setDraftLine(draft);
+      setMsg("Producto creado — complete costo y pulse Agregar");
+    }
   }
 
   async function saveDraftOrTotalize(mode: "draft" | "totalize") {
@@ -361,6 +328,7 @@ export default function AdLicoreriaCompras() {
     setMsg("Compra confirmada — inventario y CxP registrados");
     setPrelim(r.data as Record<string, unknown>);
     setLines([]);
+    setDraftLine(null);
     setInvoice("");
   }
 
@@ -374,6 +342,14 @@ export default function AdLicoreriaCompras() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="ad-btn"
+            onClick={toggleFocusMode}
+            title={focusMode ? "Mostrar menú de módulos" : "Ocultar menú de módulos"}
+          >
+            {focusMode ? "Mostrar menú" : "Ocultar menú"}
+          </button>
           <button
             type="button"
             className="ad-btn"
@@ -499,6 +475,12 @@ export default function AdLicoreriaCompras() {
             onChange={(e) => setNotes(e.target.value)}
           />
         </label>
+        <p className="text-xs text-[var(--ad-muted)] sm:col-span-full">
+          BCV {bcvRate.toLocaleString("es-VE")} · Moneda factura {currency}
+          {selectedMethod?.usesSpecialRateRef
+            ? " · método con tasa protegida (cálculo interno)"
+            : ""}
+        </p>
       </section>
 
       <section className="ad-panel space-y-2">
@@ -544,7 +526,7 @@ export default function AdLicoreriaCompras() {
                     <button
                       type="button"
                       className="ad-btn ad-btn--gold"
-                      onClick={() => addHit(h, "BOX")}
+                      onClick={() => selectHit(h, "BOX")}
                     >
                       Caja
                     </button>
@@ -552,7 +534,7 @@ export default function AdLicoreriaCompras() {
                   <button
                     type="button"
                     className="ad-btn"
-                    onClick={() => addHit(h, "UNIT")}
+                    onClick={() => selectHit(h, "UNIT")}
                   >
                     Unidad
                   </button>
@@ -563,37 +545,62 @@ export default function AdLicoreriaCompras() {
         )}
       </section>
 
+      {draftLine ? (
+        <section className="ad-panel space-y-2">
+          <h2 className="ad-panel-title">Producto en edición</h2>
+          <AdPurchaseLineForm
+            line={draftLine}
+            currency={currency}
+            rateCtx={rateCtx}
+            onChange={patchDraft}
+            onAdd={commitDraftLine}
+            onCancel={() => setDraftLine(null)}
+          />
+        </section>
+      ) : null}
+
       <section className="ad-panel space-y-3">
-        <h2 className="ad-panel-title">Líneas de la factura</h2>
+        <h2 className="ad-panel-title">
+          Líneas de la factura ({lines.length})
+        </h2>
         {lines.map((l) => {
           const m = lineMoney(l);
-          const px = pricesFromCost(
-            m.unit,
-            Math.max(1, l.boxUnits || l.unitsPerPresentation),
-            l.utilityPercent,
-          );
-          const hasBox = Boolean(l.boxPresentationId) || l.boxUnits > 1;
+          const lineDisp = purchaseAmountToDisplay(m.subtotal, rateCtx);
           return (
             <article
               key={l.key}
-              className="space-y-2 rounded border border-[var(--ad-line)] p-3"
+              className="flex flex-wrap items-center justify-between gap-2 rounded border border-[var(--ad-line)] p-3 text-sm"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="font-medium text-[var(--ad-gold-soft)]">
-                    {l.productLabel}
-                    {l.taxable ? (
-                      <span className="ml-2 ad-badge ad-badge--ok text-[10px]">
-                        IVA
-                      </span>
-                    ) : (
-                      <span className="ml-2 ad-badge text-[10px]">Exento</span>
-                    )}
-                  </div>
-                  <div className="text-xs text-[var(--ad-muted)]">
-                    {l.presentationLabel} · {l.unitsPerPresentation} u. por caja
-                  </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-[var(--ad-gold-soft)]">
+                  {l.productLabel}
+                  {l.taxable ? (
+                    <span className="ml-2 ad-badge ad-badge--ok text-[10px]">
+                      IVA
+                    </span>
+                  ) : null}
                 </div>
+                <div className="text-xs text-[var(--ad-muted)]">
+                  {l.presentationLabel} · {l.qty}{" "}
+                  {l.buyMode === "BOX" ? "caja(s)" : "u."} ·{" "}
+                  {m.subtotal.toFixed(2)} {currency}
+                  {l.taxable ? ` + IVA ${m.tax.toFixed(2)}` : ""}
+                </div>
+                <div className="mt-1">
+                  <AdPriceDisplay
+                    price={{ usd: lineDisp.usd, bs: lineDisp.bs }}
+                    stacked
+                  />
+                </div>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  className="ad-btn"
+                  onClick={() => editLine(l.key)}
+                >
+                  Editar
+                </button>
                 <button
                   type="button"
                   className="ad-btn"
@@ -602,219 +609,51 @@ export default function AdLicoreriaCompras() {
                   Quitar
                 </button>
               </div>
-              {hasBox ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    className={`ad-btn ${l.buyMode === "BOX" ? "ad-btn--gold" : ""}`}
-                    onClick={() => setBuyMode(l, "BOX")}
-                  >
-                    Compré por caja
-                  </button>
-                  <button
-                    type="button"
-                    className={`ad-btn ${l.buyMode === "UNIT" ? "ad-btn--gold" : ""}`}
-                    onClick={() => setBuyMode(l, "UNIT")}
-                  >
-                    Compré por unidad
-                  </button>
-                </div>
-              ) : null}
-              <div>
-                <p className="text-xs text-[var(--ad-muted)]">¿Este producto lleva IVA?</p>
-                <div className="mt-1 grid max-w-sm grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    className={`ad-btn ${!l.taxable ? "ad-btn--gold" : ""}`}
-                    onClick={() => updateLine(l.key, { taxable: false })}
-                  >
-                    Sin IVA
-                  </button>
-                  <button
-                    type="button"
-                    className={`ad-btn ${l.taxable ? "ad-btn--gold" : ""}`}
-                    onClick={() => updateLine(l.key, { taxable: true })}
-                  >
-                    Con IVA 16%
-                  </button>
-                </div>
-              </div>
-              <label className="text-xs text-[var(--ad-muted)]">
-                {l.buyMode === "BOX" ? "¿Cuántas cajas compré?" : "¿Cuántas unidades?"}
-                <input
-                  className="ad-input mt-1"
-                  type="number"
-                  min={0}
-                  value={l.qty}
-                  onChange={(e) =>
-                    updateLine(l.key, { qty: Number(e.target.value) })
-                  }
-                />
-              </label>
-              <div>
-                <p className="text-xs text-[var(--ad-muted)]">
-                  ¿Cómo viene el costo en la factura?
-                </p>
-                <div className="mt-1 grid max-w-md grid-cols-2 gap-2">
-                  {l.buyMode === "BOX" ? (
-                    <>
-                      <button
-                        type="button"
-                        className={`ad-btn ${l.costMode === "PRESENTATION" ? "ad-btn--gold" : ""}`}
-                        onClick={() =>
-                          updateLine(l.key, { costMode: "PRESENTATION" })
-                        }
-                      >
-                        Precio por caja
-                      </button>
-                      <button
-                        type="button"
-                        className={`ad-btn ${l.costMode === "TOTAL" ? "ad-btn--gold" : ""}`}
-                        onClick={() => updateLine(l.key, { costMode: "TOTAL" })}
-                      >
-                        Total de la línea
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className={`ad-btn ${l.costMode === "UNIT" ? "ad-btn--gold" : ""}`}
-                        onClick={() => updateLine(l.key, { costMode: "UNIT" })}
-                      >
-                        Precio por unidad
-                      </button>
-                      <button
-                        type="button"
-                        className={`ad-btn ${l.costMode === "TOTAL" ? "ad-btn--gold" : ""}`}
-                        onClick={() => updateLine(l.key, { costMode: "TOTAL" })}
-                      >
-                        Total de la línea
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-              {l.costMode === "TOTAL" ? (
-                <label className="text-xs text-[var(--ad-muted)]">
-                  Total facturado ({currency}) —{" "}
-                  {l.buyMode === "BOX"
-                    ? `${l.qty} caja(s)`
-                    : `${l.qty} unidad(es)`}
-                  <input
-                    className="ad-input mt-1"
-                    type="number"
-                    step="0.01"
-                    value={l.lineTotal}
-                    onChange={(e) =>
-                      updateLine(l.key, {
-                        lineTotal: Number(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-              ) : l.buyMode === "BOX" ? (
-                <label className="text-xs text-[var(--ad-muted)]">
-                  Costo de cada caja ({currency})
-                  <input
-                    className="ad-input mt-1"
-                    type="number"
-                    step="0.01"
-                    value={l.presentationCost}
-                    onChange={(e) =>
-                      updateLine(l.key, {
-                        presentationCost: Number(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-              ) : (
-                <label className="text-xs text-[var(--ad-muted)]">
-                  Costo de cada unidad ({currency})
-                  <input
-                    className="ad-input mt-1"
-                    type="number"
-                    step="0.0001"
-                    value={l.unitCost}
-                    onChange={(e) =>
-                      updateLine(l.key, {
-                        unitCost: Number(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-              )}
-              <div className="rounded bg-black/20 p-2 text-sm leading-6">
-                {l.buyMode === "BOX" && l.qty > 0 ? (
-                  <div className="text-[var(--ad-muted)]">
-                    {l.qty} caja(s) × {m.box.toFixed(2)} {currency} ={" "}
-                    <strong>{m.subtotal.toFixed(2)}</strong> {currency}
-                  </div>
-                ) : null}
-                <div>
-                  Costo por caja:{" "}
-                  <strong>
-                    {m.box.toFixed(2)} {currency}
-                  </strong>
-                  {l.buyMode === "BOX" ? (
-                    <span className="text-[var(--ad-muted)]">
-                      {" "}
-                      ({m.upp} u. por caja)
-                    </span>
-                  ) : null}
-                </div>
-                <div>
-                  Costo por unidad:{" "}
-                  <strong>
-                    {m.unit.toFixed(4)} {currency}
-                  </strong>
-                </div>
-                <div>
-                  Total de esta línea:{" "}
-                  <strong>{m.subtotal.toFixed(2)}</strong> {currency}
-                  {l.taxable ? ` + IVA ${m.tax.toFixed(2)}` : ""}
-                </div>
-                {l.utilityPercent > 0 ? (
-                  <>
-                    <div className="mt-1 text-[var(--ad-gold-soft)]">
-                      Utilidad contable ficha {l.utilityPercent}%
-                    </div>
-                    <div>
-                      PVP unidad: <strong>{px.unitSale.toFixed(2)}</strong>
-                    </div>
-                    <div>
-                      PVP caja: <strong>{px.boxSale.toFixed(2)}</strong>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-xs text-[var(--ad-muted)]">
-                    Sin utilidad en la ficha: cárguela en Productos para ver el
-                    PVP.
-                  </div>
-                )}
-              </div>
             </article>
           );
         })}
-        {!lines.length && (
+        {!lines.length && !draftLine ? (
           <p className="p-2 text-sm text-[var(--ad-muted)]">
-            Busque el producto y elija si lo compró por caja o por unidad.
+            Busque un producto, elija caja o unidad, complete el costo y pulse
+            Agregar.
           </p>
-        )}
+        ) : null}
+        {!lines.length && draftLine ? (
+          <p className="p-2 text-sm text-[var(--ad-muted)]">
+            Aún no hay líneas confirmadas en esta factura.
+          </p>
+        ) : null}
       </section>
 
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-[var(--ad-border)] bg-[var(--ad-surface)]/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <div className="text-sm tabular-nums">
             <div>
-              SUBTOTAL: <strong>{totals.subtotal.toFixed(2)}</strong>
+              SUBTOTAL: <strong>{totals.subtotal.toFixed(2)}</strong> {currency}
+            </div>
+            <div className="text-xs text-[var(--ad-muted)]">
+              Ref. POS:{" "}
+              <AdPriceDisplay
+                price={{ usd: totalsDisplay.sub.usd, bs: totalsDisplay.sub.bs }}
+                stacked
+              />
             </div>
             <div>
-              IVA 16%: <strong>{totals.tax.toFixed(2)}</strong>
+              IVA 16%: <strong>{totals.tax.toFixed(2)}</strong> {currency}
             </div>
             <div className="text-base">
               TOTAL GENERAL: <strong>{totals.grandTotal.toFixed(2)}</strong>{" "}
               {currency}
+            </div>
+            <div className="text-xs text-[var(--ad-muted)]">
+              Ref. POS:{" "}
+              <AdPriceDisplay
+                price={{
+                  usd: totalsDisplay.grand.usd,
+                  bs: totalsDisplay.grand.bs,
+                }}
+                stacked
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

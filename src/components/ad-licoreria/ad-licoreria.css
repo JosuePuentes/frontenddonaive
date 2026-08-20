@@ -56,6 +56,35 @@
   min-height: 100vh;
 }
 
+.ad-layout--focus {
+  grid-template-columns: 1fr;
+}
+
+.ad-layout--focus .ad-topbar {
+  padding-top: 0.5rem;
+}
+
+.ad-price-stack {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.25;
+  vertical-align: middle;
+}
+
+.ad-price-stack__usd {
+  font-weight: 600;
+  color: var(--ad-gold-soft);
+}
+
+.ad-price-stack__bs {
+  font-size: 0.78em;
+  color: var(--ad-muted);
+}
+
+.ad-purchase-draft .ad-price-stack {
+  display: inline-flex;
+}
+
 @media (max-width: 960px) {
   .ad-layout {
     grid-template-columns: 1fr;

@@ -3,6 +3,7 @@ import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import { AD_ROLE_LABELS } from "@/lib/ad-licoreria/access";
 import { normalizeAdLicoreriaPathname } from "@/lib/ad-licoreria-host";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
+import { useAdFocusMode } from "@/lib/ad-licoreria/focus-mode";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { adLogoutRequest } from "@/services/ad-licoreria/session";
 import { adMockLogout } from "@/services/ad-licoreria/mock-login";
@@ -50,20 +51,23 @@ function AdLicoreriaTopbar({ onOpenMenu }: Props) {
   const session = getCurrentOperator();
   const mode = getAdDataSourceMode();
   const warehouseLocked = Boolean(session?.warehouseId);
+  const { focusMode, toggleFocusMode } = useAdFocusMode();
   /** Con sesión: inicio operativo. Sin sesión: home público. */
   const homeTo = session ? routes.inicio : routes.home;
 
   return (
     <header className="ad-topbar">
       <div className="ad-topbar__lead">
-        <button
-          type="button"
-          className="ad-btn ad-topbar__menu"
-          onClick={onOpenMenu}
-          aria-label="Abrir menú de módulos"
-        >
-          Menú
-        </button>
+        {!focusMode ? (
+          <button
+            type="button"
+            className="ad-btn ad-topbar__menu"
+            onClick={onOpenMenu}
+            aria-label="Abrir menú de módulos"
+          >
+            Menú
+          </button>
+        ) : null}
         <div className="min-w-0">
           <p className="ad-eyebrow">A&D Licorería & Bodegón</p>
           <h1 className="ad-display mt-1 text-xl text-[var(--ad-text)] sm:text-3xl truncate">
@@ -81,6 +85,14 @@ function AdLicoreriaTopbar({ onOpenMenu }: Props) {
         </div>
       </div>
       <div className="ad-topbar__actions">
+        <button
+          type="button"
+          className="ad-btn"
+          onClick={toggleFocusMode}
+          title={focusMode ? "Mostrar menú de módulos" : "Ocultar menú de módulos"}
+        >
+          {focusMode ? "Mostrar menú" : "Ocultar menú"}
+        </button>
         <button
           type="button"
           className="ad-btn ad-btn--gold"

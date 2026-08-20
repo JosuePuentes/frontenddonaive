@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Link } from "react-router";
 import {
-  formatAdPrice,
   toBaseUnits,
 } from "@/lib/ad-licoreria/conversions";
+import { useAdFocusMode } from "@/lib/ad-licoreria/focus-mode";
 import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import { findUnitAndBox } from "@/lib/ad-licoreria/pack";
 import {
@@ -19,6 +19,7 @@ import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import { isAdApiDataSource } from "@/services/ad-licoreria/data-source";
 import { AdPackPickPrompt } from "@/components/ad-licoreria/AdPackPickPrompt";
+import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
 import {
   AdPreliminarDocument,
   AdSaleReceiptFallback,
@@ -60,6 +61,7 @@ export default function AdLicoreriaVentas() {
   const activeMethods = paymentMethods.filter((m) => m.active);
   const sessionUser = getCurrentOperator();
   const routes = getAdLicoreriaRoutes();
+  const { focusMode, toggleFocusMode } = useAdFocusMode();
 
   const cashierId = sessionUser?.id ?? currentOperatorId ?? "";
   const posWarehouseId = sessionUser?.warehouseId ?? "";
@@ -551,6 +553,13 @@ export default function AdLicoreriaVentas() {
               : ""}
           </p>
         </div>
+        <button
+          type="button"
+          className="ad-btn shrink-0"
+          onClick={toggleFocusMode}
+        >
+          {focusMode ? "Mostrar menú" : "Ocultar menú"}
+        </button>
         {!canSell ? (
           <p className="text-sm text-[var(--ad-danger)]">
             {!posWarehouseId
@@ -604,7 +613,12 @@ export default function AdLicoreriaVentas() {
                       <span className="font-medium">{p.name}</span>
                       <span className="text-[var(--ad-muted)]">
                         {p.brand} · {p.sku}
-                        {pres ? ` · ${formatAdPrice(pres.price)}` : ""}
+                        {pres ? (
+                          <>
+                            {" · "}
+                            <AdPriceDisplay price={pres.price} stacked />
+                          </>
+                        ) : null}
                       </span>
                     </button>
                   </li>
@@ -631,12 +645,14 @@ export default function AdLicoreriaVentas() {
               const pres = presentations.find((p) => p.id === l.presentationId);
               const alert = cartAlerts[i];
               const lineUsd = l.unitPrice.usd * l.qty;
+              const lineBs = l.unitPrice.bs * l.qty;
               return (
                 <article key={`${l.presentationId}-${i}`} className="ad-pos__cart-item">
                   <div className="ad-pos__cart-main">
                     <strong>{prod?.name ?? "Producto"}</strong>
-                    <span className="text-[var(--ad-muted)]">
-                      {pres?.name} · ${l.unitPrice.usd.toFixed(2)} c/u
+                    <span className="text-[var(--ad-muted)] block">
+                      {pres?.name} ·{" "}
+                      <AdPriceDisplay price={l.unitPrice} stacked />
                     </span>
                     {alert && alert.shortfall > 0 ? (
                       <span className="text-[var(--ad-gold-soft)] text-xs">
@@ -664,8 +680,11 @@ export default function AdLicoreriaVentas() {
                         +
                       </button>
                     </div>
-                    <strong className="ad-pos__line-total">
-                      ${lineUsd.toFixed(2)}
+                    <strong className="ad-pos__line-total block">
+                      <AdPriceDisplay
+                        price={{ usd: lineUsd, bs: lineBs }}
+                        stacked
+                      />
                     </strong>
                     <button
                       type="button"
