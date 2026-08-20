@@ -31,6 +31,9 @@ export default function AdLicoreriaInventario() {
     warehouses.find((w) => w.active)?.id ?? "wh-2",
   );
   const [query, setQuery] = useState("");
+  const [costFilter, setCostFilter] = useState<"all" | "with-cost" | "no-cost">(
+    "all",
+  );
 
   const canRead = hasPermission("inventory.read");
   const canEditProduct = hasPermission("products.manage");
@@ -90,9 +93,90 @@ export default function AdLicoreriaInventario() {
           pvpUnit,
           pvpBox,
           hasBox: Boolean(pack.box),
+          unitsPerBox: pack.box?.unitsPerPresentation ?? 1,
+          brand: p.brand,
         };
       });
   }, [products, query, warehouseId, getOperationalAvailability, getPresentationsFor, bcv]);
+
+  const visibleRows = useMemo(() => {
+    if (costFilter === "with-cost") return rows.filter((r) => hasAdMoney(r.cost));
+    if (costFilter === "no-cost") return rows.filter((r) => !hasAdMoney(r.cost));
+    return rows;
+  }, [rows, costFilter]);
+
+  const downloadInventoryCsv = () => {
+    const depositoNombre = warehouseLabel(warehouseId, warehouses);
+    const filterLabel =
+      costFilter === "with-cost"
+        ? "con-costo"
+        : costFilter === "no-cost"
+          ? "sin-costo"
+          : "general";
+    const headers = [
+      "Producto",
+      "Marca",
+      "SKU",
+      "Codigo barras",
+      "Deposito",
+      "Unidades fisico",
+      "Unidades comprometidas",
+      "Unidades disponibles",
+      "Unidades por caja",
+      "Cajas equivalentes",
+      "Costo USD",
+      "Costo Bs",
+      "PVP unidad USD",
+      "PVP unidad Bs",
+      "PVP caja USD",
+      "PVP caja Bs",
+      "Estado",
+    ];
+    const escape = (value: string | number) => {
+      const text = String(value ?? "");
+      if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+      return text;
+    };
+    const lines = [
+      headers.join(","),
+      ...visibleRows.map((r) => {
+        const boxes =
+          r.unitsPerBox > 1
+            ? (r.physical / r.unitsPerBox).toFixed(2)
+            : String(r.physical);
+        return [
+          r.product.name,
+          r.brand,
+          r.product.sku,
+          r.product.barcode,
+          depositoNombre,
+          r.physical,
+          r.committed,
+          r.available,
+          r.unitsPerBox,
+          boxes,
+          r.cost.usd.toFixed(4),
+          r.cost.bs.toFixed(2),
+          r.pvpUnit.usd.toFixed(2),
+          r.pvpUnit.bs.toFixed(2),
+          r.hasBox ? r.pvpBox.usd.toFixed(2) : "",
+          r.hasBox ? r.pvpBox.bs.toFixed(2) : "",
+          r.status,
+        ]
+          .map(escape)
+          .join(",");
+      }),
+    ];
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `inventario-${filterLabel}-${depositoNombre.replace(/\s+/g, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (!canRead) {
     return (
@@ -121,7 +205,7 @@ export default function AdLicoreriaInventario() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <select
           className="ad-select max-w-xs"
           value={warehouseId}
@@ -139,6 +223,35 @@ export default function AdLicoreriaInventario() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        <div className="flex flex-wrap gap-1">
+          {(
+            [
+              ["all", "General"],
+              ["with-cost", "Con mi costo"],
+              ["no-cost", "Sin costo"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={`ad-btn text-xs ${costFilter === value ? "ad-btn--gold" : ""}`}
+              onClick={() => setCostFilter(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="ad-btn ad-btn--gold"
+          onClick={downloadInventoryCsv}
+          disabled={visibleRows.length === 0}
+        >
+          Descargar CSV
+        </button>
+        <span className="text-xs text-[var(--ad-muted)]">
+          {visibleRows.length} de {rows.length} productos
+        </span>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5 text-sm">
@@ -159,13 +272,25 @@ export default function AdLicoreriaInventario() {
                 <th>Costo (CPP)</th>
                 <th>PVP unidad</th>
                 <th>PVP caja</th>
+                <th>U. / caja</th>
                 <th>Físico</th>
                 <th>Disponible</th>
                 <th>Ficha</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {visibleRows.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-sm text-[var(--ad-muted)]">
+                    {costFilter === "with-cost"
+                      ? "No hay productos con costo en este depósito."
+                      : costFilter === "no-cost"
+                        ? "Todos los productos visibles ya tienen costo."
+                        : "No hay productos que coincidan con la búsqueda."}
+                  </td>
+                </tr>
+              ) : null}
+              {visibleRows.map((r) => (
                 <tr key={r.product.id}>
                   <td>
                     <Link
@@ -181,7 +306,7 @@ export default function AdLicoreriaInventario() {
                       {r.product.baseUnitLabel}
                     </div>
                   </td>
-                  <td>{warehouseLabel(warehouseId)}</td>
+                  <td>{warehouseLabel(warehouseId, warehouses)}</td>
                   <td>
                     {hasAdMoney(r.cost) ? (
                       <AdPriceDisplay price={r.cost} stacked />
@@ -203,6 +328,7 @@ export default function AdLicoreriaInventario() {
                       <span className="text-xs text-[var(--ad-muted)]">—</span>
                     )}
                   </td>
+                  <td>{r.unitsPerBox > 1 ? r.unitsPerBox : "—"}</td>
                   <td>{r.physical}</td>
                   <td
                     className={
