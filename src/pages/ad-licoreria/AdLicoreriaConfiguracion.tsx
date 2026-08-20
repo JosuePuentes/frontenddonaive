@@ -367,15 +367,21 @@ export default function AdLicoreriaConfiguracion() {
           personalizados.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Link
-            className="ad-btn ad-btn--gold"
-            to={AD_LICORERIA_ROUTES.configUsuarios}
-          >
-            Abrir módulo de usuarios
-          </Link>
-          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.configPermisos}>
-            Matriz de permisos
-          </Link>
+          {configLinks
+            .filter((link) => link.key === "usuarios" || link.key === "permisos")
+            .map((link) => (
+              <Link
+                key={link.key}
+                className={
+                  link.key === "usuarios" ? "ad-btn ad-btn--gold" : "ad-btn"
+                }
+                to={link.to}
+              >
+                {link.key === "usuarios"
+                  ? "Abrir módulo de usuarios"
+                  : link.label}
+              </Link>
+            ))}
         </div>
         <ul className="space-y-1 text-xs text-[var(--ad-muted)]">
           {operators.slice(0, 8).map((o) => (
