@@ -6,6 +6,7 @@ import {
   ValidationError,
 } from "../errors/app-error.js";
 import {
+  hasAdPermission,
   requireAdPermission,
   requireWarehouseAccess,
   resolveEffectiveWarehouseId,
@@ -1612,16 +1613,31 @@ export const adCommerceService = {
 
   /** Solo usuarios autorizados — no listar en dashboards. */
   async getProtectedRate(ctx: AdRequestContext) {
-    requireAdPermission(ctx, "rates.protected.manage");
-    const latest = await latestRate(ctx.tenantId, "PROTECTED");
+    if (
+      !hasAdPermission(ctx, "rates.protected.manage") &&
+      !hasAdPermission(ctx, "finance.parallel_rate")
+    ) {
+      requireAdPermission(ctx, "rates.protected.manage");
+    }
     const prisma = getPrisma();
+    const latest = await prisma.adExchangeRate.findFirst({
+      where: { tenantId: ctx.tenantId, kind: "PROTECTED" },
+      orderBy: { effectiveAt: "desc" },
+    });
     const history = await prisma.adExchangeRate.findMany({
       where: { tenantId: ctx.tenantId, kind: "PROTECTED" },
       orderBy: { effectiveAt: "desc" },
       take: 20,
     });
     return {
-      current: latest,
+      current: latest
+        ? {
+            rate: num(latest.rate),
+            effectiveAt: latest.effectiveAt,
+            reason: latest.reason,
+            operatorId: latest.operatorId,
+          }
+        : null,
       history: history.map((h) => ({
         id: h.id,
         rate: num(h.rate),

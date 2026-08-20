@@ -15,6 +15,9 @@ export default function AdLicoreriaTasas() {
   >([]);
   const [protectedRate, setProtectedRate] = useState(870);
   const [prevProtected, setPrevProtected] = useState<number | null>(null);
+  const [protectedHistory, setProtectedHistory] = useState<
+    { rate: number; effectiveAt: string }[]
+  >([]);
   const [showProtected, setShowProtected] = useState(false);
   const [hotkey, setHotkey] = useState("Control+x");
   const [msg, setMsg] = useState("");
@@ -39,11 +42,19 @@ export default function AdLicoreriaTasas() {
       if (canParallel) {
         const p = await adCommerceClient.getProtected();
         if (p.ok) {
-          const cur = (p.data as { current?: { rate: number } })?.current?.rate;
-          if (cur) {
+          const d = p.data as {
+            current?: { rate: number } | number | null;
+            history?: { rate: number; effectiveAt: string }[];
+          };
+          const cur =
+            typeof d.current === "number"
+              ? d.current
+              : d.current?.rate;
+          if (cur != null && cur > 0) {
             setProtectedRate(cur);
             setPrevProtected(cur);
           }
+          if (d.history?.length) setProtectedHistory(d.history);
         }
       }
     })();
@@ -99,6 +110,14 @@ export default function AdLicoreriaTasas() {
     if (r.ok) {
       setPrevProtected(protectedRate);
       setShowProtected(false);
+      const p = await adCommerceClient.getProtected();
+      if (p.ok) {
+        const d = p.data as {
+          current?: { rate: number } | number | null;
+          history?: { rate: number; effectiveAt: string }[];
+        };
+        if (d.history?.length) setProtectedHistory(d.history);
+      }
     }
   }
 
@@ -141,6 +160,18 @@ export default function AdLicoreriaTasas() {
           >
             Abrir referencia privada
           </button>
+          {protectedHistory.length > 0 ? (
+            <div>
+              <h3 className="text-sm font-medium">Historial (privado)</h3>
+              <ul className="mt-1 max-h-32 space-y-1 overflow-auto text-xs text-[var(--ad-muted)]">
+                {protectedHistory.map((h, i) => (
+                  <li key={`${h.effectiveAt}-${i}`}>
+                    {h.rate} · {new Date(h.effectiveAt).toLocaleString("es-VE")}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </section>
       )}
 
