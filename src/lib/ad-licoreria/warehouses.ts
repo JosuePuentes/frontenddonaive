@@ -35,3 +35,18 @@ export function resolveCanonicalWarehouseId(
   if (found?.id) return found.id;
   return kind === "LIC" ? AD_WH_LICORERIA : AD_WH_BODEGON;
 }
+
+/** El bodegón usa mesas/espacios; la licorería vende directo en mostrador. */
+export function warehouseUsesMesas(
+  warehouseId: string,
+  warehouses: AdWarehouseRef[] = [],
+): boolean {
+  if (!warehouseId) return false;
+  const wh = warehouses.find((w) => w.id === warehouseId);
+  const code = (wh?.code ?? "").toUpperCase();
+  if (code === "LIC") return false;
+  if (code === "BOD") return true;
+  if (warehouseId === AD_WH_LICORERIA) return false;
+  if (warehouseId === AD_WH_BODEGON) return true;
+  return false;
+}

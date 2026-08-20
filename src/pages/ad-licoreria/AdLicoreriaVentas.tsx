@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   formatAdPrice,
   toBaseUnits,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/ad-licoreria/product-lookup";
 import {
   warehouseLabel,
+  warehouseUsesMesas,
 } from "@/lib/ad-licoreria/warehouses";
 import { AD_SHORTAGE_REASON_LABELS } from "@/types/ad-licoreria";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
@@ -99,10 +100,34 @@ export default function AdLicoreriaVentas() {
   const [confirmedSale, setConfirmedSale] = useState<AdSale | null>(null);
   const [shortageReason, setShortageReason] = useState("");
   const [shortageNote, setShortageNote] = useState("");
-  const [posStep, setPosStep] = useState<"productos" | "cliente" | "cobro">(
-    "productos",
-  );
+  const [extrasOpen, setExtrasOpen] = useState(false);
+  const [cobroOpen, setCobroOpen] = useState(false);
   const [packPick, setPackPick] = useState<{ productId: string } | null>(null);
+
+  const usesMesas = warehouseUsesMesas(posWarehouseId, warehouses);
+  const posTables = useMemo(
+    () =>
+      tables.filter(
+        (t) =>
+          t.active &&
+          usesMesas &&
+          (!posWarehouseId || !t.warehouseId || t.warehouseId === posWarehouseId),
+      ),
+    [tables, posWarehouseId, usesMesas],
+  );
+  const selectedTable = tables.find((t) => t.id === tableId);
+  const hasExtras = Boolean(
+    customerId ||
+      notes.trim() ||
+      (usesMesas && (tableId || mesoneraId)),
+  );
+
+  useEffect(() => {
+    if (!usesMesas) {
+      setTableId("");
+      setMesoneraId("");
+    }
+  }, [usesMesas, posWarehouseId]);
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -392,6 +417,7 @@ export default function AdLicoreriaVentas() {
       return;
     }
     setDraft(result.data);
+    setCobroOpen(false);
     setConfirmedReceipt(null);
     setMsg(`Preliminar ${result.data.provisionalNumber}`);
   }
@@ -447,7 +473,7 @@ export default function AdLicoreriaVentas() {
     setShortageReason("");
     setShortageNote("");
     setDraft(null);
-    setPosStep("productos");
+    setCobroOpen(false);
     setMsg(`Factura confirmada ${result.data.receiptNumber}`);
   }
 
@@ -495,6 +521,7 @@ export default function AdLicoreriaVentas() {
     setCart([]);
     setPayments([]);
     setNotes("");
+    setCobroOpen(false);
     setMsg(
       `Cuenta #${opened.data.number} abierta en ${warehouseLabel(posWarehouseId, warehouses)} · pendientes de servir`,
     );
@@ -534,6 +561,7 @@ export default function AdLicoreriaVentas() {
     setCart([]);
     setPayments([]);
     setNotes("");
+    setCobroOpen(false);
     setMsg(
       `Prepago ${result.data.code} · Recibo ${result.data.receiptNumber} · QR listo`,
     );
@@ -554,6 +582,8 @@ export default function AdLicoreriaVentas() {
               ? `Depósito: ${warehouseLabel(posWarehouseId, warehouses)}`
               : "Seleccione un usuario POS con depósito"}
             {cashier ? ` · ${cashier.name}` : ""}
+            {" · "}
+            Agregue productos y pulse Cobrar cuando esté listo.
           </p>
         </div>
         {!canSell ? (
@@ -562,39 +592,6 @@ export default function AdLicoreriaVentas() {
           </p>
         ) : null}
       </header>
-
-      <nav className="ad-pos__steps" aria-label="Pasos de venta">
-        {(
-          [
-            ["productos", "1", "Productos"],
-            ["cliente", "2", "Cliente"],
-            ["cobro", "3", "Cobro"],
-          ] as const
-        ).map(([k, n, label]) => {
-          const locked = k !== "productos" && cart.length === 0;
-          return (
-            <button
-              key={k}
-              type="button"
-              className={`ad-pos__step ${posStep === k ? "is-active" : ""} ${
-                k === "cliente" && cart.length ? "has-data" : ""
-              } ${k === "cobro" && cart.length ? "has-data" : ""}`}
-              disabled={locked}
-              onClick={() => setPosStep(k)}
-            >
-              <span className="ad-pos__step-num">{n}</span>
-              <span>{label}</span>
-            </button>
-          );
-        })}
-      </nav>
-      <p className="ad-pos__hint">
-        {posStep === "productos"
-          ? "1) Elija producto → presentación → cantidad → Agregar"
-          : posStep === "cliente"
-            ? "2) Opcional: mesa, mesonera o cliente. Luego Cobro."
-            : "3) Añada el pago y pulse Facturar."}
-      </p>
 
       {!sessionUser?.warehouseId ? (
         <section className="ad-panel space-y-2">
@@ -626,8 +623,7 @@ export default function AdLicoreriaVentas() {
         </section>
       ) : null}
 
-      {posStep === "productos" ? (
-        <section className="ad-panel ad-pos__panel space-y-3">
+      <section className="ad-panel ad-pos__panel space-y-3">
           <h3 className="ad-pos__section-title">Buscar y agregar</h3>
           <div className="flex flex-wrap gap-2">
             <input
@@ -815,254 +811,27 @@ export default function AdLicoreriaVentas() {
             ) : null}
           </div>
         </section>
+
+      {msg ? (
+        <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p>
       ) : null}
 
-      {posStep === "cliente" ? (
-        <section className="ad-panel ad-pos__panel space-y-3">
-          <h3 className="ad-pos__section-title">Cliente y mesa</h3>
-          <p className="text-sm text-[var(--ad-muted)]">
-            Opcional: asocie mesa, mesonera o cliente antes de cobrar.
-          </p>
-          <label className="ad-pos__field">
-            <span>Mesa / espacio</span>
-            <select
-              className="ad-select"
-              value={tableId}
-              onChange={(e) => setTableId(e.target.value)}
-            >
-              <option value="">Sin mesa (venta directa)</option>
-              {tables
-                .filter(
-                  (t) =>
-                    t.active &&
-                    (!posWarehouseId ||
-                      !t.warehouseId ||
-                      t.warehouseId === posWarehouseId),
-                )
-                .map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.code ?? `Mesa ${t.number}`} ({t.status})
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="ad-pos__field">
-            <span>Mesonera</span>
-            <select
-              className="ad-select"
-              value={mesoneraId}
-              onChange={(e) => setMesoneraId(e.target.value)}
-            >
-              <option value="">Sin mesonera</option>
-              {floorUsers
-                .filter((m) => m.role === "mesonera")
-                .map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="ad-pos__field">
-            <span>Cliente</span>
-            <select
-              className="ad-select"
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-            >
-              <option value="">Cliente general</option>
-              {customers
-                .filter((c) => c.active)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} · {c.phone}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="ad-pos__field">
-            <span>Notas</span>
-            <textarea
-              className="ad-input min-h-16"
-              placeholder="Observaciones de la venta"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </label>
-        </section>
-      ) : null}
-
-      {posStep === "cobro" ? (
-        <section className="ad-panel ad-pos__panel space-y-3">
-          <h3 className="ad-pos__section-title">Cobro</h3>
-          <div className="ad-pos__total-card">
-            <p className="ad-eyebrow">Total a cobrar</p>
-            <p className="ad-display text-4xl text-[var(--ad-gold-soft)]">
-              ${netUsd.toFixed(2)}
-            </p>
-            <p className="text-sm text-[var(--ad-muted)]">
-              Bs {Math.max(0, totalBs).toLocaleString("es-VE")}
-              {discountUsd ? ` · desc. $${discountUsd.toFixed(2)}` : ""}
-            </p>
-            <div className="ad-pos__pay-status">
-              <span>Pagado ${paidUsd.toFixed(2)}</span>
-              <span>
-                Resta ${Math.max(0, netUsd - paidUsd).toFixed(2)}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2">
-            <label className="ad-pos__field">
-              <span>Descuento USD</span>
-              <input
-                className="ad-input"
-                type="number"
-                min={0}
-                step="0.01"
-                inputMode="decimal"
-                value={discountUsd || ""}
-                onChange={(e) => setDiscountUsd(Number(e.target.value) || 0)}
-              />
-            </label>
-            <label className="ad-pos__field">
-              <span>Autorización</span>
-              <input
-                className="ad-input"
-                placeholder="Si aplica descuento"
-                value={discountAuth}
-                onChange={(e) => setDiscountAuth(e.target.value)}
-              />
-            </label>
-          </div>
-
-          <label className="ad-pos__field">
-            <span>Método de pago</span>
-            <select
-              className="ad-select"
-              value={payMethod}
-              onChange={(e) =>
-                setPayMethod(e.target.value as AdPaymentMethodCode)
-              }
-            >
-              {activeMethods.map((m) => (
-                <option key={m.id} value={m.code}>
-                  {m.name} ({m.currency})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="ad-pos__field">
-            <span>Monto {methodCfg?.currency ?? ""}</span>
-            <input
-              className="ad-input"
-              placeholder="0.00"
-              inputMode="decimal"
-              value={payAmount}
-              onChange={(e) => setPayAmount(e.target.value)}
-            />
-          </label>
-          {methodCfg?.requiresBank ? (
-            <label className="ad-pos__field">
-              <span>Banco</span>
-              <input
-                className="ad-input"
-                value={payBank}
-                onChange={(e) => setPayBank(e.target.value)}
-              />
-            </label>
-          ) : null}
-          {methodCfg?.requiresReference ? (
-            <label className="ad-pos__field">
-              <span>Referencia</span>
-              <input
-                className="ad-input"
-                value={payRef}
-                onChange={(e) => setPayRef(e.target.value)}
-              />
-            </label>
-          ) : null}
-          {payMethod === "pago_movil" ? (
-            <label className="ad-pos__field">
-              <span>Teléfono origen</span>
-              <input
-                className="ad-input"
-                value={payOrigin}
-                onChange={(e) => setPayOrigin(e.target.value)}
-                inputMode="tel"
-              />
-            </label>
-          ) : null}
-          <button type="button" className="ad-btn ad-btn--touch" onClick={addPayment}>
-            Añadir pago
-          </button>
-          <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
-            {payments.map((p, i) => (
-              <li key={`${p.method}-${i}`} className="flex justify-between gap-2">
-                <span>
-                  {p.method} · {p.currency} {p.amount}
-                  {p.reference ? ` · ${p.reference}` : ""}
-                </span>
-                <button
-                  type="button"
-                  className="ad-btn"
-                  onClick={() =>
-                    setPayments((list) => list.filter((_, idx) => idx !== i))
-                  }
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          <div className="ad-pos__actions">
-            <button
-              type="button"
-              className="ad-btn ad-btn--gold ad-btn--touch"
-              onClick={() => void openPrelim()}
-              disabled={!canSell || !cart.length}
-            >
-              Facturar (preliminar)
-            </button>
-            <button
-              type="button"
-              className="ad-btn ad-btn--primary ad-btn--touch"
-              onClick={() => void leaveOpen()}
-              disabled={!canSell || !cart.length}
-            >
-              Abrir cuenta
-            </button>
-            <button
-              type="button"
-              className="ad-btn ad-btn--touch"
-              onClick={() => void toPrepaid()}
-              disabled={!canSell || !cart.length}
-            >
-              Prepago + QR
-            </button>
-          </div>
-          {msg ? (
-            <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p>
-          ) : null}
-          {confirmedSale ? (
-            <AdSaleReceiptFallback
-              sale={confirmedSale}
-              productName={(id) =>
-                products.find((p) => p.id === id)?.name ?? id
-              }
-              presentationName={(id) =>
-                presentations.find((p) => p.id === id)?.name ?? id
-              }
-              onClose={() => {
-                setConfirmedSale(null);
-                setConfirmedReceipt(null);
-              }}
-            />
-          ) : confirmedReceipt ? (
-            <div className="ad-cop__alert text-sm">Recibo {confirmedReceipt}</div>
-          ) : null}
-        </section>
+      {confirmedSale ? (
+        <AdSaleReceiptFallback
+          sale={confirmedSale}
+          productName={(id) =>
+            products.find((p) => p.id === id)?.name ?? id
+          }
+          presentationName={(id) =>
+            presentations.find((p) => p.id === id)?.name ?? id
+          }
+          onClose={() => {
+            setConfirmedSale(null);
+            setConfirmedReceipt(null);
+          }}
+        />
+      ) : confirmedReceipt ? (
+        <div className="ad-cop__alert text-sm">Recibo {confirmedReceipt}</div>
       ) : null}
 
       <div className="ad-pos__footer">
@@ -1074,53 +843,316 @@ export default function AdLicoreriaVentas() {
           <p className="text-xs text-[var(--ad-muted)]">
             {cart.length} ítem(s)
             {customer ? ` · ${customer.name}` : ""}
+            {usesMesas && selectedTable
+              ? ` · ${selectedTable.code ?? `Mesa ${selectedTable.number}`}`
+              : ""}
             {mesonera ? ` · ${mesonera.name}` : ""}
           </p>
         </div>
         <div className="ad-pos__footer-actions">
-          {posStep !== "productos" ? (
-            <button
-              type="button"
-              className="ad-btn"
-              onClick={() =>
-                setPosStep(posStep === "cobro" ? "cliente" : "productos")
+          <button
+            type="button"
+            className={`ad-btn ${hasExtras ? "ad-btn--gold" : ""}`}
+            onClick={() => setExtrasOpen(true)}
+          >
+            Más opciones
+            {hasExtras ? " · ✓" : ""}
+          </button>
+          <button
+            type="button"
+            className="ad-btn ad-btn--gold"
+            disabled={!canSell || !cart.length}
+            onClick={() => {
+              setCobroOpen(true);
+              if (!payAmount && netUsd > 0) {
+                setPayAmount(String(Math.max(0, netUsd - paidUsd).toFixed(2)));
               }
-            >
-              Atrás
-            </button>
-          ) : null}
-          {posStep === "productos" ? (
-            <button
-              type="button"
-              className="ad-btn ad-btn--gold"
-              disabled={!cart.length}
-              onClick={() => setPosStep("cliente")}
-            >
-              Siguiente
-            </button>
-          ) : null}
-          {posStep === "cliente" ? (
-            <button
-              type="button"
-              className="ad-btn ad-btn--gold"
-              disabled={!cart.length}
-              onClick={() => setPosStep("cobro")}
-            >
-              Ir a cobro
-            </button>
-          ) : null}
-          {posStep === "cobro" ? (
-            <button
-              type="button"
-              className="ad-btn ad-btn--gold"
-              disabled={!canSell || !cart.length}
-              onClick={() => void openPrelim()}
-            >
-              Facturar
-            </button>
-          ) : null}
+            }}
+          >
+            Cobrar
+          </button>
         </div>
       </div>
+
+      {extrasOpen ? (
+        <div
+          className="ad-modal-backdrop"
+          role="presentation"
+          onClick={() => setExtrasOpen(false)}
+        >
+          <div
+            className="ad-modal space-y-3"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ad-pos-extras-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="ad-pos-extras-title" className="ad-panel-title">
+              Opciones de la venta
+            </h3>
+            <p className="text-sm text-[var(--ad-muted)]">
+              Todo es opcional. Puede agregar productos y cobrar sin completar
+              esto.
+            </p>
+            {usesMesas ? (
+              <>
+                <label className="ad-pos__field">
+                  <span>Mesa / espacio (bodegón)</span>
+                  <select
+                    className="ad-select"
+                    value={tableId}
+                    onChange={(e) => setTableId(e.target.value)}
+                  >
+                    <option value="">Venta directa</option>
+                    {posTables.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.code ?? `Mesa ${t.number}`} ({t.status})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="ad-pos__field">
+                  <span>Mesonera</span>
+                  <select
+                    className="ad-select"
+                    value={mesoneraId}
+                    onChange={(e) => setMesoneraId(e.target.value)}
+                  >
+                    <option value="">Sin mesonera</option>
+                    {floorUsers
+                      .filter((m) => m.role === "mesonera")
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </>
+            ) : (
+              <p className="text-sm text-[var(--ad-muted)]">
+                En licorería no se usan mesas; venta directa en mostrador.
+              </p>
+            )}
+            <label className="ad-pos__field">
+              <span>Cliente</span>
+              <select
+                className="ad-select"
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+              >
+                <option value="">Cliente general</option>
+                {customers
+                  .filter((c) => c.active)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} · {c.phone}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="ad-pos__field">
+              <span>Notas</span>
+              <textarea
+                className="ad-input min-h-16"
+                placeholder="Observaciones de la venta"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="ad-btn ad-btn--gold w-full"
+              onClick={() => setExtrasOpen(false)}
+            >
+              Listo
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {cobroOpen ? (
+        <div
+          className="ad-modal-backdrop"
+          role="presentation"
+          onClick={() => setCobroOpen(false)}
+        >
+          <div
+            className="ad-modal ad-modal--wide space-y-3"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ad-pos-cobro-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="ad-pos-cobro-title" className="ad-panel-title">
+              Cobro
+            </h3>
+            <div className="ad-pos__total-card">
+              <p className="ad-eyebrow">Total a cobrar</p>
+              <p className="ad-display text-4xl text-[var(--ad-gold-soft)]">
+                ${netUsd.toFixed(2)}
+              </p>
+              <p className="text-sm text-[var(--ad-muted)]">
+                Bs {Math.max(0, totalBs).toLocaleString("es-VE")}
+                {discountUsd ? ` · desc. $${discountUsd.toFixed(2)}` : ""}
+              </p>
+              <div className="ad-pos__pay-status">
+                <span>Pagado ${paidUsd.toFixed(2)}</span>
+                <span>Resta ${Math.max(0, netUsd - paidUsd).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="ad-pos__field">
+                <span>Descuento USD</span>
+                <input
+                  className="ad-input"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  value={discountUsd || ""}
+                  onChange={(e) =>
+                    setDiscountUsd(Number(e.target.value) || 0)
+                  }
+                />
+              </label>
+              <label className="ad-pos__field">
+                <span>Autorización</span>
+                <input
+                  className="ad-input"
+                  placeholder="Si aplica descuento"
+                  value={discountAuth}
+                  onChange={(e) => setDiscountAuth(e.target.value)}
+                />
+              </label>
+            </div>
+
+            <label className="ad-pos__field">
+              <span>Método de pago</span>
+              <select
+                className="ad-select"
+                value={payMethod}
+                onChange={(e) =>
+                  setPayMethod(e.target.value as AdPaymentMethodCode)
+                }
+              >
+                {activeMethods.map((m) => (
+                  <option key={m.id} value={m.code}>
+                    {m.name} ({m.currency})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="ad-pos__field">
+              <span>Monto {methodCfg?.currency ?? ""}</span>
+              <input
+                className="ad-input"
+                placeholder="0.00"
+                inputMode="decimal"
+                value={payAmount}
+                onChange={(e) => setPayAmount(e.target.value)}
+              />
+            </label>
+            {methodCfg?.requiresBank ? (
+              <label className="ad-pos__field">
+                <span>Banco</span>
+                <input
+                  className="ad-input"
+                  value={payBank}
+                  onChange={(e) => setPayBank(e.target.value)}
+                />
+              </label>
+            ) : null}
+            {methodCfg?.requiresReference ? (
+              <label className="ad-pos__field">
+                <span>Referencia</span>
+                <input
+                  className="ad-input"
+                  value={payRef}
+                  onChange={(e) => setPayRef(e.target.value)}
+                />
+              </label>
+            ) : null}
+            {payMethod === "pago_movil" ? (
+              <label className="ad-pos__field">
+                <span>Teléfono origen</span>
+                <input
+                  className="ad-input"
+                  value={payOrigin}
+                  onChange={(e) => setPayOrigin(e.target.value)}
+                  inputMode="tel"
+                />
+              </label>
+            ) : null}
+            <button
+              type="button"
+              className="ad-btn ad-btn--touch"
+              onClick={addPayment}
+            >
+              Añadir pago
+            </button>
+            <ul className="space-y-1 text-sm text-[var(--ad-muted)]">
+              {payments.map((p, i) => (
+                <li
+                  key={`${p.method}-${i}`}
+                  className="flex justify-between gap-2"
+                >
+                  <span>
+                    {p.method} · {p.currency} {p.amount}
+                    {p.reference ? ` · ${p.reference}` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    className="ad-btn"
+                    onClick={() =>
+                      setPayments((list) => list.filter((_, idx) => idx !== i))
+                    }
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <div className="ad-pos__actions">
+              <button
+                type="button"
+                className="ad-btn ad-btn--gold ad-btn--touch"
+                onClick={() => void openPrelim()}
+                disabled={!canSell || !cart.length}
+              >
+                Facturar
+              </button>
+              {usesMesas ? (
+                <button
+                  type="button"
+                  className="ad-btn ad-btn--primary ad-btn--touch"
+                  onClick={() => void leaveOpen()}
+                  disabled={!canSell || !cart.length}
+                >
+                  Abrir cuenta
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="ad-btn ad-btn--touch"
+                onClick={() => void toPrepaid()}
+                disabled={!canSell || !cart.length}
+              >
+                Prepago + QR
+              </button>
+              <button
+                type="button"
+                className="ad-btn ad-btn--touch"
+                onClick={() => setCobroOpen(false)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {draft ? (
         <div className="ad-modal-backdrop">

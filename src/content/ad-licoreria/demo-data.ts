@@ -462,7 +462,7 @@ export const AD_DEMO_TABLES: AdTable[] = [
     capacity: 4,
     status: "disponible",
     active: true,
-    warehouseId: "wh-2",
+    warehouseId: "wh-1",
   },
   {
     id: "mesa-2",
@@ -472,7 +472,7 @@ export const AD_DEMO_TABLES: AdTable[] = [
     capacity: 4,
     status: "ocupada",
     active: true,
-    warehouseId: "wh-2",
+    warehouseId: "wh-1",
   },
   {
     id: "mesa-3",
@@ -482,7 +482,7 @@ export const AD_DEMO_TABLES: AdTable[] = [
     capacity: 6,
     status: "cuenta_abierta",
     active: true,
-    warehouseId: "wh-2",
+    warehouseId: "wh-1",
   },
   {
     id: "mesa-8",
@@ -492,7 +492,7 @@ export const AD_DEMO_TABLES: AdTable[] = [
     capacity: 6,
     status: "disponible",
     active: true,
-    warehouseId: "wh-2",
+    warehouseId: "wh-1",
   },
   {
     id: "mesa-12",
@@ -502,7 +502,7 @@ export const AD_DEMO_TABLES: AdTable[] = [
     capacity: 8,
     status: "cuenta_prepagada",
     active: true,
-    warehouseId: "wh-2",
+    warehouseId: "wh-1",
   },
   {
     id: "mesa-18",
@@ -512,7 +512,7 @@ export const AD_DEMO_TABLES: AdTable[] = [
     capacity: 4,
     status: "disponible",
     active: true,
-    warehouseId: "wh-2",
+    warehouseId: "wh-1",
   },
   {
     id: "bar-01",
@@ -523,7 +523,7 @@ export const AD_DEMO_TABLES: AdTable[] = [
     capacity: 10,
     status: "disponible",
     active: true,
-    warehouseId: "wh-2",
+    warehouseId: "wh-1",
   },
   {
     id: "terraza-01",
