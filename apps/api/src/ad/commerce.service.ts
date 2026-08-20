@@ -1160,11 +1160,13 @@ export const adCommerceService = {
               unitsPerPresentation: upp,
               utilityPercent: util,
             });
+            const saleUsd = upp > 1 ? usd.boxSale : usd.unitSale;
+            const saleBs = upp > 1 ? bs.boxSale : bs.unitSale;
             await tx.adPresentation.update({
               where: { id: pr.id },
               data: {
-                priceUsd: dec(usd.boxSale),
-                priceBs: dec(bs.boxSale),
+                priceUsd: dec(saleUsd),
+                priceBs: dec(saleBs),
               },
             });
           }

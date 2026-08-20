@@ -664,7 +664,7 @@ export default function AdLicoreriaCompras() {
                 {l.utilityPercent > 0 ? (
                   <>
                     <div className="mt-1 text-[var(--ad-gold-soft)]">
-                      Utilidad ficha {l.utilityPercent}%
+                      Utilidad contable ficha {l.utilityPercent}%
                     </div>
                     <div>
                       PVP unidad: <strong>{px.unitSale.toFixed(2)}</strong>
@@ -802,7 +802,7 @@ export default function AdLicoreriaCompras() {
               className="ad-input"
               type="number"
               min={0}
-              placeholder="Utilidad %"
+              placeholder="Utilidad contable %"
               value={newUtility}
               onChange={(e) => setNewUtility(Number(e.target.value))}
             />

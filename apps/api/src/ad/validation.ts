@@ -33,9 +33,10 @@ export const updateProductSchema = z.object({
   categoryId: z.string().uuid().optional().nullable(),
   minStockBase: z.number().nonnegative().optional(),
   taxable: z.boolean().optional(),
-  defaultUtilityPercent: z.number().min(0).max(1000).optional(),
+  defaultUtilityPercent: z.number().min(0).max(99.99).optional(),
   active: z.boolean().optional(),
-  /** Actualiza la presentación caja (si existe). */
+  packMode: z.enum(["UNIT", "BOX"]).optional(),
+  /** Actualiza o crea presentación caja. */
   unitsPerBox: z.number().positive().optional(),
 });
 

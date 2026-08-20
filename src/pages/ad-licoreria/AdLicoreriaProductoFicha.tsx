@@ -5,7 +5,11 @@ import {
   adInventarioProductoPath,
 } from "@/constants/ad-licoreria-routes";
 import { formatAdPrice } from "@/lib/ad-licoreria/conversions";
-import { findUnitAndBox, pricesFromCost } from "@/lib/ad-licoreria/pack";
+import {
+  findUnitAndBox,
+  pricesFromCost,
+  type PackMode,
+} from "@/lib/ad-licoreria/pack";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
@@ -35,7 +39,6 @@ export default function AdLicoreriaProductoFicha() {
     () => findUnitAndBox(product ? getPresentationsFor(product.id) : []),
     [product, getPresentationsFor],
   );
-  const unitsPerBox = pack.box?.unitsPerPresentation ?? 1;
 
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
@@ -43,8 +46,9 @@ export default function AdLicoreriaProductoFicha() {
   const [categoryId, setCategoryId] = useState("");
   const [baseUnitLabel, setBaseUnitLabel] = useState("");
   const [minStock, setMinStock] = useState(0);
+  const [packMode, setPackMode] = useState<PackMode>("UNIT");
+  const [boxUnits, setBoxUnits] = useState(20);
   const [utility, setUtility] = useState(0);
-  const [boxUnits, setBoxUnits] = useState(1);
   const [active, setActive] = useState(true);
   const [msg, setMsg] = useState("");
 
@@ -57,12 +61,17 @@ export default function AdLicoreriaProductoFicha() {
     setBaseUnitLabel(product.baseUnitLabel);
     setMinStock(product.minStockBase);
     setUtility(product.defaultUtilityPercent ?? 0);
-    setBoxUnits(pack.box?.unitsPerPresentation ?? 1);
     setActive(product.active);
-  }, [product, pack.box?.unitsPerPresentation]);
+    const hasBox = Boolean(pack.box?.active !== false && pack.box);
+    setPackMode(hasBox ? "BOX" : "UNIT");
+    setBoxUnits(
+      hasBox ? Math.max(2, pack.box?.unitsPerPresentation ?? 20) : 20,
+    );
+  }, [product, pack.box]);
 
-  const px = product
-    ? pricesFromCost(product.cost.usd, unitsPerBox, product.defaultUtilityPercent ?? 0)
+  const unitsPerBox = packMode === "BOX" ? boxUnits : 1;
+  const previewPx = product
+    ? pricesFromCost(product.cost.usd, unitsPerBox, utility)
     : null;
 
   const stockRows = useMemo(() => {
@@ -95,8 +104,10 @@ export default function AdLicoreriaProductoFicha() {
     setBaseUnitLabel(product.baseUnitLabel);
     setMinStock(product.minStockBase);
     setUtility(product.defaultUtilityPercent ?? 0);
-    setBoxUnits(unitsPerBox);
     setActive(product.active);
+    const hasBox = Boolean(pack.box?.active !== false && pack.box);
+    setPackMode(hasBox ? "BOX" : "UNIT");
+    setBoxUnits(hasBox ? pack.box!.unitsPerPresentation : 20);
     setSearchParams({});
     setMsg("");
   }
@@ -107,8 +118,12 @@ export default function AdLicoreriaProductoFicha() {
       setMsg("Nombre y SKU son obligatorios");
       return;
     }
-    if (pack.box && !(boxUnits > 1)) {
-      setMsg("Las unidades por caja deben ser mayores a 1");
+    if (packMode === "BOX" && !(boxUnits > 1)) {
+      setMsg("Indique cuántas unidades trae cada caja (mínimo 2)");
+      return;
+    }
+    if (utility >= 100) {
+      setMsg("La utilidad contable debe ser menor a 100%");
       return;
     }
     const updated: AdProduct = {
@@ -120,7 +135,8 @@ export default function AdLicoreriaProductoFicha() {
       baseUnitLabel: baseUnitLabel.trim() || "unidad",
       minStockBase: minStock,
       defaultUtilityPercent: utility,
-      unitsPerBox: pack.box ? boxUnits : 1,
+      packMode,
+      unitsPerBox: packMode === "BOX" ? boxUnits : 1,
       active,
     };
     const r = await resolveAdResult(upsertProduct(updated));
@@ -155,6 +171,11 @@ export default function AdLicoreriaProductoFicha() {
 
   const categoryName =
     categories.find((c) => c.id === product.categoryId)?.name ?? "—";
+  const viewPx = pricesFromCost(
+    product.cost.usd,
+    pack.box?.unitsPerPresentation ?? 1,
+    product.defaultUtilityPercent ?? 0,
+  );
 
   return (
     <div className="space-y-5">
@@ -259,34 +280,6 @@ export default function AdLicoreriaProductoFicha() {
             product.minStockBase
           )}
         </Field>
-        <Field label="Utilidad %">
-          {editing ? (
-            <input
-              className="ad-input"
-              type="number"
-              min={0}
-              step="0.1"
-              value={utility}
-              onChange={(e) => setUtility(Number(e.target.value))}
-            />
-          ) : (
-            `${(product.defaultUtilityPercent ?? 0).toFixed(1)}%`
-          )}
-        </Field>
-        <Field label="Empaque">
-          {pack.box ? `Caja x${unitsPerBox} + unidad` : "Solo unidad"}
-        </Field>
-        {pack.box && editing ? (
-          <Field label="Unidades por caja">
-            <input
-              className="ad-input"
-              type="number"
-              min={2}
-              value={boxUnits}
-              onChange={(e) => setBoxUnits(Number(e.target.value))}
-            />
-          </Field>
-        ) : null}
         <Field label="Estado">
           {editing ? (
             <button
@@ -304,15 +297,111 @@ export default function AdLicoreriaProductoFicha() {
         </Field>
       </section>
 
+      <section className="ad-panel space-y-4">
+        <div>
+          <h2 className="ad-panel-title">Empaque y utilidad</h2>
+          <p className="mt-1 text-sm text-[var(--ad-muted)]">
+            Defina si compra/vende por caja o por unidad, cuántas unidades trae
+            la caja y la utilidad contable (margen sobre el precio de venta, no
+            markup lineal sobre el costo).
+          </p>
+        </div>
+
+        {editing ? (
+          <>
+            <div className="grid grid-cols-2 gap-2 max-w-md">
+              <button
+                type="button"
+                className={`ad-btn ${packMode === "UNIT" ? "ad-btn--gold" : ""}`}
+                onClick={() => setPackMode("UNIT")}
+              >
+                Por unidad
+              </button>
+              <button
+                type="button"
+                className={`ad-btn ${packMode === "BOX" ? "ad-btn--gold" : ""}`}
+                onClick={() => setPackMode("BOX")}
+              >
+                Por caja
+              </button>
+            </div>
+            {packMode === "BOX" ? (
+              <label className="block max-w-xs text-sm text-[var(--ad-muted)]">
+                Unidades que trae cada caja
+                <input
+                  className="ad-input mt-1"
+                  type="number"
+                  min={2}
+                  value={boxUnits}
+                  onChange={(e) => setBoxUnits(Number(e.target.value))}
+                />
+              </label>
+            ) : (
+              <p className="text-sm text-[var(--ad-muted)]">
+                Se compra y vende solo por unidad (presentación ×1).
+              </p>
+            )}
+            <label className="block max-w-xs text-sm text-[var(--ad-muted)]">
+              Utilidad contable % (margen sobre PVP)
+              <input
+                className="ad-input mt-1"
+                type="number"
+                min={0}
+                max={99.9}
+                step="0.1"
+                value={utility}
+                onChange={(e) => setUtility(Number(e.target.value))}
+              />
+            </label>
+            {previewPx && product.cost.usd > 0 ? (
+              <div className="rounded border border-[var(--ad-line)] p-3 text-sm">
+                <p className="text-[var(--ad-muted)]">Vista previa PVP (utilidad {utility}% contable):</p>
+                <p className="mt-1">
+                  Unidad ${previewPx.unitSale.toFixed(2)}
+                  {packMode === "BOX" ? (
+                    <> · Caja x{boxUnits} ${previewPx.boxSale.toFixed(2)}</>
+                  ) : null}
+                </p>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+            <Stat
+              label="Empaque"
+              value={
+                pack.box
+                  ? `Caja x${pack.box.unitsPerPresentation} + unidad`
+                  : "Solo unidad"
+              }
+            />
+            {pack.box ? (
+              <Stat
+                label="Unidades por caja"
+                value={String(pack.box.unitsPerPresentation)}
+              />
+            ) : null}
+            <Stat
+              label="Utilidad contable"
+              value={`${(product.defaultUtilityPercent ?? 0).toFixed(1)}% sobre PVP`}
+            />
+          </div>
+        )}
+      </section>
+
       <section className="ad-panel">
         <h2 className="ad-panel-title">Costos y precios</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
           <Stat label="Costo unitario (CPP)" value={formatAdPrice(product.cost)} />
-          {px && product.cost.usd > 0 ? (
+          {viewPx && product.cost.usd > 0 ? (
             <>
-              <Stat label="Costo caja" value={`$${px.boxCost.toFixed(2)}`} />
-              <Stat label="PVP unidad" value={`$${px.unitSale.toFixed(2)}`} />
-              <Stat label="PVP caja" value={`$${px.boxSale.toFixed(2)}`} />
+              {pack.box ? (
+                <Stat label="Costo caja" value={`$${viewPx.boxCost.toFixed(2)}`} />
+              ) : null}
+              <Stat label="PVP unidad" value={`$${viewPx.unitSale.toFixed(2)}`} />
+              {pack.box ? (
+                <Stat label="PVP caja" value={`$${viewPx.boxSale.toFixed(2)}`} />
+              ) : null}
             </>
           ) : (
             <p className="text-[var(--ad-muted)] sm:col-span-3">
@@ -342,13 +431,6 @@ export default function AdLicoreriaProductoFicha() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-[var(--ad-muted)]">
-          Para ajustar precios manualmente use{" "}
-          <Link className="underline" to={AD_LICORERIA_ROUTES.presentaciones}>
-            Presentaciones / precios
-          </Link>
-          .
-        </p>
       </section>
 
       <section className="ad-panel">

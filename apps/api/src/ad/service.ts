@@ -259,6 +259,7 @@ export const adService = {
       taxable?: boolean;
       defaultUtilityPercent?: number;
       active?: boolean;
+      packMode?: "UNIT" | "BOX";
       unitsPerBox?: number;
     },
   ) {
@@ -312,9 +313,68 @@ export const adService = {
           data: {
             unitsPerPresentation: dec(input.unitsPerBox),
             name: `Caja x${input.unitsPerBox}`,
+            active: true,
           },
         });
       }
+    }
+
+    const packMode =
+      input.packMode ??
+      (input.unitsPerBox !== undefined && input.unitsPerBox > 1 ? "BOX" : undefined);
+
+    if (packMode === "BOX") {
+      const existingBox = existing.presentations.find(
+        (p) => toNum(p.unitsPerPresentation) > 1,
+      );
+      const upp = Math.max(
+        2,
+        Number(input.unitsPerBox) ||
+          (existingBox ? toNum(existingBox.unitsPerPresentation) : 0) ||
+          2,
+      );
+      const unitPres = existing.presentations.find(
+        (p) => toNum(p.unitsPerPresentation) === 1,
+      );
+      if (!unitPres) {
+        await prisma.adPresentation.create({
+          data: {
+            productId,
+            name: "Unidad",
+            code: "U",
+            unitsPerPresentation: dec(1),
+            priceUsd: dec(0),
+            priceBs: dec(0),
+            active: true,
+          },
+        });
+      }
+      const boxPres = existing.presentations.find(
+        (p) => toNum(p.unitsPerPresentation) > 1,
+      );
+      if (!boxPres) {
+        await prisma.adPresentation.create({
+          data: {
+            productId,
+            name: `Caja x${upp}`,
+            code: "CAJA",
+            unitsPerPresentation: dec(upp),
+            priceUsd: dec(0),
+            priceBs: dec(0),
+            active: true,
+          },
+        });
+      }
+    }
+
+    if (packMode === "UNIT") {
+      await prisma.adPresentation.updateMany({
+        where: {
+          productId,
+          unitsPerPresentation: { gt: 1 },
+        },
+        data: { active: false },
+      });
     }
 
     const refreshed = await prisma.adProduct.findFirst({

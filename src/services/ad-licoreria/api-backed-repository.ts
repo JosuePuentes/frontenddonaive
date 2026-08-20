@@ -962,8 +962,13 @@ export const adApiBackedRepository = {
     if (isNew) {
       body.packMode = product.packMode;
       body.unitsPerBox = product.unitsPerBox;
-    } else if (product.unitsPerBox && product.unitsPerBox > 1) {
-      body.unitsPerBox = product.unitsPerBox;
+    } else {
+      if (product.packMode) body.packMode = product.packMode;
+      if (product.unitsPerBox && product.unitsPerBox > 1) {
+        body.unitsPerBox = product.unitsPerBox;
+      } else if (product.packMode === "UNIT") {
+        body.packMode = "UNIT";
+      }
     }
     const path = isNew
       ? "/api/v1/ad/products"

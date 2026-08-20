@@ -222,6 +222,7 @@ export function equivalentBsFromUsd(amountUsd: number, rate: number): number {
 
 export type PriceFromUtilityInput = {
   cost: number;
+  /** Margen contable % sobre el precio de venta (no markup lineal sobre costo). */
   utilityPercent: number;
 };
 
@@ -230,14 +231,25 @@ export function priceFromUtility(input: PriceFromUtilityInput): {
   utilityAmount: number;
   utilityPercent: number;
   marginPercent: number;
+  markupPercent: number;
 } {
   const cost = Number(input.cost);
-  const utilityPercent = Number(input.utilityPercent);
+  const marginPercent = Number(input.utilityPercent);
   if (!(cost >= 0)) throw new Error("Costo inválido");
-  const price = cost * (1 + utilityPercent / 100);
+  if (marginPercent >= 100) {
+    throw new Error("Utilidad contable debe ser menor a 100%");
+  }
+  const price =
+    marginPercent <= 0 ? cost : cost / (1 - marginPercent / 100);
   const utilityAmount = price - cost;
-  const marginPercent = price > 0 ? (utilityAmount / price) * 100 : 0;
-  return { price, utilityAmount, utilityPercent, marginPercent };
+  const markupPercent = cost > 0 ? (utilityAmount / cost) * 100 : 0;
+  return {
+    price,
+    utilityAmount,
+    utilityPercent: marginPercent,
+    marginPercent,
+    markupPercent,
+  };
 }
 
 /** PVP unidad y caja a partir del costo unitario y la utilidad de ficha. */
@@ -268,20 +280,24 @@ export function salePricesFromUnitCost(input: {
 export function utilityFromPrice(cost: number, price: number): {
   price: number;
   utilityAmount: number;
+  /** Margen contable % sobre PVP. */
   utilityPercent: number;
   marginPercent: number;
+  /** Markup lineal % sobre costo (referencia). */
+  markupPercent: number;
   belowCost: boolean;
 } {
   const c = Number(cost);
   const p = Number(price);
   const utilityAmount = p - c;
-  const utilityPercent = c > 0 ? (utilityAmount / c) * 100 : 0;
   const marginPercent = p > 0 ? (utilityAmount / p) * 100 : 0;
+  const markupPercent = c > 0 ? (utilityAmount / c) * 100 : 0;
   return {
     price: p,
     utilityAmount,
-    utilityPercent,
+    utilityPercent: marginPercent,
     marginPercent,
+    markupPercent,
     belowCost: p < c,
   };
 }

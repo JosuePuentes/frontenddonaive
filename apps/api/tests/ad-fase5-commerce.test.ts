@@ -57,10 +57,10 @@ describe("commerce-domain (puro)", () => {
     );
   });
 
-  it("N/O — utilidad y precio directo", () => {
+  it("N/O — utilidad contable y precio directo", () => {
     const fromU = priceFromUtility({ cost: 10, utilityPercent: 20 });
-    expect(fromU.price).toBeCloseTo(12, 5);
-    const fromP = utilityFromPrice(10, 12);
+    expect(fromU.price).toBeCloseTo(12.5, 5);
+    const fromP = utilityFromPrice(10, 12.5);
     expect(fromP.utilityPercent).toBeCloseTo(20, 5);
     expect(utilityFromPrice(10, 8).belowCost).toBe(true);
   });

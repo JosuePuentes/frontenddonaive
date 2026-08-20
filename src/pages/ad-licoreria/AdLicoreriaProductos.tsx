@@ -179,7 +179,7 @@ export default function AdLicoreriaProductos() {
           </label>
         ) : null}
         <label className="sm:col-span-3 text-sm text-[var(--ad-muted)]">
-          Utilidad % (sobre el costo de compra)
+          Utilidad contable % (margen sobre precio de venta)
           <input
             className="ad-input mt-1"
             type="number"
@@ -210,7 +210,7 @@ export default function AdLicoreriaProductos() {
               <th>Producto</th>
               <th>SKU</th>
               <th>Caja / unidad</th>
-              <th>Utilidad</th>
+              <th>Utilidad cont.</th>
               <th>Costo u.</th>
               <th>Estado</th>
             </tr>

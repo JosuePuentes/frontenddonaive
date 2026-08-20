@@ -220,7 +220,7 @@ export type AdProduct = {
   baseUnitLabel: string;
   cost: AdPrice;
   minStockBase: number;
-  /** Utilidad % sobre el costo. La compra calcula PVP unidad y caja con esto. */
+  /** Utilidad contable % (margen sobre PVP, no markup lineal sobre costo). */
   defaultUtilityPercent?: number;
   /** Solo al crear: genera Unidad y, si es BOX, Caja xN. */
   packMode?: "UNIT" | "BOX";
