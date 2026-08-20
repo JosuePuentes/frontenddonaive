@@ -9,6 +9,8 @@ import {
   createWarehouseSchema,
   parseBody,
   setStockSchema,
+  updatePresentationSchema,
+  updateProductSchema,
   voidSaleSchema,
 } from "./validation.js";
 
@@ -99,12 +101,49 @@ adRouter.post("/products", async (req, res, next) => {
   }
 });
 
+adRouter.get("/products/:id", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const data = await adService.getProduct(ctx, req.params.id);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adRouter.put("/products/:id", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(updateProductSchema, req.body);
+    const data = await adService.updateProduct(ctx, req.params.id, body);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 adRouter.post("/products/:id/presentations", async (req, res, next) => {
   try {
     const ctx = getAdContext(req);
     const body = parseBody(createPresentationSchema, req.body);
     const data = await adService.createPresentation(ctx, req.params.id, body);
     res.status(201).json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adRouter.put("/products/:productId/presentations/:presentationId", async (req, res, next) => {
+  try {
+    const ctx = getAdContext(req);
+    const body = parseBody(updatePresentationSchema, req.body);
+    const data = await adService.updatePresentation(
+      ctx,
+      req.params.productId,
+      req.params.presentationId,
+      body,
+    );
+    res.json({ data });
   } catch (err) {
     next(err);
   }

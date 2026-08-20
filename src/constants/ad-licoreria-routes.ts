@@ -10,6 +10,7 @@ const AD_SEGMENTS = {
   ventas: "/ventas",
   cuentas: "/cuentas",
   inventario: "/inventario",
+  inventarioProducto: "/inventario/producto/:productId",
   productos: "/productos",
   depositos: "/depositos",
   compras: "/compras",
@@ -61,6 +62,7 @@ export type AdLicoreriaRoutes = {
   ventas: string;
   cuentas: string;
   inventario: string;
+  inventarioProducto: string;
   productos: string;
   depositos: string;
   compras: string;
@@ -114,6 +116,7 @@ export function getAdLicoreriaRoutes(
     ventas: joinPath(base, AD_SEGMENTS.ventas),
     cuentas: joinPath(base, AD_SEGMENTS.cuentas),
     inventario: joinPath(base, AD_SEGMENTS.inventario),
+    inventarioProducto: joinPath(base, AD_SEGMENTS.inventarioProducto),
     productos: joinPath(base, AD_SEGMENTS.productos),
     depositos: joinPath(base, AD_SEGMENTS.depositos),
     compras: joinPath(base, AD_SEGMENTS.compras),
@@ -154,6 +157,19 @@ export function getAdLicoreriaRoutes(
 }
 
 export const AD_LICORERIA_ROUTES = getAdLicoreriaRoutes();
+
+/** Ficha de producto desde inventario (ver o editar). */
+export function adInventarioProductoPath(
+  productId: string,
+  options?: { edit?: boolean; base?: "" | "/licoreria" },
+): string {
+  const base = options?.base ?? getAdLicoreriaBasePath();
+  const path = joinPath(
+    base,
+    `/inventario/producto/${encodeURIComponent(productId)}`,
+  );
+  return options?.edit ? `${path}?edit=1` : path;
+}
 
 /** URL del reproductor de una pantalla (por código TV-001 o id). */
 export function adTvPlayerPath(

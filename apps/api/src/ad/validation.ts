@@ -23,6 +23,29 @@ export const createProductSchema = z.object({
   tenantId: z.string().uuid().optional(),
 });
 
+export const updateProductSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  brand: z.string().max(120).optional().nullable(),
+  sku: z.string().max(64).optional().nullable(),
+  barcode: z.string().max(64).optional().nullable(),
+  description: z.string().max(2000).optional().nullable(),
+  baseUnitLabel: z.string().min(1).max(32).optional(),
+  categoryId: z.string().uuid().optional().nullable(),
+  minStockBase: z.number().nonnegative().optional(),
+  taxable: z.boolean().optional(),
+  defaultUtilityPercent: z.number().min(0).max(1000).optional(),
+  active: z.boolean().optional(),
+  /** Actualiza la presentación caja (si existe). */
+  unitsPerBox: z.number().positive().optional(),
+});
+
+export const updatePresentationSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  code: z.string().max(64).optional().nullable(),
+  unitsPerPresentation: z.number().positive().optional(),
+  active: z.boolean().optional(),
+});
+
 export const createPresentationSchema = z.object({
   name: z.string().min(1).max(120),
   code: z.string().max(64).optional(),

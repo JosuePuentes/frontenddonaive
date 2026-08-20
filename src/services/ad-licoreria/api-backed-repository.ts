@@ -944,46 +944,75 @@ export const adApiBackedRepository = {
   },
 
   async upsertProduct(product: AdProduct): Promise<AdResult<AdProduct>> {
-    const r = await apiJson<Record<string, unknown>>(
-      "POST",
-      "/api/v1/ad/products",
-      {
-        name: product.name,
-        brand: product.brand,
-        sku: product.sku,
-        barcode: product.barcode,
-        description: product.description,
-        baseUnitLabel: product.baseUnitLabel,
-        minStockBase: product.minStockBase,
-        defaultUtilityPercent: product.defaultUtilityPercent ?? 0,
-        packMode: product.packMode,
-        unitsPerBox: product.unitsPerBox,
-      },
-    );
+    const isNew = product.id.startsWith("prod-");
+    const body: Record<string, unknown> = {
+      name: product.name,
+      brand: product.brand || undefined,
+      sku: product.sku,
+      barcode: product.barcode,
+      description: product.description,
+      baseUnitLabel: product.baseUnitLabel,
+      minStockBase: product.minStockBase,
+      defaultUtilityPercent: product.defaultUtilityPercent ?? 0,
+      active: product.active,
+    };
+    if (product.categoryId && !product.categoryId.startsWith("cat-")) {
+      body.categoryId = product.categoryId;
+    }
+    if (isNew) {
+      body.packMode = product.packMode;
+      body.unitsPerBox = product.unitsPerBox;
+    } else if (product.unitsPerBox && product.unitsPerBox > 1) {
+      body.unitsPerBox = product.unitsPerBox;
+    }
+    const path = isNew
+      ? "/api/v1/ad/products"
+      : `/api/v1/ad/products/${product.id}`;
+    const method = isNew ? "POST" : "PUT";
+    const r = await apiJson<Record<string, unknown>>(method, path, body);
     if (!r.ok) return r;
     await hydrate();
-    const p = state.products.find((x) => x.name === product.name);
+    const p = state.products.find(
+      (x) => x.id === product.id || x.sku === product.sku,
+    );
     return p ? { ok: true, data: p } : { ok: false, error: "Producto no listo" };
   },
 
   async upsertPresentation(
     pres: AdPresentation,
   ): Promise<AdResult<AdPresentation>> {
-    const r = await apiJson<Record<string, unknown>>(
-      "POST",
-      `/api/v1/ad/products/${pres.productId}/presentations`,
-      {
-        name: pres.name,
-        code: pres.code,
-        unitsPerPresentation: pres.unitsPerPresentation,
-        priceUsd: pres.price.usd,
-        priceBs: pres.price.bs,
-      },
-    );
-    if (!r.ok) return r;
+    const isNew = pres.id.startsWith("pres-");
+    if (isNew) {
+      const r = await apiJson<Record<string, unknown>>(
+        "POST",
+        `/api/v1/ad/products/${pres.productId}/presentations`,
+        {
+          name: pres.name,
+          code: pres.code,
+          unitsPerPresentation: pres.unitsPerPresentation,
+          priceUsd: pres.price.usd,
+          priceBs: pres.price.bs,
+        },
+      );
+      if (!r.ok) return r;
+    } else {
+      const r = await apiJson<Record<string, unknown>>(
+        "PUT",
+        `/api/v1/ad/products/${pres.productId}/presentations/${pres.id}`,
+        {
+          name: pres.name,
+          code: pres.code,
+          unitsPerPresentation: pres.unitsPerPresentation,
+          active: pres.active,
+        },
+      );
+      if (!r.ok) return r;
+    }
     await hydrate();
     const found = state.presentations.find(
-      (p) => p.productId === pres.productId && p.name === pres.name,
+      (p) =>
+        p.id === pres.id ||
+        (p.productId === pres.productId && p.name === pres.name),
     );
     return found
       ? { ok: true, data: found }

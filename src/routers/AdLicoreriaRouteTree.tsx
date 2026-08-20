@@ -17,6 +17,9 @@ const AdLicoreriaVentas = lazy(
 const AdLicoreriaInventario = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaInventario"),
 );
+const AdLicoreriaProductoFicha = lazy(
+  () => import("@/pages/ad-licoreria/AdLicoreriaProductoFicha"),
+);
 const AdLicoreriaProductos = lazy(
   () => import("@/pages/ad-licoreria/AdLicoreriaProductos"),
 );
@@ -136,6 +139,11 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
   const tvReproductorIndex =
     prefix === "" ? "/tv/reproductor" : `${prefix}/tv/reproductor`;
 
+  const inventarioProducto =
+    prefix === ""
+      ? "/inventario/producto/:productId"
+      : `${prefix}/inventario/producto/:productId`;
+
   return (
     <>
       <Route
@@ -174,6 +182,7 @@ function adLicoreriaRouteTree(prefix: "" | "/licoreria"): ReactNode {
         path={adLicoreriaRouterPath(prefix, "inventario")}
         element={<AdLicoreriaInventario />}
       />
+      <Route path={inventarioProducto} element={<AdLicoreriaProductoFicha />} />
       <Route
         path={adLicoreriaRouterPath(prefix, "productos")}
         element={<AdLicoreriaProductos />}

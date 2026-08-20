@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import {
+  AD_LICORERIA_ROUTES,
+  adInventarioProductoPath,
+} from "@/constants/ad-licoreria-routes";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
@@ -24,6 +27,7 @@ export default function AdLicoreriaInventario() {
   const [query, setQuery] = useState("");
 
   const canRead = hasPermission("inventory.read");
+  const canEditProduct = hasPermission("products.manage");
   const visibleWh = warehouses.filter(
     (w) => w.active && canAccessWarehouse(w.id),
   );
@@ -125,13 +129,19 @@ export default function AdLicoreriaInventario() {
                 <th>Pend. clientes</th>
                 <th>Déficit</th>
                 <th>TR / Compra</th>
+                <th>Ficha</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.product.id}>
                   <td>
-                    {r.product.name}
+                    <Link
+                      className="hover:underline"
+                      to={adInventarioProductoPath(r.product.id)}
+                    >
+                      {r.product.name}
+                    </Link>
                     <div className="text-xs text-[var(--ad-muted)]">
                       {r.product.sku} · {r.product.baseUnitLabel}
                     </div>
@@ -159,6 +169,26 @@ export default function AdLicoreriaInventario() {
                   </td>
                   <td className="text-xs text-[var(--ad-muted)]">
                     TR {r.pendingTransfers} · C {r.pendingPurchases}
+                  </td>
+                  <td>
+                    <div className="flex flex-wrap gap-1">
+                      <Link
+                        className="ad-btn text-xs"
+                        to={adInventarioProductoPath(r.product.id)}
+                      >
+                        Ver
+                      </Link>
+                      {canEditProduct ? (
+                        <Link
+                          className="ad-btn ad-btn--gold text-xs"
+                          to={adInventarioProductoPath(r.product.id, {
+                            edit: true,
+                          })}
+                        >
+                          Editar
+                        </Link>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}

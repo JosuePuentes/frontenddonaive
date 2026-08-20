@@ -232,6 +232,107 @@ export const adService = {
     return product;
   },
 
+  async getProduct(ctx: AdRequestContext, productId: string) {
+    requireAdPermission(ctx, "inventory.read");
+    const prisma = getPrisma();
+    const product = await prisma.adProduct.findFirst({
+      where: { id: productId, tenantId: ctx.tenantId },
+      include: { presentations: true, category: true },
+    });
+    if (!product) throw new NotFoundError("Producto no encontrado");
+    return product;
+  },
+
+  async updateProduct(
+    ctx: AdRequestContext,
+    productId: string,
+    input: {
+      name?: string;
+      brand?: string | null;
+      sku?: string | null;
+      barcode?: string | null;
+      description?: string | null;
+      baseUnitLabel?: string;
+      categoryId?: string | null;
+      minStockBase?: number;
+      taxable?: boolean;
+      defaultUtilityPercent?: number;
+      active?: boolean;
+      unitsPerBox?: number;
+    },
+  ) {
+    requireAdPermission(ctx, "products.manage");
+    const prisma = getPrisma();
+    const existing = await prisma.adProduct.findFirst({
+      where: { id: productId, tenantId: ctx.tenantId },
+      include: { presentations: true },
+    });
+    if (!existing) throw new NotFoundError("Producto no encontrado");
+
+    const before = { ...existing };
+    const product = await prisma.adProduct.update({
+      where: { id: productId },
+      data: {
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.brand !== undefined ? { brand: input.brand } : {}),
+        ...(input.sku !== undefined ? { sku: input.sku } : {}),
+        ...(input.barcode !== undefined ? { barcode: input.barcode } : {}),
+        ...(input.description !== undefined
+          ? { description: input.description }
+          : {}),
+        ...(input.baseUnitLabel !== undefined
+          ? { baseUnitLabel: input.baseUnitLabel }
+          : {}),
+        ...(input.categoryId !== undefined
+          ? { categoryId: input.categoryId }
+          : {}),
+        ...(input.minStockBase !== undefined
+          ? { minStockBase: dec(input.minStockBase) }
+          : {}),
+        ...(input.taxable !== undefined ? { taxable: input.taxable } : {}),
+        ...(input.defaultUtilityPercent !== undefined
+          ? { defaultUtilityPercent: dec(input.defaultUtilityPercent) }
+          : {}),
+        ...(input.active !== undefined ? { active: input.active } : {}),
+      },
+      include: { presentations: true, category: true },
+    });
+
+    if (input.unitsPerBox !== undefined && input.unitsPerBox > 1) {
+      const boxPres = [...existing.presentations]
+        .filter((p) => toNum(p.unitsPerPresentation) > 1)
+        .sort(
+          (a, b) =>
+            toNum(b.unitsPerPresentation) - toNum(a.unitsPerPresentation),
+        )[0];
+      if (boxPres) {
+        await prisma.adPresentation.update({
+          where: { id: boxPres.id },
+          data: {
+            unitsPerPresentation: dec(input.unitsPerBox),
+            name: `Caja x${input.unitsPerBox}`,
+          },
+        });
+      }
+    }
+
+    const refreshed = await prisma.adProduct.findFirst({
+      where: { id: productId, tenantId: ctx.tenantId },
+      include: { presentations: true, category: true },
+    });
+
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      action: "update",
+      entity: "product",
+      entityId: productId,
+      before,
+      after: refreshed ?? product,
+    });
+    return refreshed ?? product;
+  },
+
   async createPresentation(
     ctx: AdRequestContext,
     productId: string,
@@ -276,6 +377,52 @@ export const adService = {
       action: "create",
       entity: "presentation",
       entityId: presentation.id,
+      after: presentation,
+    });
+    return presentation;
+  },
+
+  async updatePresentation(
+    ctx: AdRequestContext,
+    productId: string,
+    presentationId: string,
+    input: {
+      name?: string;
+      code?: string | null;
+      unitsPerPresentation?: number;
+      active?: boolean;
+    },
+  ) {
+    requireAdPermission(ctx, "products.manage");
+    const prisma = getPrisma();
+    const product = await prisma.adProduct.findFirst({
+      where: { id: productId, tenantId: ctx.tenantId },
+    });
+    if (!product) throw new NotFoundError("Producto no encontrado");
+
+    const existing = await prisma.adPresentation.findFirst({
+      where: { id: presentationId, productId },
+    });
+    if (!existing) throw new NotFoundError("Presentación no encontrada");
+
+    const presentation = await prisma.adPresentation.update({
+      where: { id: presentationId },
+      data: {
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.code !== undefined ? { code: input.code } : {}),
+        ...(input.unitsPerPresentation !== undefined
+          ? { unitsPerPresentation: dec(input.unitsPerPresentation) }
+          : {}),
+        ...(input.active !== undefined ? { active: input.active } : {}),
+      },
+    });
+    await writeAdAudit({
+      tenantId: ctx.tenantId,
+      operatorId: ctx.operator.id,
+      action: "update",
+      entity: "presentation",
+      entityId: presentation.id,
+      before: existing,
       after: presentation,
     });
     return presentation;
