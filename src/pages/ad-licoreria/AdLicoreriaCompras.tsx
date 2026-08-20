@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
   AdPurchaseDocument,
@@ -8,6 +8,8 @@ import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { adCommerceClient } from "@/services/ad-licoreria/commerce-client";
 import { findUnitAndBox, pricesFromCost } from "@/lib/ad-licoreria/pack";
+import { searchAdProducts, type AdProductSearchHit } from "@/lib/ad-licoreria/product-lookup";
+import { useAdBarcodeCamera } from "@/hooks/ad-licoreria/useAdBarcodeCamera";
 
 type DraftLine = {
   key: string;
@@ -74,21 +76,7 @@ export default function AdLicoreriaCompras() {
   const [notes, setNotes] = useState("");
 
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<
-    {
-      id: string;
-      name: string;
-      brand: string | null;
-      sku: string | null;
-      taxable?: boolean;
-      defaultUtilityPercent?: number;
-      presentations: {
-        id: string;
-        name: string;
-        unitsPerPresentation: number;
-      }[];
-    }[]
-  >([]);
+  const [hits, setHits] = useState<AdProductSearchHit[]>([]);
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
   const [prelim, setPrelim] = useState<Record<string, unknown> | null>(null);
@@ -150,14 +138,41 @@ export default function AdLicoreriaCompras() {
     })();
   }, []);
 
-  async function search() {
-    const r = await adCommerceClient.searchProducts(query.trim());
+  async function search(source: "manual" | "camera" | "wedge" = "manual") {
+    const term = query.trim();
+    if (!term) {
+      setHits([]);
+      return;
+    }
+    const r = await searchAdProducts(term, source);
     if (!r.ok) {
       setMsg(r.error);
       return;
     }
-    setHits(r.data);
+    setHits(r.products);
+    setMsg(r.products.length ? "" : "Sin resultados");
   }
+
+  const onScan = useCallback((code: string) => {
+    setQuery(code);
+    void (async () => {
+      const r = await searchAdProducts(code, "camera");
+      if (!r.ok) {
+        setMsg(r.error);
+        return;
+      }
+      setHits(r.products);
+      setMsg(r.products.length ? "" : "Sin resultados");
+    })();
+  }, []);
+
+  const {
+    cameraOn,
+    cameraSupported,
+    msg: camMsg,
+    videoRef,
+    toggleCamera,
+  } = useAdBarcodeCamera({ onScan });
 
   function addHit(p: (typeof hits)[0], prefer: "UNIT" | "BOX" = "BOX") {
     const pack = findUnitAndBox(p.presentations);
@@ -507,17 +522,32 @@ export default function AdLicoreriaCompras() {
         <div className="flex flex-wrap gap-2">
           <input
             className="ad-input min-w-[16rem] flex-1"
-            placeholder="Buscar código, nombre, marca… (escáner → Enter)"
+            placeholder="Buscar código, nombre, marca… (escáner USB → Enter)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") void search();
+              if (e.key === "Enter") void search("wedge");
             }}
+            autoComplete="off"
           />
           <button type="button" className="ad-btn" onClick={() => void search()}>
             Buscar
           </button>
+          {cameraSupported ? (
+            <button type="button" className="ad-btn" onClick={toggleCamera}>
+              {cameraOn ? "Cerrar cámara" : "Escanear"}
+            </button>
+          ) : null}
         </div>
+        {cameraOn ? (
+          <video
+            ref={videoRef}
+            className="max-h-40 w-full rounded bg-black object-cover"
+            muted
+            playsInline
+          />
+        ) : null}
+        {camMsg ? <p className="text-sm text-[var(--ad-muted)]">{camMsg}</p> : null}
         {hits.length > 0 && (
           <ul className="max-h-40 overflow-auto text-sm">
             {hits.map((h) => (

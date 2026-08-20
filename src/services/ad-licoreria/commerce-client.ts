@@ -57,7 +57,25 @@ export const adCommerceClient = {
       }[]
     >("GET", `/api/v1/ad/products/search?q=${encodeURIComponent(q)}`),
   lookupByCode: (code: string, source: "manual" | "camera" | "wedge" = "manual") =>
-    commerceFetch(
+    commerceFetch<{
+      code: string;
+      source: string;
+      matches: {
+        id: string;
+        name: string;
+        brand: string | null;
+        sku: string | null;
+        barcode?: string | null;
+        taxable?: boolean;
+        defaultUtilityPercent?: number;
+        presentations: {
+          id: string;
+          name: string;
+          unitsPerPresentation: number;
+          barcode?: string | null;
+        }[];
+      }[];
+    }>(
       "GET",
       `/api/v1/ad/products/by-code?code=${encodeURIComponent(code)}&source=${source}`,
     ),

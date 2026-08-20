@@ -1,15 +1,22 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   formatAdPrice,
   toBaseUnits,
 } from "@/lib/ad-licoreria/conversions";
 import { findUnitAndBox } from "@/lib/ad-licoreria/pack";
 import {
+  matchPresentationBarcode,
+  searchAdProducts,
+} from "@/lib/ad-licoreria/product-lookup";
+import {
   warehouseLabel,
 } from "@/lib/ad-licoreria/warehouses";
 import { AD_SHORTAGE_REASON_LABELS } from "@/types/ad-licoreria";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
+import { isAdApiDataSource } from "@/services/ad-licoreria/data-source";
+import { useAdBarcodeCamera } from "@/hooks/ad-licoreria/useAdBarcodeCamera";
+import { AdPackPickPrompt } from "@/components/ad-licoreria/AdPackPickPrompt";
 import {
   AdPreliminarDocument,
   AdSaleReceiptFallback,
@@ -95,6 +102,7 @@ export default function AdLicoreriaVentas() {
   const [posStep, setPosStep] = useState<"productos" | "cliente" | "cobro">(
     "productos",
   );
+  const [packPick, setPackPick] = useState<{ productId: string } | null>(null);
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -164,15 +172,15 @@ export default function AdLicoreriaVentas() {
     [cart, getOperationalAvailability, posWarehouseId],
   );
 
-  function addLine() {
-    const pres = activePres;
-    if (!pres || qty <= 0) return;
+  function addLineToCart(pid: string, presId: string, lineQty: number) {
+    const pres = presentations.find((p) => p.id === presId);
+    if (!pres || lineQty <= 0) return;
     setCart((prev) => {
       const idx = prev.findIndex((l) => l.presentationId === pres.id);
       if (idx >= 0) {
         const next = [...prev];
         const line = next[idx];
-        const newQty = line.qty + qty;
+        const newQty = line.qty + lineQty;
         next[idx] = {
           ...line,
           qty: newQty,
@@ -183,15 +191,119 @@ export default function AdLicoreriaVentas() {
       return [
         ...prev,
         {
-          productId,
+          productId: pid,
           presentationId: pres.id,
-          qty,
+          qty: lineQty,
           unitPrice: { ...pres.price },
-          qtyBase: toBaseUnits(pres, qty),
+          qtyBase: toBaseUnits(pres, lineQty),
         },
       ];
     });
     setMsg("");
+  }
+
+  function addLine() {
+    const pres = activePres;
+    if (!pres || qty <= 0) return;
+    addLineToCart(productId, pres.id, qty);
+  }
+
+  const handleBarcodeScan = useCallback(
+    async (code: string, source: "wedge" | "camera" = "wedge") => {
+      const trimmed = code.trim();
+      if (!trimmed) return;
+      setQuery(trimmed);
+
+      let resolvedProductId: string | undefined;
+      let resolvedPresentationId: string | undefined;
+
+      const presByCode = matchPresentationBarcode(presentations, trimmed);
+      if (presByCode) {
+        resolvedProductId = presByCode.productId;
+        resolvedPresentationId = presByCode.id;
+      } else {
+        const bySkuOrBarcode = products.find(
+          (p) =>
+            p.active &&
+            (p.barcode?.trim().toLowerCase() === trimmed.toLowerCase() ||
+              p.sku.trim().toLowerCase() === trimmed.toLowerCase()),
+        );
+        if (bySkuOrBarcode) resolvedProductId = bySkuOrBarcode.id;
+      }
+
+      if (!resolvedProductId && isAdApiDataSource()) {
+        const r = await searchAdProducts(trimmed, source);
+        if (r.ok && r.products.length) {
+          const hit = r.products[0];
+          resolvedProductId = hit.id;
+          const pres = matchPresentationBarcode(hit.presentations, trimmed);
+          if (pres) resolvedPresentationId = pres.id;
+        }
+      }
+
+      if (!resolvedProductId) {
+        setMsg("Producto no encontrado");
+        return;
+      }
+
+      const product = products.find((p) => p.id === resolvedProductId);
+      if (!product?.active) {
+        setMsg("Producto no disponible");
+        return;
+      }
+
+      setProductId(resolvedProductId);
+
+      if (resolvedPresentationId) {
+        setPresentationId(resolvedPresentationId);
+        addLineToCart(resolvedProductId, resolvedPresentationId, 1);
+        setQuery("");
+        return;
+      }
+
+      const presList = getPresentationsFor(resolvedProductId);
+      const scannedPack = findUnitAndBox(presList);
+      if (scannedPack.unit && scannedPack.box) {
+        setPackPick({ productId: resolvedProductId });
+        return;
+      }
+
+      const onlyPres = presList[0];
+      if (onlyPres) {
+        setPresentationId(onlyPres.id);
+        addLineToCart(resolvedProductId, onlyPres.id, 1);
+        setQuery("");
+      }
+    },
+    [getPresentationsFor, presentations, products],
+  );
+
+  const onCameraScan = useCallback(
+    (code: string) => {
+      void handleBarcodeScan(code, "camera");
+    },
+    [handleBarcodeScan],
+  );
+
+  const {
+    cameraOn,
+    cameraSupported,
+    msg: camMsg,
+    videoRef,
+    toggleCamera,
+  } = useAdBarcodeCamera({ onScan: onCameraScan });
+
+  function applyPackPick(mode: "UNIT" | "BOX") {
+    if (!packPick) return;
+    const presList = getPresentationsFor(packPick.productId);
+    const pickPack = findUnitAndBox(presList);
+    const pres = mode === "BOX" ? pickPack.box : pickPack.unit;
+    if (!pres) return;
+    setProductId(packPick.productId);
+    setPresentationId(pres.id);
+    addLineToCart(packPick.productId, pres.id, 1);
+    setPackPick(null);
+    setQuery("");
   }
 
   function setLineQty(index: number, nextQty: number) {
@@ -517,14 +629,35 @@ export default function AdLicoreriaVentas() {
       {posStep === "productos" ? (
         <section className="ad-panel ad-pos__panel space-y-3">
           <h3 className="ad-pos__section-title">Buscar y agregar</h3>
-          <input
-            className="ad-input ad-pos__search"
-            placeholder="Buscar nombre, marca o código…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            inputMode="search"
-            autoComplete="off"
-          />
+          <div className="flex flex-wrap gap-2">
+            <input
+              className="ad-input ad-pos__search min-w-[12rem] flex-1"
+              placeholder="Buscar nombre, marca o código… (escáner USB → Enter)"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleBarcodeScan(query, "wedge");
+              }}
+              inputMode="search"
+              autoComplete="off"
+            />
+            {cameraSupported ? (
+              <button type="button" className="ad-btn" onClick={toggleCamera}>
+                {cameraOn ? "Cerrar cámara" : "Escanear"}
+              </button>
+            ) : null}
+          </div>
+          {cameraOn ? (
+            <video
+              ref={videoRef}
+              className="max-h-40 w-full rounded bg-black object-cover"
+              muted
+              playsInline
+            />
+          ) : null}
+          {camMsg ? (
+            <p className="text-sm text-[var(--ad-muted)]">{camMsg}</p>
+          ) : null}
 
           <div className="ad-pos__products">
             {filteredProducts.slice(0, 24).map((p) => (
@@ -1072,6 +1205,26 @@ export default function AdLicoreriaVentas() {
             />
           </div>
         </div>
+      ) : null}
+
+      {packPick ? (
+        <AdPackPickPrompt
+          productName={
+            products.find((p) => p.id === packPick.productId)?.name ?? "Producto"
+          }
+          unitPrice={
+            findUnitAndBox(getPresentationsFor(packPick.productId)).unit?.price
+          }
+          boxPrice={
+            findUnitAndBox(getPresentationsFor(packPick.productId)).box?.price
+          }
+          boxUnits={
+            findUnitAndBox(getPresentationsFor(packPick.productId)).box
+              ?.unitsPerPresentation
+          }
+          onPick={applyPackPick}
+          onCancel={() => setPackPick(null)}
+        />
       ) : null}
     </div>
   );
