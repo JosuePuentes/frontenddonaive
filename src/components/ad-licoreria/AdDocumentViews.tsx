@@ -387,6 +387,7 @@ export type AdPurchasePrintLine = {
   description: string;
   brand: string;
   presentation: string;
+  unitsPerPresentation?: number;
   qty: number;
   unitCost: number;
   presentationCost: number;
@@ -483,8 +484,9 @@ export function AdPurchaseDocument(props: {
               <th>Marca</th>
               <th>Presentación</th>
               <th>Cant.</th>
-              <th>Costo u.</th>
-              <th>Costo pres.</th>
+              <th>U. x caja</th>
+              <th>Costo / u.</th>
+              <th>Costo / caja</th>
               <th>Subtotal</th>
               <th>IVA</th>
             </tr>
@@ -497,8 +499,13 @@ export function AdPurchaseDocument(props: {
                 <td>{l.brand || "—"}</td>
                 <td>{l.presentation}</td>
                 <td>{l.qty}</td>
+                <td>{l.unitsPerPresentation && l.unitsPerPresentation > 1 ? l.unitsPerPresentation : "—"}</td>
                 <td className="tabular-nums">{l.unitCost.toFixed(4)}</td>
-                <td className="tabular-nums">{l.presentationCost.toFixed(2)}</td>
+                <td className="tabular-nums">
+                  {l.unitsPerPresentation && l.unitsPerPresentation > 1
+                    ? l.presentationCost.toFixed(2)
+                    : "—"}
+                </td>
                 <td className="tabular-nums">{l.lineSubtotal.toFixed(2)}</td>
                 <td className="tabular-nums">
                   {l.taxable ? l.lineTax.toFixed(2) : "—"}

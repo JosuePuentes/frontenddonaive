@@ -39,15 +39,32 @@ function lineMoney(l: DraftLine) {
     box = unit * upp;
     subtotal = unit * upp * l.qty;
   } else if (l.costMode === "PRESENTATION") {
-    unit = box / upp;
+    unit = upp > 0 ? box / upp : 0;
     subtotal = box * l.qty;
   } else {
     subtotal = l.lineTotal;
     box = l.qty > 0 ? subtotal / l.qty : 0;
-    unit = box / upp;
+    unit = upp > 0 ? box / upp : 0;
   }
   const tax = l.taxable ? subtotal * 0.16 : 0;
-  return { unit, box, subtotal, tax, total: subtotal + tax };
+  return { unit, box, subtotal, tax, total: subtotal + tax, upp };
+}
+
+function lineToApiPayload(l: DraftLine, currency: "USD" | "BS") {
+  const m = lineMoney(l);
+  return {
+    presentationId: l.presentationId,
+    qty: l.qty,
+    qtyBonus: l.qtyBonus,
+    costMode: l.costMode,
+    unitCostUsd: currency === "USD" ? m.unit : 0,
+    unitCostBs: currency === "BS" ? m.unit : 0,
+    presentationCostUsd: currency === "USD" ? m.box : 0,
+    presentationCostBs: currency === "BS" ? m.box : 0,
+    lineTotalUsd: currency === "USD" ? m.subtotal : 0,
+    lineTotalBs: currency === "BS" ? m.subtotal : 0,
+    taxable: l.taxable,
+  };
 }
 
 /**
@@ -292,19 +309,7 @@ export default function AdLicoreriaCompras() {
       dueDate: credit && dueDate ? new Date(dueDate).toISOString() : undefined,
       notes,
       preliminary: true,
-      lines: lines.map((l) => ({
-        presentationId: l.presentationId,
-        qty: l.qty,
-        qtyBonus: l.qtyBonus,
-        costMode: l.costMode,
-        unitCostUsd: currency === "USD" ? l.unitCost : 0,
-        unitCostBs: currency === "BS" ? l.unitCost : 0,
-        presentationCostUsd: currency === "USD" ? l.presentationCost : 0,
-        presentationCostBs: currency === "BS" ? l.presentationCost : 0,
-        lineTotalUsd: currency === "USD" ? l.lineTotal : 0,
-        lineTotalBs: currency === "BS" ? l.lineTotal : 0,
-        taxable: l.taxable,
-      })),
+      lines: lines.map((l) => lineToApiPayload(l, currency)),
     };
 
     let id = purchaseId;
@@ -646,7 +651,69 @@ export default function AdLicoreriaCompras() {
                   }
                 />
               </label>
-              {l.buyMode === "BOX" ? (
+              <div>
+                <p className="text-xs text-[var(--ad-muted)]">
+                  ¿Cómo viene el costo en la factura?
+                </p>
+                <div className="mt-1 grid max-w-md grid-cols-2 gap-2">
+                  {l.buyMode === "BOX" ? (
+                    <>
+                      <button
+                        type="button"
+                        className={`ad-btn ${l.costMode === "PRESENTATION" ? "ad-btn--gold" : ""}`}
+                        onClick={() =>
+                          updateLine(l.key, { costMode: "PRESENTATION" })
+                        }
+                      >
+                        Precio por caja
+                      </button>
+                      <button
+                        type="button"
+                        className={`ad-btn ${l.costMode === "TOTAL" ? "ad-btn--gold" : ""}`}
+                        onClick={() => updateLine(l.key, { costMode: "TOTAL" })}
+                      >
+                        Total de la línea
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={`ad-btn ${l.costMode === "UNIT" ? "ad-btn--gold" : ""}`}
+                        onClick={() => updateLine(l.key, { costMode: "UNIT" })}
+                      >
+                        Precio por unidad
+                      </button>
+                      <button
+                        type="button"
+                        className={`ad-btn ${l.costMode === "TOTAL" ? "ad-btn--gold" : ""}`}
+                        onClick={() => updateLine(l.key, { costMode: "TOTAL" })}
+                      >
+                        Total de la línea
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              {l.costMode === "TOTAL" ? (
+                <label className="text-xs text-[var(--ad-muted)]">
+                  Total facturado ({currency}) —{" "}
+                  {l.buyMode === "BOX"
+                    ? `${l.qty} caja(s)`
+                    : `${l.qty} unidad(es)`}
+                  <input
+                    className="ad-input mt-1"
+                    type="number"
+                    step="0.01"
+                    value={l.lineTotal}
+                    onChange={(e) =>
+                      updateLine(l.key, {
+                        lineTotal: Number(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+              ) : l.buyMode === "BOX" ? (
                 <label className="text-xs text-[var(--ad-muted)]">
                   Costo de cada caja ({currency})
                   <input
@@ -678,15 +745,33 @@ export default function AdLicoreriaCompras() {
                 </label>
               )}
               <div className="rounded bg-black/20 p-2 text-sm leading-6">
+                {l.buyMode === "BOX" && l.qty > 0 ? (
+                  <div className="text-[var(--ad-muted)]">
+                    {l.qty} caja(s) × {m.box.toFixed(2)} {currency} ={" "}
+                    <strong>{m.subtotal.toFixed(2)}</strong> {currency}
+                  </div>
+                ) : null}
                 <div>
-                  Costo por caja: <strong>{px.boxCost.toFixed(2)}</strong>
+                  Costo por caja:{" "}
+                  <strong>
+                    {m.box.toFixed(2)} {currency}
+                  </strong>
+                  {l.buyMode === "BOX" ? (
+                    <span className="text-[var(--ad-muted)]">
+                      {" "}
+                      ({m.upp} u. por caja)
+                    </span>
+                  ) : null}
                 </div>
                 <div>
-                  Costo por unidad: <strong>{m.unit.toFixed(4)}</strong>
+                  Costo por unidad:{" "}
+                  <strong>
+                    {m.unit.toFixed(4)} {currency}
+                  </strong>
                 </div>
                 <div>
-                  Total de esta línea: <strong>{m.subtotal.toFixed(2)}</strong>{" "}
-                  {currency}
+                  Total de esta línea:{" "}
+                  <strong>{m.subtotal.toFixed(2)}</strong> {currency}
                   {l.taxable ? ` + IVA ${m.tax.toFixed(2)}` : ""}
                 </div>
                 {l.utilityPercent > 0 ? (
