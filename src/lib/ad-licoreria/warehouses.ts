@@ -50,3 +50,45 @@ export function warehouseUsesMesas(
   if (warehouseId === AD_WH_BODEGON) return true;
   return false;
 }
+
+export type WarehouseAssignMode = "transversal" | "lic" | "bod";
+
+export function warehouseIdFromMode(
+  mode: WarehouseAssignMode,
+  warehouses: AdWarehouseRef[] = [],
+): string | null {
+  if (mode === "transversal") return null;
+  if (mode === "lic") return resolveCanonicalWarehouseId("LIC", warehouses);
+  return resolveCanonicalWarehouseId("BOD", warehouses);
+}
+
+export function warehouseModeFromId(
+  warehouseId: string | null | undefined,
+  warehouses: AdWarehouseRef[] = [],
+): WarehouseAssignMode {
+  if (!warehouseId) return "transversal";
+  const licId = resolveCanonicalWarehouseId("LIC", warehouses);
+  const bodId = resolveCanonicalWarehouseId("BOD", warehouses);
+  if (warehouseId === licId) return "lic";
+  if (warehouseId === bodId) return "bod";
+  const wh = warehouses.find((w) => w.id === warehouseId);
+  const code = (wh?.code ?? "").toUpperCase();
+  if (code === "LIC") return "lic";
+  if (code === "BOD") return "bod";
+  return "transversal";
+}
+
+export function warehouseAssignmentLabel(
+  warehouseId: string | null | undefined,
+  warehouses: AdWarehouseRef[] = [],
+): string {
+  const mode = warehouseModeFromId(warehouseId, warehouses);
+  if (mode === "lic") return "Licorería";
+  if (mode === "bod") return "Bodegón";
+  return "Ambos (transversal)";
+}
+
+/** Cajero/mesonera deben tener un solo depósito (no transversal). */
+export function roleRequiresSingleWarehouse(role: string): boolean {
+  return role === "cajero" || role === "mesonera";
+}

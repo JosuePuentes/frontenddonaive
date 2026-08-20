@@ -6,6 +6,13 @@ import {
   AD_ROLE_LABELS,
 } from "@/lib/ad-licoreria/access";
 import { uid } from "@/lib/ad-licoreria/conversions";
+import {
+  roleRequiresSingleWarehouse,
+  warehouseAssignmentLabel,
+  warehouseIdFromMode,
+  warehouseModeFromId,
+  type WarehouseAssignMode,
+} from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import { useAdTv } from "@/providers/ad-licoreria/AdTvProvider";
@@ -32,7 +39,7 @@ export default function AdLicoreriaConfigUsuarios() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<AdRole>("cajero");
-  const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
+  const [warehouseMode, setWarehouseMode] = useState<WarehouseAssignMode>("lic");
   const [pos, setPos] = useState(true);
   const [inv, setInv] = useState(false);
   const [cop, setCop] = useState(false);
@@ -51,7 +58,7 @@ export default function AdLicoreriaConfigUsuarios() {
     setName(o.name);
     setPhone(o.phone ?? "");
     setRole(o.role);
-    setWarehouseId(o.warehouseId ?? "");
+    setWarehouseMode(warehouseModeFromId(o.warehouseId, warehouses));
     setPos(o.role === "tv" ? false : o.posEnabled !== false);
     setInv(o.inventoryAccess === true);
     setCop(o.copAccess === true);
@@ -70,7 +77,9 @@ export default function AdLicoreriaConfigUsuarios() {
       setCop(false);
       setPurchase(false);
       setClosures(false);
-      setWarehouseId("");
+      setWarehouseMode("transversal");
+    } else if (roleRequiresSingleWarehouse(next)) {
+      setWarehouseMode((m) => (m === "transversal" ? "lic" : m));
     }
   }
 
@@ -84,6 +93,7 @@ export default function AdLicoreriaConfigUsuarios() {
     setTvScreenId("");
     setTvGroupId("");
     setRole("cajero");
+    setWarehouseMode("lic");
     setPos(true);
     setInv(false);
     setCop(false);
@@ -95,6 +105,26 @@ export default function AdLicoreriaConfigUsuarios() {
 
   async function save() {
     const isTv = role === "tv";
+    const singleWh = roleRequiresSingleWarehouse(role);
+    if (singleWh && warehouseMode === "transversal") {
+      setMsg("Cajero y mesonera deben asignarse a Licorería o Bodegón");
+      return;
+    }
+    if (!isTv && pos && singleWh && warehouseMode === "transversal") {
+      setMsg("Seleccione Licorería o Bodegón para el POS");
+      return;
+    }
+    const resolvedWarehouseId = isTv
+      ? null
+      : warehouseIdFromMode(warehouseMode, warehouses);
+    if (
+      !isTv &&
+      (singleWh || pos) &&
+      !resolvedWarehouseId
+    ) {
+      setMsg("Seleccione Licorería o Bodegón");
+      return;
+    }
     const login = username.trim().toLowerCase();
     if (!login) {
       setMsg("Indique el usuario (login) con el que va a entrar");
@@ -135,7 +165,7 @@ export default function AdLicoreriaConfigUsuarios() {
       phone: phone.trim() || undefined,
       role,
       active,
-      warehouseId: isTv ? null : warehouseId || null,
+      warehouseId: resolvedWarehouseId,
       posEnabled: isTv ? false : pos,
       inventoryAccess: isTv ? false : inv,
       copAccess: isTv ? false : cop,
@@ -186,8 +216,8 @@ export default function AdLicoreriaConfigUsuarios() {
             Usuarios
           </h1>
           <p className="mt-1 text-sm text-[var(--ad-muted)]">
-            Defina usuario y contraseña de acceso. Al editar, deje la clave
-            vacía si no desea cambiarla.
+            Defina usuario, contraseña y depósito (Licorería, Bodegón o ambos).
+            Cajero/mesonera deben ir a un solo depósito; Bodegón habilita mesas.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -232,9 +262,7 @@ export default function AdLicoreriaConfigUsuarios() {
                         ]
                           .filter(Boolean)
                           .join(" · ") || "TV"
-                      : o.warehouseId
-                        ? warehouses.find((w) => w.id === o.warehouseId)?.name
-                        : "Transversal"}
+                      : warehouseAssignmentLabel(o.warehouseId, warehouses)}
                   </td>
                   <td>{o.role === "tv" || o.posEnabled === false ? "No" : "Sí"}</td>
                   <td>{o.active ? "Activo" : "Inactivo"}</td>
@@ -323,23 +351,29 @@ export default function AdLicoreriaConfigUsuarios() {
               onChange={(e) => setName(e.target.value)}
             />
           </label>
-          <input
-            className="ad-input"
-            placeholder="Teléfono (opcional)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <select
-            className="ad-select"
-            value={role}
-            onChange={(e) => onRoleChange(e.target.value as AdRole)}
-          >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {AD_ROLE_LABELS[r]}
-              </option>
-            ))}
-          </select>
+          <label className="text-xs">
+            Teléfono (opcional)
+            <input
+              className="ad-input mt-1"
+              placeholder="0414-0000000"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </label>
+          <label className="text-xs">
+            Rol
+            <select
+              className="ad-select mt-1"
+              value={role}
+              onChange={(e) => onRoleChange(e.target.value as AdRole)}
+            >
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {AD_ROLE_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </label>
           {role === "tv" ? (
             <>
               <select
@@ -368,18 +402,71 @@ export default function AdLicoreriaConfigUsuarios() {
               </select>
             </>
           ) : (
-            <select
-              className="ad-select"
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-            >
-              <option value="">Transversal</option>
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name} ({w.code})
-                </option>
-              ))}
-            </select>
+            <fieldset className="sm:col-span-2 lg:col-span-3 space-y-2 rounded border border-[var(--ad-line)] p-3">
+              <legend className="px-1 text-sm font-medium text-[var(--ad-gold-soft)]">
+                ¿Dónde opera este usuario?
+              </legend>
+              {roleRequiresSingleWarehouse(role) ? (
+                <p className="text-xs text-[var(--ad-muted)]">
+                  Cajero y mesonera trabajan en un solo depósito. En Bodegón
+                  puede usar mesas; en Licorería es venta en mostrador.
+                </p>
+              ) : (
+                <p className="text-xs text-[var(--ad-muted)]">
+                  Admin, supervisor e inventario pueden ser transversales
+                  (ambos) o quedar en un solo depósito.
+                </p>
+              )}
+              <div className="grid gap-2 sm:grid-cols-3">
+                {!roleRequiresSingleWarehouse(role) ? (
+                  <label className="flex cursor-pointer items-start gap-2 rounded border border-[var(--ad-line)] p-2 text-sm has-[:checked]:border-[var(--ad-gold)]">
+                    <input
+                      type="radio"
+                      name="warehouseMode"
+                      className="mt-1"
+                      checked={warehouseMode === "transversal"}
+                      onChange={() => setWarehouseMode("transversal")}
+                    />
+                    <span>
+                      <strong>Ambos</strong>
+                      <span className="mt-0.5 block text-xs text-[var(--ad-muted)]">
+                        Licorería + Bodegón
+                      </span>
+                    </span>
+                  </label>
+                ) : null}
+                <label className="flex cursor-pointer items-start gap-2 rounded border border-[var(--ad-line)] p-2 text-sm has-[:checked]:border-[var(--ad-gold)]">
+                  <input
+                    type="radio"
+                    name="warehouseMode"
+                    className="mt-1"
+                    checked={warehouseMode === "lic"}
+                    onChange={() => setWarehouseMode("lic")}
+                  />
+                  <span>
+                    <strong>Licorería</strong>
+                    <span className="mt-0.5 block text-xs text-[var(--ad-muted)]">
+                      Mostrador, sin mesas
+                    </span>
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-2 rounded border border-[var(--ad-line)] p-2 text-sm has-[:checked]:border-[var(--ad-gold)]">
+                  <input
+                    type="radio"
+                    name="warehouseMode"
+                    className="mt-1"
+                    checked={warehouseMode === "bod"}
+                    onChange={() => setWarehouseMode("bod")}
+                  />
+                  <span>
+                    <strong>Bodegón</strong>
+                    <span className="mt-0.5 block text-xs text-[var(--ad-muted)]">
+                      POS, mesas y cuentas
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
           )}
           <label className="flex items-center gap-2 text-sm">
             <input
