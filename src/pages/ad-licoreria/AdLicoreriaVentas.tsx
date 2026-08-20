@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Link } from "react-router";
 import {
+  customerDisplayName,
   toBaseUnits,
+  uid,
 } from "@/lib/ad-licoreria/conversions";
+import { barcodeLookupVariants } from "@/lib/ad-licoreria/barcode-lookup";
 import { useAdFocusMode } from "@/lib/ad-licoreria/focus-mode";
 import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import { findUnitAndBox } from "@/lib/ad-licoreria/pack";
@@ -55,6 +58,7 @@ export default function AdLicoreriaVentas() {
     createInvoiceDraft,
     confirmInvoiceDraft,
     cancelInvoiceDraft,
+    upsertCustomer,
     hasPermission,
   } = useAdLicoreria();
 
@@ -94,6 +98,11 @@ export default function AdLicoreriaVentas() {
   const [extrasOpen, setExtrasOpen] = useState(false);
   const [cobroOpen, setCobroOpen] = useState(false);
   const [packPick, setPackPick] = useState<{ productId: string } | null>(null);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newCustomerFirst, setNewCustomerFirst] = useState("");
+  const [newCustomerLast, setNewCustomerLast] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
 
   const usesMesas = warehouseUsesMesas(posWarehouseId, warehouses);
   const posTables = useMemo(
@@ -136,6 +145,21 @@ export default function AdLicoreriaVentas() {
   const cashier = sessionUser ?? operators.find((o) => o.id === cashierId);
   const mesonera = operators.find((o) => o.id === mesoneraId);
   const customer = customers.find((c) => c.id === customerId);
+  const customerLabel = customer?.name ?? "Cliente general";
+
+  const filteredCustomers = useMemo(() => {
+    const q = customerQuery.trim().toLowerCase();
+    const active = customers.filter((c) => c.active);
+    if (!q) return active.slice(0, 12);
+    return active
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.phone.includes(q) ||
+          (c.documentId ?? "").toLowerCase().includes(q),
+      )
+      .slice(0, 12);
+  }, [customers, customerQuery]);
   const methodCfg = activeMethods.find((m) => m.code === payMethod);
   const totalUsd = cart.reduce((a, l) => a + l.unitPrice.usd * l.qty, 0);
   const totalBs = cart.reduce((a, l) => a + l.unitPrice.bs * l.qty, 0);
@@ -234,18 +258,23 @@ export default function AdLicoreriaVentas() {
       let resolvedProductId: string | undefined;
       let resolvedPresentationId: string | undefined;
 
-      const presByCode = matchPresentationBarcode(presentations, trimmed);
-      if (presByCode) {
-        resolvedProductId = presByCode.productId;
-        resolvedPresentationId = presByCode.id;
-      } else {
+      for (const variant of barcodeLookupVariants(trimmed)) {
+        const presByCode = matchPresentationBarcode(presentations, variant);
+        if (presByCode) {
+          resolvedProductId = presByCode.productId;
+          resolvedPresentationId = presByCode.id;
+          break;
+        }
         const bySkuOrBarcode = products.find(
           (p) =>
             p.active &&
-            (p.barcode?.trim().toLowerCase() === trimmed.toLowerCase() ||
-              p.sku.trim().toLowerCase() === trimmed.toLowerCase()),
+            ((p.barcode && p.barcode.trim().toLowerCase() === variant.toLowerCase()) ||
+              p.sku.trim().toLowerCase() === variant.toLowerCase()),
         );
-        if (bySkuOrBarcode) resolvedProductId = bySkuOrBarcode.id;
+        if (bySkuOrBarcode) {
+          resolvedProductId = bySkuOrBarcode.id;
+          break;
+        }
       }
 
       if (!resolvedProductId && isAdApiDataSource()) {
@@ -349,6 +378,40 @@ export default function AdLicoreriaVentas() {
     setMsg("");
   }
 
+  async function registerCustomerQuick() {
+    if (!newCustomerPhone.trim()) {
+      setMsg("Teléfono del cliente obligatorio");
+      return;
+    }
+    if (!newCustomerFirst.trim() || !newCustomerLast.trim()) {
+      setMsg("Nombre y apellido obligatorios");
+      return;
+    }
+    const name = customerDisplayName(newCustomerFirst, newCustomerLast);
+    const r = await resolveAdResult(
+      upsertCustomer({
+        id: uid("cust"),
+        firstName: newCustomerFirst.trim(),
+        lastName: newCustomerLast.trim(),
+        name,
+        phone: newCustomerPhone.trim(),
+        active: true,
+        createdAt: new Date().toISOString(),
+      }),
+    );
+    if (!r.ok) {
+      setMsg(r.error);
+      return;
+    }
+    setCustomerId(r.data.id);
+    setCustomerQuery("");
+    setShowNewCustomer(false);
+    setNewCustomerFirst("");
+    setNewCustomerLast("");
+    setNewCustomerPhone("");
+    setMsg(`Cliente ${r.data.name} listo`);
+  }
+
   async function openPrelim() {
     if (!canSell || !posWarehouseId || !cashierId) {
       setMsg("Sesión POS inválida: usuario con depósito asignado requerido");
@@ -376,7 +439,7 @@ export default function AdLicoreriaVentas() {
         tableId: tableId || undefined,
         mesoneraName: mesonera?.name,
         customerId: customer?.id,
-        customerName: customer?.name,
+        customerName: customerLabel,
         customerPhone: customer?.phone,
         customerDocumentId: customer?.documentId,
         discountUsd,
@@ -736,8 +799,7 @@ export default function AdLicoreriaVentas() {
             ${netUsd.toFixed(2)}
           </p>
           <p className="text-xs text-[var(--ad-muted)]">
-            {cart.length} ítem(s)
-            {customer ? ` · ${customer.name}` : ""}
+            {cart.length} ítem(s) · {customerLabel}
             {usesMesas && selectedTable
               ? ` · ${selectedTable.code ?? `Mesa ${selectedTable.number}`}`
               : ""}
@@ -913,6 +975,98 @@ export default function AdLicoreriaVentas() {
                 <span>Pagado ${paidUsd.toFixed(2)}</span>
                 <span>Resta ${Math.max(0, netUsd - paidUsd).toFixed(2)}</span>
               </div>
+            </div>
+
+            <div className="rounded border border-[var(--ad-line)] p-3 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="ad-pos__section-title mb-0">Cliente</p>
+                <span className="text-sm text-[var(--ad-gold-soft)]">
+                  {customerLabel}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={`ad-btn ${!customerId ? "ad-btn--gold" : ""}`}
+                  onClick={() => {
+                    setCustomerId("");
+                    setCustomerQuery("");
+                    setShowNewCustomer(false);
+                  }}
+                >
+                  Cliente general
+                </button>
+                <button
+                  type="button"
+                  className={`ad-btn ${showNewCustomer ? "ad-btn--gold" : ""}`}
+                  onClick={() => setShowNewCustomer((v) => !v)}
+                >
+                  Registrar cliente
+                </button>
+              </div>
+              <input
+                className="ad-input"
+                placeholder="Buscar por nombre, teléfono o cédula…"
+                value={customerQuery}
+                onChange={(e) => setCustomerQuery(e.target.value)}
+              />
+              {filteredCustomers.length ? (
+                <ul className="max-h-32 overflow-auto rounded border border-[var(--ad-line)] text-sm">
+                  {filteredCustomers.map((c) => (
+                    <li key={c.id} className="border-b border-[var(--ad-line)] last:border-0">
+                      <button
+                        type="button"
+                        className={`flex w-full flex-col px-3 py-2 text-left hover:bg-white/5 ${customerId === c.id ? "bg-[rgba(212,175,106,0.08)]" : ""}`}
+                        onClick={() => {
+                          setCustomerId(c.id);
+                          setCustomerQuery("");
+                          setShowNewCustomer(false);
+                        }}
+                      >
+                        <span className="font-medium">{c.name}</span>
+                        <span className="text-[var(--ad-muted)]">
+                          {c.phone}
+                          {c.documentId ? ` · ${c.documentId}` : ""}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : customerQuery.trim() ? (
+                <p className="text-xs text-[var(--ad-muted)]">
+                  Sin coincidencias. Use «Registrar cliente» o «Cliente general».
+                </p>
+              ) : null}
+              {showNewCustomer ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input
+                    className="ad-input"
+                    placeholder="Nombre"
+                    value={newCustomerFirst}
+                    onChange={(e) => setNewCustomerFirst(e.target.value)}
+                  />
+                  <input
+                    className="ad-input"
+                    placeholder="Apellido"
+                    value={newCustomerLast}
+                    onChange={(e) => setNewCustomerLast(e.target.value)}
+                  />
+                  <input
+                    className="ad-input sm:col-span-2"
+                    placeholder="Teléfono *"
+                    value={newCustomerPhone}
+                    onChange={(e) => setNewCustomerPhone(e.target.value)}
+                    inputMode="tel"
+                  />
+                  <button
+                    type="button"
+                    className="ad-btn ad-btn--gold sm:col-span-2"
+                    onClick={() => void registerCustomerQuick()}
+                  >
+                    Guardar y usar este cliente
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">

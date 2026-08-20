@@ -269,6 +269,8 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
         productId: String(p.id),
         name: String(pr.name),
         code: pr.code ? String(pr.code) : undefined,
+        sku: pr.sku ? String(pr.sku) : undefined,
+        barcode: pr.barcode ? String(pr.barcode) : undefined,
         unitsPerPresentation: num(pr.unitsPerPresentation),
         price: { usd: num(pr.priceUsd), bs: num(pr.priceBs) },
         active: Boolean(pr.active),

@@ -7,6 +7,7 @@ import {
 } from "../errors/app-error.js";
 import {
   hasAdPermission,
+  requireAdAnyPermission,
   requireAdPermission,
   requireWarehouseAccess,
   resolveEffectiveWarehouseId,
@@ -59,9 +60,25 @@ function sanitizePurchaseForClient<T extends Record<string, unknown>>(
   return copy;
 }
 
+/** Variantes EAN/SKU para tolerar ceros a la izquierda o lecturas parciales. */
+function barcodeLookupVariants(code: string): string[] {
+  const trimmed = code.trim();
+  if (!trimmed) return [];
+  const out = new Set<string>([trimmed]);
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits) {
+    out.add(digits);
+    const stripped = digits.replace(/^0+/, "") || digits;
+    out.add(stripped);
+    if (digits.length <= 13) out.add(digits.padStart(13, "0"));
+    if (digits.length <= 14) out.add(digits.padStart(14, "0"));
+  }
+  return [...out];
+}
+
 export const adCommerceService = {
-  /** Búsqueda global de productos (código, barcode, nombre, marca…). */
-  async searchProducts(
+  /** Consulta interna sin chequeo de permiso (lookup POS / inventario). */
+  async queryProducts(
     ctx: AdRequestContext,
     query: {
       q?: string;
@@ -73,7 +90,6 @@ export const adCommerceService = {
       limit?: number;
     },
   ) {
-    requireAdPermission(ctx, "inventory.read");
     const prisma = getPrisma();
     const limit = query.limit ?? 40;
     const activeFilter =
@@ -176,6 +192,27 @@ export const adCommerceService = {
     }));
   },
 
+  /** Búsqueda global de productos (código, barcode, nombre, marca…). */
+  async searchProducts(
+    ctx: AdRequestContext,
+    query: {
+      q?: string;
+      sku?: string;
+      barcode?: string;
+      brand?: string;
+      warehouseId?: string;
+      active?: "true" | "false" | "all";
+      limit?: number;
+    },
+  ) {
+    requireAdAnyPermission(ctx, [
+      "inventory.read",
+      "pos.sell",
+      "products.manage",
+    ]);
+    return this.queryProducts(ctx, query);
+  },
+
   /**
    * Contrato de escaneo: code + source (manual|camera|wedge).
    * No integra hardware; solo resuelve producto.
@@ -184,27 +221,46 @@ export const adCommerceService = {
     ctx: AdRequestContext,
     input: { code: string; source?: "manual" | "camera" | "wedge" },
   ) {
-    requireAdPermission(ctx, "inventory.read");
-    const code = input.code.trim();
-    if (!code) throw new ValidationError("Código requerido");
-    const hits = await this.searchProducts(ctx, {
-      barcode: code,
-      limit: 5,
-      active: "true",
-    });
-    if (!hits.length) {
-      const bySku = await this.searchProducts(ctx, {
-        sku: code,
+    requireAdAnyPermission(ctx, [
+      "inventory.read",
+      "pos.sell",
+      "products.manage",
+    ]);
+    const raw = input.code.trim();
+    if (!raw) throw new ValidationError("Código requerido");
+    const variants = barcodeLookupVariants(raw);
+    let matches: Awaited<
+      ReturnType<(typeof adCommerceService)["queryProducts"]>
+    > = [];
+    for (const code of variants) {
+      const hits = await this.queryProducts(ctx, {
+        barcode: code,
         limit: 5,
         active: "true",
       });
-      return {
-        code,
-        source: input.source ?? "manual",
-        matches: bySku,
-      };
+      if (hits.length) {
+        matches = hits;
+        break;
+      }
     }
-    return { code, source: input.source ?? "manual", matches: hits };
+    if (!matches.length) {
+      for (const code of variants) {
+        const bySku = await this.queryProducts(ctx, {
+          sku: code,
+          limit: 5,
+          active: "true",
+        });
+        if (bySku.length) {
+          matches = bySku;
+          break;
+        }
+      }
+    }
+    return {
+      code: raw,
+      source: input.source ?? "manual",
+      matches,
+    };
   },
 
   async listSuppliers(ctx: AdRequestContext) {

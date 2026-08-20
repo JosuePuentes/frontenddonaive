@@ -59,6 +59,18 @@ export function requireAdPermission(
   }
 }
 
+/** Al menos uno de los permisos listados (p. ej. POS o inventario para escaneo). */
+export function requireAdAnyPermission(
+  ctx: AdRequestContext,
+  permissions: AdPermission[],
+): void {
+  if (ctx.operator.role === "admin") return;
+  if (permissions.some((p) => ctx.permissions.has(p))) return;
+  throw new ForbiddenError(
+    `Permiso A&D requerido: ${permissions.join(" o ")}`,
+  );
+}
+
 /**
  * POS/mesonera: el depósito efectivo es siempre el del operador.
  * Ignora cualquier warehouseId enviado en el body/query.

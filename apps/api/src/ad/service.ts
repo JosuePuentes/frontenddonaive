@@ -8,6 +8,7 @@ import {
 import {
   assertSameWarehouseSale,
   hasAdPermission,
+  requireAdAnyPermission,
   requireAdPermission,
   requireWarehouseAccess,
   resolveEffectiveWarehouseId,
@@ -580,7 +581,7 @@ export const adService = {
     ctx: AdRequestContext,
     input: { name: string; phone: string; document?: string },
   ) {
-    requireAdPermission(ctx, "clients.read");
+    requireAdAnyPermission(ctx, ["clients.read", "pos.sell"]);
     const prisma = getPrisma();
     const customer = await prisma.adCustomer.create({
       data: {

@@ -3,7 +3,10 @@ import { Link } from "react-router";
 import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import { useAdBarcodeCamera } from "@/hooks/ad-licoreria/useAdBarcodeCamera";
 import { formatAdPrice, fromBaseUnits } from "@/lib/ad-licoreria/conversions";
-import { resolveAdProductByCode } from "@/lib/ad-licoreria/product-lookup";
+import {
+  resolveAdProductByCode,
+  type AdProductSearchHit,
+} from "@/lib/ad-licoreria/product-lookup";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
@@ -14,6 +17,7 @@ type ScanView =
       code: string;
       productId: string;
       presentationId?: string;
+      apiHit?: AdProductSearchHit;
     };
 
 /**
@@ -55,7 +59,7 @@ export default function AdLicoreriaEscaner() {
           return;
         }
         const product = products.find((p) => p.id === hit.productId);
-        if (!product?.active) {
+        if (product && !product.active) {
           setView({ mode: "idle" });
           setMsg("Producto no disponible");
           return;
@@ -66,6 +70,7 @@ export default function AdLicoreriaEscaner() {
           code: trimmed,
           productId: hit.productId,
           presentationId: hit.presentationId,
+          apiHit: hit.apiHit,
         });
       } finally {
         setBusy(false);
@@ -96,15 +101,51 @@ export default function AdLicoreriaEscaner() {
 
   const result = view.mode === "result" ? view : null;
 
-  const product = useMemo(
-    () => (result ? products.find((p) => p.id === result.productId) : undefined),
-    [products, result],
-  );
+  const product = useMemo(() => {
+    if (!result) return undefined;
+    const local = products.find((p) => p.id === result.productId);
+    if (local) return local;
+    if (result.apiHit) {
+      return {
+        id: result.apiHit.id,
+        name: result.apiHit.name,
+        brand: result.apiHit.brand ?? "",
+        sku: result.apiHit.sku ?? "",
+        barcode: result.apiHit.barcode ?? undefined,
+        active: result.apiHit.active !== false,
+        baseUnitLabel: "u",
+        categoryId: "cat-default",
+        cost: { usd: 0, bs: 0 },
+        minStockBase: 0,
+        defaultUtilityPercent: result.apiHit.defaultUtilityPercent ?? 0,
+        taxable: Boolean(result.apiHit.taxable),
+        createdAt: new Date().toISOString(),
+      };
+    }
+    return undefined;
+  }, [products, result]);
 
-  const presList = useMemo(
-    () => (product ? getPresentationsFor(product.id) : []),
-    [getPresentationsFor, product],
-  );
+  const presList = useMemo(() => {
+    if (!result) return [];
+    const local = getPresentationsFor(result.productId);
+    if (local.length) return local;
+    if (result.apiHit?.presentations?.length) {
+      return result.apiHit.presentations.map((p) => ({
+        id: p.id,
+        productId: result.productId,
+        name: p.name,
+        unitsPerPresentation: p.unitsPerPresentation,
+        barcode: p.barcode ?? undefined,
+        sku: p.sku ?? undefined,
+        price: {
+          usd: Number(p.priceUsd ?? 0),
+          bs: Number(p.priceBs ?? 0),
+        },
+        active: true,
+      }));
+    }
+    return [];
+  }, [getPresentationsFor, result]);
 
   const matchedPres = useMemo(() => {
     if (!result) return undefined;
