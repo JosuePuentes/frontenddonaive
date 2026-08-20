@@ -63,8 +63,8 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       key: "mesonera",
       label: "Mis mesas",
       to: r.mesonera,
-      anyOf: ["accounts.open", "accounts.serve", "tables.manage"],
-      roles: ["mesonera", "admin", "supervisor", "cajero"],
+      anyOf: ["accounts.serve", "tables.manage"],
+      roles: ["mesonera", "admin", "supervisor"],
       group: "operacion",
     },
     {
@@ -78,7 +78,7 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       key: "cuentas",
       label: "Cuentas",
       to: r.cuentas,
-      anyOf: ["pos.sell", "pos.close_account", "accounts.open", "accounts.serve"],
+      anyOf: ["accounts.open", "accounts.serve"],
       group: "operacion",
     },
     {
@@ -99,7 +99,7 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       key: "mesas",
       label: "Espacios / mesas",
       to: r.mesas,
-      anyOf: ["tables.manage", "accounts.open"],
+      anyOf: ["tables.manage"],
       group: "operacion",
     },
     {
@@ -113,7 +113,7 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       key: "qr",
       label: "QR / Prepago",
       to: r.qr,
-      anyOf: ["accounts.serve", "pos.sell", "clients.read"],
+      anyOf: ["accounts.serve"],
       group: "operacion",
     },
     {
@@ -183,7 +183,7 @@ export function getAdNavCatalog(base?: "" | "/licoreria"): AdNavItem[] {
       key: "finanzas",
       label: "Finanzas",
       to: r.finanzas,
-      anyOf: ["finance.dashboard.view", "finance.view", "reports.read"],
+      anyOf: ["finance.dashboard.view", "finance.manage"],
       group: "finanzas",
     },
     {
@@ -406,7 +406,7 @@ export function mobilePrimaryNavItems(
 export function mobilePrimaryNavKeys(role: AdRole | null | undefined): string[] {
   switch (role) {
     case "cajero":
-      return ["inicio", "ventas", "escaner", "cuentas"];
+      return ["inicio", "ventas", "escaner", "cierres"];
     case "mesonera":
       return ["inicio", "mesonera", "cuentas", "clientes"];
     case "inventario":

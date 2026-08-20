@@ -123,15 +123,12 @@ export const AD_DEFAULT_ROLE_PERMISSIONS: Record<
     "tv.groups.manage",
     "tv.screen.manage",
   ],
+  /** Solo caja / POS. Ampliar vía permisos explícitos en el operador. */
   cajero: [
     "pos.sell",
     "pos.discount",
     "pos.close_account",
-    "clients.read",
-    "accounts.open",
     "closures.create",
-    "reports.read",
-    "finance.view",
   ],
   mesonera: [
     "accounts.open",

@@ -169,15 +169,12 @@ export const AD_DEFAULT_ROLE_PERMISSIONS: Record<AdRole, AdPermission[]> = {
     "tv.groups.manage",
     "tv.screen.manage",
   ],
+  /** Solo caja / POS. El admin puede ampliar con toggles al crear el usuario. */
   cajero: [
     "pos.sell",
     "pos.discount",
     "pos.close_account",
-    "clients.read",
-    "accounts.open",
     "closures.create",
-    "reports.read",
-    "finance.view",
   ],
   mesonera: [
     "accounts.open",

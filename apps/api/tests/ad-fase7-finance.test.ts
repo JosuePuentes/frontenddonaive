@@ -648,7 +648,7 @@ describeE2E("A&D Fase 7 — finanzas E2E", () => {
     const cajeroView = await request(app)
       .get("/api/v1/ad/finance/accounts")
       .set(auth(cajeroToken));
-    expect(cajeroView.status).toBe(200);
+    expect(cajeroView.status).toBeGreaterThanOrEqual(400);
 
     const cajeroManage = await request(app)
       .post("/api/v1/ad/finance/accounts")

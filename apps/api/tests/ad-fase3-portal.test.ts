@@ -47,6 +47,8 @@ describe("A&D Fase 3 — matriz de roles para FE", () => {
     const perms = resolveRolePermissions("cajero", []);
     expect(perms.has("pos.sell")).toBe(true);
     expect(perms.has("users.manage")).toBe(false);
+    expect(perms.has("finance.view")).toBe(false);
+    expect(perms.has("clients.read")).toBe(false);
   });
 
   it("admin tiene users.manage y pos.shortage_override", () => {
