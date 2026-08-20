@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
-import { formatAdPrice, uid } from "@/lib/ad-licoreria/conversions";
+import { AD_LICORERIA_ROUTES, adInventarioProductoPath } from "@/constants/ad-licoreria-routes";
+import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
+import { useAdBcvRate } from "@/hooks/ad-licoreria/useAdBcvRate";
+import { uid } from "@/lib/ad-licoreria/conversions";
 import { findUnitAndBox, pricesFromCost } from "@/lib/ad-licoreria/pack";
+import { completeAdPrice, hasAdMoney } from "@/lib/ad-licoreria/rates";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import type { AdPresentation, AdProduct } from "@/types/ad-licoreria";
@@ -15,6 +18,7 @@ export default function AdLicoreriaProductos() {
     upsertProduct,
     upsertPresentation,
   } = useAdLicoreria();
+  const bcv = useAdBcvRate();
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
@@ -224,22 +228,32 @@ export default function AdLicoreriaProductos() {
               <th>Caja / unidad</th>
               <th>Utilidad cont.</th>
               <th>Costo u.</th>
+              <th>PVP unidad</th>
               <th>Estado</th>
             </tr>
           </thead>
           <tbody>
             {products.map((p) => {
               const pack = findUnitAndBox(getPresentationsFor(p.id));
+              const cost = completeAdPrice(p.cost, bcv);
               const upp = pack.box?.unitsPerPresentation ?? 1;
               const px = pricesFromCost(
-                p.cost.usd,
+                cost.usd,
                 upp,
                 p.defaultUtilityPercent ?? 0,
               );
+              const pvpUnit = hasAdMoney(pack.unit?.price)
+                ? completeAdPrice(pack.unit!.price, bcv)
+                : completeAdPrice({ usd: px.unitSale, bs: 0 }, bcv);
               return (
                 <tr key={p.id}>
                   <td>
-                    <div>{p.name}</div>
+                    <Link
+                      className="hover:underline"
+                      to={adInventarioProductoPath(p.id)}
+                    >
+                      {p.name}
+                    </Link>
                     <div className="text-xs text-[var(--ad-muted)]">
                       {p.brand}
                     </div>
@@ -255,13 +269,23 @@ export default function AdLicoreriaProductos() {
                   </td>
                   <td>{(p.defaultUtilityPercent ?? 0).toFixed(1)}%</td>
                   <td>
-                    {formatAdPrice(p.cost)}
-                    {pack.box && p.cost.usd > 0 ? (
+                    {hasAdMoney(cost) ? (
+                      <AdPriceDisplay price={cost} stacked />
+                    ) : (
+                      <span className="text-xs text-[var(--ad-muted)]">—</span>
+                    )}
+                    {pack.box && cost.usd > 0 ? (
                       <div className="text-[10px] text-[var(--ad-muted)]">
-                        caja ${px.boxCost.toFixed(2)} · PVP u. $
-                        {px.unitSale.toFixed(2)}
+                        caja ${px.boxCost.toFixed(2)}
                       </div>
                     ) : null}
+                  </td>
+                  <td>
+                    {hasAdMoney(pvpUnit) ? (
+                      <AdPriceDisplay price={pvpUnit} stacked />
+                    ) : (
+                      <span className="text-xs text-[var(--ad-muted)]">—</span>
+                    )}
                   </td>
                   <td>
                     <button

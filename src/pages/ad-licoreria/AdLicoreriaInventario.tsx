@@ -4,6 +4,10 @@ import {
   AD_LICORERIA_ROUTES,
   adInventarioProductoPath,
 } from "@/constants/ad-licoreria-routes";
+import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
+import { useAdBcvRate } from "@/hooks/ad-licoreria/useAdBcvRate";
+import { findUnitAndBox, pricesFromCost } from "@/lib/ad-licoreria/pack";
+import { completeAdPrice, hasAdMoney } from "@/lib/ad-licoreria/rates";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 
@@ -19,7 +23,9 @@ export default function AdLicoreriaInventario() {
     getOperationalAvailability,
     canAccessWarehouse,
     hasPermission,
+    getPresentationsFor,
   } = useAdLicoreria();
+  const bcv = useAdBcvRate();
 
   const [warehouseId, setWarehouseId] = useState(
     warehouses.find((w) => w.active)?.id ?? "wh-2",
@@ -46,6 +52,29 @@ export default function AdLicoreriaInventario() {
       .map((p) => {
         const av = getOperationalAvailability(p.id, 0, warehouseId);
         const wh = av.byWarehouse.find((w) => w.warehouseId === warehouseId);
+        const pack = findUnitAndBox(getPresentationsFor(p.id));
+        const cost = completeAdPrice(p.cost, bcv);
+        const fromUnit = completeAdPrice(
+          pack.unit?.price ?? { usd: 0, bs: 0 },
+          bcv,
+        );
+        const fromBox = completeAdPrice(
+          pack.box?.price ?? { usd: 0, bs: 0 },
+          bcv,
+        );
+        const computed = pricesFromCost(
+          cost.usd,
+          pack.box?.unitsPerPresentation ?? 1,
+          p.defaultUtilityPercent ?? 0,
+        );
+        const pvpUnit = hasAdMoney(fromUnit)
+          ? fromUnit
+          : completeAdPrice({ usd: computed.unitSale, bs: 0 }, bcv);
+        const pvpBox = hasAdMoney(fromBox)
+          ? fromBox
+          : pack.box
+            ? completeAdPrice({ usd: computed.boxSale, bs: 0 }, bcv)
+            : { usd: 0, bs: 0 };
         return {
           product: p,
           physical: wh?.physical ?? 0,
@@ -57,9 +86,13 @@ export default function AdLicoreriaInventario() {
           pendingTransfers: av.pendingTransfers,
           pendingPurchases: av.pendingPurchases,
           status: av.status,
+          cost,
+          pvpUnit,
+          pvpBox,
+          hasBox: Boolean(pack.box),
         };
       });
-  }, [products, query, warehouseId, getOperationalAvailability]);
+  }, [products, query, warehouseId, getOperationalAvailability, getPresentationsFor, bcv]);
 
   if (!canRead) {
     return (
@@ -123,13 +156,11 @@ export default function AdLicoreriaInventario() {
               <tr>
                 <th>Producto</th>
                 <th>Depósito</th>
+                <th>Costo (CPP)</th>
+                <th>PVP unidad</th>
+                <th>PVP caja</th>
                 <th>Físico</th>
-                <th>Comprometido</th>
-                <th>En TR / soft</th>
                 <th>Disponible</th>
-                <th>Pend. clientes</th>
-                <th>Déficit</th>
-                <th>TR / Compra</th>
                 <th>Ficha</th>
               </tr>
             </thead>
@@ -151,9 +182,28 @@ export default function AdLicoreriaInventario() {
                     </div>
                   </td>
                   <td>{warehouseLabel(warehouseId)}</td>
+                  <td>
+                    {hasAdMoney(r.cost) ? (
+                      <AdPriceDisplay price={r.cost} stacked />
+                    ) : (
+                      <span className="text-xs text-[var(--ad-muted)]">—</span>
+                    )}
+                  </td>
+                  <td>
+                    {hasAdMoney(r.pvpUnit) ? (
+                      <AdPriceDisplay price={r.pvpUnit} stacked />
+                    ) : (
+                      <span className="text-xs text-[var(--ad-muted)]">—</span>
+                    )}
+                  </td>
+                  <td>
+                    {r.hasBox && hasAdMoney(r.pvpBox) ? (
+                      <AdPriceDisplay price={r.pvpBox} stacked />
+                    ) : (
+                      <span className="text-xs text-[var(--ad-muted)]">—</span>
+                    )}
+                  </td>
                   <td>{r.physical}</td>
-                  <td>{r.committed}</td>
-                  <td>{r.softOut}</td>
                   <td
                     className={
                       r.available <= 0
@@ -162,17 +212,6 @@ export default function AdLicoreriaInventario() {
                     }
                   >
                     {r.available}
-                  </td>
-                  <td>{r.pendingCustomers}</td>
-                  <td
-                    className={
-                      r.deficit > 0 ? "text-[var(--ad-danger)]" : undefined
-                    }
-                  >
-                    {r.deficit}
-                  </td>
-                  <td className="text-xs text-[var(--ad-muted)]">
-                    TR {r.pendingTransfers} · C {r.pendingPurchases}
                   </td>
                   <td>
                     <div className="flex flex-wrap gap-1">

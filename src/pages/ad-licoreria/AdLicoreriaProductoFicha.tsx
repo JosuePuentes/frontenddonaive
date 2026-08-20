@@ -4,12 +4,14 @@ import {
   AD_LICORERIA_ROUTES,
   adInventarioProductoPath,
 } from "@/constants/ad-licoreria-routes";
-import { formatAdPrice } from "@/lib/ad-licoreria/conversions";
+import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
+import { useAdBcvRate } from "@/hooks/ad-licoreria/useAdBcvRate";
 import {
   findUnitAndBox,
   pricesFromCost,
   type PackMode,
 } from "@/lib/ad-licoreria/pack";
+import { completeAdPrice, hasAdMoney } from "@/lib/ad-licoreria/rates";
 import { warehouseLabel } from "@/lib/ad-licoreria/warehouses";
 import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
 import { resolveAdResult } from "@/services/ad-licoreria/async-result";
@@ -30,6 +32,7 @@ export default function AdLicoreriaProductoFicha() {
     upsertPresentation,
     hasPermission,
   } = useAdLicoreria();
+  const bcv = useAdBcvRate();
 
   const product = products.find((p) => p.id === productId);
   const canRead = hasPermission("inventory.read");
@@ -84,8 +87,9 @@ export default function AdLicoreriaProductoFicha() {
   }, [product, pack.box, getPresentationsFor]);
 
   const unitsPerBox = packMode === "BOX" ? boxUnits : 1;
+  const displayCost = product ? completeAdPrice(product.cost, bcv) : { usd: 0, bs: 0 };
   const previewPx = product
-    ? pricesFromCost(product.cost.usd, unitsPerBox, utility)
+    ? pricesFromCost(displayCost.usd, unitsPerBox, utility)
     : null;
 
   const stockRows = useMemo(() => {
@@ -208,11 +212,21 @@ export default function AdLicoreriaProductoFicha() {
 
   const categoryName =
     categories.find((c) => c.id === product.categoryId)?.name ?? "—";
+  const cost = completeAdPrice(product.cost, bcv);
   const viewPx = pricesFromCost(
-    product.cost.usd,
+    cost.usd,
     pack.box?.unitsPerPresentation ?? 1,
     product.defaultUtilityPercent ?? 0,
   );
+  const pvpUnit = hasAdMoney(pack.unit?.price)
+    ? completeAdPrice(pack.unit!.price, bcv)
+    : completeAdPrice({ usd: viewPx.unitSale, bs: 0 }, bcv);
+  const pvpBox = pack.box
+    ? hasAdMoney(pack.box.price)
+      ? completeAdPrice(pack.box.price, bcv)
+      : completeAdPrice({ usd: viewPx.boxSale, bs: 0 }, bcv)
+    : { usd: 0, bs: 0 };
+  const hasCost = hasAdMoney(cost) || hasAdMoney(pvpUnit);
 
   return (
     <div className="space-y-5">
@@ -404,7 +418,7 @@ export default function AdLicoreriaProductoFicha() {
                 onChange={(e) => setUtility(Number(e.target.value))}
               />
             </label>
-            {previewPx && product.cost.usd > 0 ? (
+            {previewPx && displayCost.usd > 0 ? (
               <div className="rounded border border-[var(--ad-line)] p-3 text-sm">
                 <p className="text-[var(--ad-muted)]">Vista previa PVP (utilidad {utility}% contable):</p>
                 <p className="mt-1">
@@ -449,20 +463,47 @@ export default function AdLicoreriaProductoFicha() {
           </p>
         ) : null}
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-          <Stat label="Costo unitario (CPP)" value={formatAdPrice(product.cost)} />
-          {viewPx && product.cost.usd > 0 ? (
+          <Stat
+            label="Costo unitario (CPP)"
+            value={
+              hasAdMoney(cost) ? (
+                <AdPriceDisplay price={cost} stacked />
+              ) : (
+                "—"
+              )
+            }
+          />
+          {hasCost ? (
             <>
               {pack.box ? (
-                <Stat label="Costo caja" value={`$${viewPx.boxCost.toFixed(2)}`} />
+                <Stat
+                  label="Costo caja"
+                  value={
+                    <AdPriceDisplay
+                      price={completeAdPrice(
+                        { usd: viewPx.boxCost, bs: 0 },
+                        bcv,
+                      )}
+                      stacked
+                    />
+                  }
+                />
               ) : null}
-              <Stat label="PVP unidad" value={`$${viewPx.unitSale.toFixed(2)}`} />
+              <Stat
+                label="PVP unidad"
+                value={<AdPriceDisplay price={pvpUnit} stacked />}
+              />
               {pack.box ? (
-                <Stat label="PVP caja" value={`$${viewPx.boxSale.toFixed(2)}`} />
+                <Stat
+                  label="PVP caja"
+                  value={<AdPriceDisplay price={pvpBox} stacked />}
+                />
               ) : null}
             </>
           ) : (
             <p className="text-[var(--ad-muted)] sm:col-span-3">
-              Sin costo registrado. Confirme una compra para calcular CPP y PVP.
+              Sin costo ni PVP. Confirme una compra (con utilidad en la ficha)
+              para calcularlos, o fije precio en Presentaciones.
             </p>
           )}
         </div>
@@ -473,8 +514,7 @@ export default function AdLicoreriaProductoFicha() {
                 <th>Presentación</th>
                 <th>Cód. barras</th>
                 <th>Conversión</th>
-                <th>Precio USD</th>
-                <th>Precio Bs</th>
+                <th>PVP</th>
               </tr>
             </thead>
             <tbody>
@@ -500,8 +540,12 @@ export default function AdLicoreriaProductoFicha() {
                     )}
                   </td>
                   <td>{pres.unitsPerPresentation} u. base</td>
-                  <td>${pres.price.usd.toFixed(2)}</td>
-                  <td>{pres.price.bs.toFixed(2)}</td>
+                  <td>
+                    <AdPriceDisplay
+                      price={completeAdPrice(pres.price, bcv)}
+                      stacked
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -571,7 +615,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <div className="text-xs text-[var(--ad-muted)]">{label}</div>

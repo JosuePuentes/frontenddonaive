@@ -29,6 +29,11 @@ export function completeAdPrice(
   return { usd, bs };
 }
 
+export function hasAdMoney(price: { usd: number; bs: number } | undefined): boolean {
+  if (!price) return false;
+  return Number(price.usd) > 0 || Number(price.bs) > 0;
+}
+
 /** Monto en moneda de factura → USD (BCV) + Bs de venta (BCV). */
 export function purchaseAmountToDisplay(
   amount: number,
