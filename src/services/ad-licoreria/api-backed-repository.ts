@@ -8,6 +8,7 @@ import { AD_DEFAULT_SITE_DESIGN } from "@/lib/ad-licoreria/site-design";
 import { adDesignRepository } from "@/services/ad-licoreria/design/repository";
 import { fulfillmentMessage } from "@/lib/ad-licoreria/operational-availability";
 import { getOperationalAvailability } from "@/lib/ad-licoreria/operational-availability";
+import { completeAdPrice } from "@/lib/ad-licoreria/rates";
 import {
   AD_ALL_PERMISSIONS,
   AD_DEFAULT_ROLE_PERMISSIONS,
@@ -193,12 +194,12 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
   const next = emptyState();
   const session = loadAdSession();
   next.currentOperatorId = session?.operatorId ?? null;
-  if (session) {
-    next.settings = {
-      ...next.settings,
-      brandName: session.tenantName,
-    };
-  }
+  const bcv = num(snap.bcvRate);
+  next.settings = {
+    ...next.settings,
+    exchangeRateUsdToBs: bcv > 0 ? bcv : next.settings.exchangeRateUsdToBs,
+    brandName: session?.tenantName ?? next.settings.brandName,
+  };
 
   const warehouses = (snap.warehouses as Record<string, unknown>[]) ?? [];
   next.warehouses = warehouses.map(
@@ -272,7 +273,10 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
         sku: pr.sku ? String(pr.sku) : undefined,
         barcode: pr.barcode ? String(pr.barcode) : undefined,
         unitsPerPresentation: num(pr.unitsPerPresentation),
-        price: { usd: num(pr.priceUsd), bs: num(pr.priceBs) },
+        price: completeAdPrice(
+          { usd: num(pr.priceUsd), bs: num(pr.priceBs) },
+          bcv,
+        ),
         active: Boolean(pr.active),
       });
     }
@@ -285,7 +289,10 @@ function mapSnapshotToState(snap: Record<string, unknown>): AdRepositoryState {
       barcode: p.barcode ? String(p.barcode) : undefined,
       description: p.description ? String(p.description) : undefined,
       baseUnitLabel: String(p.baseUnitLabel ?? "u"),
-      cost: { usd: num(p.avgCostUsd), bs: num(p.avgCostBs) },
+      cost: completeAdPrice(
+        { usd: num(p.avgCostUsd), bs: num(p.avgCostBs) },
+        bcv,
+      ),
       minStockBase: num(p.minStockBase),
       defaultUtilityPercent: num(p.defaultUtilityPercent),
       taxable: Boolean(p.taxable),

@@ -23,6 +23,8 @@ import { resolveAdResult } from "@/services/ad-licoreria/async-result";
 import { isAdApiDataSource } from "@/services/ad-licoreria/data-source";
 import { AdPackPickPrompt } from "@/components/ad-licoreria/AdPackPickPrompt";
 import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
+import { completeAdPrice } from "@/lib/ad-licoreria/rates";
+import { adCommerceClient } from "@/services/ad-licoreria/commerce-client";
 import {
   AdPreliminarDocument,
   AdSaleReceiptFallback,
@@ -48,6 +50,7 @@ export default function AdLicoreriaVentas() {
     customers,
     paymentMethods,
     currentOperatorId,
+    settings,
     getPresentationsFor,
     getOperationalAvailability,
     getFloorOperatorsForWarehouse,
@@ -98,6 +101,7 @@ export default function AdLicoreriaVentas() {
   const [extrasOpen, setExtrasOpen] = useState(false);
   const [cobroOpen, setCobroOpen] = useState(false);
   const [packPick, setPackPick] = useState<{ productId: string } | null>(null);
+  const [bcvRate, setBcvRate] = useState(settings.exchangeRateUsdToBs || 0);
   const [customerQuery, setCustomerQuery] = useState("");
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomerFirst, setNewCustomerFirst] = useState("");
@@ -206,6 +210,22 @@ export default function AdLicoreriaVentas() {
     [cart, getOperationalAvailability, posWarehouseId],
   );
 
+  useEffect(() => {
+    if (settings.exchangeRateUsdToBs > 0) {
+      setBcvRate(settings.exchangeRateUsdToBs);
+      return;
+    }
+    void adCommerceClient.getBcv().then((r) => {
+      if (!r.ok) return;
+      const d = r.data as { current?: { rate: number } };
+      if (d.current?.rate) setBcvRate(d.current.rate);
+    });
+  }, [settings.exchangeRateUsdToBs]);
+
+  function posPrice(price: { usd: number; bs: number }) {
+    return completeAdPrice(price, bcvRate);
+  }
+
   function addLineToCart(pid: string, presId: string, lineQty: number) {
     const pres = presentations.find((p) => p.id === presId);
     if (!pres || lineQty <= 0) return;
@@ -228,7 +248,7 @@ export default function AdLicoreriaVentas() {
           productId: pid,
           presentationId: pres.id,
           qty: lineQty,
-          unitPrice: { ...pres.price },
+          unitPrice: posPrice(pres.price),
           qtyBase: toBaseUnits(pres, lineQty),
         },
       ];
@@ -679,7 +699,7 @@ export default function AdLicoreriaVentas() {
                         {pres ? (
                           <>
                             {" · "}
-                            <AdPriceDisplay price={pres.price} stacked />
+                            <AdPriceDisplay price={posPrice(pres.price)} stacked />
                           </>
                         ) : null}
                       </span>
@@ -1302,10 +1322,20 @@ export default function AdLicoreriaVentas() {
             products.find((p) => p.id === packPick.productId)?.name ?? "Producto"
           }
           unitPrice={
-            findUnitAndBox(getPresentationsFor(packPick.productId)).unit?.price
+            findUnitAndBox(getPresentationsFor(packPick.productId)).unit
+              ? posPrice(
+                  findUnitAndBox(getPresentationsFor(packPick.productId)).unit!
+                    .price,
+                )
+              : undefined
           }
           boxPrice={
-            findUnitAndBox(getPresentationsFor(packPick.productId)).box?.price
+            findUnitAndBox(getPresentationsFor(packPick.productId)).box
+              ? posPrice(
+                  findUnitAndBox(getPresentationsFor(packPick.productId)).box!
+                    .price,
+                )
+              : undefined
           }
           boxUnits={
             findUnitAndBox(getPresentationsFor(packPick.productId)).box

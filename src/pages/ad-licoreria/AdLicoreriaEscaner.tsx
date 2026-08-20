@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { getAdLicoreriaRoutes } from "@/constants/ad-licoreria-routes";
 import { useAdBarcodeCamera } from "@/hooks/ad-licoreria/useAdBarcodeCamera";
 import { formatAdPrice, fromBaseUnits } from "@/lib/ad-licoreria/conversions";
+import { completeAdPrice } from "@/lib/ad-licoreria/rates";
 import {
   resolveAdProductByCode,
   type AdProductSearchHit,
@@ -33,6 +34,7 @@ export default function AdLicoreriaEscaner() {
     getPresentationsFor,
     getOperationalAvailability,
     getCurrentOperator,
+    settings,
   } = useAdLicoreria();
 
   const session = getCurrentOperator();
@@ -274,7 +276,9 @@ export default function AdLicoreriaEscaner() {
             {matchedPres ? (
               <p className="mt-2 text-sm text-[var(--ad-gold-soft)]">
                 Presentación escaneada: <strong>{matchedPres.name}</strong> ·{" "}
-                {formatAdPrice(matchedPres.price)}
+                {formatAdPrice(
+                  completeAdPrice(matchedPres.price, settings.exchangeRateUsdToBs),
+                )}
               </p>
             ) : null}
           </div>
@@ -305,7 +309,14 @@ export default function AdLicoreriaEscaner() {
                       <td className="font-mono text-xs">
                         {pres.barcode ?? pres.sku ?? "—"}
                       </td>
-                      <td>{formatAdPrice(pres.price)}</td>
+                      <td>
+                        {formatAdPrice(
+                          completeAdPrice(
+                            pres.price,
+                            settings.exchangeRateUsdToBs,
+                          ),
+                        )}
+                      </td>
                       <td>{pres.unitsPerPresentation} u.</td>
                     </tr>
                   ))}

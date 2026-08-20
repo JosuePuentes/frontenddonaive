@@ -261,6 +261,7 @@ export const adPortalService = {
       invClosures,
       movements,
       tables,
+      bcvRow,
     ] = await Promise.all([
       prisma.adWarehouse.findMany({ where: { tenantId: ctx.tenantId } }),
       prisma.adOperator.findMany({
@@ -329,6 +330,10 @@ export const adPortalService = {
         take: 500,
       }),
       prisma.adTableSpace.findMany({ where: { tenantId: ctx.tenantId } }),
+      prisma.adExchangeRate.findFirst({
+        where: { tenantId: ctx.tenantId, kind: "BCV" },
+        orderBy: { effectiveAt: "desc" },
+      }),
     ]);
 
     return {
@@ -352,6 +357,7 @@ export const adPortalService = {
       invClosures,
       movements,
       tables,
+      bcvRate: bcvRow ? Number(bcvRow.rate) : null,
     };
   },
 

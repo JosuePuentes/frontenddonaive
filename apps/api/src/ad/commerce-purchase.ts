@@ -5,8 +5,10 @@ import { Prisma } from "@prisma/client";
 import {
   AD_DEFAULT_TAX_RATE,
   applyLineTax,
+  completeCrossCurrencyAmount,
   equivalentUsdFromProtected,
   resolvePurchaseLineCosts,
+  scalePurchaseCosts,
   sumPurchaseDocumentTotals,
   type CostMode,
 } from "./commerce-domain.js";
@@ -69,7 +71,7 @@ export function buildPurchaseLineFromPresentation(
     throw new Error("Presentación fuera del tenant");
   }
   const upp = num(presentation.unitsPerPresentation);
-  const costsUsd = resolvePurchaseLineCosts({
+  const costsUsdRaw = resolvePurchaseLineCosts({
     qtyInvoiced: raw.qty,
     qtyBonus: raw.qtyBonus,
     unitsPerPresentation: upp,
@@ -78,7 +80,7 @@ export function buildPurchaseLineFromPresentation(
     presentationCost: raw.presentationCostUsd,
     lineTotal: raw.lineTotalUsd,
   });
-  const costsBs = resolvePurchaseLineCosts({
+  const costsBsRaw = resolvePurchaseLineCosts({
     qtyInvoiced: raw.qty,
     qtyBonus: raw.qtyBonus,
     unitsPerPresentation: upp,
@@ -88,6 +90,21 @@ export function buildPurchaseLineFromPresentation(
     lineTotal: raw.lineTotalBs ?? 0,
   });
 
+  const bcv = opts?.bcv && opts.bcv > 0 ? opts.bcv : 0;
+  const prot =
+    opts?.useProtected && opts.protectedRate && opts.protectedRate > 0
+      ? opts.protectedRate
+      : 0;
+  let costsUsd = costsUsdRaw;
+  let costsBs = costsBsRaw;
+  if (opts?.currency === "BS" && costsBs.invoicedTotal > 0 && !(costsUsd.invoicedTotal > 0) && bcv > 0) {
+    costsUsd = scalePurchaseCosts(costsBs, 1 / bcv);
+  }
+  if (opts?.currency === "USD" && costsUsd.invoicedTotal > 0 && !(costsBs.invoicedTotal > 0)) {
+    const rate = prot > 0 ? prot : bcv;
+    if (rate > 0) costsBs = scalePurchaseCosts(costsUsd, rate);
+  }
+
   const taxable =
     raw.taxable ?? Boolean(presentation.product.taxable) ?? false;
   const taxRate = raw.taxRate ?? AD_DEFAULT_TAX_RATE;
@@ -96,18 +113,26 @@ export function buildPurchaseLineFromPresentation(
 
   let equivalentUsd: number | null = null;
   let equivalentBs: number | null = null;
-  if (opts?.useProtected && opts.protectedRate && opts.bcv) {
+  if (opts?.useProtected && prot > 0 && bcv > 0) {
     if (opts.currency === "BS") {
       equivalentBs = costsBs.invoicedTotal;
-      equivalentUsd = costsBs.invoicedTotal / opts.bcv;
+      equivalentUsd = costsBs.invoicedTotal / bcv;
     } else {
       equivalentUsd = equivalentUsdFromProtected(
         costsUsd.invoicedTotal,
-        opts.protectedRate,
-        opts.bcv,
+        prot,
+        bcv,
       );
-      equivalentBs = costsUsd.invoicedTotal * opts.protectedRate;
+      equivalentBs = costsUsd.invoicedTotal * prot;
     }
+  } else if (bcv > 0) {
+    const pair = completeCrossCurrencyAmount({
+      amountUsd: costsUsd.invoicedTotal,
+      amountBs: costsBs.invoicedTotal,
+      bcv,
+    });
+    equivalentUsd = pair.usd;
+    equivalentBs = pair.bs;
   }
 
   return {

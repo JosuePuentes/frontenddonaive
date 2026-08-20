@@ -15,6 +15,7 @@ import {
 } from "./authorization.js";
 import {
   avgDailyFromWindow,
+  completeCrossCurrencyAmount,
   priceFromUtility,
   salePricesFromUnitCost,
   suggestReplenishment,
@@ -1161,6 +1162,13 @@ export const adCommerceService = {
       throw new ValidationError("Compra sin líneas");
     }
 
+    const bcvSnapshot = num(before.bcvRateSnapshot);
+    const bcv =
+      bcvSnapshot > 0
+        ? bcvSnapshot
+        : (await latestRate(ctx.tenantId, "BCV")) ?? 0;
+    const protSnapshot = num(before.protectedRateSnapshot);
+
     const result = await prisma.$transaction(async (tx) => {
       for (const line of before.lines) {
         const totalStock = await tx.adStock.aggregate({
@@ -1176,14 +1184,28 @@ export const adCommerceService = {
           num(line.qtyReceivedBase) > 0
             ? num(line.qtyReceivedBase)
             : num(line.qtyBase);
-        const unitUsd =
+        let unitUsd =
           num(line.effectiveUnitCostUsd) > 0
             ? num(line.effectiveUnitCostUsd)
             : num(line.unitCostUsd);
-        const unitBs =
+        let unitBs =
           num(line.effectiveUnitCostBs) > 0
             ? num(line.effectiveUnitCostBs)
             : num(line.unitCostBs);
+        const eqUsd = num(line.equivalentCostUsd);
+        const qtyInv = num(line.qtyBase) || qtyIn;
+        if (eqUsd > 0 && qtyInv > 0 && before.useProtectedRateRef) {
+          unitUsd = eqUsd / qtyInv;
+        }
+        const filled = completeCrossCurrencyAmount({
+          amountUsd: unitUsd,
+          amountBs: unitBs,
+          bcv,
+          protectedRate: protSnapshot,
+          useProtected: Boolean(before.useProtectedRateRef),
+        });
+        unitUsd = filled.usd;
+        unitBs = filled.bs;
         const avgUsd = weightedAverageCost(
           prevQty,
           num(product.avgCostUsd),
@@ -1207,18 +1229,13 @@ export const adCommerceService = {
           });
           for (const pr of presentations) {
             const upp = num(pr.unitsPerPresentation) || 1;
-            const usd = salePricesFromUnitCost({
+            const usdPx = salePricesFromUnitCost({
               unitCost: unitUsd,
               unitsPerPresentation: upp,
               utilityPercent: util,
             });
-            const bs = salePricesFromUnitCost({
-              unitCost: unitBs,
-              unitsPerPresentation: upp,
-              utilityPercent: util,
-            });
-            const saleUsd = upp > 1 ? usd.boxSale : usd.unitSale;
-            const saleBs = upp > 1 ? bs.boxSale : bs.unitSale;
+            const saleUsd = upp > 1 ? usdPx.boxSale : usdPx.unitSale;
+            const saleBs = bcv > 0 ? saleUsd * bcv : saleUsd;
             await tx.adPresentation.update({
               where: { id: pr.id },
               data: {

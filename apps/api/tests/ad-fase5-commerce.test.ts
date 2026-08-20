@@ -4,6 +4,7 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import request from "supertest";
 import {
+  completeCrossCurrencyAmount,
   equivalentUsdFromProtected,
   priceFromUtility,
   resolvePurchaseLineCosts,
@@ -55,6 +56,16 @@ describe("commerce-domain (puro)", () => {
       (10 * 870) / 772.54,
       4,
     );
+  });
+
+  it("compra en Bs completa USD con BCV", () => {
+    const r = completeCrossCurrencyAmount({
+      amountUsd: 0,
+      amountBs: 1545.08,
+      bcv: 772.54,
+    });
+    expect(r.usd).toBeCloseTo(2, 4);
+    expect(r.bs).toBeCloseTo(1545.08, 4);
   });
 
   it("N/O — utilidad contable y precio directo", () => {

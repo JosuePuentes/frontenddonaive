@@ -16,6 +16,19 @@ export type PurchaseRateContext = {
   useProtected: boolean;
 };
 
+/** Completa USD (BCV) y Bs para mostrar en POS. */
+export function completeAdPrice(
+  price: { usd: number; bs: number },
+  bcv: number,
+): { usd: number; bs: number } {
+  let usd = Number(price.usd) || 0;
+  let bs = Number(price.bs) || 0;
+  const rate = Number(bcv) || 0;
+  if (usd > 0 && !(bs > 0) && rate > 0) bs = usd * rate;
+  if (bs > 0 && !(usd > 0) && rate > 0) usd = bs / rate;
+  return { usd, bs };
+}
+
 /** Monto en moneda de factura → USD (BCV) + Bs de venta (BCV). */
 export function purchaseAmountToDisplay(
   amount: number,

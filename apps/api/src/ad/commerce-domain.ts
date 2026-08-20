@@ -157,6 +157,48 @@ export function equivalentUsdFromProtected(
 }
 
 /**
+ * Completa el par USD/Bs de un monto de factura.
+ * POS siempre usa USD BCV; la tasa protegida solo llena Bs internos.
+ */
+export function completeCrossCurrencyAmount(input: {
+  amountUsd: number;
+  amountBs: number;
+  bcv: number | null | undefined;
+  protectedRate?: number | null;
+  useProtected?: boolean;
+}): { usd: number; bs: number } {
+  let usd = Number(input.amountUsd) || 0;
+  let bs = Number(input.amountBs) || 0;
+  const bcv = Number(input.bcv) || 0;
+  const prot = Number(input.protectedRate) || 0;
+  if (usd > 0 && !(bs > 0)) {
+    const rate = input.useProtected && prot > 0 ? prot : bcv;
+    if (rate > 0) bs = usd * rate;
+  }
+  if (bs > 0 && !(usd > 0) && bcv > 0) {
+    usd = bs / bcv;
+  }
+  return { usd, bs };
+}
+
+/** Escala todos los montos de un resultado de línea a la otra moneda. */
+export function scalePurchaseCosts(
+  source: PurchaseLineCostResult,
+  factor: number,
+): PurchaseLineCostResult {
+  const f = Number(factor) || 0;
+  return {
+    ...source,
+    invoicedTotal: source.invoicedTotal * f,
+    unitCostInvoiced: source.unitCostInvoiced * f,
+    presentationCostInvoiced: source.presentationCostInvoiced * f,
+    effectiveUnitCost: source.effectiveUnitCost * f,
+    effectivePresentationCost: source.effectivePresentationCost * f,
+    effectiveTotal: source.effectiveTotal * f,
+  };
+}
+
+/**
  * Costo de reposición/referencia con tasas actuales.
  * NO altera costo histórico ni CPP.
  * Fórmula: costoUsdHistórico * paralelaActual / bcvActual
