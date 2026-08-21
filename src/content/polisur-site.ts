@@ -48,9 +48,13 @@ export type PolisurUnitItem = {
   id: string;
   label: string;
   summary: string;
+  /** Texto de funciones / labores de la división. */
+  functions: string;
   imageUrl: string;
   /** Mostrar en el mosaico de divisiones del home. */
   showOnHome: boolean;
+  /** Mostrar en la página pública /divisiones. */
+  showInCatalog: boolean;
   featured: boolean;
   /** Disponible en el formulario de preinscripción. */
   active: boolean;
@@ -67,33 +71,49 @@ export type PolisurSiteContent = {
 
 const DEFAULT_UNIT_META: Record<
   string,
-  Partial<Pick<PolisurUnitItem, "summary" | "imageUrl" | "showOnHome" | "featured">>
+  Partial<
+    Pick<
+      PolisurUnitItem,
+      "summary" | "functions" | "imageUrl" | "showOnHome" | "showInCatalog" | "featured"
+    >
+  >
 > = {
   institucion: {
     summary: "",
+    functions: "",
     imageUrl: "",
     showOnHome: false,
+    showInCatalog: false,
     featured: false,
   },
   "unidad-canina": {
     summary:
       "Patrullaje canino y apoyo especializado con binomios entrenados al servicio de la institución.",
+    functions:
+      "Apoyo operativo, prevención y labores especializadas con el binomio policía-canino.",
     imageUrl: POLISUR_MEDIA.home.canina,
     showOnHome: true,
+    showInCatalog: true,
     featured: true,
   },
   "unidades-operativas": {
     summary:
       "Patrullaje preventivo, orden público y respuesta operativa en las siete parroquias del municipio.",
+    functions:
+      "Patrullaje preventivo, orden público y respuesta operativa en las parroquias del municipio.",
     imageUrl: POLISUR_MEDIA.home.about,
     showOnHome: true,
+    showInCatalog: true,
     featured: false,
   },
   prevencion: {
     summary:
       "Vinculación comunitaria, Mesas y Cuadrantes de Paz, y prevención para la convivencia ciudadana.",
+    functions:
+      "Organización comunitaria, Mesas y Cuadrantes de Paz, y prevención de la convivencia ciudadana.",
     imageUrl: POLISUR_MEDIA.home.ciudadania,
     showOnHome: true,
+    showInCatalog: true,
     featured: false,
   },
 };
@@ -105,8 +125,10 @@ export const POLISUR_DEFAULT_UNITS: PolisurUnitItem[] = POLISUR_UNITS.map(
       id: unit.id,
       label: unit.label,
       summary: meta.summary ?? "",
+      functions: meta.functions ?? "",
       imageUrl: meta.imageUrl ?? "",
       showOnHome: Boolean(meta.showOnHome),
+      showInCatalog: meta.showInCatalog !== false && unit.id !== "institucion",
       featured: Boolean(meta.featured),
       active: true,
     };
@@ -221,12 +243,18 @@ export function normalizePolisurUnitItem(
     slugifyPolisurUnitId(cleanStr(raw?.id, 40)) ||
     slugifyPolisurUnitId(label) ||
     `unidad-${index + 1}`;
+  const isInstitucion = id === "institucion";
   return {
     id,
     label,
     summary: cleanStr(raw?.summary, 400),
+    functions: cleanStr(raw?.functions, 2000),
     imageUrl: cleanUrl(raw?.imageUrl),
     showOnHome: Boolean(raw?.showOnHome),
+    showInCatalog:
+      raw?.showInCatalog !== undefined
+        ? Boolean(raw.showInCatalog)
+        : !isInstitucion,
     featured: Boolean(raw?.featured),
     active: raw?.active !== false,
   };
@@ -311,6 +339,11 @@ export function activePolisurUnits(site: PolisurSiteContent): PolisurUnitItem[] 
 
 export function homePolisurUnits(site: PolisurSiteContent): PolisurUnitItem[] {
   return site.units.filter((u) => u.showOnHome && u.label);
+}
+
+/** Divisiones visibles en /divisiones (catálogo). */
+export function catalogPolisurUnits(site: PolisurSiteContent): PolisurUnitItem[] {
+  return site.units.filter((u) => u.showInCatalog && u.label);
 }
 
 export function hasPolisurSocial(social: PolisurSocialLinks): boolean {
