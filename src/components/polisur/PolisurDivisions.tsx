@@ -43,10 +43,7 @@ function PolisurDivisions() {
               overlay="strong"
             />
             <div className="ps-division-block__body">
-              {item.featured ? (
-                <p className="ps-eyebrow text-[var(--ps-mint)]">Destacada</p>
-              ) : null}
-              <h3 className="mt-2 text-2xl text-[var(--ps-white)] sm:text-3xl">
+              <h3 className="text-2xl text-[var(--ps-white)] sm:text-3xl">
                 {item.label}
               </h3>
               {item.summary ? (

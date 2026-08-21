@@ -58,7 +58,7 @@ const DEFAULTS = {
       imageUrl: "/polisur/home/canina.jpg",
       showOnHome: true,
       showInCatalog: true,
-      featured: true,
+      featured: false,
       active: true,
     },
     {

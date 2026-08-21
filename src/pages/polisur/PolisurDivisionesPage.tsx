@@ -52,13 +52,7 @@ export default function PolisurDivisionesPage() {
                 />
                 <div className="flex items-center px-5 py-10 sm:px-10 sm:py-14">
                   <div className="max-w-xl">
-                    {item.featured ? (
-                      <p className="ps-eyebrow text-[var(--ps-mint)]">
-                        Destacada
-                      </p>
-                    ) : (
-                      <p className="ps-eyebrow">División</p>
-                    )}
+                    <p className="ps-eyebrow">División</p>
                     <h2 className="mt-3 text-3xl text-[var(--ps-white)] sm:text-4xl">
                       {item.label}
                     </h2>

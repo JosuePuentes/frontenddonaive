@@ -94,7 +94,7 @@ const DEFAULT_UNIT_META: Record<
     imageUrl: POLISUR_MEDIA.home.canina,
     showOnHome: true,
     showInCatalog: true,
-    featured: true,
+    featured: false,
   },
   "unidades-operativas": {
     summary:

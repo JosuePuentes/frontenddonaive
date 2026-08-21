@@ -565,7 +565,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
                         updateUnit(u.id, { featured: e.target.checked })
                       }
                     />
-                    Destacada en home
+                    Ajuste de encuadre de imagen
                   </label>
                 </div>
                 <div className="mt-4 grid gap-3">
