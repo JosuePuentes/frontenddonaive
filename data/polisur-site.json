@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-21T07:54:16.495Z",
+  "updatedAt": "2026-08-21T07:55:01.442Z",
   "contact": {
     "address": "Municipio San Francisco, estado Zulia — República Bolivariana de Venezuela",
     "phone": "04120691012",
@@ -35,7 +35,7 @@
         "/polisur/extras/nmt2nialdsax.jpg"
       ],
       "publishedAt": "2026-08-20T20:49:00.000Z",
-      "published": false
+      "published": true
     }
   ],
   "units": [
