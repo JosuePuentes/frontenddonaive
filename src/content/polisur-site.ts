@@ -35,7 +35,10 @@ export type PolisurNewsItem = {
   title: string;
   summary: string;
   body: string;
+  /** Portada (primera imagen). */
   imageUrl: string;
+  /** Galería de la noticia (incluye portada). */
+  imageUrls: string[];
   publishedAt: string;
   published: boolean;
 };
@@ -173,21 +176,40 @@ export function slugifyPolisurUnitId(value: string): string {
 }
 
 export function normalizePolisurNewsItem(
-  raw: Partial<PolisurNewsItem> | null | undefined,
+  raw: Partial<PolisurNewsItem> & { images?: string[] } | null | undefined,
   index = 0,
 ): PolisurNewsItem {
   const id =
     cleanStr(raw?.id, 64) ||
     `noticia-${Date.now().toString(36)}-${index}`;
+  const fromList = Array.isArray(raw?.imageUrls)
+    ? raw.imageUrls
+    : Array.isArray(raw?.images)
+      ? raw.images
+      : [];
+  const urls = [
+    ...fromList.map((u) => cleanUrl(u)),
+    cleanUrl(raw?.imageUrl),
+  ].filter(Boolean);
+  const unique: string[] = [];
+  for (const url of urls) {
+    if (!unique.includes(url)) unique.push(url);
+  }
+  const imageUrl = unique[0] || "";
   return {
     id,
     title: cleanStr(raw?.title, 160),
-    summary: cleanStr(raw?.summary, 400),
-    body: cleanStr(raw?.body, 4000),
-    imageUrl: cleanUrl(raw?.imageUrl),
+    summary: cleanStr(raw?.summary, 500),
+    body: cleanStr(raw?.body, 12000),
+    imageUrl,
+    imageUrls: unique.slice(0, 12),
     publishedAt: cleanStr(raw?.publishedAt, 40) || new Date().toISOString(),
     published: Boolean(raw?.published),
   };
+}
+
+export function newsCoverUrl(item: PolisurNewsItem): string {
+  return item.imageUrl || item.imageUrls[0] || "";
 }
 
 export function normalizePolisurUnitItem(

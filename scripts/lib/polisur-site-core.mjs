@@ -156,12 +156,23 @@ function normalizeUnit(raw, index) {
 }
 
 function normalizeNews(raw, index) {
+  const fromList = Array.isArray(raw?.imageUrls)
+    ? raw.imageUrls
+    : Array.isArray(raw?.images)
+      ? raw.images
+      : [];
+  const urls = [];
+  for (const u of [...fromList, raw?.imageUrl]) {
+    const cleaned = cleanUrl(u);
+    if (cleaned && !urls.includes(cleaned)) urls.push(cleaned);
+  }
   return {
     id: clean(raw?.id, 64) || `noticia-${Date.now().toString(36)}-${index}`,
     title: clean(raw?.title, 160),
-    summary: clean(raw?.summary, 400),
-    body: clean(raw?.body, 4000),
-    imageUrl: cleanUrl(raw?.imageUrl),
+    summary: clean(raw?.summary, 500),
+    body: clean(raw?.body, 12000),
+    imageUrl: urls[0] || "",
+    imageUrls: urls.slice(0, 12),
     publishedAt: clean(raw?.publishedAt, 40) || new Date().toISOString(),
     published: Boolean(raw?.published),
   };
