@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-21T21:07:18.298Z",
+  "updatedAt": "2026-08-21T21:07:38.875Z",
   "news": {
     "noticia-mt2nerpt-0": 2
   },
@@ -12,7 +12,7 @@
     "whatsapp": 0
   },
   "phone": {
-    "primary": 0,
+    "primary": 1,
     "alt": 0
   }
 }
