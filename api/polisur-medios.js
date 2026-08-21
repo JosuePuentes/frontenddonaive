@@ -81,12 +81,18 @@ async function readBody(req) {
   return raw ? JSON.parse(raw) : {};
 }
 
+async function mediosBranch() {
+  return (
+    process.env.POLISUR_MEDIOS_BRANCH ||
+    process.env.POLISUR_SITE_BRANCH ||
+    "main"
+  );
+}
+
 async function putGitHub({ path, contentBase64, message }) {
   const repo =
     process.env.POLISUR_MEDIOS_REPO || "JosuePuentes/frontenddonaive";
-  const branch =
-    process.env.POLISUR_MEDIOS_BRANCH ||
-    "cursor/polisur-portal-fotografico-335d";
+  const branch = await mediosBranch();
   const token = process.env.GITHUB_TOKEN;
   const api = `https://api.github.com/repos/${repo}/contents/${path}`;
 
@@ -133,9 +139,7 @@ async function putGitHub({ path, contentBase64, message }) {
 async function deleteGitHub({ path }) {
   const repo =
     process.env.POLISUR_MEDIOS_REPO || "JosuePuentes/frontenddonaive";
-  const branch =
-    process.env.POLISUR_MEDIOS_BRANCH ||
-    "cursor/polisur-portal-fotografico-335d";
+  const branch = await mediosBranch();
   const token = process.env.GITHUB_TOKEN;
   const api = `https://api.github.com/repos/${repo}/contents/${path}`;
 
