@@ -85,6 +85,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
       summary: "",
       body: "",
       imageUrl: "",
+      imageUrls: [],
       published: false,
       publishedAt: new Date().toISOString(),
     });
@@ -108,6 +109,83 @@ export function PolisurSiteAdmin({ clave }: Props) {
       news: prev.news.filter((n) => n.id !== id),
     }));
     if (editingNewsId === id) setEditingNewsId(null);
+  }
+
+  async function uploadNewsPhotos(newsId: string, files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const uploaded: string[] = [];
+      for (const file of Array.from(files).slice(0, 8)) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+          reader.readAsDataURL(file);
+        });
+        const type = file.type || "";
+        const ext = type.includes("png")
+          ? "png"
+          : type.includes("webp")
+            ? "webp"
+            : "jpg";
+        const path = `public/polisur/extras/n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}.${ext}`;
+        const res = await fetch("/api/polisur-medios?action=upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clave,
+            path,
+            dataBase64: dataUrl,
+          }),
+        });
+        const text = await res.text();
+        let data: { ok?: boolean; error?: string; path?: string } = {};
+        try {
+          data = JSON.parse(text) as typeof data;
+        } catch {
+          throw new Error("No se pudo subir la imagen.");
+        }
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "No se pudo subir la imagen.");
+        }
+        const publicUrl = `/${(data.path || path).replace(/^public\//, "")}`;
+        uploaded.push(publicUrl);
+      }
+      setDraft((prev) => ({
+        ...prev,
+        news: prev.news.map((n) => {
+          if (n.id !== newsId) return n;
+          const imageUrls = [...(n.imageUrls || []), ...uploaded].slice(0, 12);
+          return normalizePolisurNewsItem({
+            ...n,
+            imageUrls,
+            imageUrl: imageUrls[0] || "",
+          });
+        }),
+      }));
+      setMessage("Fotos agregadas a la noticia. Recuerde Guardar contenido.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al subir fotos.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function removeNewsPhoto(newsId: string, url: string) {
+    setDraft((prev) => ({
+      ...prev,
+      news: prev.news.map((n) => {
+        if (n.id !== newsId) return n;
+        const imageUrls = (n.imageUrls || []).filter((u) => u !== url);
+        return normalizePolisurNewsItem({
+          ...n,
+          imageUrls,
+          imageUrl: imageUrls[0] || "",
+        });
+      }),
+    }));
   }
 
   function addUnit() {
@@ -466,8 +544,8 @@ export function PolisurSiteAdmin({ clave }: Props) {
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-[var(--ps-steel-400)]">
-              {draft.news.length} noticia(s). Solo las publicadas aparecen en
-              la web.
+              Redacte título, resumen, cuerpo, fecha y varias fotos. Solo las
+              publicadas aparecen en /noticias.
             </p>
             <button
               type="button"
@@ -485,6 +563,11 @@ export function PolisurSiteAdmin({ clave }: Props) {
             <ul className="space-y-4">
               {draft.news.map((n) => {
                 const open = editingNewsId === n.id;
+                const photos = n.imageUrls?.length
+                  ? n.imageUrls
+                  : n.imageUrl
+                    ? [n.imageUrl]
+                    : [];
                 return (
                   <li
                     key={n.id}
@@ -534,7 +617,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
                             }
                           />
                         </Field>
-                        <Field label="Resumen">
+                        <Field label="Resumen / bajada">
                           <textarea
                             rows={2}
                             className={inputClass}
@@ -544,9 +627,9 @@ export function PolisurSiteAdmin({ clave }: Props) {
                             }
                           />
                         </Field>
-                        <Field label="Cuerpo">
+                        <Field label="Cuerpo de la noticia">
                           <textarea
-                            rows={5}
+                            rows={8}
                             className={inputClass}
                             value={n.body}
                             onChange={(e) =>
@@ -554,24 +637,59 @@ export function PolisurSiteAdmin({ clave }: Props) {
                             }
                           />
                         </Field>
-                        <Field label="Imagen (URL pública)">
-                          <input
-                            className={inputClass}
-                            value={n.imageUrl}
-                            onChange={(e) =>
-                              updateNews(n.id, { imageUrl: e.target.value })
-                            }
-                          />
-                        </Field>
                         <Field label="Fecha de publicación">
                           <input
+                            type="datetime-local"
                             className={inputClass}
-                            value={n.publishedAt}
+                            value={
+                              n.publishedAt && !Number.isNaN(Date.parse(n.publishedAt))
+                                ? new Date(n.publishedAt).toISOString().slice(0, 16)
+                                : ""
+                            }
                             onChange={(e) =>
-                              updateNews(n.id, { publishedAt: e.target.value })
+                              updateNews(n.id, {
+                                publishedAt: e.target.value
+                                  ? new Date(e.target.value).toISOString()
+                                  : new Date().toISOString(),
+                              })
                             }
                           />
                         </Field>
+                        <div>
+                          <span className={labelClass}>Fotos (varias)</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="mt-2 block w-full text-sm text-[var(--ps-steel-300)] file:mr-4 file:border file:border-[var(--ps-line-strong)] file:bg-transparent file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-[0.12em] file:text-[var(--ps-paper)]"
+                            onChange={(e) => {
+                              void uploadNewsPhotos(n.id, e.target.files);
+                              e.target.value = "";
+                            }}
+                          />
+                          {photos.length > 0 ? (
+                            <ul className="mt-3 space-y-2">
+                              {photos.map((url, idx) => (
+                                <li
+                                  key={url}
+                                  className="flex items-center justify-between gap-2 text-xs text-[var(--ps-steel-300)]"
+                                >
+                                  <span className="truncate">
+                                    {idx === 0 ? "Portada · " : ""}
+                                    {url}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="shrink-0 text-red-300/80 hover:underline"
+                                    onClick={() => removeNewsPhoto(n.id, url)}
+                                  >
+                                    Quitar
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
                       </div>
                     ) : null}
                   </li>

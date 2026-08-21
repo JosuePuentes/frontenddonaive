@@ -3,8 +3,8 @@ import { getPolisurBasePath } from "@/lib/polisur-host";
 /**
  * Rutas públicas de POLISUR.
  *
- * - Donaive / desarrollo: prefijo `/polisur` (no colisiona con `/`, `/contacto`, etc.)
- * - Dominio propio polisur.com.ve: rutas en raíz (`/`, `/unidad-canina`, …)
+ * - Donaive / desarrollo: prefijo `/polisur`
+ * - Dominio propio polisur.com.ve: rutas en raíz
  */
 const POLISUR_SEGMENTS = {
   divisiones: "/divisiones",
@@ -12,6 +12,7 @@ const POLISUR_SEGMENTS = {
   preinscripcion: "/preinscripcion",
   contacto: "/contacto",
   medios: "/medios",
+  noticias: "/noticias",
 } as const;
 
 export type PolisurRoutes = {
@@ -23,6 +24,7 @@ export type PolisurRoutes = {
   preinscripcionCanina: string;
   contacto: string;
   medios: string;
+  noticias: string;
 };
 
 function joinPolisurPath(base: "" | "/polisur", segment: string): string {
@@ -43,6 +45,7 @@ export function getPolisurRoutes(base = getPolisurBasePath()): PolisurRoutes {
     preinscripcionCanina: `${joinPolisurPath(base, POLISUR_SEGMENTS.preinscripcion)}?unidad=canina`,
     contacto: joinPolisurPath(base, POLISUR_SEGMENTS.contacto),
     medios: joinPolisurPath(base, POLISUR_SEGMENTS.medios),
+    noticias: joinPolisurPath(base, POLISUR_SEGMENTS.noticias),
   };
 }
 
@@ -52,17 +55,17 @@ export const POLISUR_ROUTES = getPolisurRoutes();
 export type PolisurRouteKey = keyof PolisurRoutes;
 export type PolisurRoutePath = PolisurRoutes[PolisurRouteKey];
 
+export function adPolisurNoticiaPath(id: string, base = getPolisurBasePath()) {
+  return `${getPolisurRoutes(base).noticias}/${encodeURIComponent(id)}`;
+}
+
 export function getPolisurNavItems(base = getPolisurBasePath()) {
   const routes = getPolisurRoutes(base);
   return [
     { key: "inicio", label: "Inicio", to: routes.home },
     { key: "institucion", label: "Institución", to: routes.institucion },
     { key: "divisiones", label: "Divisiones", to: routes.divisiones },
-    {
-      key: "unidad-canina",
-      label: "Unidad Canina",
-      to: routes.unidadCanina,
-    },
+    { key: "noticias", label: "Noticias", to: routes.noticias },
     {
       key: "preinscripcion",
       label: "Preinscripción",
@@ -74,15 +77,17 @@ export function getPolisurNavItems(base = getPolisurBasePath()) {
 
 export const polisurNavItems = getPolisurNavItems();
 
-/** Prefijos de ruta registrados en React Router (dominio propio + namespace legacy). */
 export const POLISUR_ROUTE_PREFIXES = ["", "/polisur"] as const;
 
 export function polisurRouterPath(
   prefix: "" | "/polisur",
-  segment: keyof typeof POLISUR_SEGMENTS | "home",
+  segment: keyof typeof POLISUR_SEGMENTS | "home" | "noticia",
 ): string {
   if (segment === "home") {
     return prefix || "/";
+  }
+  if (segment === "noticia") {
+    return `${joinPolisurPath(prefix, POLISUR_SEGMENTS.noticias)}/:noticiaId`;
   }
   return joinPolisurPath(prefix, POLISUR_SEGMENTS[segment]);
 }

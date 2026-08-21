@@ -1,47 +1,48 @@
+import { Link } from "react-router";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import {
+  adPolisurNoticiaPath,
+  POLISUR_ROUTES,
+} from "@/constants/polisur-routes";
+import {
+  newsCoverUrl,
   publishedPolisurNews,
   type PolisurNewsItem,
 } from "@/content/polisur-site";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
-function NewsCard({ item }: { item: PolisurNewsItem }) {
-  const dateLabel = (() => {
-    const d = new Date(item.publishedAt);
-    return Number.isNaN(d.getTime())
-      ? item.publishedAt
-      : d.toLocaleDateString("es-VE", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-        });
-  })();
+function formatNewsDate(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("es-VE", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
 
+function NewsCard({ item }: { item: PolisurNewsItem }) {
+  const cover = newsCoverUrl(item);
   return (
-    <article className="border-t border-[var(--ps-line)] pt-6 first:border-t-0 first:pt-0">
-      {item.imageUrl ? (
-        <div className="mb-4 aspect-[16/9] overflow-hidden">
-          <PolisurMedia
-            src={item.imageUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            overlay="none"
-          />
-        </div>
-      ) : null}
-      <p className="ps-eyebrow">{dateLabel}</p>
-      <h3 className="mt-2 text-xl text-[var(--ps-white)]">{item.title}</h3>
-      {item.summary ? (
-        <p className="mt-3 text-sm leading-relaxed text-[var(--ps-steel-300)]">
-          {item.summary}
+    <Link
+      to={adPolisurNoticiaPath(item.id)}
+      className="group relative block min-h-[15rem] overflow-hidden"
+    >
+      <PolisurMedia
+        src={cover || "/polisur/home/hero.jpg"}
+        alt=""
+        className="absolute inset-0 h-full w-full"
+        overlay="readable"
+      />
+      <div className="relative z-[1] flex h-full min-h-[15rem] flex-col justify-end p-5">
+        <p className="ps-eyebrow text-[var(--ps-mint)]">
+          {formatNewsDate(item.publishedAt)}
         </p>
-      ) : null}
-      {item.body ? (
-        <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-[var(--ps-steel-300)]">
-          {item.body}
-        </p>
-      ) : null}
-    </article>
+        <h3 className="mt-2 text-xl leading-tight text-[var(--ps-white)] group-hover:text-[var(--ps-mint)]">
+          {item.title}
+        </h3>
+      </div>
+    </Link>
   );
 }
 
@@ -57,15 +58,25 @@ export function PolisurNewsSection() {
       aria-labelledby="polisur-noticias-title"
     >
       <div className="ps-container py-16 sm:py-20">
-        <p className="ps-eyebrow">Comunicados</p>
-        <h2
-          id="polisur-noticias-title"
-          className="mt-3 max-w-xl text-3xl text-[var(--ps-white)] sm:text-4xl"
-        >
-          Noticias institucionales
-        </h2>
-        <div className="mt-10 grid gap-10 lg:grid-cols-2">
-          {items.slice(0, 6).map((item) => (
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="ps-eyebrow">Comunicados</p>
+            <h2
+              id="polisur-noticias-title"
+              className="mt-3 max-w-xl text-3xl text-[var(--ps-white)] sm:text-4xl"
+            >
+              Noticias institucionales
+            </h2>
+          </div>
+          <Link
+            to={POLISUR_ROUTES.noticias}
+            className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ps-mint)] underline-offset-4 hover:underline"
+          >
+            Ver todas
+          </Link>
+        </div>
+        <div className="mt-10 grid gap-4 lg:grid-cols-2">
+          {items.slice(0, 4).map((item) => (
             <NewsCard key={item.id} item={item} />
           ))}
         </div>
