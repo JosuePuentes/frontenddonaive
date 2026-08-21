@@ -49,6 +49,20 @@ export function PolisurSiteAdmin({ clave }: Props) {
     setDraft(liveSite);
   }, [liveSite]);
 
+  useEffect(() => {
+    if (!editingNewsId) return;
+    document
+      .getElementById(`news-${editingNewsId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [editingNewsId]);
+
+  useEffect(() => {
+    if (!editingUnitId) return;
+    document
+      .getElementById(`unit-${editingUnitId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [editingUnitId]);
+
   function updateContact<K extends keyof PolisurSiteContent["contact"]>(
     key: K,
     value: PolisurSiteContent["contact"][K],
@@ -475,189 +489,180 @@ export function PolisurSiteAdmin({ clave }: Props) {
 
       {tab === "divisiones" ? (
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-[var(--ps-steel-400)]">
-              Cree divisiones, cargue su imagen, escriba las funciones y marque
-              si van en Home, en /divisiones y en preinscripciones. Luego pulse
-              Guardar contenido.
-            </p>
-            <button
-              type="button"
-              onClick={addUnit}
-              className="border-b border-[var(--ps-mint)]/70 pb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)]"
-            >
-              + Agregar división
-            </button>
-          </div>
+          <p className="text-sm text-[var(--ps-steel-400)]">
+            Complete nombre, funciones e imagen. Marque Preinscripción, Home y
+            Divisiones según corresponda. Al final pulse Guardar contenido.
+          </p>
+          <button
+            type="button"
+            onClick={addUnit}
+            className="w-full border border-[var(--ps-mint)]/60 bg-[var(--ps-navy-950)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)]"
+          >
+            + Agregar división
+          </button>
           <ul className="space-y-4">
-            {draft.units.map((u) => {
-              const open = editingUnitId === u.id;
-              return (
-                <li
-                  key={u.id}
-                  className="border border-[var(--ps-line)] bg-[var(--ps-navy-950)]/60 p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditingUnitId(open ? null : u.id)}
-                      className="text-left text-sm text-[var(--ps-paper)] hover:underline"
-                    >
-                      {u.label}
-                    </button>
-                    <div className="flex flex-wrap gap-3">
-                      <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
-                        <input
-                          type="checkbox"
-                          checked={u.active}
-                          onChange={(e) =>
-                            updateUnit(u.id, { active: e.target.checked })
-                          }
+            {draft.units.map((u) => (
+              <li
+                key={u.id}
+                id={`unit-${u.id}`}
+                className={[
+                  "border bg-[var(--ps-navy-950)]/60 p-4",
+                  editingUnitId === u.id
+                    ? "border-[var(--ps-mint)]/50"
+                    : "border-[var(--ps-line)]",
+                ].join(" ")}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-[var(--ps-paper)]">
+                    {u.label || "Sin nombre"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => removeUnit(u.id)}
+                    className="text-xs uppercase tracking-[0.12em] text-red-300/80 hover:underline"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
+                    <input
+                      type="checkbox"
+                      checked={u.active}
+                      onChange={(e) =>
+                        updateUnit(u.id, { active: e.target.checked })
+                      }
+                    />
+                    Preinscripción
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
+                    <input
+                      type="checkbox"
+                      checked={u.showOnHome}
+                      onChange={(e) =>
+                        updateUnit(u.id, { showOnHome: e.target.checked })
+                      }
+                    />
+                    En Home
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
+                    <input
+                      type="checkbox"
+                      checked={u.showInCatalog}
+                      onChange={(e) =>
+                        updateUnit(u.id, {
+                          showInCatalog: e.target.checked,
+                        })
+                      }
+                    />
+                    En Divisiones
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
+                    <input
+                      type="checkbox"
+                      checked={u.featured}
+                      onChange={(e) =>
+                        updateUnit(u.id, { featured: e.target.checked })
+                      }
+                    />
+                    Destacada en home
+                  </label>
+                </div>
+                <div className="mt-4 grid gap-3">
+                  <Field label="Nombre de la división">
+                    <input
+                      className={inputClass}
+                      value={u.label}
+                      onChange={(e) =>
+                        updateUnit(u.id, { label: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Resumen corto (tarjeta)">
+                    <textarea
+                      rows={2}
+                      className={inputClass}
+                      value={u.summary}
+                      onChange={(e) =>
+                        updateUnit(u.id, { summary: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Funciones de la división">
+                    <textarea
+                      rows={5}
+                      className={inputClass}
+                      value={u.functions}
+                      onChange={(e) =>
+                        updateUnit(u.id, { functions: e.target.value })
+                      }
+                      placeholder="Describa las funciones y labores de esta división…"
+                    />
+                  </Field>
+                  <div>
+                    <span className={labelClass}>Imagen de la división</span>
+                    {u.imageUrl ? (
+                      <div className="mt-2 flex items-start gap-3">
+                        <img
+                          src={u.imageUrl}
+                          alt=""
+                          className="h-20 w-28 object-cover border border-[var(--ps-line)]"
                         />
-                        Preinscripción
-                      </label>
-                      <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
-                        <input
-                          type="checkbox"
-                          checked={u.showOnHome}
-                          onChange={(e) =>
-                            updateUnit(u.id, { showOnHome: e.target.checked })
-                          }
-                        />
-                        En Home
-                      </label>
-                      <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
-                        <input
-                          type="checkbox"
-                          checked={u.showInCatalog}
-                          onChange={(e) =>
-                            updateUnit(u.id, {
-                              showInCatalog: e.target.checked,
-                            })
-                          }
-                        />
-                        En Divisiones
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => removeUnit(u.id)}
-                        className="text-xs uppercase tracking-[0.12em] text-red-300/80 hover:underline"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </div>
-                  {open ? (
-                    <div className="mt-4 grid gap-3">
-                      <Field label="Nombre de la división">
-                        <input
-                          className={inputClass}
-                          value={u.label}
-                          onChange={(e) =>
-                            updateUnit(u.id, { label: e.target.value })
-                          }
-                        />
-                      </Field>
-                      <Field label="Resumen corto (tarjeta)">
-                        <textarea
-                          rows={2}
-                          className={inputClass}
-                          value={u.summary}
-                          onChange={(e) =>
-                            updateUnit(u.id, { summary: e.target.value })
-                          }
-                        />
-                      </Field>
-                      <Field label="Funciones de la división">
-                        <textarea
-                          rows={5}
-                          className={inputClass}
-                          value={u.functions}
-                          onChange={(e) =>
-                            updateUnit(u.id, { functions: e.target.value })
-                          }
-                          placeholder="Describa las funciones y labores de esta división…"
-                        />
-                      </Field>
-                      <div>
-                        <span className={labelClass}>Imagen de la división</span>
-                        {u.imageUrl ? (
-                          <div className="mt-2 flex items-start gap-3">
-                            <img
-                              src={u.imageUrl}
-                              alt=""
-                              className="h-20 w-28 object-cover border border-[var(--ps-line)]"
-                            />
-                            <p className="min-w-0 flex-1 truncate text-xs text-[var(--ps-steel-300)]">
-                              {u.imageUrl}
-                            </p>
-                          </div>
-                        ) : null}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="mt-2 block w-full text-sm text-[var(--ps-steel-300)] file:mr-4 file:border file:border-[var(--ps-line-strong)] file:bg-transparent file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-[0.12em] file:text-[var(--ps-paper)]"
-                          onChange={(e) => {
-                            void uploadUnitImage(
-                              u.id,
-                              e.target.files?.[0] || null,
-                            );
-                            e.target.value = "";
-                          }}
-                        />
-                        <Field label="O pegue una URL pública">
-                          <input
-                            className={inputClass}
-                            value={u.imageUrl}
-                            onChange={(e) =>
-                              updateUnit(u.id, { imageUrl: e.target.value })
-                            }
-                            placeholder="/polisur/home/canina.jpg"
-                          />
-                        </Field>
+                        <p className="min-w-0 flex-1 truncate text-xs text-[var(--ps-steel-300)]">
+                          {u.imageUrl}
+                        </p>
                       </div>
-                      <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
-                        <input
-                          type="checkbox"
-                          checked={u.featured}
-                          onChange={(e) =>
-                            updateUnit(u.id, { featured: e.target.checked })
-                          }
-                        />
-                        Destacada en home
-                      </label>
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
+                    ) : null}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="mt-2 block w-full text-sm text-[var(--ps-steel-300)] file:mr-4 file:border file:border-[var(--ps-line-strong)] file:bg-transparent file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-[0.12em] file:text-[var(--ps-paper)]"
+                      onChange={(e) => {
+                        void uploadUnitImage(
+                          u.id,
+                          e.target.files?.[0] || null,
+                        );
+                        e.target.value = "";
+                      }}
+                    />
+                    <Field label="O pegue una URL pública">
+                      <input
+                        className={inputClass}
+                        value={u.imageUrl}
+                        onChange={(e) =>
+                          updateUnit(u.id, { imageUrl: e.target.value })
+                        }
+                        placeholder="/polisur/home/canina.jpg"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </li>
+            ))}
           </ul>
         </div>
       ) : null}
 
       {tab === "noticias" ? (
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-[var(--ps-steel-400)]">
-              Redacte título, resumen, cuerpo, fecha y varias fotos. Solo las
-              publicadas aparecen en /noticias.
-            </p>
-            <button
-              type="button"
-              onClick={addNews}
-              className="text-xs uppercase tracking-[0.14em] text-[var(--ps-mint)] underline-offset-4 hover:underline"
-            >
-              Agregar noticia
-            </button>
-          </div>
+          <p className="text-sm text-[var(--ps-steel-400)]">
+            Pulse Agregar noticia, complete el formulario (título, texto, fecha
+            y fotos) y marque Publicada. Luego Guardar contenido.
+          </p>
+          <button
+            type="button"
+            onClick={addNews}
+            className="w-full border border-[var(--ps-mint)]/60 bg-[var(--ps-navy-950)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)]"
+          >
+            + Agregar noticia
+          </button>
           {draft.news.length === 0 ? (
-            <p className="text-sm text-[var(--ps-steel-400)]">
-              Aún no hay noticias.
+            <p className="border border-dashed border-[var(--ps-line)] px-4 py-8 text-center text-sm text-[var(--ps-steel-400)]">
+              Aún no hay noticias. Use el botón de arriba para crear la primera.
             </p>
           ) : (
             <ul className="space-y-4">
               {draft.news.map((n) => {
-                const open = editingNewsId === n.id;
                 const photos = n.imageUrls?.length
                   ? n.imageUrls
                   : n.imageUrl
@@ -666,21 +671,23 @@ export function PolisurSiteAdmin({ clave }: Props) {
                 return (
                   <li
                     key={n.id}
-                    className="border border-[var(--ps-line)] bg-[var(--ps-navy-950)]/60 p-4"
+                    id={`news-${n.id}`}
+                    className={[
+                      "border bg-[var(--ps-navy-950)]/60 p-4",
+                      editingNewsId === n.id
+                        ? "border-[var(--ps-mint)]/50"
+                        : "border-[var(--ps-line)]",
+                    ].join(" ")}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingNewsId(open ? null : n.id)}
-                        className="text-left text-sm text-[var(--ps-paper)] hover:underline"
-                      >
+                      <p className="text-sm font-medium text-[var(--ps-paper)]">
                         {n.title || "Sin título"}
                         {!n.published ? (
                           <span className="ml-2 text-xs text-[var(--ps-steel-400)]">
                             (borrador)
                           </span>
                         ) : null}
-                      </button>
+                      </p>
                       <div className="flex gap-3">
                         <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
                           <input
@@ -701,92 +708,93 @@ export function PolisurSiteAdmin({ clave }: Props) {
                         </button>
                       </div>
                     </div>
-                    {open ? (
-                      <div className="mt-4 grid gap-3">
-                        <Field label="Título">
-                          <input
-                            className={inputClass}
-                            value={n.title}
-                            onChange={(e) =>
-                              updateNews(n.id, { title: e.target.value })
-                            }
-                          />
-                        </Field>
-                        <Field label="Resumen / bajada">
-                          <textarea
-                            rows={2}
-                            className={inputClass}
-                            value={n.summary}
-                            onChange={(e) =>
-                              updateNews(n.id, { summary: e.target.value })
-                            }
-                          />
-                        </Field>
-                        <Field label="Cuerpo de la noticia">
-                          <textarea
-                            rows={8}
-                            className={inputClass}
-                            value={n.body}
-                            onChange={(e) =>
-                              updateNews(n.id, { body: e.target.value })
-                            }
-                          />
-                        </Field>
-                        <Field label="Fecha de publicación">
-                          <input
-                            type="datetime-local"
-                            className={inputClass}
-                            value={
-                              n.publishedAt && !Number.isNaN(Date.parse(n.publishedAt))
-                                ? new Date(n.publishedAt).toISOString().slice(0, 16)
-                                : ""
-                            }
-                            onChange={(e) =>
-                              updateNews(n.id, {
-                                publishedAt: e.target.value
-                                  ? new Date(e.target.value).toISOString()
-                                  : new Date().toISOString(),
-                              })
-                            }
-                          />
-                        </Field>
-                        <div>
-                          <span className={labelClass}>Fotos (varias)</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            className="mt-2 block w-full text-sm text-[var(--ps-steel-300)] file:mr-4 file:border file:border-[var(--ps-line-strong)] file:bg-transparent file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-[0.12em] file:text-[var(--ps-paper)]"
-                            onChange={(e) => {
-                              void uploadNewsPhotos(n.id, e.target.files);
-                              e.target.value = "";
-                            }}
-                          />
-                          {photos.length > 0 ? (
-                            <ul className="mt-3 space-y-2">
-                              {photos.map((url, idx) => (
-                                <li
-                                  key={url}
-                                  className="flex items-center justify-between gap-2 text-xs text-[var(--ps-steel-300)]"
+                    <div className="mt-4 grid gap-3">
+                      <Field label="Título">
+                        <input
+                          className={inputClass}
+                          value={n.title}
+                          onChange={(e) =>
+                            updateNews(n.id, { title: e.target.value })
+                          }
+                        />
+                      </Field>
+                      <Field label="Resumen / bajada">
+                        <textarea
+                          rows={2}
+                          className={inputClass}
+                          value={n.summary}
+                          onChange={(e) =>
+                            updateNews(n.id, { summary: e.target.value })
+                          }
+                        />
+                      </Field>
+                      <Field label="Cuerpo de la noticia">
+                        <textarea
+                          rows={8}
+                          className={inputClass}
+                          value={n.body}
+                          onChange={(e) =>
+                            updateNews(n.id, { body: e.target.value })
+                          }
+                        />
+                      </Field>
+                      <Field label="Fecha de publicación">
+                        <input
+                          type="datetime-local"
+                          className={inputClass}
+                          value={
+                            n.publishedAt &&
+                            !Number.isNaN(Date.parse(n.publishedAt))
+                              ? new Date(n.publishedAt)
+                                  .toISOString()
+                                  .slice(0, 16)
+                              : ""
+                          }
+                          onChange={(e) =>
+                            updateNews(n.id, {
+                              publishedAt: e.target.value
+                                ? new Date(e.target.value).toISOString()
+                                : new Date().toISOString(),
+                            })
+                          }
+                        />
+                      </Field>
+                      <div>
+                        <span className={labelClass}>Fotos (varias)</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="mt-2 block w-full text-sm text-[var(--ps-steel-300)] file:mr-4 file:border file:border-[var(--ps-line-strong)] file:bg-transparent file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-[0.12em] file:text-[var(--ps-paper)]"
+                          onChange={(e) => {
+                            void uploadNewsPhotos(n.id, e.target.files);
+                            e.target.value = "";
+                          }}
+                        />
+                        {photos.length > 0 ? (
+                          <ul className="mt-3 space-y-2">
+                            {photos.map((url, idx) => (
+                              <li
+                                key={url}
+                                className="flex items-center justify-between gap-2 text-xs text-[var(--ps-steel-300)]"
+                              >
+                                <span className="truncate">
+                                  {idx === 0 ? "Portada · " : ""}
+                                  {url}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="shrink-0 text-red-300/80 hover:underline"
+                                  onClick={() => removeNewsPhoto(n.id, url)}
                                 >
-                                  <span className="truncate">
-                                    {idx === 0 ? "Portada · " : ""}
-                                    {url}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    className="shrink-0 text-red-300/80 hover:underline"
-                                    onClick={() => removeNewsPhoto(n.id, url)}
-                                  >
-                                    Quitar
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
+                                  Quitar
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </div>
-                    ) : null}
+                    </div>
                   </li>
                 );
               })}
