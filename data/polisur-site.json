@@ -24,5 +24,43 @@
     "ctaSecondary": "Preinscripción",
     "imageUrl": "/polisur/home/hero.jpg"
   },
-  "news": []
+  "news": [],
+  "units": [
+    {
+      "id": "institucion",
+      "label": "POLISUR — Institución",
+      "summary": "",
+      "imageUrl": "",
+      "showOnHome": false,
+      "featured": false,
+      "active": true
+    },
+    {
+      "id": "unidad-canina",
+      "label": "Unidad Canina",
+      "summary": "Patrullaje canino y apoyo especializado con binomios entrenados al servicio de la institución.",
+      "imageUrl": "/polisur/home/canina.jpg",
+      "showOnHome": true,
+      "featured": true,
+      "active": true
+    },
+    {
+      "id": "unidades-operativas",
+      "label": "Unidades operativas",
+      "summary": "Patrullaje preventivo, orden público y respuesta operativa en las siete parroquias del municipio.",
+      "imageUrl": "/polisur/home/about.jpg",
+      "showOnHome": true,
+      "featured": false,
+      "active": true
+    },
+    {
+      "id": "prevencion",
+      "label": "Prevención y cercanía",
+      "summary": "Vinculación comunitaria, Mesas y Cuadrantes de Paz, y prevención para la convivencia ciudadana.",
+      "imageUrl": "/polisur/home/ciudadania.jpg",
+      "showOnHome": true,
+      "featured": false,
+      "active": true
+    }
+  ]
 }

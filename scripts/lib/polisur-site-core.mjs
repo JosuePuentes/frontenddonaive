@@ -36,6 +36,47 @@ const DEFAULTS = {
     imageUrl: "/polisur/home/hero.jpg",
   },
   news: [],
+  units: [
+    {
+      id: "institucion",
+      label: "POLISUR — Institución",
+      summary: "",
+      imageUrl: "",
+      showOnHome: false,
+      featured: false,
+      active: true,
+    },
+    {
+      id: "unidad-canina",
+      label: "Unidad Canina",
+      summary:
+        "Patrullaje canino y apoyo especializado con binomios entrenados al servicio de la institución.",
+      imageUrl: "/polisur/home/canina.jpg",
+      showOnHome: true,
+      featured: true,
+      active: true,
+    },
+    {
+      id: "unidades-operativas",
+      label: "Unidades operativas",
+      summary:
+        "Patrullaje preventivo, orden público y respuesta operativa en las siete parroquias del municipio.",
+      imageUrl: "/polisur/home/about.jpg",
+      showOnHome: true,
+      featured: false,
+      active: true,
+    },
+    {
+      id: "prevencion",
+      label: "Prevención y cercanía",
+      summary:
+        "Vinculación comunitaria, Mesas y Cuadrantes de Paz, y prevención para la convivencia ciudadana.",
+      imageUrl: "/polisur/home/ciudadania.jpg",
+      showOnHome: true,
+      featured: false,
+      active: true,
+    },
+  ],
 };
 
 export function sendJson(res, status, body) {
@@ -87,6 +128,33 @@ function cleanUrl(value, max = 400) {
   return "";
 }
 
+function slugifyId(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+}
+
+function normalizeUnit(raw, index) {
+  const label = clean(raw?.label, 120);
+  const id =
+    slugifyId(clean(raw?.id, 40)) ||
+    slugifyId(label) ||
+    `unidad-${index + 1}`;
+  return {
+    id,
+    label,
+    summary: clean(raw?.summary, 400),
+    imageUrl: cleanUrl(raw?.imageUrl),
+    showOnHome: Boolean(raw?.showOnHome),
+    featured: Boolean(raw?.featured),
+    active: raw?.active !== false,
+  };
+}
+
 function normalizeNews(raw, index) {
   return {
     id: clean(raw?.id, 64) || `noticia-${Date.now().toString(36)}-${index}`,
@@ -104,6 +172,20 @@ export function normalizeSite(raw) {
   const social = raw?.social || {};
   const banner = raw?.banner || {};
   const newsIn = Array.isArray(raw?.news) ? raw.news : [];
+  const unitsIn = Array.isArray(raw?.units) ? raw.units : null;
+  const unitsSource =
+    unitsIn && unitsIn.length > 0 ? unitsIn : DEFAULTS.units;
+
+  const units = [];
+  const seen = new Set();
+  unitsSource.slice(0, 40).forEach((item, i) => {
+    const unit = normalizeUnit(item, i);
+    if (!unit.label) return;
+    let id = unit.id;
+    if (seen.has(id)) id = `${id}-${i + 1}`;
+    seen.add(id);
+    units.push({ ...unit, id });
+  });
 
   return {
     updatedAt: clean(raw?.updatedAt, 40),
@@ -136,6 +218,7 @@ export function normalizeSite(raw) {
       .slice(0, 50)
       .map((item, i) => normalizeNews(item, i))
       .filter((n) => n.title),
+    units,
   };
 }
 

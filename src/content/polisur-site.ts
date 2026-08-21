@@ -1,6 +1,7 @@
 import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
+import { POLISUR_UNITS } from "@/content/polisur-preinscripcion";
 
-/** Contenido editable del portal POLISUR (contactos, redes, banner, noticias). */
+/** Contenido editable del portal POLISUR (contactos, redes, banner, noticias, divisiones). */
 
 export type PolisurContactInfo = {
   address: string;
@@ -39,13 +40,75 @@ export type PolisurNewsItem = {
   published: boolean;
 };
 
+/** División / unidad selectable en preinscripción y opcionalmente en el home. */
+export type PolisurUnitItem = {
+  id: string;
+  label: string;
+  summary: string;
+  imageUrl: string;
+  /** Mostrar en el mosaico de divisiones del home. */
+  showOnHome: boolean;
+  featured: boolean;
+  /** Disponible en el formulario de preinscripción. */
+  active: boolean;
+};
+
 export type PolisurSiteContent = {
   updatedAt: string;
   contact: PolisurContactInfo;
   social: PolisurSocialLinks;
   banner: PolisurBannerContent;
   news: PolisurNewsItem[];
+  units: PolisurUnitItem[];
 };
+
+const DEFAULT_UNIT_META: Record<
+  string,
+  Partial<Pick<PolisurUnitItem, "summary" | "imageUrl" | "showOnHome" | "featured">>
+> = {
+  institucion: {
+    summary: "",
+    imageUrl: "",
+    showOnHome: false,
+    featured: false,
+  },
+  "unidad-canina": {
+    summary:
+      "Patrullaje canino y apoyo especializado con binomios entrenados al servicio de la institución.",
+    imageUrl: POLISUR_MEDIA.home.canina,
+    showOnHome: true,
+    featured: true,
+  },
+  "unidades-operativas": {
+    summary:
+      "Patrullaje preventivo, orden público y respuesta operativa en las siete parroquias del municipio.",
+    imageUrl: POLISUR_MEDIA.home.about,
+    showOnHome: true,
+    featured: false,
+  },
+  prevencion: {
+    summary:
+      "Vinculación comunitaria, Mesas y Cuadrantes de Paz, y prevención para la convivencia ciudadana.",
+    imageUrl: POLISUR_MEDIA.home.ciudadania,
+    showOnHome: true,
+    featured: false,
+  },
+};
+
+export const POLISUR_DEFAULT_UNITS: PolisurUnitItem[] = POLISUR_UNITS.map(
+  (unit) => {
+    const meta = DEFAULT_UNIT_META[unit.id] ?? {};
+    return {
+      id: unit.id,
+      label: unit.label,
+      summary: meta.summary ?? "",
+      imageUrl: meta.imageUrl ?? "",
+      showOnHome: Boolean(meta.showOnHome),
+      featured: Boolean(meta.featured),
+      active: true,
+    };
+  },
+);
 
 export const POLISUR_SITE_DEFAULTS: PolisurSiteContent = {
   updatedAt: "",
@@ -76,6 +139,7 @@ export const POLISUR_SITE_DEFAULTS: PolisurSiteContent = {
     imageUrl: POLISUR_MEDIA.home.hero,
   },
   news: [],
+  units: POLISUR_DEFAULT_UNITS,
 };
 
 function cleanStr(value: unknown, max: number): string {
@@ -98,6 +162,16 @@ function cleanUrl(value: unknown, max = 400): string {
   return "";
 }
 
+export function slugifyPolisurUnitId(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+}
+
 export function normalizePolisurNewsItem(
   raw: Partial<PolisurNewsItem> | null | undefined,
   index = 0,
@@ -116,6 +190,26 @@ export function normalizePolisurNewsItem(
   };
 }
 
+export function normalizePolisurUnitItem(
+  raw: Partial<PolisurUnitItem> | null | undefined,
+  index = 0,
+): PolisurUnitItem {
+  const label = cleanStr(raw?.label, 120);
+  const id =
+    slugifyPolisurUnitId(cleanStr(raw?.id, 40)) ||
+    slugifyPolisurUnitId(label) ||
+    `unidad-${index + 1}`;
+  return {
+    id,
+    label,
+    summary: cleanStr(raw?.summary, 400),
+    imageUrl: cleanUrl(raw?.imageUrl),
+    showOnHome: Boolean(raw?.showOnHome),
+    featured: Boolean(raw?.featured),
+    active: raw?.active !== false,
+  };
+}
+
 export function mergePolisurSiteContent(
   raw: Partial<PolisurSiteContent> | null | undefined,
 ): PolisurSiteContent {
@@ -123,6 +217,21 @@ export function mergePolisurSiteContent(
   const social: Partial<PolisurSocialLinks> = raw?.social ?? {};
   const banner: Partial<PolisurBannerContent> = raw?.banner ?? {};
   const newsIn = Array.isArray(raw?.news) ? raw.news : [];
+  const unitsIn = Array.isArray(raw?.units) ? raw.units : null;
+
+  const units = (unitsIn && unitsIn.length > 0 ? unitsIn : POLISUR_DEFAULT_UNITS)
+    .slice(0, 40)
+    .map((item, i) => normalizePolisurUnitItem(item, i))
+    .filter((u) => u.label);
+
+  // Ensure unique ids
+  const seen = new Set<string>();
+  const uniqueUnits = units.map((unit, i) => {
+    let id = unit.id;
+    if (seen.has(id)) id = `${id}-${i + 1}`;
+    seen.add(id);
+    return { ...unit, id };
+  });
 
   return {
     updatedAt: cleanStr(raw?.updatedAt, 40),
@@ -162,6 +271,7 @@ export function mergePolisurSiteContent(
       .slice(0, 50)
       .map((item, i) => normalizePolisurNewsItem(item, i))
       .filter((n) => n.title),
+    units: uniqueUnits,
   };
 }
 
@@ -171,6 +281,14 @@ export function publishedPolisurNews(
   return site.news
     .filter((n) => n.published && n.title)
     .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+}
+
+export function activePolisurUnits(site: PolisurSiteContent): PolisurUnitItem[] {
+  return site.units.filter((u) => u.active && u.label);
+}
+
+export function homePolisurUnits(site: PolisurSiteContent): PolisurUnitItem[] {
+  return site.units.filter((u) => u.showOnHome && u.label);
 }
 
 export function hasPolisurSocial(social: PolisurSocialLinks): boolean {

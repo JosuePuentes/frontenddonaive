@@ -1,28 +1,41 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
-  POLISUR_UNITS,
-  type PolisurUnitId,
-} from "@/content/polisur-preinscripcion";
+  activePolisurUnits,
+  type PolisurUnitItem,
+} from "@/content/polisur-site";
+import { unitFromSearchParam } from "@/content/polisur-preinscripcion";
+import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
 type PolisurPreinscripcionFormProps = {
-  defaultUnidad: PolisurUnitId;
+  defaultUnidad: string;
 };
 
 function PolisurPreinscripcionForm({
   defaultUnidad,
 }: PolisurPreinscripcionFormProps) {
+  const { site } = usePolisurSite();
+  const units = useMemo(() => activePolisurUnits(site), [site]);
+  const initial = unitFromSearchParam(defaultUnidad);
+
   const [nombres, setNombres] = useState("");
   const [apellidos, setApellidos] = useState("");
   const [cedula, setCedula] = useState("");
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [unidad, setUnidad] = useState<PolisurUnitId>(defaultUnidad);
+  const [unidad, setUnidad] = useState(initial);
   const [mensaje, setMensaje] = useState("");
   const [website, setWebsite] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (units.length === 0) return;
+    if (!units.some((u) => u.id === unidad)) {
+      setUnidad(units[0].id);
+    }
+  }, [units, unidad]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,7 +69,9 @@ function PolisurPreinscripcionForm({
       setDone(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "No se pudo enviar la preinscripción.",
+        err instanceof Error
+          ? err.message
+          : "No se pudo enviar la preinscripción.",
       );
     } finally {
       setBusy(false);
@@ -154,10 +169,10 @@ function PolisurPreinscripcionForm({
         <select
           name="unidad"
           value={unidad}
-          onChange={(e) => setUnidad(e.target.value as PolisurUnitId)}
+          onChange={(e) => setUnidad(e.target.value)}
           className="ps-input"
         >
-          {POLISUR_UNITS.map((unit) => (
+          {units.map((unit: PolisurUnitItem) => (
             <option key={unit.id} value={unit.id}>
               {unit.label}
             </option>

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import {
-  polisurUnitLabel,
-} from "@/content/polisur-preinscripcion";
+import { polisurUnitLabel } from "@/content/polisur-preinscripcion";
 import type { PolisurPreinscripcion } from "@/types/polisur-preinscripcion";
+import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 import { cn } from "@/lib/utils";
 
 type PolisurPreinscripcionesAdminProps = {
@@ -23,6 +22,7 @@ function PolisurPreinscripcionesAdmin({
   clave,
   tone = "polisur",
 }: PolisurPreinscripcionesAdminProps) {
+  const { site } = usePolisurSite();
   const [items, setItems] = useState<PolisurPreinscripcion[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,6 +30,7 @@ function PolisurPreinscripcionesAdmin({
 
   const isPolisur = tone === "polisur";
   const selected = items.find((item) => item.id === selectedId) ?? null;
+  const labelFor = (id: string) => polisurUnitLabel(id, site.units);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,7 +135,7 @@ function PolisurPreinscripcionesAdmin({
                   {item.nombres} {item.apellidos}
                 </span>
                 <span className="text-xs uppercase tracking-[0.12em]">
-                  {polisurUnitLabel(item.unidad)}
+                  {labelFor(item.unidad)}
                 </span>
               </button>
             </li>
@@ -163,7 +164,7 @@ function PolisurPreinscripcionesAdmin({
             <DetailRow
               tone={tone}
               label="Unidad"
-              value={polisurUnitLabel(selected.unidad)}
+              value={labelFor(selected.unidad)}
             />
             <DetailRow
               tone={tone}
