@@ -26,19 +26,17 @@ function formatNewsDate(value: string) {
 
 function NewsHeroCard({ item }: { item: PolisurNewsItem }) {
   const cover = newsCoverUrl(item);
+  const href = adPolisurNoticiaPath(item.id);
   return (
-    <Link
-      to={adPolisurNoticiaPath(item.id)}
-      className="group relative block min-h-[16rem] overflow-hidden sm:min-h-[18rem]"
-    >
+    <Link to={href} className="ps-news-hero group min-h-[20rem] sm:min-h-[22rem]">
       <PolisurMedia
         src={cover || "/polisur/home/hero.jpg"}
-        alt=""
-        className="absolute inset-0 h-full w-full"
-        overlay="readable"
+        alt={item.title}
+        className="ps-news-hero__media"
+        overlay="strong"
         objectPosition="center"
       />
-      <div className="relative z-[1] flex h-full min-h-[16rem] flex-col justify-end p-5 sm:min-h-[18rem] sm:p-7">
+      <div className="ps-news-hero__body">
         <p className="ps-eyebrow text-[var(--ps-mint)]">
           {formatNewsDate(item.publishedAt)}
         </p>
