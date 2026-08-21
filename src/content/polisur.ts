@@ -53,6 +53,14 @@ export const polisurCopy = {
     history:
       "En 2026 la institución conmemoró su trigésimo aniversario, reafirmando el compromiso de hombres y mujeres que, con convicción y mística de servicio, trabajan por la tranquilidad del municipio. Con el apoyo de la Alcaldía y la comunidad, POLISUR ha fortalecido su despliegue mediante dotación de unidades patrulleras, equipos de comunicación y organización comunitaria a través de Cuadrantes de Paz.",
   },
+  leadership: {
+    eyebrow: "Dirección general",
+    role: "Director General",
+    rank: "Primer Comisario",
+    name: "Lisimaco Alberto Quintanillo López",
+    note:
+      "Director General del Instituto Autónomo Policía Municipal de San Francisco (POLISUR).",
+  },
   mission: {
     title: "Misión",
     body:

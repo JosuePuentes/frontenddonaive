@@ -36,6 +36,12 @@ function PolisurFooter() {
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-[var(--ps-steel-300)]">
             {polisurCopy.brand.identification}
           </p>
+          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)]">
+            <span className="text-[var(--ps-mint)]">
+              {polisurCopy.leadership.role}:
+            </span>{" "}
+            {polisurCopy.leadership.rank} {polisurCopy.leadership.name}
+          </p>
         </div>
 
         <div>
