@@ -6,6 +6,7 @@ import {
   hasPolisurSocial,
   type PolisurSocialLinks,
 } from "@/content/polisur-site";
+import { trackPolisurClick } from "@/lib/polisur-track";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
 const SOCIAL_LABELS: { key: keyof PolisurSocialLinks; label: string }[] = [
@@ -68,7 +69,28 @@ function PolisurFooter() {
                 Ir a contacto
               </Link>
             </li>
-            {contact.phone ? <li>{contact.phone}</li> : null}
+            {contact.phone ? (
+              <li>
+                <a
+                  href={`tel:${contact.phone.replace(/\s+/g, "")}`}
+                  className="hover:text-[var(--ps-white)]"
+                  onClick={() => trackPolisurClick("phone", "primary")}
+                >
+                  {contact.phone}
+                </a>
+              </li>
+            ) : null}
+            {contact.phoneAlt ? (
+              <li>
+                <a
+                  href={`tel:${contact.phoneAlt.replace(/\s+/g, "")}`}
+                  className="hover:text-[var(--ps-white)]"
+                  onClick={() => trackPolisurClick("phone", "alt")}
+                >
+                  {contact.phoneAlt}
+                </a>
+              </li>
+            ) : null}
             {contact.email ? <li>{contact.email}</li> : null}
             <li>{contact.address || polisurCopy.footer.contactNote}</li>
           </ul>
@@ -91,6 +113,7 @@ function PolisurFooter() {
                       target="_blank"
                       rel="noreferrer noopener"
                       className="hover:text-[var(--ps-mint)]"
+                      onClick={() => trackPolisurClick("social", key)}
                     >
                       {label}
                     </a>

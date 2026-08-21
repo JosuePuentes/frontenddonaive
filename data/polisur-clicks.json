@@ -1,0 +1,16 @@
+{
+  "updatedAt": "",
+  "news": {},
+  "social": {
+    "facebook": 0,
+    "instagram": 0,
+    "twitter": 0,
+    "youtube": 0,
+    "tiktok": 0,
+    "whatsapp": 0
+  },
+  "phone": {
+    "primary": 0,
+    "alt": 0
+  }
+}
