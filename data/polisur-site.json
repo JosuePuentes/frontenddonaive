@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-21T07:11:20.061Z",
+  "updatedAt": "2026-08-21T07:20:58.789Z",
   "contact": {
     "address": "Municipio San Francisco, estado Zulia — República Bolivariana de Venezuela",
     "phone": "",
@@ -31,7 +31,7 @@
       "label": "POLISUR — Institución",
       "summary": "",
       "imageUrl": "",
-      "showOnHome": false,
+      "showOnHome": true,
       "featured": false,
       "active": true
     },
