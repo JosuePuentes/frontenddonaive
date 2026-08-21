@@ -2,8 +2,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   mergePolisurSiteContent,
   normalizePolisurNewsItem,
+  normalizePolisurUnitItem,
+  slugifyPolisurUnitId,
   type PolisurNewsItem,
   type PolisurSiteContent,
+  type PolisurUnitItem,
 } from "@/content/polisur-site";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
@@ -15,7 +18,7 @@ const inputClass =
 const labelClass =
   "text-xs uppercase tracking-[0.16em] text-[var(--ps-steel-400)]";
 
-type Tab = "contacto" | "redes" | "banner" | "noticias";
+type Tab = "contacto" | "redes" | "banner" | "noticias" | "divisiones";
 
 function Field({
   label,
@@ -40,6 +43,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingNewsId, setEditingNewsId] = useState<string | null>(null);
+  const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(liveSite);
@@ -106,6 +110,42 @@ export function PolisurSiteAdmin({ clave }: Props) {
     if (editingNewsId === id) setEditingNewsId(null);
   }
 
+  function addUnit() {
+    const item = normalizePolisurUnitItem({
+      label: "Nueva división",
+      summary: "",
+      imageUrl: "",
+      showOnHome: true,
+      featured: false,
+      active: true,
+    });
+    setDraft((prev) => ({ ...prev, units: [...prev.units, item] }));
+    setEditingUnitId(item.id);
+    setTab("divisiones");
+  }
+
+  function updateUnit(id: string, patch: Partial<PolisurUnitItem>) {
+    setDraft((prev) => ({
+      ...prev,
+      units: prev.units.map((u) => {
+        if (u.id !== id) return u;
+        const next = normalizePolisurUnitItem({ ...u, ...patch });
+        // Preserve id unless explicitly renamed via patch.id
+        if (!patch.id) next.id = u.id;
+        else next.id = slugifyPolisurUnitId(patch.id) || u.id;
+        return next;
+      }),
+    }));
+  }
+
+  function removeUnit(id: string) {
+    setDraft((prev) => ({
+      ...prev,
+      units: prev.units.filter((u) => u.id !== id),
+    }));
+    if (editingUnitId === id) setEditingUnitId(null);
+  }
+
   async function onSave(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -144,6 +184,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
     { id: "contacto", label: "Contacto" },
     { id: "redes", label: "Redes" },
     { id: "banner", label: "Banner" },
+    { id: "divisiones", label: "Divisiones" },
     { id: "noticias", label: "Noticias" },
   ];
 
@@ -302,6 +343,122 @@ export function PolisurSiteAdmin({ clave }: Props) {
               placeholder="/polisur/home/hero.jpg"
             />
           </Field>
+        </div>
+      ) : null}
+
+      {tab === "divisiones" ? (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-[var(--ps-steel-400)]">
+              Estas divisiones aparecen en preinscripciones (si están activas) y
+              opcionalmente en el home.
+            </p>
+            <button
+              type="button"
+              onClick={addUnit}
+              className="text-xs uppercase tracking-[0.14em] text-[var(--ps-mint)] underline-offset-4 hover:underline"
+            >
+              Agregar división
+            </button>
+          </div>
+          <ul className="space-y-4">
+            {draft.units.map((u) => {
+              const open = editingUnitId === u.id;
+              return (
+                <li
+                  key={u.id}
+                  className="border border-[var(--ps-line)] bg-[var(--ps-navy-950)]/60 p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingUnitId(open ? null : u.id)}
+                      className="text-left text-sm text-[var(--ps-paper)] hover:underline"
+                    >
+                      {u.label}
+                      {!u.active ? (
+                        <span className="ml-2 text-xs text-[var(--ps-steel-400)]">
+                          (inactiva)
+                        </span>
+                      ) : null}
+                    </button>
+                    <div className="flex flex-wrap gap-3">
+                      <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
+                        <input
+                          type="checkbox"
+                          checked={u.active}
+                          onChange={(e) =>
+                            updateUnit(u.id, { active: e.target.checked })
+                          }
+                        />
+                        Preinscripción
+                      </label>
+                      <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
+                        <input
+                          type="checkbox"
+                          checked={u.showOnHome}
+                          onChange={(e) =>
+                            updateUnit(u.id, { showOnHome: e.target.checked })
+                          }
+                        />
+                        En home
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeUnit(u.id)}
+                        className="text-xs uppercase tracking-[0.12em] text-red-300/80 hover:underline"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                  {open ? (
+                    <div className="mt-4 grid gap-3">
+                      <Field label="Nombre">
+                        <input
+                          className={inputClass}
+                          value={u.label}
+                          onChange={(e) =>
+                            updateUnit(u.id, { label: e.target.value })
+                          }
+                        />
+                      </Field>
+                      <Field label="Resumen (home)">
+                        <textarea
+                          rows={2}
+                          className={inputClass}
+                          value={u.summary}
+                          onChange={(e) =>
+                            updateUnit(u.id, { summary: e.target.value })
+                          }
+                        />
+                      </Field>
+                      <Field label="Imagen (URL pública)">
+                        <input
+                          className={inputClass}
+                          value={u.imageUrl}
+                          onChange={(e) =>
+                            updateUnit(u.id, { imageUrl: e.target.value })
+                          }
+                          placeholder="/polisur/home/canina.jpg"
+                        />
+                      </Field>
+                      <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
+                        <input
+                          type="checkbox"
+                          checked={u.featured}
+                          onChange={(e) =>
+                            updateUnit(u.id, { featured: e.target.checked })
+                          }
+                        />
+                        Destacada en home
+                      </label>
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       ) : null}
 

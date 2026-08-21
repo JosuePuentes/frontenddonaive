@@ -10,8 +10,9 @@
 import { randomUUID } from "node:crypto";
 
 const STORE_PATH = "data/polisur-preinscripciones.json";
+const SITE_PATH = "data/polisur-site.json";
 const MAX_RECORDS = 5000;
-const UNIT_IDS = new Set([
+const FALLBACK_UNIT_IDS = new Set([
   "institucion",
   "unidad-canina",
   "unidades-operativas",
@@ -67,7 +68,7 @@ function looksLikeEmail(value) {
   return at > 0 && dot > at + 1 && dot < value.length - 1;
 }
 
-function normalizePayload(body) {
+function normalizePayload(body, allowedUnitIds) {
   const nombres = clean(body.nombres, 80);
   const apellidos = clean(body.apellidos, 80);
   const cedula = clean(body.cedula, 24);
@@ -100,7 +101,8 @@ function normalizePayload(body) {
     err.statusCode = 400;
     throw err;
   }
-  if (!UNIT_IDS.has(unidad)) {
+  const allowed = allowedUnitIds?.size ? allowedUnitIds : FALLBACK_UNIT_IDS;
+  if (!allowed.has(unidad)) {
     const err = new Error("Seleccione la unidad de interés.");
     err.statusCode = 400;
     throw err;
@@ -137,6 +139,32 @@ async function readBody(req) {
   for await (const chunk of req) chunks.push(chunk);
   const raw = Buffer.concat(chunks).toString("utf8");
   return raw ? JSON.parse(raw) : {};
+}
+
+async function getAllowedUnitIds() {
+  const { repo, branch, token } = githubConfig();
+  if (!token) return FALLBACK_UNIT_IDS;
+  const api = `https://api.github.com/repos/${repo}/contents/${SITE_PATH}?ref=${encodeURIComponent(branch)}`;
+  try {
+    const res = await fetch(api, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+      },
+    });
+    if (!res.ok) return FALLBACK_UNIT_IDS;
+    const data = await res.json();
+    const decoded = Buffer.from(data.content || "", "base64").toString("utf8");
+    const parsed = JSON.parse(decoded);
+    const units = Array.isArray(parsed?.units) ? parsed.units : [];
+    const ids = units
+      .filter((u) => u && u.active !== false && u.id)
+      .map((u) => String(u.id).trim())
+      .filter(Boolean);
+    return ids.length > 0 ? new Set(ids) : FALLBACK_UNIT_IDS;
+  } catch {
+    return FALLBACK_UNIT_IDS;
+  }
 }
 
 async function getGitHubFile() {
@@ -240,7 +268,8 @@ export default async function handler(req, res) {
   try {
     if (req.method === "POST" && action === "submit") {
       const body = await readBody(req);
-      const result = normalizePayload(body);
+      const allowed = await getAllowedUnitIds();
+      const result = normalizePayload(body, allowed);
       if (result.honeypot) {
         return json(res, 200, { ok: true });
       }

@@ -1,6 +1,7 @@
 import { assertAuthorized } from "./lib/polisur-medios-core.mjs";
 import {
   appendRecord,
+  allowedUnitIds,
   normalizePayload,
   readJsonBody,
   readStore,
@@ -31,7 +32,7 @@ export async function handlePolisurPreinscripcionesRequest(req, res, opts) {
   try {
     if (req.method === "POST" && action === "submit") {
       const body = await readJsonBody(req);
-      const result = normalizePayload(body);
+      const result = normalizePayload(body, allowedUnitIds(root));
       if (result.honeypot) {
         sendJson(res, 200, { ok: true });
         return;

@@ -6,14 +6,31 @@ import { dirname, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 
 export const STORE_REL = "data/polisur-preinscripciones.json";
+const SITE_REL = "data/polisur-site.json";
 const MAX_RECORDS = 5000;
 
-const UNIT_IDS = new Set([
+const FALLBACK_UNIT_IDS = new Set([
   "institucion",
   "unidad-canina",
   "unidades-operativas",
   "prevencion",
 ]);
+
+export function allowedUnitIds(root) {
+  try {
+    const file = resolve(root, SITE_REL);
+    if (!existsSync(file)) return FALLBACK_UNIT_IDS;
+    const parsed = JSON.parse(readFileSync(file, "utf8"));
+    const units = Array.isArray(parsed?.units) ? parsed.units : [];
+    const ids = units
+      .filter((u) => u && u.active !== false && u.id)
+      .map((u) => String(u.id).trim())
+      .filter(Boolean);
+    return ids.length > 0 ? new Set(ids) : FALLBACK_UNIT_IDS;
+  } catch {
+    return FALLBACK_UNIT_IDS;
+  }
+}
 
 export function sendJson(res, status, body) {
   res.statusCode = status;
@@ -57,7 +74,7 @@ function looksLikeEmail(value) {
   return at > 0 && dot > at + 1 && dot < value.length - 1;
 }
 
-export function normalizePayload(body) {
+export function normalizePayload(body, unitIds = FALLBACK_UNIT_IDS) {
   const nombres = clean(body.nombres, 80);
   const apellidos = clean(body.apellidos, 80);
   const cedula = clean(body.cedula, 24);
@@ -92,7 +109,8 @@ export function normalizePayload(body) {
     err.statusCode = 400;
     throw err;
   }
-  if (!UNIT_IDS.has(unidad)) {
+  const allowed = unitIds?.size ? unitIds : FALLBACK_UNIT_IDS;
+  if (!allowed.has(unidad)) {
     const err = new Error("Seleccione la unidad de interés.");
     err.statusCode = 400;
     throw err;

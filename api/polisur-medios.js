@@ -82,11 +82,15 @@ async function readBody(req) {
 }
 
 async function mediosBranch() {
-  return (
+  const raw =
     process.env.POLISUR_MEDIOS_BRANCH ||
     process.env.POLISUR_SITE_BRANCH ||
-    "main"
-  );
+    "main";
+  // Evita guardar assets en ramas de feature retiradas (rompe producción).
+  if (!raw || raw === "main" || raw.startsWith("cursor/")) {
+    return "main";
+  }
+  return raw;
 }
 
 async function putGitHub({ path, contentBase64, message }) {
