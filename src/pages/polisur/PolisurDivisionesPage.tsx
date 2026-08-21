@@ -3,7 +3,6 @@ import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import {
   adPolisurDivisionPath,
-  POLISUR_ROUTES,
 } from "@/constants/polisur-routes";
 import { polisurCopy } from "@/content/polisur";
 import { catalogPolisurUnits } from "@/content/polisur-site";
