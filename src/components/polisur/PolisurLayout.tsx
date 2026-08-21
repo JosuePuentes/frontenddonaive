@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Outlet } from "react-router";
 import { PolisurNavbar } from "@/components/polisur/PolisurNavbar";
 import { PolisurFooter } from "@/components/polisur/PolisurFooter";
+import { PolisurSiteProvider } from "@/providers/polisur/PolisurSiteProvider";
 import "@/components/polisur/polisur.css";
 
 const FONT_HREF =
@@ -19,13 +20,15 @@ function PolisurLayout() {
   }, []);
 
   return (
-    <div className="polisur-shell">
-      <PolisurNavbar />
-      <main>
-        <Outlet />
-      </main>
-      <PolisurFooter />
-    </div>
+    <PolisurSiteProvider>
+      <div className="polisur-shell">
+        <PolisurNavbar />
+        <main>
+          <Outlet />
+        </main>
+        <PolisurFooter />
+      </div>
+    </PolisurSiteProvider>
   );
 }
 
