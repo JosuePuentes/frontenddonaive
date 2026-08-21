@@ -30,8 +30,10 @@
       "id": "institucion",
       "label": "POLISUR — Institución",
       "summary": "",
+      "functions": "",
       "imageUrl": "",
-      "showOnHome": true,
+      "showOnHome": false,
+      "showInCatalog": false,
       "featured": false,
       "active": true
     },
@@ -39,8 +41,10 @@
       "id": "unidad-canina",
       "label": "Unidad Canina",
       "summary": "Patrullaje canino y apoyo especializado con binomios entrenados al servicio de la institución.",
+      "functions": "Apoyo operativo, prevención y labores especializadas con el binomio policía-canino.",
       "imageUrl": "/polisur/home/canina.jpg",
       "showOnHome": true,
+      "showInCatalog": true,
       "featured": true,
       "active": true
     },
@@ -48,8 +52,10 @@
       "id": "unidades-operativas",
       "label": "Unidades operativas",
       "summary": "Patrullaje preventivo, orden público y respuesta operativa en las siete parroquias del municipio.",
+      "functions": "Patrullaje preventivo, orden público y respuesta operativa en las parroquias del municipio.",
       "imageUrl": "/polisur/home/about.jpg",
       "showOnHome": true,
+      "showInCatalog": true,
       "featured": false,
       "active": true
     },
@@ -57,8 +63,10 @@
       "id": "prevencion",
       "label": "Prevención y cercanía",
       "summary": "Vinculación comunitaria, Mesas y Cuadrantes de Paz, y prevención para la convivencia ciudadana.",
+      "functions": "Organización comunitaria, Mesas y Cuadrantes de Paz, y prevención de la convivencia ciudadana.",
       "imageUrl": "/polisur/home/ciudadania.jpg",
       "showOnHome": true,
+      "showInCatalog": true,
       "featured": false,
       "active": true
     }

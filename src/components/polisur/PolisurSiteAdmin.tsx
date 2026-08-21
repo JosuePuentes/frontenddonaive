@@ -192,14 +192,63 @@ export function PolisurSiteAdmin({ clave }: Props) {
     const item = normalizePolisurUnitItem({
       label: "Nueva división",
       summary: "",
+      functions: "",
       imageUrl: "",
       showOnHome: true,
+      showInCatalog: true,
       featured: false,
       active: true,
     });
     setDraft((prev) => ({ ...prev, units: [...prev.units, item] }));
     setEditingUnitId(item.id);
     setTab("divisiones");
+  }
+
+  async function uploadUnitImage(unitId: string, file: File | null) {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+        reader.readAsDataURL(file);
+      });
+      const type = file.type || "";
+      const ext = type.includes("png")
+        ? "png"
+        : type.includes("webp")
+          ? "webp"
+          : "jpg";
+      const path = `public/polisur/extras/d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}.${ext}`;
+      const res = await fetch("/api/polisur-medios?action=upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clave,
+          path,
+          dataBase64: dataUrl,
+        }),
+      });
+      const text = await res.text();
+      let data: { ok?: boolean; error?: string; path?: string } = {};
+      try {
+        data = JSON.parse(text) as typeof data;
+      } catch {
+        throw new Error("No se pudo subir la imagen.");
+      }
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "No se pudo subir la imagen.");
+      }
+      const publicUrl = `/${(data.path || path).replace(/^public\//, "")}`;
+      updateUnit(unitId, { imageUrl: publicUrl });
+      setMessage("Imagen de la división cargada. Recuerde Guardar contenido.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al subir imagen.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function updateUnit(id: string, patch: Partial<PolisurUnitItem>) {
@@ -428,15 +477,16 @@ export function PolisurSiteAdmin({ clave }: Props) {
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-[var(--ps-steel-400)]">
-              Estas divisiones aparecen en preinscripciones (si están activas) y
-              opcionalmente en el home.
+              Cree divisiones, cargue su imagen, escriba las funciones y marque
+              si van en Home, en /divisiones y en preinscripciones. Luego pulse
+              Guardar contenido.
             </p>
             <button
               type="button"
               onClick={addUnit}
-              className="text-xs uppercase tracking-[0.14em] text-[var(--ps-mint)] underline-offset-4 hover:underline"
+              className="border-b border-[var(--ps-mint)]/70 pb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)]"
             >
-              Agregar división
+              + Agregar división
             </button>
           </div>
           <ul className="space-y-4">
@@ -454,11 +504,6 @@ export function PolisurSiteAdmin({ clave }: Props) {
                       className="text-left text-sm text-[var(--ps-paper)] hover:underline"
                     >
                       {u.label}
-                      {!u.active ? (
-                        <span className="ml-2 text-xs text-[var(--ps-steel-400)]">
-                          (inactiva)
-                        </span>
-                      ) : null}
                     </button>
                     <div className="flex flex-wrap gap-3">
                       <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
@@ -479,7 +524,19 @@ export function PolisurSiteAdmin({ clave }: Props) {
                             updateUnit(u.id, { showOnHome: e.target.checked })
                           }
                         />
-                        En home
+                        En Home
+                      </label>
+                      <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
+                        <input
+                          type="checkbox"
+                          checked={u.showInCatalog}
+                          onChange={(e) =>
+                            updateUnit(u.id, {
+                              showInCatalog: e.target.checked,
+                            })
+                          }
+                        />
+                        En Divisiones
                       </label>
                       <button
                         type="button"
@@ -492,7 +549,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
                   </div>
                   {open ? (
                     <div className="mt-4 grid gap-3">
-                      <Field label="Nombre">
+                      <Field label="Nombre de la división">
                         <input
                           className={inputClass}
                           value={u.label}
@@ -501,7 +558,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
                           }
                         />
                       </Field>
-                      <Field label="Resumen (home)">
+                      <Field label="Resumen corto (tarjeta)">
                         <textarea
                           rows={2}
                           className={inputClass}
@@ -511,16 +568,54 @@ export function PolisurSiteAdmin({ clave }: Props) {
                           }
                         />
                       </Field>
-                      <Field label="Imagen (URL pública)">
-                        <input
+                      <Field label="Funciones de la división">
+                        <textarea
+                          rows={5}
                           className={inputClass}
-                          value={u.imageUrl}
+                          value={u.functions}
                           onChange={(e) =>
-                            updateUnit(u.id, { imageUrl: e.target.value })
+                            updateUnit(u.id, { functions: e.target.value })
                           }
-                          placeholder="/polisur/home/canina.jpg"
+                          placeholder="Describa las funciones y labores de esta división…"
                         />
                       </Field>
+                      <div>
+                        <span className={labelClass}>Imagen de la división</span>
+                        {u.imageUrl ? (
+                          <div className="mt-2 flex items-start gap-3">
+                            <img
+                              src={u.imageUrl}
+                              alt=""
+                              className="h-20 w-28 object-cover border border-[var(--ps-line)]"
+                            />
+                            <p className="min-w-0 flex-1 truncate text-xs text-[var(--ps-steel-300)]">
+                              {u.imageUrl}
+                            </p>
+                          </div>
+                        ) : null}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="mt-2 block w-full text-sm text-[var(--ps-steel-300)] file:mr-4 file:border file:border-[var(--ps-line-strong)] file:bg-transparent file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-[0.12em] file:text-[var(--ps-paper)]"
+                          onChange={(e) => {
+                            void uploadUnitImage(
+                              u.id,
+                              e.target.files?.[0] || null,
+                            );
+                            e.target.value = "";
+                          }}
+                        />
+                        <Field label="O pegue una URL pública">
+                          <input
+                            className={inputClass}
+                            value={u.imageUrl}
+                            onChange={(e) =>
+                              updateUnit(u.id, { imageUrl: e.target.value })
+                            }
+                            placeholder="/polisur/home/canina.jpg"
+                          />
+                        </Field>
+                      </div>
                       <label className="flex items-center gap-2 text-xs text-[var(--ps-steel-300)]">
                         <input
                           type="checkbox"

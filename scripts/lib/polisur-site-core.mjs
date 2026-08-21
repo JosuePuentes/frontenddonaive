@@ -41,8 +41,10 @@ const DEFAULTS = {
       id: "institucion",
       label: "POLISUR — Institución",
       summary: "",
+      functions: "",
       imageUrl: "",
       showOnHome: false,
+      showInCatalog: false,
       featured: false,
       active: true,
     },
@@ -51,8 +53,11 @@ const DEFAULTS = {
       label: "Unidad Canina",
       summary:
         "Patrullaje canino y apoyo especializado con binomios entrenados al servicio de la institución.",
+      functions:
+        "Apoyo operativo, prevención y labores especializadas con el binomio policía-canino.",
       imageUrl: "/polisur/home/canina.jpg",
       showOnHome: true,
+      showInCatalog: true,
       featured: true,
       active: true,
     },
@@ -61,8 +66,11 @@ const DEFAULTS = {
       label: "Unidades operativas",
       summary:
         "Patrullaje preventivo, orden público y respuesta operativa en las siete parroquias del municipio.",
+      functions:
+        "Patrullaje preventivo, orden público y respuesta operativa en las parroquias del municipio.",
       imageUrl: "/polisur/home/about.jpg",
       showOnHome: true,
+      showInCatalog: true,
       featured: false,
       active: true,
     },
@@ -71,8 +79,11 @@ const DEFAULTS = {
       label: "Prevención y cercanía",
       summary:
         "Vinculación comunitaria, Mesas y Cuadrantes de Paz, y prevención para la convivencia ciudadana.",
+      functions:
+        "Organización comunitaria, Mesas y Cuadrantes de Paz, y prevención de la convivencia ciudadana.",
       imageUrl: "/polisur/home/ciudadania.jpg",
       showOnHome: true,
+      showInCatalog: true,
       featured: false,
       active: true,
     },
@@ -144,12 +155,18 @@ function normalizeUnit(raw, index) {
     slugifyId(clean(raw?.id, 40)) ||
     slugifyId(label) ||
     `unidad-${index + 1}`;
+  const isInstitucion = id === "institucion";
   return {
     id,
     label,
     summary: clean(raw?.summary, 400),
+    functions: clean(raw?.functions, 2000),
     imageUrl: cleanUrl(raw?.imageUrl),
     showOnHome: Boolean(raw?.showOnHome),
+    showInCatalog:
+      raw?.showInCatalog !== undefined
+        ? Boolean(raw.showInCatalog)
+        : !isInstitucion,
     featured: Boolean(raw?.featured),
     active: raw?.active !== false,
   };
