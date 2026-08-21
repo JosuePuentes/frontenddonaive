@@ -1,15 +1,12 @@
 import { Link } from "react-router";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
-import { POLISUR_ROUTES } from "@/constants/polisur-routes";
+import {
+  adPolisurDivisionPath,
+  POLISUR_ROUTES,
+} from "@/constants/polisur-routes";
 import { polisurCopy } from "@/content/polisur";
 import { homePolisurUnits } from "@/content/polisur-site";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
-
-function unitLink(id: string): string {
-  if (id === "unidad-canina") return POLISUR_ROUTES.unidadCanina;
-  if (id === "institucion") return POLISUR_ROUTES.institucion;
-  return POLISUR_ROUTES.divisiones;
-}
 
 function PolisurDivisions() {
   const { site } = usePolisurSite();
@@ -58,7 +55,7 @@ function PolisurDivisions() {
                 </p>
               ) : null}
               <Link
-                to={unitLink(item.id)}
+                to={adPolisurDivisionPath(item.id)}
                 className="mt-5 inline-flex text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ps-white)] underline-offset-4 hover:underline"
               >
                 Acceder
@@ -66,6 +63,15 @@ function PolisurDivisions() {
             </div>
           </article>
         ))}
+      </div>
+
+      <div className="ps-container pb-10 pt-2">
+        <Link
+          to={POLISUR_ROUTES.divisiones}
+          className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ps-mint)] underline-offset-4 hover:underline"
+        >
+          Ver todas las divisiones
+        </Link>
       </div>
     </section>
   );

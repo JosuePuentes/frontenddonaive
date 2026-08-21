@@ -59,6 +59,14 @@ export function adPolisurNoticiaPath(id: string, base = getPolisurBasePath()) {
   return `${getPolisurRoutes(base).noticias}/${encodeURIComponent(id)}`;
 }
 
+/** Página de una división (canina e institución tienen rutas propias). */
+export function adPolisurDivisionPath(id: string, base = getPolisurBasePath()) {
+  const routes = getPolisurRoutes(base);
+  if (id === "unidad-canina") return routes.unidadCanina;
+  if (id === "institucion") return routes.institucion;
+  return `${routes.divisiones}/${encodeURIComponent(id)}`;
+}
+
 export function getPolisurNavItems(base = getPolisurBasePath()) {
   const routes = getPolisurRoutes(base);
   return [
@@ -81,13 +89,16 @@ export const POLISUR_ROUTE_PREFIXES = ["", "/polisur"] as const;
 
 export function polisurRouterPath(
   prefix: "" | "/polisur",
-  segment: keyof typeof POLISUR_SEGMENTS | "home" | "noticia",
+  segment: keyof typeof POLISUR_SEGMENTS | "home" | "noticia" | "division",
 ): string {
   if (segment === "home") {
     return prefix || "/";
   }
   if (segment === "noticia") {
     return `${joinPolisurPath(prefix, POLISUR_SEGMENTS.noticias)}/:noticiaId`;
+  }
+  if (segment === "division") {
+    return `${joinPolisurPath(prefix, POLISUR_SEGMENTS.divisiones)}/:divisionId`;
   }
   return joinPolisurPath(prefix, POLISUR_SEGMENTS[segment]);
 }
