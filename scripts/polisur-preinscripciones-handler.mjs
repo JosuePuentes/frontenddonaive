@@ -2,10 +2,12 @@ import { assertAuthorized } from "./lib/polisur-medios-core.mjs";
 import {
   appendRecord,
   allowedUnitIds,
+  deleteRecord,
   normalizePayload,
   readJsonBody,
   readStore,
   sendJson,
+  setRecordStatus,
 } from "./lib/polisur-preinscripciones-core.mjs";
 
 function setCors(res) {
@@ -46,6 +48,22 @@ export async function handlePolisurPreinscripcionesRequest(req, res, opts) {
       const clave = url.searchParams.get("clave") || "";
       assertAuthorized(clave);
       sendJson(res, 200, { ok: true, items: readStore(root) });
+      return;
+    }
+
+    if (req.method === "POST" && action === "delete") {
+      const body = await readJsonBody(req);
+      assertAuthorized(body.clave || url.searchParams.get("clave") || "");
+      const items = deleteRecord(root, body.id);
+      sendJson(res, 200, { ok: true, items });
+      return;
+    }
+
+    if (req.method === "POST" && action === "setStatus") {
+      const body = await readJsonBody(req);
+      assertAuthorized(body.clave || url.searchParams.get("clave") || "");
+      const item = setRecordStatus(root, body.id, body.status);
+      sendJson(res, 200, { ok: true, item, items: readStore(root) });
       return;
     }
 
