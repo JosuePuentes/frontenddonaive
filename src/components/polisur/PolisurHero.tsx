@@ -53,7 +53,7 @@ function PolisurHero() {
             >
               {banner.title || polisurCopy.hero.title}
             </h1>
-            <p className="mt-5 max-w-md text-[0.95rem] leading-relaxed text-[var(--ps-paper)]/92 sm:text-base">
+            <p className="mt-5 max-w-md whitespace-pre-line text-[0.95rem] leading-relaxed text-[var(--ps-paper)]/92 sm:text-base">
               {banner.message || polisurCopy.hero.message}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
