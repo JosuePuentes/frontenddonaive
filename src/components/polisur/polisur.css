@@ -214,6 +214,65 @@
   display: block;
 }
 
+/* Tarjeta / hero de noticia: foto a pantalla y título encima */
+.ps-news-hero {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  min-height: 18rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ps-news-hero--detail {
+  min-height: min(78vh, 42rem);
+}
+
+.ps-news-hero__media {
+  position: absolute !important;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ps-news-hero__media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ps-news-hero__body {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.25rem;
+  pointer-events: none;
+}
+
+.ps-news-hero__body a,
+.ps-news-hero__body button {
+  pointer-events: auto;
+}
+
+@media (min-width: 640px) {
+  .ps-news-hero {
+    min-height: 20rem;
+  }
+
+  .ps-news-hero__body {
+    padding: 1.75rem;
+  }
+
+  .ps-news-hero--detail .ps-news-hero__body {
+    padding: 3rem 0;
+  }
+}
+
 .ps-overlay-soft {
   pointer-events: none;
   position: absolute;

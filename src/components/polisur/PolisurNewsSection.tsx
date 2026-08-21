@@ -26,15 +26,15 @@ function NewsCard({ item }: { item: PolisurNewsItem }) {
   return (
     <Link
       to={adPolisurNoticiaPath(item.id)}
-      className="group relative block min-h-[15rem] overflow-hidden"
+      className="ps-news-hero group min-h-[17rem]"
     >
       <PolisurMedia
         src={cover || "/polisur/home/hero.jpg"}
-        alt=""
-        className="absolute inset-0 h-full w-full"
-        overlay="readable"
+        alt={item.title}
+        className="ps-news-hero__media"
+        overlay="strong"
       />
-      <div className="relative z-[1] flex h-full min-h-[15rem] flex-col justify-end p-5">
+      <div className="ps-news-hero__body">
         <p className="ps-eyebrow text-[var(--ps-mint)]">
           {formatNewsDate(item.publishedAt)}
         </p>

@@ -59,32 +59,34 @@ export default function PolisurNoticiaDetalle() {
   return (
     <>
       <PageMeta title={`${item.title} — POLISUR`} description={item.summary} />
-      <section className="relative min-h-[42vh] overflow-hidden border-b border-[var(--ps-line)]">
+      <section className="ps-news-hero ps-news-hero--detail border-b border-[var(--ps-line)]">
         <PolisurMedia
           src={cover || "/polisur/home/hero.jpg"}
           alt=""
-          className="absolute inset-0 h-full w-full"
-          overlay="readable"
+          className="ps-news-hero__media"
+          overlay="strong"
           priority
         />
-        <div className="relative z-[1] ps-container flex min-h-[42vh] flex-col justify-end py-12 sm:py-16">
-          <Link
-            to={POLISUR_ROUTES.noticias}
-            className="ps-eyebrow text-[var(--ps-mint)] hover:underline"
-          >
-            Noticias
-          </Link>
-          <p className="mt-4 text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-300)]">
-            {formatNewsDate(item.publishedAt)}
-          </p>
-          <h1 className="mt-3 max-w-3xl text-3xl text-[var(--ps-white)] sm:text-5xl">
-            {item.title}
-          </h1>
-          {item.summary ? (
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--ps-paper)]/92 sm:text-base">
-              {item.summary}
+        <div className="ps-news-hero__body">
+          <div className="ps-container w-full">
+            <Link
+              to={POLISUR_ROUTES.noticias}
+              className="ps-eyebrow text-[var(--ps-mint)] hover:underline"
+            >
+              Noticias
+            </Link>
+            <p className="mt-4 text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-300)]">
+              {formatNewsDate(item.publishedAt)}
             </p>
-          ) : null}
+            <h1 className="mt-3 max-w-3xl text-3xl text-[var(--ps-white)] sm:text-5xl">
+              {item.title}
+            </h1>
+            {item.summary ? (
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--ps-paper)]/92 sm:text-base">
+                {item.summary}
+              </p>
+            ) : null}
+          </div>
         </div>
       </section>
 
