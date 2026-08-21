@@ -41,7 +41,7 @@ export const polisurCopy = {
     title: "POLISUR",
     subtitle: "Instituto Autónomo Policía del Municipio San Francisco",
     message:
-      "Tres décadas al servicio del pueblo sanfranciscano: educar, proteger y servir con disciplina, prevención y presencia en las siete parroquias del municipio.",
+      "Tres décadas al servicio del pueblo sanfranciscano: educar, proteger y servir con disciplina.\n\nNuestro lema es Defender y Proteger a Nuestro Pueblo",
     ctaPrimary: "Conoce la institución",
     ctaSecondary: "Preinscripción",
   },
