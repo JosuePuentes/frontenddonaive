@@ -3,6 +3,7 @@ import {
   hasPolisurSocial,
   type PolisurSocialLinks,
 } from "@/content/polisur-site";
+import { trackPolisurClick } from "@/lib/polisur-track";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
 const SOCIAL_LABELS: { key: keyof PolisurSocialLinks; label: string }[] = [
@@ -53,6 +54,7 @@ export default function PolisurContacto() {
                     <a
                       href={`tel:${contact.phone.replace(/\s+/g, "")}`}
                       className="text-[var(--ps-paper)] hover:underline"
+                      onClick={() => trackPolisurClick("phone", "primary")}
                     >
                       {contact.phone}
                     </a>
@@ -62,6 +64,7 @@ export default function PolisurContacto() {
                         <a
                           href={`tel:${contact.phoneAlt.replace(/\s+/g, "")}`}
                           className="text-[var(--ps-paper)] hover:underline"
+                          onClick={() => trackPolisurClick("phone", "alt")}
                         >
                           {contact.phoneAlt}
                         </a>
@@ -104,6 +107,7 @@ export default function PolisurContacto() {
                         target="_blank"
                         rel="noreferrer noopener"
                         className="text-[var(--ps-mint)] underline-offset-4 hover:underline"
+                        onClick={() => trackPolisurClick("social", key)}
                       >
                         {label}
                       </a>

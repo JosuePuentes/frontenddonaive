@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router";
+import { useEffect } from "react";
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import { POLISUR_ROUTES } from "@/constants/polisur-routes";
@@ -6,6 +7,7 @@ import {
   newsCoverUrl,
   publishedPolisurNews,
 } from "@/content/polisur-site";
+import { trackPolisurClick } from "@/lib/polisur-track";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
 function formatNewsDate(value: string) {
@@ -29,6 +31,10 @@ export default function PolisurNoticiaDetalle() {
         ? [item.imageUrl]
         : []
     : [];
+
+  useEffect(() => {
+    if (item?.id) trackPolisurClick("news", item.id);
+  }, [item?.id]);
 
   if (!item) {
     return (

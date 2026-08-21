@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
+import { Filter, Search, X } from "lucide-react";
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import {
@@ -60,11 +61,18 @@ export default function PolisurNoticias() {
   const [query, setQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const hasDateFilter = Boolean(fromDate || toDate);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return all.filter((item) => {
-      if (q && !item.title.toLowerCase().includes(q) && !item.summary.toLowerCase().includes(q)) {
+      if (
+        q &&
+        !item.title.toLowerCase().includes(q) &&
+        !item.summary.toLowerCase().includes(q)
+      ) {
         return false;
       }
       const t = new Date(item.publishedAt).getTime();
@@ -80,6 +88,11 @@ export default function PolisurNoticias() {
     });
   }, [all, query, fromDate, toDate]);
 
+  function clearDates() {
+    setFromDate("");
+    setToDate("");
+  }
+
   return (
     <>
       <PageMeta
@@ -93,33 +106,106 @@ export default function PolisurNoticias() {
             Noticias
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--ps-steel-300)]">
-            Información oficial de la institución. Filtre por nombre o fecha.
+            Información oficial de la institución. Busque por título o filtre
+            por fecha.
           </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <input
-              className="ps-input"
-              placeholder="Buscar por título…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <label className="block">
-              <span className="sr-only">Desde</span>
-              <input
-                type="date"
-                className="ps-input"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </label>
-            <label className="block">
-              <span className="sr-only">Hasta</span>
-              <input
-                type="date"
-                className="ps-input"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </label>
+
+          <div className="relative mt-8 max-w-2xl">
+            <div className="flex gap-2">
+              <label className="relative min-w-0 flex-1">
+                <span className="sr-only">Buscar noticias</span>
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ps-steel-400)]"
+                  aria-hidden
+                />
+                <input
+                  className="ps-input w-full !pl-10"
+                  placeholder="Buscar por título…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setFilterOpen((v) => !v)}
+                className={[
+                  "inline-flex shrink-0 items-center gap-2 border px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em]",
+                  filterOpen || hasDateFilter
+                    ? "border-[var(--ps-mint)]/70 text-[var(--ps-mint)]"
+                    : "border-[var(--ps-line-strong)] text-[var(--ps-paper)]",
+                ].join(" ")}
+                aria-expanded={filterOpen}
+                aria-controls="noticias-filtro-fecha"
+              >
+                <Filter size={14} aria-hidden />
+                Filtrar
+                {hasDateFilter ? (
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--ps-mint)]" />
+                ) : null}
+              </button>
+            </div>
+
+            {filterOpen ? (
+              <div
+                id="noticias-filtro-fecha"
+                className="absolute left-0 right-0 z-20 mt-2 border border-[var(--ps-line)] bg-[var(--ps-navy-900)] p-4 shadow-lg"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-400)]">
+                    Filtrar por fecha
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen(false)}
+                    className="text-[var(--ps-steel-400)] hover:text-[var(--ps-paper)]"
+                    aria-label="Cerrar filtro"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-[0.65rem] uppercase tracking-[0.14em] text-[var(--ps-steel-400)]">
+                      Desde
+                    </span>
+                    <input
+                      type="date"
+                      className="ps-input mt-1.5 w-full"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-[0.65rem] uppercase tracking-[0.14em] text-[var(--ps-steel-400)]">
+                      Hasta
+                    </span>
+                    <input
+                      type="date"
+                      className="ps-input mt-1.5 w-full"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={clearDates}
+                    className="text-xs uppercase tracking-[0.12em] text-[var(--ps-steel-400)] underline-offset-4 hover:text-[var(--ps-paper)] hover:underline"
+                  >
+                    Limpiar fechas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen(false)}
+                    className="border-b border-[var(--ps-mint)]/70 pb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ps-paper)]"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
