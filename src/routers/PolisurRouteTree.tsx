@@ -18,6 +18,9 @@ const PolisurNoticias = lazy(() => import("@/pages/polisur/PolisurNoticias"));
 const PolisurNoticiaDetalle = lazy(
   () => import("@/pages/polisur/PolisurNoticiaDetalle"),
 );
+const PolisurDivisionDetalle = lazy(
+  () => import("@/pages/polisur/PolisurDivisionDetalle"),
+);
 
 /**
  * Devuelve `<Route>` hijos para un prefijo POLISUR.
@@ -40,6 +43,10 @@ function polisurRouteTree(prefix: "" | "/polisur"): ReactNode {
       <Route
         path={polisurRouterPath(prefix, "divisiones")}
         element={<PolisurDivisionesPage />}
+      />
+      <Route
+        path={polisurRouterPath(prefix, "division")}
+        element={<PolisurDivisionDetalle />}
       />
       <Route
         path={polisurRouterPath(prefix, "noticias")}

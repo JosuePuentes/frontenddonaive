@@ -93,7 +93,7 @@ export const polisurCopy = {
       "POLISUR organiza su labor en unidades operativas, especialidades y programas de prevención y cercanía ciudadana, con despliegue en las parroquias del municipio San Francisco.",
   },
   canina: {
-    eyebrow: "Especialidad institucional",
+    eyebrow: "División",
     title: "Unidad Canina",
     body:
       "Unidad de Patrullaje Canino al servicio de la institución, orientada al apoyo operativo, la prevención y las labores especializadas donde el binomio policía-canino aporta capacidad técnica al servicio de la ciudadanía.",

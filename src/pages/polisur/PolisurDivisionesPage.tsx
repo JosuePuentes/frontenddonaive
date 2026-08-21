@@ -1,16 +1,12 @@
 import { Link } from "react-router";
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
-import { POLISUR_ROUTES } from "@/constants/polisur-routes";
+import {
+  adPolisurDivisionPath,
+} from "@/constants/polisur-routes";
 import { polisurCopy } from "@/content/polisur";
 import { catalogPolisurUnits } from "@/content/polisur-site";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
-
-function unitLink(id: string): string {
-  if (id === "unidad-canina") return POLISUR_ROUTES.unidadCanina;
-  if (id === "institucion") return POLISUR_ROUTES.institucion;
-  return `${POLISUR_ROUTES.preinscripcion}?unidad=${encodeURIComponent(id)}`;
-}
 
 export default function PolisurDivisionesPage() {
   const { site } = usePolisurSite();
@@ -29,8 +25,7 @@ export default function PolisurDivisionesPage() {
             {polisurCopy.divisions.title}
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-            Consulte cada división, sus funciones y acceda a la unidad de su
-            interés.
+            Consulte cada división y conozca más sobre su labor institucional.
           </p>
         </div>
       </section>
@@ -72,16 +67,8 @@ export default function PolisurDivisionesPage() {
                         {item.summary}
                       </p>
                     ) : null}
-                    {item.functions ? (
-                      <div className="mt-6">
-                        <p className="ps-eyebrow">Funciones</p>
-                        <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-[var(--ps-steel-300)]">
-                          {item.functions}
-                        </p>
-                      </div>
-                    ) : null}
                     <Link
-                      to={unitLink(item.id)}
+                      to={adPolisurDivisionPath(item.id)}
                       className="mt-8 inline-flex text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ps-white)] underline-offset-4 hover:underline"
                     >
                       Acceder
