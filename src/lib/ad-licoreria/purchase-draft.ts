@@ -72,9 +72,32 @@ export function formatLineQtySummary(l: DraftLine): string {
   const base = lineQtyBase(l);
   if (l.buyMode === "BOX") {
     const upp = lineUnitsPerPresentation(l);
-    return `${l.qty} caja(s) × ${upp} u. = ${base} u. al inventario`;
+    return `${l.qty} caja(s) × ${upp} u./caja = ${base} u. al inventario`;
   }
   return `${l.qty} unidad(es) suelta(s) = ${base} u. al inventario`;
+}
+
+/** Precio unitario en factura → costMode interno según cómo compró. */
+export function invoiceUnitarioCostMode(
+  buyMode: DraftLine["buyMode"],
+): "UNIT" | "PRESENTATION" {
+  return buyMode === "BOX" ? "PRESENTATION" : "UNIT";
+}
+
+export function normalizeDraftLineCostMode(line: DraftLine): DraftLine {
+  if (line.costMode === "TOTAL") return line;
+  const expected = invoiceUnitarioCostMode(line.buyMode);
+  if (line.costMode === expected) return line;
+  // Legacy: UNIT + BOX → tratar como unitario de caja (PRESENTATION)
+  if (line.buyMode === "BOX" && line.costMode === "UNIT") {
+    return {
+      ...line,
+      costMode: "PRESENTATION",
+      presentationCost: line.unitCost * lineUnitsPerPresentation(line),
+      unitCost: line.unitCost,
+    };
+  }
+  return { ...line, costMode: expected };
 }
 
 export function lineMoney(l: DraftLine) {

@@ -24,6 +24,7 @@ import {
   lineMoney,
   lineQtyBase,
   formatLineQtySummary,
+  normalizeDraftLineCostMode,
   lineToApiPayload,
   purchaseAmountToDisplay,
   type DraftLine,
@@ -228,7 +229,7 @@ export default function AdLicoreriaCompras() {
   function selectHit(p: (typeof hits)[0], prefer: "UNIT" | "BOX" = "BOX") {
     const draft = hitToDraftLine(p, prefer);
     if (!draft) return;
-    setDraftLine(draft);
+    setDraftLine(normalizeDraftLineCostMode(draft));
     setHits([]);
     setQuery("");
     setMsg("Complete costo y cantidad, luego pulse Agregar.");
@@ -260,7 +261,12 @@ export default function AdLicoreriaCompras() {
   function editLine(key: string) {
     const line = lines.find((l) => l.key === key);
     if (!line) return;
-    setDraftLine({ ...line, key: `draft-${line.presentationId}-${Date.now()}` });
+    setDraftLine(
+      normalizeDraftLineCostMode({
+        ...line,
+        key: `draft-${line.presentationId}-${Date.now()}`,
+      }),
+    );
     setLines((prev) => prev.filter((l) => l.key !== key));
     setMsg("Editando línea — pulse Agregar al confirmar");
   }
