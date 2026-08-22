@@ -132,7 +132,7 @@ export default function AdLicoreriaInventario() {
       "PVP caja Bs",
       "Estado",
     ];
-    const escape = (value: string | number) => {
+    const escape = (value: string | number | undefined | null) => {
       const text = String(value ?? "");
       if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
       return text;
