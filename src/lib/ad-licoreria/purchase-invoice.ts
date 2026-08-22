@@ -1,4 +1,4 @@
-import { lineMoney, type DraftLine } from "@/lib/ad-licoreria/purchase-draft";
+import { lineMoney, lineQtyBase, type DraftLine } from "@/lib/ad-licoreria/purchase-draft";
 
 export type ExtraInvoiceTax = {
   id: string;
@@ -80,10 +80,7 @@ export function computeLineRealCosts(
     const share = subtotal > 0 ? m.subtotal / subtotal : 0;
     const allocatedExtraTax = extraTaxesAllocated * share;
     const realTotal = m.subtotal + m.tax + allocatedExtraTax;
-    const qtyBase = Math.max(
-      0.0001,
-      l.qty * (l.unitsPerPresentation || 1),
-    );
+    const qtyBase = Math.max(0.0001, lineQtyBase(l));
     const realUnit = realTotal / qtyBase;
     const realBox = realUnit * (l.unitsPerPresentation || 1);
     lineRealCosts.set(l.key, {

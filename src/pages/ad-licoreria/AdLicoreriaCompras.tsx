@@ -22,6 +22,8 @@ import { formatVeNumber } from "@/lib/ad-licoreria/number-format";
 import {
   hitToDraftLine,
   lineMoney,
+  lineQtyBase,
+  formatLineQtySummary,
   lineToApiPayload,
   purchaseAmountToDisplay,
   type DraftLine,
@@ -753,10 +755,12 @@ export default function AdLicoreriaCompras() {
                   ) : null}
                 </div>
                 <div className="text-xs text-[var(--ad-muted)]">
-                  {l.presentationLabel} · {l.qty}{" "}
-                  {l.buyMode === "BOX" ? "caja(s)" : "u."} · Subtotal{" "}
+                  {formatLineQtySummary(l)} · Subtotal{" "}
                   {formatVeNumber(m.subtotal, 2)} {currency}
                   {l.taxable ? ` + IVA ${formatVeNumber(m.tax, 2)}` : ""}
+                </div>
+                <div className="text-xs text-[var(--ad-gold-soft)]">
+                  Entrada inventario: {lineQtyBase(l)} u.
                 </div>
                 {real && real.realUnit > m.unit ? (
                   <div className="text-xs text-[var(--ad-success)]">

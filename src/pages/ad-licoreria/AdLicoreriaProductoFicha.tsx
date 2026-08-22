@@ -5,6 +5,7 @@ import {
   adInventarioProductoPath,
 } from "@/constants/ad-licoreria-routes";
 import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
+import { AdStockBreakdown } from "@/components/ad-licoreria/AdStockBreakdown";
 import {
   AdProductPricingEditor,
   buildPricingRowsFromPresentations,
@@ -603,6 +604,11 @@ export default function AdLicoreriaProductoFicha() {
 
       <section className="ad-panel">
         <h2 className="ad-panel-title">Existencias por depósito</h2>
+        <p className="mt-1 text-sm text-[var(--ad-muted)]">
+          El inventario se guarda en unidades. Si el producto tiene caja x
+          {pack.box?.unitsPerPresentation ?? "—"}, se muestran cajas completas y
+          unidades sueltas (ej. 30 u. con caja de 36 = solo venta por unidad).
+        </p>
         <div className="ad-table-wrap mt-3">
           <table className="ad-table">
             <thead>
@@ -614,11 +620,17 @@ export default function AdLicoreriaProductoFicha() {
               </tr>
             </thead>
             <tbody>
-              {stockRows.map((row) => (
+              {stockRows.map((row) => {
+                const upb = pack.box?.unitsPerPresentation ?? 1;
+                return (
                 <tr key={row.warehouseId}>
                   <td>{warehouseLabel(row.warehouseId) || row.name}</td>
-                  <td>{row.physical}</td>
-                  <td>{row.committed}</td>
+                  <td>
+                    <AdStockBreakdown totalUnits={row.physical} unitsPerBox={upb} />
+                  </td>
+                  <td>
+                    <AdStockBreakdown totalUnits={row.committed} unitsPerBox={upb} showHint={false} />
+                  </td>
                   <td
                     className={
                       row.available <= 0
@@ -626,10 +638,19 @@ export default function AdLicoreriaProductoFicha() {
                         : "text-[var(--ad-success)]"
                     }
                   >
-                    {row.available}
+                    <AdStockBreakdown
+                      totalUnits={row.available}
+                      unitsPerBox={upb}
+                      className={
+                        row.available <= 0
+                          ? "text-[var(--ad-danger)]"
+                          : "text-[var(--ad-success)]"
+                      }
+                    />
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

@@ -58,8 +58,27 @@ export function hitToDraftLine(
   };
 }
 
+/** Unidades base por presentación según modo caja/unidad de compra. */
+export function lineUnitsPerPresentation(l: DraftLine): number {
+  if (l.buyMode === "UNIT") return 1;
+  return Math.max(1, l.boxUnits || l.unitsPerPresentation || 1);
+}
+
+export function lineQtyBase(l: DraftLine): number {
+  return Math.max(0, l.qty) * lineUnitsPerPresentation(l);
+}
+
+export function formatLineQtySummary(l: DraftLine): string {
+  const base = lineQtyBase(l);
+  if (l.buyMode === "BOX") {
+    const upp = lineUnitsPerPresentation(l);
+    return `${l.qty} caja(s) × ${upp} u. = ${base} u. al inventario`;
+  }
+  return `${l.qty} unidad(es) suelta(s) = ${base} u. al inventario`;
+}
+
 export function lineMoney(l: DraftLine) {
-  const upp = l.unitsPerPresentation || 1;
+  const upp = lineUnitsPerPresentation(l);
   let unit = l.unitCost;
   let box = l.presentationCost;
   let subtotal = 0;
@@ -75,7 +94,7 @@ export function lineMoney(l: DraftLine) {
     unit = upp > 0 ? box / upp : 0;
   }
   const tax = l.taxable ? subtotal * 0.16 : 0;
-  return { unit, box, subtotal, tax, total: subtotal + tax, upp };
+  return { unit, box, subtotal, tax, total: subtotal + tax, upp, qtyBase: l.qty * upp };
 }
 
 export function lineToApiPayload(
@@ -88,7 +107,7 @@ export function lineToApiPayload(
   const unit = realUnit != null && realUnit > 0 ? realUnit : m.unit;
   const lineTotal =
     realLineTotal != null && realLineTotal > 0 ? realLineTotal : m.subtotal;
-  const upp = l.unitsPerPresentation || 1;
+  const upp = lineUnitsPerPresentation(l);
   const box = unit * upp;
   return {
     presentationId: l.presentationId,

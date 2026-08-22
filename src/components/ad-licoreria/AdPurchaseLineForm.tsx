@@ -2,6 +2,10 @@ import { AdNumberInput } from "@/components/ad-licoreria/AdNumberInput";
 import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
 import {
   draftPvpPreview,
+  formatLineQtySummary,
+  lineMoney,
+  lineQtyBase,
+  lineUnitsPerPresentation,
   type DraftLine,
   purchaseAmountToDisplay,
 } from "@/lib/ad-licoreria/purchase-draft";
@@ -21,21 +25,26 @@ type Props = {
 };
 
 function setBuyMode(line: DraftLine, buyMode: "UNIT" | "BOX"): Partial<DraftLine> {
+  const m = lineMoney(line);
+  const boxUpp = Math.max(2, line.boxUnits || line.unitsPerPresentation || 1);
   const nextId =
     buyMode === "BOX"
       ? line.boxPresentationId ?? line.presentationId
       : line.unitPresentationId ?? line.presentationId;
-  const upp =
-    buyMode === "BOX"
-      ? Math.max(2, line.boxUnits || line.unitsPerPresentation)
-      : 1;
-  const label = buyMode === "BOX" ? `Caja x${upp}` : "Unidad";
+  const upp = buyMode === "BOX" ? boxUpp : 1;
+  let costMode = line.costMode;
+  if (buyMode === "UNIT" && costMode === "PRESENTATION") {
+    costMode = "UNIT";
+  }
   return {
     buyMode,
-    costMode: buyMode === "BOX" ? "PRESENTATION" : "UNIT",
+    costMode,
     presentationId: nextId,
-    presentationLabel: label,
+    presentationLabel: buyMode === "BOX" ? `Caja x${boxUpp}` : "Unidad suelta",
     unitsPerPresentation: upp,
+    unitCost: m.unit,
+    presentationCost: m.box,
+    lineTotal: m.subtotal,
   };
 }
 
@@ -58,7 +67,9 @@ export function AdPurchaseLineForm({
     ? purchaseAmountToDisplay(realCost.realBox, rateCtx)
     : null;
   const hasBox = Boolean(l.boxPresentationId) || l.boxUnits > 1;
+  const boxUpp = Math.max(1, l.boxUnits || l.unitsPerPresentation || 1);
   const useProtected = rateCtx.useProtected;
+  const qtyBase = lineQtyBase(l);
 
   return (
     <article className="ad-purchase-draft space-y-3 rounded border border-[var(--ad-gold)]/40 bg-black/25 p-3">
@@ -73,7 +84,15 @@ export function AdPurchaseLineForm({
             )}
           </div>
           <div className="text-xs text-[var(--ad-muted)]">
-            {l.presentationLabel} · {l.unitsPerPresentation} u. por caja
+            {l.buyMode === "BOX" ? (
+              <>
+                {l.presentationLabel} · ficha: <strong>{boxUpp} u. por caja</strong>
+              </>
+            ) : (
+              <>
+                Unidad suelta · ficha caja x{boxUpp} u. (no aplica en esta compra)
+              </>
+            )}
           </div>
         </div>
         <button type="button" className="ad-btn" onClick={onCancel}>
@@ -121,20 +140,29 @@ export function AdPurchaseLineForm({
       </div>
 
       <label className="text-xs text-[var(--ad-muted)]">
-        {l.buyMode === "BOX" ? "Cantidad de cajas compradas" : "Cantidad de unidades compradas"}
+        {l.buyMode === "BOX"
+          ? `Cantidad de cajas (cada caja = ${boxUpp} u.)`
+          : "Cantidad de unidades sueltas"}
         <AdNumberInput
           value={l.qty}
           decimals={0}
           min={0}
           onChange={(qty) => onChange({ qty })}
         />
+        {l.qty > 0 ? (
+          <span className="mt-1 block text-[var(--ad-gold-soft)]">
+            → {formatLineQtySummary(l)}
+          </span>
+        ) : null}
       </label>
 
       <div>
         <p className="text-xs text-[var(--ad-muted)]">
-          ¿Cómo viene el costo en la factura del proveedor?
+          ¿Cómo viene el precio en la factura del proveedor?
         </p>
-        <div className="mt-1 grid max-w-md grid-cols-2 gap-2">
+        <div
+          className={`mt-1 grid max-w-lg gap-2 ${l.buyMode === "BOX" ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2"}`}
+        >
           {l.buyMode === "BOX" ? (
             <>
               <button
@@ -146,10 +174,17 @@ export function AdPurchaseLineForm({
               </button>
               <button
                 type="button"
+                className={`ad-btn ${l.costMode === "UNIT" ? "ad-btn--gold" : ""}`}
+                onClick={() => onChange({ costMode: "UNIT" })}
+              >
+                Precio por unidad
+              </button>
+              <button
+                type="button"
                 className={`ad-btn ${l.costMode === "TOTAL" ? "ad-btn--gold" : ""}`}
                 onClick={() => onChange({ costMode: "TOTAL" })}
               >
-                Total de la línea
+                Total lineal
               </button>
             </>
           ) : (
@@ -166,17 +201,22 @@ export function AdPurchaseLineForm({
                 className={`ad-btn ${l.costMode === "TOTAL" ? "ad-btn--gold" : ""}`}
                 onClick={() => onChange({ costMode: "TOTAL" })}
               >
-                Total de la línea
+                Total lineal
               </button>
             </>
           )}
         </div>
+        {l.buyMode === "BOX" && l.costMode === "UNIT" ? (
+          <p className="mt-1 text-xs text-[var(--ad-muted)]">
+            Use esto si la factura trae precio unitario aunque haya comprado cajas
+            de {boxUpp} u.
+          </p>
+        ) : null}
       </div>
 
       {l.costMode === "TOTAL" ? (
         <label className="text-xs text-[var(--ad-muted)]">
-          Total facturado de esta línea ({currency}) —{" "}
-          {l.buyMode === "BOX" ? `${l.qty} caja(s)` : `${l.qty} unidad(es)`}
+          Total lineal de la línea ({currency}) — {qtyBase} u. en total
           <AdNumberInput
             value={l.lineTotal}
             decimals={2}
@@ -184,9 +224,9 @@ export function AdPurchaseLineForm({
             onChange={(lineTotal) => onChange({ lineTotal })}
           />
         </label>
-      ) : l.buyMode === "BOX" ? (
+      ) : l.costMode === "PRESENTATION" ? (
         <label className="text-xs text-[var(--ad-muted)]">
-          Costo de cada caja en {currency} (sin IVA)
+          Precio de cada caja ({currency}, sin IVA) · {boxUpp} u. por caja
           <AdNumberInput
             value={l.presentationCost}
             decimals={2}
@@ -196,7 +236,8 @@ export function AdPurchaseLineForm({
         </label>
       ) : (
         <label className="text-xs text-[var(--ad-muted)]">
-          Costo de cada unidad en {currency} (sin IVA)
+          Precio de cada unidad ({currency}, sin IVA)
+          {l.buyMode === "BOX" ? ` · dentro de caja x${boxUpp}` : ""}
           <AdNumberInput
             value={l.unitCost}
             decimals={4}
@@ -209,25 +250,39 @@ export function AdPurchaseLineForm({
       <div className="rounded bg-black/20 p-2 text-sm leading-6">
         {useProtected && currency === "USD" ? (
           <p className="text-xs text-[var(--ad-muted)]">
-            Pago con tasa protegida: el equivalente en Bs se calcula internamente;
-            abajo ve USD (BCV) y Bs de referencia POS.
+            Pago con tasa protegida: el equivalente en Bs se calcula internamente.
           </p>
         ) : null}
         {rateCtx.invoiceRate && currency === "BS" ? (
           <p className="text-xs text-[var(--ad-muted)]">
-            Tasa factura {formatVeNumber(rateCtx.invoiceRate, 2)} Bs/USD — el costo
-            en USD = monto Bs ÷ tasa.
+            Tasa factura {formatVeNumber(rateCtx.invoiceRate, 2)} Bs/USD
           </p>
         ) : null}
-        {l.buyMode === "BOX" && l.qty > 0 ? (
+        <div className="text-[var(--ad-gold-soft)] text-xs font-medium">
+          Inventario: entrarán {qtyBase} u.
+          {l.buyMode === "BOX" && boxUpp > 1
+            ? ` (${l.qty} caja(s) × ${boxUpp} u.)`
+            : ""}
+        </div>
+        {l.buyMode === "BOX" && l.qty > 0 && l.costMode !== "TOTAL" ? (
           <div className="text-[var(--ad-muted)]">
-            {l.qty} caja(s) × {formatVeNumber(m.box, 2)} {currency} ={" "}
+            {l.qty} caja(s) × {formatVeNumber(m.box, 2)} {currency}/caja ={" "}
             <strong>{formatVeNumber(m.subtotal, 2)}</strong> {currency}
           </div>
         ) : null}
+        {l.buyMode === "BOX" && l.costMode === "UNIT" && l.qty > 0 ? (
+          <div className="text-[var(--ad-muted)]">
+            {l.qty} caja(s) × {boxUpp} u. × {formatVeNumber(m.unit, 4)} {currency}/u.
+          </div>
+        ) : null}
         <div>
-          Costo unitario factura ({currency}):{" "}
-          <strong>{formatVeNumber(m.unit, 4)}</strong>
+          Costo unitario ({currency}): <strong>{formatVeNumber(m.unit, 4)}</strong>
+          {l.buyMode === "BOX" ? (
+            <span className="text-[var(--ad-muted)]">
+              {" "}
+              · caja ({boxUpp} u.): {formatVeNumber(m.box, 2)}
+            </span>
+          ) : null}
           <span className="ml-2 text-[var(--ad-muted)]">→ ref. POS:</span>{" "}
           <AdPriceDisplay
             price={{ usd: costUnitDisp.usd, bs: costUnitDisp.bs }}
@@ -236,8 +291,7 @@ export function AdPurchaseLineForm({
         </div>
         {realCost && realCost.realUnit > m.unit ? (
           <div className="text-[var(--ad-success)]">
-            Costo real unitario (IVA + imp. repartidos):{" "}
-            <strong>{formatVeNumber(realCost.realUnit, 4)}</strong> {currency}
+            Costo real/u.: {formatVeNumber(realCost.realUnit, 4)} {currency}
             {realUnitDisp ? (
               <span className="ml-2">
                 <AdPriceDisplay
@@ -248,7 +302,8 @@ export function AdPurchaseLineForm({
             ) : null}
             {hasBox ? (
               <div className="text-xs">
-                Costo real por caja: {formatVeNumber(realCost.realBox, 2)} {currency}
+                Costo real/caja ({lineUnitsPerPresentation(l)} u.):{" "}
+                {formatVeNumber(realCost.realBox, 2)} {currency}
                 {realBoxDisp ? (
                   <span className="ml-2">
                     <AdPriceDisplay
@@ -279,24 +334,16 @@ export function AdPurchaseLineForm({
             </div>
             <div>
               Unidad:{" "}
-              <AdPriceDisplay
-                price={{ usd: unitDisp.usd, bs: unitDisp.bs }}
-                stacked
-              />
+              <AdPriceDisplay price={{ usd: unitDisp.usd, bs: unitDisp.bs }} stacked />
             </div>
-            <div>
-              Caja:{" "}
-              <AdPriceDisplay
-                price={{ usd: boxDisp.usd, bs: boxDisp.bs }}
-                stacked
-              />
-            </div>
+            {hasBox ? (
+              <div>
+                Caja x{boxUpp}:{" "}
+                <AdPriceDisplay price={{ usd: boxDisp.usd, bs: boxDisp.bs }} stacked />
+              </div>
+            ) : null}
           </>
-        ) : (
-          <div className="text-xs text-[var(--ad-muted)]">
-            Sin utilidad en la ficha: cárguela en Productos para ver el PVP.
-          </div>
-        )}
+        ) : null}
       </div>
 
       <button type="button" className="ad-btn ad-btn--gold w-full" onClick={onAdd}>
