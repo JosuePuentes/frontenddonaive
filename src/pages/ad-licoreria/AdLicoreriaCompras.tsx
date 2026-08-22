@@ -6,9 +6,19 @@ import {
 } from "@/components/ad-licoreria/AdDocumentViews";
 import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
 import { AdPurchaseLineForm } from "@/components/ad-licoreria/AdPurchaseLineForm";
+import { AdNumberInput } from "@/components/ad-licoreria/AdNumberInput";
 import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
 import { useAdFocusMode } from "@/lib/ad-licoreria/focus-mode";
 import { findUnitAndBox } from "@/lib/ad-licoreria/pack";
+import {
+  requiresInvoiceExchangeRate,
+} from "@/lib/ad-licoreria/payment-methods";
+import {
+  computeLineRealCosts,
+  newExtraTax,
+  type ExtraInvoiceTax,
+} from "@/lib/ad-licoreria/purchase-invoice";
+import { formatVeNumber } from "@/lib/ad-licoreria/number-format";
 import {
   hitToDraftLine,
   lineMoney,
@@ -30,13 +40,21 @@ export default function AdLicoreriaCompras() {
     { id: string; name: string; creditDays: number }[]
   >([]);
   const [methods, setMethods] = useState<
-    { id: string; name: string; currency: string; usesSpecialRateRef: boolean }[]
+    {
+      id: string;
+      name: string;
+      currency: string;
+      usesSpecialRateRef: boolean;
+      code?: string;
+    }[]
   >([]);
 
   const [supplierId, setSupplierId] = useState("");
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
   const [paymentMethodId, setPaymentMethodId] = useState("");
   const [currency, setCurrency] = useState<"USD" | "BS">("USD");
+  const [invoiceRate, setInvoiceRate] = useState(0);
+  const [extraTaxes, setExtraTaxes] = useState<ExtraInvoiceTax[]>([]);
   const [invoice, setInvoice] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().slice(0, 10),
@@ -72,16 +90,32 @@ export default function AdLicoreriaCompras() {
     return d.toISOString().slice(0, 10);
   }, [credit, creditDays, invoiceDate]);
 
-  const totals = useMemo(() => {
-    let subtotal = 0;
-    let tax = 0;
-    for (const l of lines) {
-      const m = lineMoney(l);
-      subtotal += m.subtotal;
-      tax += m.tax;
-    }
-    return { subtotal, tax, grandTotal: subtotal + tax };
-  }, [lines]);
+  const selectedMethod = useMemo(
+    () => methods.find((m) => m.id === paymentMethodId),
+    [methods, paymentMethodId],
+  );
+
+  const showInvoiceRate = requiresInvoiceExchangeRate(selectedMethod);
+
+  const totals = useMemo(
+    () =>
+      computeLineRealCosts(lines, extraTaxes, {
+        currency,
+        invoiceRate: showInvoiceRate ? invoiceRate : undefined,
+        bcv: bcvRate,
+      }),
+    [lines, extraTaxes, currency, showInvoiceRate, invoiceRate, bcvRate],
+  );
+
+  const draftRealCost = useMemo(() => {
+    if (!draftLine) return undefined;
+    const single = computeLineRealCosts([draftLine], extraTaxes, {
+      currency,
+      invoiceRate: showInvoiceRate ? invoiceRate : undefined,
+      bcv: bcvRate,
+    });
+    return single.lineRealCosts.get(draftLine.key);
+  }, [draftLine, extraTaxes, currency, showInvoiceRate, invoiceRate, bcvRate]);
 
   const printDoc = useMemo((): AdPurchasePrintDoc | null => {
     if (!prelim) return null;
@@ -90,26 +124,24 @@ export default function AdLicoreriaCompras() {
     return d;
   }, [prelim]);
 
-  const selectedMethod = useMemo(
-    () => methods.find((m) => m.id === paymentMethodId),
-    [methods, paymentMethodId],
-  );
-
   const rateCtx = useMemo(
     () => ({
       currency,
       bcv: bcvRate,
       protectedRate,
       useProtected: Boolean(selectedMethod?.usesSpecialRateRef),
+      invoiceRate:
+        showInvoiceRate && invoiceRate > 0 ? invoiceRate : undefined,
     }),
-    [currency, bcvRate, protectedRate, selectedMethod],
+    [currency, bcvRate, protectedRate, selectedMethod, showInvoiceRate, invoiceRate],
   );
 
   const totalsDisplay = useMemo(() => {
     const sub = purchaseAmountToDisplay(totals.subtotal, rateCtx);
     const tax = purchaseAmountToDisplay(totals.tax, rateCtx);
+    const extra = purchaseAmountToDisplay(totals.extraTaxesTotal, rateCtx);
     const grand = purchaseAmountToDisplay(totals.grandTotal, rateCtx);
-    return { sub, tax, grand };
+    return { sub, tax, extra, grand };
   }, [totals, rateCtx]);
 
   useEffect(() => {
@@ -124,7 +156,7 @@ export default function AdLicoreriaCompras() {
       }
       const m = await adCommerceClient.listPaymentMethods();
       if (m.ok) {
-        const active = m.data.filter((x) => x.active !== false);
+        const active = m.data.filter((x) => x.active !== false) as typeof methods;
         setMethods(active);
         if (active[0]) {
           setPaymentMethodId(active[0].id);
@@ -147,6 +179,34 @@ export default function AdLicoreriaCompras() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (showInvoiceRate && !(invoiceRate > 0)) {
+      setInvoiceRate(bcvRate);
+    }
+  }, [showInvoiceRate, bcvRate, invoiceRate]);
+
+  function encodeNotes(userNotes: string) {
+    const meta = {
+      invoiceRate: showInvoiceRate && invoiceRate > 0 ? invoiceRate : undefined,
+      extraTaxes,
+    };
+    const metaBlock = `[AD_META]${JSON.stringify(meta)}[/AD_META]`;
+    const trimmed = userNotes.trim();
+    return trimmed ? `${metaBlock}\n${trimmed}` : metaBlock;
+  }
+
+  function buildLinePayloads() {
+    return lines.map((l) => {
+      const real = totals.lineRealCosts.get(l.key);
+      return lineToApiPayload(
+        l,
+        currency,
+        real?.realUnit,
+        real?.realTotal,
+      );
+    });
+  }
 
   async function search(source: "manual" | "camera" | "wedge" = "manual") {
     const term = query.trim();
@@ -277,9 +337,9 @@ export default function AdLicoreriaCompras() {
       paymentCondition: credit ? "CREDITO" : "CONTADO",
       creditDays: credit ? creditDays : 0,
       dueDate: credit && dueDate ? new Date(dueDate).toISOString() : undefined,
-      notes,
+      notes: encodeNotes(notes),
       preliminary: true,
-      lines: lines.map((l) => lineToApiPayload(l, currency)),
+      lines: buildLinePayloads(),
     };
 
     let id = purchaseId;
@@ -417,6 +477,20 @@ export default function AdLicoreriaCompras() {
             ))}
           </select>
         </label>
+        {showInvoiceRate ? (
+          <label className="text-xs">
+            Tasa de la factura (Bs por 1 USD) *
+            <AdNumberInput
+              value={invoiceRate || bcvRate}
+              decimals={2}
+              min={0.01}
+              onChange={setInvoiceRate}
+            />
+            <span className="mt-1 block text-[var(--ad-muted)]">
+              Solo pagos en Bs. Costo USD = monto Bs ÷ tasa.
+            </span>
+          </label>
+        ) : null}
         <label className="text-xs">
           Moneda
           <select
@@ -480,10 +554,100 @@ export default function AdLicoreriaCompras() {
         </label>
         <p className="text-xs text-[var(--ad-muted)] sm:col-span-full">
           BCV {bcvRate.toLocaleString("es-VE")} · Moneda factura {currency}
+          {showInvoiceRate && invoiceRate > 0
+            ? ` · Tasa factura ${formatVeNumber(invoiceRate, 2)} Bs/USD`
+            : ""}
           {selectedMethod?.usesSpecialRateRef
             ? " · método con tasa protegida (cálculo interno)"
             : ""}
         </p>
+      </section>
+
+      <section className="ad-panel space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="ad-panel-title">Impuestos adicionales</h2>
+            <p className="text-xs text-[var(--ad-muted)]">
+              Montos en Bs. Marque los que reparten entre líneas para sumarlos al
+              costo real (CPP).
+            </p>
+          </div>
+          <button
+            type="button"
+            className="ad-btn ad-btn--gold"
+            onClick={() => setExtraTaxes((prev) => [...prev, newExtraTax()])}
+          >
+            + Impuesto
+          </button>
+        </div>
+        {extraTaxes.length === 0 ? (
+          <p className="text-sm text-[var(--ad-muted)]">
+            Sin impuestos extra. Use + Impuesto para agregar (ej. municipal, retención).
+          </p>
+        ) : (
+          extraTaxes.map((tax) => (
+            <div
+              key={tax.id}
+              className="grid gap-2 rounded border border-[var(--ad-line)] p-3 sm:grid-cols-[1fr_10rem_auto_auto]"
+            >
+              <label className="text-xs text-[var(--ad-muted)]">
+                Nombre del impuesto
+                <input
+                  className="ad-input mt-1"
+                  value={tax.name}
+                  placeholder="Ej. Impuesto municipal"
+                  onChange={(e) =>
+                    setExtraTaxes((prev) =>
+                      prev.map((t) =>
+                        t.id === tax.id ? { ...t, name: e.target.value } : t,
+                      ),
+                    )
+                  }
+                />
+              </label>
+              <label className="text-xs text-[var(--ad-muted)]">
+                Monto en Bs
+                <AdNumberInput
+                  value={tax.amountBs}
+                  decimals={2}
+                  min={0}
+                  onChange={(amountBs) =>
+                    setExtraTaxes((prev) =>
+                      prev.map((t) =>
+                        t.id === tax.id ? { ...t, amountBs } : t,
+                      ),
+                    )
+                  }
+                />
+              </label>
+              <label className="flex items-end gap-2 pb-1 text-xs">
+                <input
+                  type="checkbox"
+                  checked={tax.allocateToCost}
+                  onChange={(e) =>
+                    setExtraTaxes((prev) =>
+                      prev.map((t) =>
+                        t.id === tax.id
+                          ? { ...t, allocateToCost: e.target.checked }
+                          : t,
+                      ),
+                    )
+                  }
+                />
+                Sumar al costo
+              </label>
+              <button
+                type="button"
+                className="ad-btn self-end"
+                onClick={() =>
+                  setExtraTaxes((prev) => prev.filter((t) => t.id !== tax.id))
+                }
+              >
+                Quitar
+              </button>
+            </div>
+          ))
+        )}
       </section>
 
       <section className="ad-panel space-y-2">
@@ -555,6 +719,7 @@ export default function AdLicoreriaCompras() {
             line={draftLine}
             currency={currency}
             rateCtx={rateCtx}
+            realCost={draftRealCost}
             onChange={patchDraft}
             onAdd={commitDraftLine}
             onCancel={() => setDraftLine(null)}
@@ -568,7 +733,11 @@ export default function AdLicoreriaCompras() {
         </h2>
         {lines.map((l) => {
           const m = lineMoney(l);
+          const real = totals.lineRealCosts.get(l.key);
           const lineDisp = purchaseAmountToDisplay(m.subtotal, rateCtx);
+          const realDisp = real
+            ? purchaseAmountToDisplay(real.realUnit, rateCtx)
+            : null;
           return (
             <article
               key={l.key}
@@ -585,10 +754,26 @@ export default function AdLicoreriaCompras() {
                 </div>
                 <div className="text-xs text-[var(--ad-muted)]">
                   {l.presentationLabel} · {l.qty}{" "}
-                  {l.buyMode === "BOX" ? "caja(s)" : "u."} ·{" "}
-                  {m.subtotal.toFixed(2)} {currency}
-                  {l.taxable ? ` + IVA ${m.tax.toFixed(2)}` : ""}
+                  {l.buyMode === "BOX" ? "caja(s)" : "u."} · Subtotal{" "}
+                  {formatVeNumber(m.subtotal, 2)} {currency}
+                  {l.taxable ? ` + IVA ${formatVeNumber(m.tax, 2)}` : ""}
                 </div>
+                {real && real.realUnit > m.unit ? (
+                  <div className="text-xs text-[var(--ad-success)]">
+                    Costo real/u.: {formatVeNumber(real.realUnit, 4)} {currency}
+                    {l.buyMode === "BOX"
+                      ? ` · caja: ${formatVeNumber(real.realBox, 2)}`
+                      : ""}
+                    {realDisp ? (
+                      <span className="ml-2">
+                        <AdPriceDisplay
+                          price={{ usd: realDisp.usd, bs: realDisp.bs }}
+                          stacked
+                        />
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="mt-1">
                   <AdPriceDisplay
                     price={{ usd: lineDisp.usd, bs: lineDisp.bs }}
@@ -632,7 +817,8 @@ export default function AdLicoreriaCompras() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <div className="text-sm tabular-nums">
             <div>
-              SUBTOTAL: <strong>{totals.subtotal.toFixed(2)}</strong> {currency}
+              SUBTOTAL: <strong>{formatVeNumber(totals.subtotal, 2)}</strong>{" "}
+              {currency}
             </div>
             <div className="text-xs text-[var(--ad-muted)]">
               Ref. POS:{" "}
@@ -642,11 +828,24 @@ export default function AdLicoreriaCompras() {
               />
             </div>
             <div>
-              IVA 16%: <strong>{totals.tax.toFixed(2)}</strong> {currency}
-            </div>
-            <div className="text-base">
-              TOTAL GENERAL: <strong>{totals.grandTotal.toFixed(2)}</strong>{" "}
+              IVA 16%: <strong>{formatVeNumber(totals.tax, 2)}</strong>{" "}
               {currency}
+            </div>
+            {totals.extraTaxesTotalBs > 0 ? (
+              <div>
+                Impuestos adicionales:{" "}
+                <strong>{formatVeNumber(totals.extraTaxesTotalBs, 2)}</strong> Bs
+                {currency === "USD" && totals.extraTaxesTotal > 0 ? (
+                  <span className="text-[var(--ad-muted)]">
+                    {" "}
+                    (≈ {formatVeNumber(totals.extraTaxesTotal, 2)} USD)
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="text-base">
+              TOTAL GENERAL:{" "}
+              <strong>{formatVeNumber(totals.grandTotal, 2)}</strong> {currency}
             </div>
             <div className="text-xs text-[var(--ad-muted)]">
               Ref. POS:{" "}
@@ -741,23 +940,26 @@ export default function AdLicoreriaCompras() {
               </button>
             </div>
             {newPackMode === "BOX" ? (
-              <input
-                className="ad-input"
-                type="number"
-                min={2}
-                placeholder="Unidades por caja"
-                value={newUpp}
-                onChange={(e) => setNewUpp(Number(e.target.value))}
-              />
+              <label className="text-xs text-[var(--ad-muted)]">
+                Unidades por caja
+                <AdNumberInput
+                  value={newUpp}
+                  decimals={0}
+                  min={2}
+                  onChange={setNewUpp}
+                />
+              </label>
             ) : null}
-            <input
-              className="ad-input"
-              type="number"
-              min={0}
-              placeholder="Utilidad contable %"
-              value={newUtility}
-              onChange={(e) => setNewUtility(Number(e.target.value))}
-            />
+            <label className="text-xs text-[var(--ad-muted)]">
+              Utilidad contable % (margen sobre PVP, no sobre costo)
+              <AdNumberInput
+                value={newUtility}
+                decimals={1}
+                min={0}
+                max={99.9}
+                onChange={setNewUtility}
+              />
+            </label>
             <div>
               <p className="mb-1 text-xs text-[var(--ad-muted)]">¿Aplica IVA?</p>
               <div className="grid grid-cols-2 gap-2">

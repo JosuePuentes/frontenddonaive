@@ -78,19 +78,29 @@ export function lineMoney(l: DraftLine) {
   return { unit, box, subtotal, tax, total: subtotal + tax, upp };
 }
 
-export function lineToApiPayload(l: DraftLine, currency: "USD" | "BS") {
+export function lineToApiPayload(
+  l: DraftLine,
+  currency: "USD" | "BS",
+  realUnit?: number,
+  realLineTotal?: number,
+) {
   const m = lineMoney(l);
+  const unit = realUnit != null && realUnit > 0 ? realUnit : m.unit;
+  const lineTotal =
+    realLineTotal != null && realLineTotal > 0 ? realLineTotal : m.subtotal;
+  const upp = l.unitsPerPresentation || 1;
+  const box = unit * upp;
   return {
     presentationId: l.presentationId,
     qty: l.qty,
     qtyBonus: l.qtyBonus,
     costMode: l.costMode,
-    unitCostUsd: currency === "USD" ? m.unit : 0,
-    unitCostBs: currency === "BS" ? m.unit : 0,
-    presentationCostUsd: currency === "USD" ? m.box : 0,
-    presentationCostBs: currency === "BS" ? m.box : 0,
-    lineTotalUsd: currency === "USD" ? m.subtotal : 0,
-    lineTotalBs: currency === "BS" ? m.subtotal : 0,
+    unitCostUsd: currency === "USD" ? unit : 0,
+    unitCostBs: currency === "BS" ? unit : 0,
+    presentationCostUsd: currency === "USD" ? box : 0,
+    presentationCostBs: currency === "BS" ? box : 0,
+    lineTotalUsd: currency === "USD" ? lineTotal : 0,
+    lineTotalBs: currency === "BS" ? lineTotal : 0,
     taxable: l.taxable,
   };
 }

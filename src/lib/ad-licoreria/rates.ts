@@ -14,6 +14,8 @@ export type PurchaseRateContext = {
   bcv: number;
   protectedRate: number;
   useProtected: boolean;
+  /** Tasa propia de la factura (Bs/USD) cuando el pago es en bolívares. */
+  invoiceRate?: number;
 };
 
 /** Completa USD (BCV) y Bs para mostrar en POS. */
@@ -41,7 +43,9 @@ export function purchaseAmountToDisplay(
 ): { usd: number; bs: number; internalBs?: number } {
   const bcv = ctx.bcv > 0 ? ctx.bcv : 1;
   if (ctx.currency === "BS") {
-    const usd = amount / bcv;
+    const rate =
+      ctx.invoiceRate && ctx.invoiceRate > 0 ? ctx.invoiceRate : bcv;
+    const usd = amount / rate;
     return { usd, bs: amount };
   }
   if (ctx.useProtected && ctx.protectedRate > 0) {

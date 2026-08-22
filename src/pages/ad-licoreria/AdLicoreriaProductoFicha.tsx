@@ -5,6 +5,12 @@ import {
   adInventarioProductoPath,
 } from "@/constants/ad-licoreria-routes";
 import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
+import {
+  AdProductPricingEditor,
+  buildPricingRowsFromPresentations,
+  type PricingRowState,
+} from "@/components/ad-licoreria/AdProductPricingEditor";
+import { AdNumberInput } from "@/components/ad-licoreria/AdNumberInput";
 import { useAdBcvRate } from "@/hooks/ad-licoreria/useAdBcvRate";
 import {
   findUnitAndBox,
@@ -57,6 +63,7 @@ export default function AdLicoreriaProductoFicha() {
   const [active, setActive] = useState(true);
   const [msg, setMsg] = useState("");
   const [presBarcodes, setPresBarcodes] = useState<Record<string, string>>({});
+  const [pricingRows, setPricingRows] = useState<PricingRowState[]>([]);
 
   const productPresentations = useMemo(
     () => (product ? getPresentationsFor(product.id) : []),
@@ -84,7 +91,14 @@ export default function AdLicoreriaProductoFicha() {
       nextBarcodes[pres.id] = pres.barcode ?? "";
     }
     setPresBarcodes(nextBarcodes);
-  }, [product, pack.box, getPresentationsFor]);
+    setPricingRows(
+      buildPricingRowsFromPresentations(
+        getPresentationsFor(product.id),
+        completeAdPrice(product.cost, bcv).usd,
+        product.defaultUtilityPercent ?? 0,
+      ),
+    );
+  }, [product, pack.box, getPresentationsFor, bcv]);
 
   const unitsPerBox = packMode === "BOX" ? boxUnits : 1;
   const displayCost = product ? completeAdPrice(product.cost, bcv) : { usd: 0, bs: 0 };
@@ -132,6 +146,13 @@ export default function AdLicoreriaProductoFicha() {
       nextBarcodes[pres.id] = pres.barcode ?? "";
     }
     setPresBarcodes(nextBarcodes);
+    setPricingRows(
+      buildPricingRowsFromPresentations(
+        getPresentationsFor(product.id),
+        completeAdPrice(product.cost, bcv).usd,
+        product.defaultUtilityPercent ?? 0,
+      ),
+    );
     setSearchParams({});
     setMsg("");
   }
@@ -172,11 +193,18 @@ export default function AdLicoreriaProductoFicha() {
     for (const pres of productPresentations) {
       const nextBarcode = (presBarcodes[pres.id] ?? "").trim();
       const prevBarcode = pres.barcode?.trim() ?? "";
-      if (nextBarcode === prevBarcode) continue;
+      const priceRow = pricingRows.find((r) => r.presentationId === pres.id);
+      const nextPriceUsd = priceRow?.saleUsd ?? pres.price.usd;
+      const priceChanged = Math.abs(nextPriceUsd - (pres.price.usd || 0)) > 0.0001;
+      if (nextBarcode === prevBarcode && !priceChanged) continue;
       const pr = await resolveAdResult(
         upsertPresentation({
           ...pres,
           barcode: nextBarcode || undefined,
+          price: {
+            usd: nextPriceUsd,
+            bs: nextPriceUsd * bcv,
+          },
         }),
       );
       if (!pr.ok) {
@@ -332,14 +360,14 @@ export default function AdLicoreriaProductoFicha() {
             product.baseUnitLabel
           )}
         </Field>
-        <Field label="Stock mínimo (base)">
+        <Field label="Stock mínimo (unidades base)">
           {editing ? (
-            <input
-              className="ad-input"
-              type="number"
-              min={0}
+            <AdNumberInput
+              className="ad-input mt-1"
               value={minStock}
-              onChange={(e) => setMinStock(Number(e.target.value))}
+              decimals={0}
+              min={0}
+              onChange={setMinStock}
             />
           ) : (
             product.minStockBase
@@ -392,32 +420,32 @@ export default function AdLicoreriaProductoFicha() {
             </div>
             {packMode === "BOX" ? (
               <label className="block max-w-xs text-sm text-[var(--ad-muted)]">
-                Unidades que trae cada caja
-                <input
-                  className="ad-input mt-1"
-                  type="number"
-                  min={2}
-                  value={boxUnits}
-                  onChange={(e) => setBoxUnits(Number(e.target.value))}
-                />
-              </label>
-            ) : (
-              <p className="text-sm text-[var(--ad-muted)]">
-                Se compra y vende solo por unidad (presentación ×1).
-              </p>
-            )}
-            <label className="block max-w-xs text-sm text-[var(--ad-muted)]">
-              Utilidad contable % (margen sobre PVP)
-              <input
-                className="ad-input mt-1"
-                type="number"
-                min={0}
-                max={99.9}
-                step="0.1"
-                value={utility}
-                onChange={(e) => setUtility(Number(e.target.value))}
+              Unidades que trae cada caja (mín. 2)
+              <AdNumberInput
+                value={boxUnits}
+                decimals={0}
+                min={2}
+                onChange={setBoxUnits}
               />
             </label>
+          ) : (
+            <p className="text-sm text-[var(--ad-muted)]">
+              Se compra y vende solo por unidad (presentación ×1).
+            </p>
+          )}
+          <label className="block max-w-xs text-sm text-[var(--ad-muted)]">
+            Utilidad contable por defecto % (margen sobre PVP)
+            <AdNumberInput
+              value={utility}
+              decimals={1}
+              min={0}
+              max={99.9}
+              onChange={setUtility}
+            />
+            <span className="mt-1 block text-xs">
+              Se usa para calcular PVP cuando aún no hay precio manual.
+            </span>
+          </label>
             {previewPx && displayCost.usd > 0 ? (
               <div className="rounded border border-[var(--ad-line)] p-3 text-sm">
                 <p className="text-[var(--ad-muted)]">Vista previa PVP (utilidad {utility}% contable):</p>
@@ -455,58 +483,78 @@ export default function AdLicoreriaProductoFicha() {
       </section>
 
       <section className="ad-panel">
-        <h2 className="ad-panel-title">Costos y precios</h2>
+        <h2 className="ad-panel-title">Costos y precios de venta</h2>
         {editing ? (
-          <p className="mt-1 text-xs text-[var(--ad-muted)]">
-            Código de barras por presentación: use el de la caja si escanea
-            empaques; el del producto arriba es para la unidad suelta.
-          </p>
-        ) : null}
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-          <Stat
-            label="Costo unitario (CPP)"
-            value={
-              hasAdMoney(cost) ? (
-                <AdPriceDisplay price={cost} stacked />
-              ) : (
-                "—"
-              )
-            }
-          />
-          {hasCost ? (
-            <>
-              {pack.box ? (
-                <Stat
-                  label="Costo caja"
-                  value={
-                    <AdPriceDisplay
-                      price={completeAdPrice(
-                        { usd: viewPx.boxCost, bs: 0 },
-                        bcv,
-                      )}
-                      stacked
-                    />
-                  }
-                />
-              ) : null}
-              <Stat
-                label="PVP unidad"
-                value={<AdPriceDisplay price={pvpUnit} stacked />}
-              />
-              {pack.box ? (
-                <Stat
-                  label="PVP caja"
-                  value={<AdPriceDisplay price={pvpBox} stacked />}
-                />
-              ) : null}
-            </>
-          ) : (
-            <p className="text-[var(--ad-muted)] sm:col-span-3">
-              Sin costo ni PVP. Confirme una compra (con utilidad en la ficha)
-              para calcularlos, o fije precio en Presentaciones.
+          <>
+            <p className="mt-1 text-xs text-[var(--ad-muted)]">
+              Código de barras por presentación abajo en la tabla. Aquí define
+              PVP por unidad y por caja con margen bidireccional.
             </p>
-          )}
-        </div>
+            <div className="mt-4">
+              <AdProductPricingEditor
+                rows={pricingRows}
+                unitCostUsd={displayCost.usd}
+                boxCostUsd={previewPx?.boxCost ?? displayCost.usd * unitsPerBox}
+                bcv={bcv}
+                onChange={(presentationId, patch) =>
+                  setPricingRows((prev) =>
+                    prev.map((r) =>
+                      r.presentationId === presentationId ? { ...r, ...patch } : r,
+                    ),
+                  )
+                }
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+              <Stat
+                label="Costo unitario (CPP)"
+                value={
+                  hasAdMoney(cost) ? (
+                    <AdPriceDisplay price={cost} stacked />
+                  ) : (
+                    "—"
+                  )
+                }
+              />
+              {hasCost ? (
+                <>
+                  {pack.box ? (
+                    <Stat
+                      label="Costo caja"
+                      value={
+                        <AdPriceDisplay
+                          price={completeAdPrice(
+                            { usd: viewPx.boxCost, bs: 0 },
+                            bcv,
+                          )}
+                          stacked
+                        />
+                      }
+                    />
+                  ) : null}
+                  <Stat
+                    label="PVP unidad"
+                    value={<AdPriceDisplay price={pvpUnit} stacked />}
+                  />
+                  {pack.box ? (
+                    <Stat
+                      label="PVP caja"
+                      value={<AdPriceDisplay price={pvpBox} stacked />}
+                    />
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-[var(--ad-muted)] sm:col-span-3">
+                  Sin costo ni PVP. Confirme una compra (con utilidad en la ficha)
+                  para calcularlos, o fije precio en edición.
+                </p>
+              )}
+            </div>
+          </>
+        )}
         <div className="ad-table-wrap mt-4">
           <table className="ad-table">
             <thead>

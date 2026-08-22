@@ -22,6 +22,7 @@ const CODES: AdPaymentMethodCode[] = [
   "transferencia",
   "zelle",
   "tarjeta",
+  "tarjeta_debito_bs",
   "qr",
   "otro",
 ];
