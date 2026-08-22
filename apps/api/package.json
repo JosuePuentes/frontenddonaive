@@ -18,8 +18,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+    "seed:ad": "tsx prisma/seed-ad-licoreria.ts",
+    "cleanup:ad-demo": "tsx prisma/cleanup-ad-licoreria-demo.ts",
+    "test:e2e:ad": "vitest run tests/ad-fase4-e2e.test.ts",
     "render:build": "npm run prisma:generate && npm run build",
-    "render:start": "npm run prisma:migrate:deploy && npm start"
+    "render:start": "npm run prisma:migrate:deploy && sh -c 'test -n \"$AD_CLEANUP_DEMO\" && npm run cleanup:ad-demo || true' && npm run seed:ad && npm start"
   },
   "dependencies": {
     "@donaive/core": "file:../../packages/core",
@@ -28,18 +31,20 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^22.15.18",
+    "@types/pdfkit": "^0.17.6",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
+    "pdfkit": "^0.19.1",
     "prisma": "^6.14.0",
+    "tsx": "^4.23.12",
     "typescript": "~5.8.3",
     "zod": "^4.0.17"
   },
   "devDependencies": {
     "@types/supertest": "^6.0.3",
     "supertest": "^7.1.4",
-    "tsx": "^4.20.4",
     "vitest": "^3.2.4"
   }
 }

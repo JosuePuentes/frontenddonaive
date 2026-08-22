@@ -9,16 +9,63 @@ import {
   databaseGuard,
   errorHandler,
 } from "./middleware/error.middleware.js";
+import { adPublicAuthRouter } from "./ad/public-auth.routes.js";
+import { adTvSyncRouter } from "./ad/tv-sync.routes.js";
+import { adRouter } from "./ad/routes.js";
 
 export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
-  app.use(helmet());
+  app.use(
+    helmet({
+      /** Assets TV se cargan desde el túnel del frontend (otro origen). */
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    }),
+  );
   app.use(cors(buildCorsOptions()));
-  app.use(express.json({ limit: "1mb" }));
+  app.use(express.json({ limit: "12mb" }));
+  /**
+   * Subidas TV: chunks de ~1.5 MB. El archivo completo se ensambla en disco.
+   */
+  app.use(
+    express.raw({
+      limit: "12mb",
+      type: (req) => {
+        const anyReq = req as { originalUrl?: string; url?: string };
+        const url = `${anyReq.originalUrl || anyReq.url || ""}`;
+        const pathOnly = url.split("?")[0] ?? "";
+        const ct = String(req.headers["content-type"] || "").toLowerCase();
+        if (
+          ct.includes("application/json") ||
+          ct.includes("multipart/form-data")
+        ) {
+          return false;
+        }
+        if (
+          pathOnly.endsWith("/tv/assets/binary") ||
+          pathOnly.endsWith("/tv/assets/binary/chunk")
+        ) {
+          return true;
+        }
+        return (
+          ct.includes("application/octet-stream") || ct.startsWith("video/")
+        );
+      },
+    }),
+  );
 
   app.use(healthRouter);
+  /** A&D público: login/bootstrap/logout (JWT). */
+  app.use("/api/v1/ad", databaseGuard, adPublicAuthRouter);
+  /** A&D TV sync MOCK multi-dispositivo (reproductor sin JWT). */
+  app.use("/api/v1/ad", adTvSyncRouter);
+  /**
+   * A&D protegido con JWT propio (Fase 4) — sin exigir X-User-Id Core.
+   * El router aplica adContextMiddleware internamente.
+   */
+  app.use("/api/v1/ad", databaseGuard, adRouter);
+  /** Rutas Core Donaive (headers de desarrollo / futuro JWT Core). */
   app.use("/api/v1", databaseGuard, authMiddleware, v1Router);
 
   app.use(errorHandler);

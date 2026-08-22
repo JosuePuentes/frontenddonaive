@@ -7,7 +7,10 @@ import { PageLoader } from "@/components/page/PageLoader";
 import { ROUTES } from "@/constants/routes";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { isPolisurHost } from "@/lib/polisur-host";
+import { isAdLicoreriaHost } from "@/lib/ad-licoreria-host";
 import { polisurRouteTree } from "@/routers/PolisurRouteTree";
+import { adLicoreriaRouteTree } from "@/routers/AdLicoreriaRouteTree";
+import { AdLicoreriaLayout } from "@/components/ad-licoreria/AdLicoreriaLayout";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Empresa = lazy(() => import("@/pages/Empresa"));
@@ -75,11 +78,13 @@ const PolisurPreinscripciones = lazy(
 
 const AppRouter = () => {
   const onPolisurDomain = isPolisurHost();
+  const onAdLicoreriaDomain = isAdLicoreriaHost();
+  const showDonaiveShell = !onPolisurDomain && !onAdLicoreriaDomain;
 
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {!onPolisurDomain ? (
+        {showDonaiveShell ? (
           <Route element={<Layout />}>
             <Route path={ROUTES.home} element={<Home />} />
             <Route path={ROUTES.empresa} element={<Empresa />} />
@@ -99,12 +104,22 @@ const AppRouter = () => {
         ) : null}
 
         {/* POLISUR — dominio propio (/) + namespace /polisur en Donaive */}
-        <Route element={<PolisurLayout />}>
-          {onPolisurDomain ? polisurRouteTree("") : null}
-          {polisurRouteTree("/polisur")}
-        </Route>
+        {!onAdLicoreriaDomain ? (
+          <Route element={<PolisurLayout />}>
+            {onPolisurDomain ? polisurRouteTree("") : null}
+            {polisurRouteTree("/polisur")}
+          </Route>
+        ) : null}
 
+        {/* A&D Licorería — /licoreria ahora; raíz cuando exista dominio propio */}
         {!onPolisurDomain ? (
+          <Route element={<AdLicoreriaLayout />}>
+            {onAdLicoreriaDomain ? adLicoreriaRouteTree("") : null}
+            {adLicoreriaRouteTree("/licoreria")}
+          </Route>
+        ) : null}
+
+        {showDonaiveShell ? (
           <Route element={<DashboardLayout />}>
             <Route path={DASHBOARD_ROUTES.root} element={<Dashboard />} />
             <Route path={DASHBOARD_ROUTES.usuarios} element={<Users />} />

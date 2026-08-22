@@ -45,6 +45,18 @@ healthRouter.get("/health", async (_req, res) => {
   });
 });
 
+/** Módulo A&D — liveness sin DB (Fase 1 scaffolding). */
+healthRouter.get("/health/ad", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    module: "ad-licoreria",
+    schema: "ad_licoreria",
+    phase: 1,
+    apiPrefix: "/api/v1/ad",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 /** Readiness — requiere DB conectada (opcional para orquestadores). */
 healthRouter.get("/health/ready", async (_req, res) => {
   if (!isDatabaseConfigured()) {

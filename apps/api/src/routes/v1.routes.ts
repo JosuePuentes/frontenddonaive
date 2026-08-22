@@ -14,6 +14,8 @@ import { requireCapability } from "../auth/authorization.js";
 
 export const v1Router = Router();
 
+/** A&D se monta en app.ts bajo /api/v1/ad con JWT propio (Fase 4). */
+
 v1Router.get("/projects", async (req, res, next) => {
   try {
     const auth = getAuth(req);

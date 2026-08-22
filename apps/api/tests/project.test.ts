@@ -4,13 +4,20 @@ import { createApp } from "../src/app.js";
 
 describe("API v1 — guardia de base de datos", () => {
   it("GET /api/v1/projects responde 503 sin DATABASE_URL", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .get("/api/v1/projects")
-      .set("X-User-Id", "test-user");
+    const original = process.env.DATABASE_URL;
+    delete process.env.DATABASE_URL;
+    try {
+      const app = createApp();
+      const res = await request(app)
+        .get("/api/v1/projects")
+        .set("X-User-Id", "test-user");
 
-    expect(res.status).toBe(503);
-    expect(res.body.error.code).toBe("DATABASE_NOT_CONFIGURED");
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe("DATABASE_NOT_CONFIGURED");
+    } finally {
+      if (original === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = original;
+    }
   });
 });
 

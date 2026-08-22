@@ -25,9 +25,31 @@ describe("CORS configuration", () => {
 
     try {
       const options = buildCorsOptions();
-      expect(options.origin).toEqual([
-        "https://donaive.com.ve",
-        "https://app.donaive.com.ve",
+      const origin = options.origin;
+      expect(typeof origin).toBe("function");
+      const allow = (
+        value: string | undefined,
+      ): Promise<boolean> =>
+        new Promise((resolve, reject) => {
+          (origin as (
+            o: string | undefined,
+            cb: (err: Error | null, allow?: boolean) => void,
+          ) => void)(value, (err, allowed) => {
+            if (err) reject(err);
+            else resolve(Boolean(allowed));
+          });
+        });
+      return Promise.all([
+        allow("https://donaive.com.ve").then((v) => expect(v).toBe(true)),
+        allow("https://app.donaive.com.ve").then((v) => expect(v).toBe(true)),
+        allow("https://ad-licoreria.vercel.app").then((v) => expect(v).toBe(true)),
+        allow("https://ad-licoreria-abc123-donaive.vercel.app").then((v) =>
+          expect(v).toBe(true),
+        ),
+        allow("https://frontenddonaive-xxx-donaive.vercel.app").then((v) =>
+          expect(v).toBe(false),
+        ),
+        allow("https://evil.example").then((v) => expect(v).toBe(false)),
       ]);
     } finally {
       if (originalCors !== undefined) {

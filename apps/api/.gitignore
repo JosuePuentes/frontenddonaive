@@ -8,3 +8,5 @@ dist/
 
 # Prisma
 node_modules/.prisma/
+
+.data/

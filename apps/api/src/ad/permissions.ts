@@ -1,0 +1,161 @@
+/**
+ * Matriz de permisos A&D (espejo del MOCK frontend).
+ * La autorización real se verifica siempre en backend.
+ */
+
+export const AD_PERMISSIONS = [
+  "pos.sell",
+  "pos.refund",
+  "pos.discount",
+  "pos.close_account",
+  "pos.shortage_override",
+  "inventory.read",
+  "inventory.adjust",
+  "inventory.transfer",
+  "inventory.receive",
+  "purchase.create",
+  "purchase.approve",
+  "purchases.create",
+  "purchases.manage",
+  "purchases.approve",
+  "products.manage",
+  "products.cost.manage",
+  "suppliers.manage",
+  "payables.manage",
+  "pricing.manage",
+  "pricing.override",
+  "promotions.manage",
+  "purchase-analysis.view",
+  "purchase-orders.create",
+  "rates.bcv.manage",
+  "rates.protected.manage",
+  "finance.view",
+  "finance.manage",
+  "finance.transfer",
+  "finance.exchange",
+  "finance.rates",
+  "finance.parallel_rate",
+  "finance.expenses",
+  "finance.withdrawals",
+  "finance.dashboard.view",
+  "finance.reconcile",
+  "cop.read",
+  "cop.transfer",
+  "cop.purchase_request",
+  "reports.read",
+  "users.manage",
+  "deposits.manage",
+  "settings.manage",
+  "accounts.open",
+  "accounts.serve",
+  "tables.manage",
+  "clients.read",
+  "closures.create",
+  "tv.view",
+  "tv.manage",
+  "tv.control",
+  "tv.content.manage",
+  "tv.groups.manage",
+  "tv.screen.manage",
+] as const;
+
+export type AdPermission = (typeof AD_PERMISSIONS)[number];
+
+export type AdOperatorRoleName =
+  | "admin"
+  | "supervisor"
+  | "cajero"
+  | "mesonera"
+  | "inventario"
+  | "tv";
+
+export const AD_DEFAULT_ROLE_PERMISSIONS: Record<
+  AdOperatorRoleName,
+  AdPermission[]
+> = {
+  admin: [...AD_PERMISSIONS],
+  supervisor: [
+    "pos.sell",
+    "pos.refund",
+    "pos.discount",
+    "pos.close_account",
+    "pos.shortage_override",
+    "inventory.read",
+    "inventory.adjust",
+    "inventory.transfer",
+    "inventory.receive",
+    "purchase.create",
+    "purchase.approve",
+    "purchases.create",
+    "purchases.manage",
+    "purchases.approve",
+    "products.manage",
+    "products.cost.manage",
+    "suppliers.manage",
+    "payables.manage",
+    "pricing.manage",
+    "pricing.override",
+    "promotions.manage",
+    "purchase-analysis.view",
+    "purchase-orders.create",
+    "rates.bcv.manage",
+    "finance.view",
+    "finance.manage",
+    "finance.transfer",
+    "finance.exchange",
+    "finance.rates",
+    "finance.expenses",
+    "finance.withdrawals",
+    "finance.dashboard.view",
+    "finance.reconcile",
+    "cop.read",
+    "cop.transfer",
+    "cop.purchase_request",
+    "reports.read",
+    "accounts.open",
+    "accounts.serve",
+    "tables.manage",
+    "clients.read",
+    "closures.create",
+    "tv.view",
+    "tv.control",
+    "tv.content.manage",
+    "tv.groups.manage",
+    "tv.screen.manage",
+  ],
+  /** Solo caja / POS. Ampliar vía permisos explícitos en el operador. */
+  cajero: [
+    "pos.sell",
+    "pos.discount",
+    "pos.close_account",
+    "closures.create",
+  ],
+  mesonera: [
+    "accounts.open",
+    "accounts.serve",
+    "tables.manage",
+    "clients.read",
+  ],
+  inventario: [
+    "inventory.read",
+    "inventory.adjust",
+    "inventory.transfer",
+    "inventory.receive",
+    "purchase.create",
+    "purchases.create",
+    "products.manage",
+    "products.cost.manage",
+    "suppliers.manage",
+    "purchase-analysis.view",
+    "purchase-orders.create",
+    "cop.read",
+    "cop.transfer",
+    "cop.purchase_request",
+    "reports.read",
+  ],
+  tv: ["tv.view", "tv.control"],
+};
+
+export function isAdPermission(value: string): value is AdPermission {
+  return (AD_PERMISSIONS as readonly string[]).includes(value);
+}

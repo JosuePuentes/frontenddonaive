@@ -1,0 +1,570 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
+import { AD_LICORERIA_ROUTES } from "@/constants/ad-licoreria-routes";
+import {
+  resolveCanonicalWarehouseId,
+  warehouseLabel,
+} from "@/lib/ad-licoreria/warehouses";
+import { useAdLicoreria } from "@/providers/ad-licoreria/AdLicoreriaProvider";
+import { resolveAdResult } from "@/services/ad-licoreria/async-result";
+
+export default function AdLicoreriaCop() {
+  const {
+    products,
+    stockTransfers,
+    purchaseRequests,
+    customerCommitments,
+    getOperationalAvailability,
+    getCopDashboard,
+    getPresentationsFor,
+    createTransferDraft,
+    confirmTransfer,
+    createPurchaseRequest,
+    hasPermission,
+    getCurrentOperator,
+    warehouses,
+  } = useAdLicoreria();
+
+  const session = getCurrentOperator();
+  const canRead = hasPermission("cop.read");
+  const canTransfer =
+    hasPermission("cop.transfer") || hasPermission("inventory.transfer");
+  const canPurchaseReq = hasPermission("cop.purchase_request");
+  const warehouseLocked = Boolean(session?.warehouseId);
+  const licId = resolveCanonicalWarehouseId("LIC", warehouses);
+  const bodId = resolveCanonicalWarehouseId("BOD", warehouses);
+
+  const dash = getCopDashboard();
+  const [productId, setProductId] = useState(products[0]?.id ?? "");
+  const [warehouseId, setWarehouseId] = useState(
+    session?.warehouseId ?? licId,
+  );
+  const [requestQty, setRequestQty] = useState(20);
+  const [msg, setMsg] = useState("");
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (!products.some((p) => p.id === productId)) {
+      setProductId(products[0]?.id ?? "");
+    }
+  }, [products, productId]);
+
+  useEffect(() => {
+    const ids = warehouses.map((w) => w.id);
+    if (warehouseId && ids.includes(warehouseId)) return;
+    setWarehouseId(session?.warehouseId || licId);
+  }, [warehouses, session?.warehouseId, warehouseId, licId]);
+
+  const av = getOperationalAvailability(productId, requestQty, warehouseId);
+  const product = products.find((p) => p.id === productId);
+  const lic = av.byWarehouse.find((w) => w.warehouseId === licId);
+  const bod = av.byWarehouse.find((w) => w.warehouseId === bodId);
+  const defaultPres = getPresentationsFor(productId)[0];
+
+  const filteredCritical = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return dash.inventory.critical;
+    return dash.inventory.critical.filter((c) =>
+      c.name.toLowerCase().includes(q),
+    );
+  }, [dash.inventory.critical, query]);
+
+  if (!canRead) {
+    return (
+      <div className="ad-panel space-y-2">
+        <h1 className="ad-panel-title">Centro de operaciones</h1>
+        <p className="text-sm text-[var(--ad-muted)]">
+          {session
+            ? `${session.name} no tiene permiso COP (cop.read).`
+            : "Sin sesión o sin permiso para consultar el COP."}
+        </p>
+        <Link className="ad-btn" to={AD_LICORERIA_ROUTES.inicio}>
+          Volver
+        </Link>
+      </div>
+    );
+  }
+
+  const statusLabel =
+    av.status === "OK"
+      ? "PUEDE CUMPLIRSE"
+      : av.status === "TRANSFER_NEEDED"
+        ? "ABASTECIMIENTO · TRANSFERIR"
+        : av.status === "TRANSFER_AND_PURCHASE"
+          ? "TRANSFERIR + COMPRAR"
+          : av.status === "COMMITMENT_DEFICIT"
+            ? "DÉFICIT COMPROMISO CLIENTE"
+            : "COMPRA NECESARIA";
+
+  async function prepareTransfer() {
+    if (!canTransfer) {
+      setMsg("Sin permiso para transferencias");
+      return;
+    }
+    const qtyBase = av.plan.transferSuggestion;
+    if (qtyBase <= 0 || !av.plan.transferFromId || !defaultPres) {
+      setMsg("No hay sugerencia de transferencia o presentación");
+      return;
+    }
+    /** Sugerencia COP está en u. base → convertir a qty de presentación. */
+    const units = Math.max(1, defaultPres.unitsPerPresentation || 1);
+    const qty = Math.ceil(qtyBase / units);
+    const result = await resolveAdResult(
+      createTransferDraft({
+        fromWarehouseId: av.plan.transferFromId,
+        toWarehouseId: warehouseId,
+        lines: [{ productId, presentationId: defaultPres.id, qty }],
+        createdBy: "COP A&D",
+        reason: `COP · cubrir pedido de ${requestQty} u. base (${qtyBase} base → ${qty} × ${defaultPres.name})`,
+      }),
+    );
+    if (!result.ok) {
+      setMsg(result.error);
+      return;
+    }
+    setMsg(
+      `Transferencia borrador ${result.data.number} lista · confirmar en Transferencias`,
+    );
+  }
+
+  async function confirmSuggestedTransfer() {
+    const pending = stockTransfers.find(
+      (t) =>
+        t.status === "BORRADOR" &&
+        t.lines.some((l) => l.productId === productId),
+    );
+    if (!pending) {
+      await prepareTransfer();
+      return;
+    }
+    const conf = await resolveAdResult(
+      confirmTransfer({
+        transferId: pending.id,
+        userName: "COP A&D",
+      }),
+    );
+    setMsg(
+      conf.ok
+        ? `Transferencia confirmada ${conf.data.number}`
+        : conf.error,
+    );
+  }
+
+  async function createBuy() {
+    if (!canPurchaseReq) {
+      setMsg("Sin permiso para solicitar compras");
+      return;
+    }
+    const needBase =
+      av.plan.purchaseNeeded ||
+      Math.max(0, requestQty - av.availableOperationalTotal);
+    if (needBase <= 0 || !defaultPres) {
+      setMsg("No hace falta compra");
+      return;
+    }
+    const units = Math.max(1, defaultPres.unitsPerPresentation || 1);
+    const qty = Math.ceil(needBase / units);
+    const r = await resolveAdResult(
+      createPurchaseRequest({
+        productId,
+        presentationId: defaultPres.id,
+        qty,
+        warehouseId,
+        createdBy: "COP A&D",
+        reason: `Faltante operativo pedido ${requestQty} (${needBase} u. base → ${qty} × ${defaultPres.name})`,
+      }),
+    );
+    setMsg(r.ok ? `Solicitud ${r.data.number} · ${qty} × ${defaultPres.name}` : r.error);
+  }
+
+  return (
+    <div className="ad-cop space-y-5">
+      <header className="ad-cop__hero">
+        <div>
+          <p className="ad-eyebrow">A&D · tiempo real</p>
+          <h1 className="ad-display text-4xl text-[var(--ad-gold-soft)] md:text-5xl">
+            Centro de operaciones
+          </h1>
+          <p className="mt-2 max-w-xl text-sm text-[var(--ad-muted)]">
+            ¿Tenemos mercancía suficiente? Si no: cuánto falta y dónde
+            conseguirla. Facturar, servir, comprometer y transferir son eventos
+            distintos.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            className="ad-btn ad-btn--gold"
+            to={AD_LICORERIA_ROUTES.copTransferencias}
+          >
+            Transferencias
+          </Link>
+          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.copReportes}>
+            Reportes COP
+          </Link>
+          <Link className="ad-btn" to={AD_LICORERIA_ROUTES.ventas}>
+            POS
+          </Link>
+        </div>
+      </header>
+
+      <section className="ad-cop__grid">
+        <article className="ad-panel ad-cop__stat">
+          <div className="ad-stat__label">Cuentas abiertas</div>
+          <div className="ad-display text-3xl">{dash.operation.openAccounts}</div>
+        </article>
+        <article className="ad-panel ad-cop__stat">
+          <div className="ad-stat__label">Mesas ocupadas</div>
+          <div className="ad-display text-3xl">
+            {dash.operation.occupiedTables}
+          </div>
+        </article>
+        <article className="ad-panel ad-cop__stat">
+          <div className="ad-stat__label">Mesoneras en piso</div>
+          <div className="ad-display text-3xl">
+            {dash.operation.workingMesoneras}
+          </div>
+        </article>
+        <article className="ad-panel ad-cop__stat">
+          <div className="ad-stat__label">Ventas hoy</div>
+          <div className="ad-display text-3xl">
+            {dash.operation.completedSalesToday}
+          </div>
+        </article>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="ad-panel space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 className="ad-panel-title">Consulta operativa</h2>
+            <span
+              className={`ad-badge ${
+                av.status === "OK" ? "ad-badge--ok" : "ad-badge--warn"
+              }`}
+            >
+              {statusLabel}
+            </span>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <select
+              className="ad-select"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+            >
+              {products
+                .filter((p) => p.active)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+            <select
+              className="ad-select"
+              value={warehouseId}
+              onChange={(e) => setWarehouseId(e.target.value)}
+            >
+              {warehouses
+                .filter((w) => w.active)
+                .map((w) => (
+                  <option key={w.id} value={w.id}>
+                    Servicio: {w.name}
+                  </option>
+                ))}
+            </select>
+            <input
+              className="ad-input"
+              type="number"
+              min={0}
+              value={requestQty}
+              onChange={(e) => setRequestQty(Number(e.target.value) || 0)}
+              placeholder="Cantidad pedida"
+            />
+          </div>
+
+          <div className="ad-cop__avail">
+            <div>
+              <div className="ad-stat__label">Necesario</div>
+              <strong>{av.requestedBase}</strong>
+            </div>
+            <div>
+              <div className="ad-stat__label">Disponible operativo</div>
+              <strong>{av.availableOperationalTotal}</strong>
+            </div>
+            <div>
+              <div className="ad-stat__label">Faltante</div>
+              <strong className="text-[var(--ad-danger)]">
+                {Math.max(0, av.requestedBase - av.availableOperationalTotal)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="ad-cop__wh">
+              <h3 className="ad-eyebrow">Licorería</h3>
+              <ul className="space-y-1 text-sm">
+                <li>Físico: {lic?.physical ?? 0}</li>
+                <li>Comprometido activo: {lic?.committedActive ?? 0}</li>
+                <li>Disponible operativo: {lic?.availableOperational ?? 0}</li>
+              </ul>
+            </div>
+            <div className="ad-cop__wh">
+              <h3 className="ad-eyebrow">Bodegón</h3>
+              <ul className="space-y-1 text-sm">
+                <li>Físico: {bod?.physical ?? 0}</li>
+                <li>Comprometido activo: {bod?.committedActive ?? 0}</li>
+                <li>Disponible operativo: {bod?.availableOperational ?? 0}</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="grid gap-2 text-sm text-[var(--ad-muted)] sm:grid-cols-3">
+            <div>
+              Total físico:{" "}
+              <strong className="text-[var(--ad-text)]">{av.physicalTotal}</strong>
+            </div>
+            <div>
+              Total comprometido:{" "}
+              <strong className="text-[var(--ad-text)]">
+                {av.committedActiveTotal}
+              </strong>
+            </div>
+            <div>
+              Pendiente clientes:{" "}
+              <strong className="text-[var(--ad-text)]">
+                {av.customerPendingBase}
+              </strong>
+              {av.customerCommitmentDeficit > 0 ? (
+                <span className="ml-2 ad-badge ad-badge--warn">
+                  Déficit {av.customerCommitmentDeficit}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {av.plan.transferSuggestion > 0 || av.plan.purchaseNeeded > 0 ? (
+            <div className="ad-cop__alert">
+              <p>
+                {av.plan.transferSuggestion > 0
+                  ? `Sugerencia: transferir ${av.plan.transferSuggestion} · ${warehouseLabel(av.plan.transferFromId ?? bodId, warehouses)} → ${warehouseLabel(warehouseId, warehouses)}`
+                  : null}
+              </p>
+              {av.plan.purchaseNeeded > 0 ? (
+                <p>Compra necesaria: {av.plan.purchaseNeeded} unidades</p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {av.plan.transferSuggestion > 0 ? (
+                  <>
+                    <button
+                      type="button"
+                      className="ad-btn ad-btn--gold"
+                      onClick={prepareTransfer}
+                      disabled={!canTransfer}
+                    >
+                      Preparar transferencia {av.plan.transferSuggestion}
+                    </button>
+                    <button
+                      type="button"
+                      className="ad-btn ad-btn--primary"
+                      onClick={confirmSuggestedTransfer}
+                      disabled={!canTransfer}
+                    >
+                      Confirmar última borrador
+                    </button>
+                  </>
+                ) : null}
+                {av.plan.purchaseNeeded > 0 ? (
+                  <button
+                    type="button"
+                    className="ad-btn"
+                    onClick={createBuy}
+                    disabled={!canPurchaseReq}
+                  >
+                    Crear compra de {av.plan.purchaseNeeded}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--ad-success)]">
+              ● Operación cubrible con disponibilidad actual
+              {product ? ` · ${product.name}` : ""}
+            </p>
+          )}
+
+          {msg ? (
+            <p className="text-sm text-[var(--ad-gold-soft)]">{msg}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-4">
+          <div className="ad-panel space-y-3">
+            <h2 className="ad-panel-title">Inventario crítico</h2>
+            <input
+              className="ad-input"
+              placeholder="Filtrar producto…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <ul className="max-h-64 space-y-2 overflow-auto text-sm">
+              {filteredCritical.map((c) => (
+                <li key={c.productId}>
+                  <button
+                    type="button"
+                    className="ad-cop__crit"
+                    onClick={() => setProductId(c.productId)}
+                  >
+                    <span>{c.name}</span>
+                    <span className="text-[var(--ad-muted)]">
+                      disp {c.availability.availableOperationalTotal} · comp{" "}
+                      {c.availability.committedActiveTotal}
+                      {c.availability.customerCommitmentDeficit > 0
+                        ? ` · déficit ${c.availability.customerCommitmentDeficit}`
+                        : ""}
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {!filteredCritical.length ? (
+                <li className="text-[var(--ad-muted)]">Sin alertas</li>
+              ) : null}
+            </ul>
+          </div>
+
+          <div className="ad-panel space-y-2">
+            <h2 className="ad-panel-title">Abastecimiento</h2>
+            <p className="text-sm text-[var(--ad-muted)]">
+              Transferencias pendientes:{" "}
+              <strong className="text-[var(--ad-text)]">
+                {dash.supply.pendingTransfers.length}
+              </strong>
+            </p>
+            <p className="text-sm text-[var(--ad-muted)]">
+              Compras pendientes:{" "}
+              <strong className="text-[var(--ad-text)]">
+                {dash.supply.pendingPurchases.length}
+              </strong>
+            </p>
+            <p className="text-sm text-[var(--ad-muted)]">
+              Compromisos cliente:{" "}
+              <strong className="text-[var(--ad-text)]">
+                {customerCommitments.filter((c) => c.status === "PENDIENTE")
+                  .length}
+              </strong>
+            </p>
+            <p className="text-sm text-[var(--ad-muted)]">
+              Solicitudes:{" "}
+              <strong className="text-[var(--ad-text)]">
+                {purchaseRequests.filter((p) => p.status === "SOLICITADA")
+                  .length}
+              </strong>
+            </p>
+          </div>
+
+          <div className="ad-panel space-y-2">
+            <h2 className="ad-panel-title">Documentos</h2>
+            <p className="text-sm text-[var(--ad-muted)]">
+              Pre-facturas: {dash.documents.preliminars.length}
+            </p>
+            <p className="text-sm text-[var(--ad-muted)]">
+              Transferencias recientes: {stockTransfers.length}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="ad-panel space-y-3">
+        <h2 className="ad-panel-title">
+          Vista por depósito · {warehouseLabel(warehouseId, warehouses)}
+          {warehouseLocked ? " · fijado" : ""}
+        </h2>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className={`ad-btn ${warehouseId === licId ? "ad-btn--gold" : ""}`}
+            onClick={() => setWarehouseId(licId)}
+            disabled={warehouseLocked && session?.warehouseId !== licId}
+          >
+            Licorería
+          </button>
+          <button
+            type="button"
+            className={`ad-btn ${warehouseId === bodId ? "ad-btn--gold" : ""}`}
+            onClick={() => setWarehouseId(bodId)}
+            disabled={warehouseLocked && session?.warehouseId !== bodId}
+          >
+            Bodegón
+          </button>
+        </div>
+        <WarehousePanel warehouseId={warehouseId} productId={productId} />
+      </section>
+    </div>
+  );
+}
+
+function WarehousePanel({
+  warehouseId,
+  productId,
+}: {
+  warehouseId: string;
+  productId: string;
+}) {
+  const {
+    getOperationalAvailability,
+    stockTransfers,
+    purchaseRequests,
+    inventory,
+  } = useAdLicoreria();
+  const av = getOperationalAvailability(productId, 0, warehouseId);
+  const wh = av.byWarehouse.find((w) => w.warehouseId === warehouseId);
+  const lines = inventory.filter((i) => i.warehouseId === warehouseId);
+  const incoming = stockTransfers.filter(
+    (t) =>
+      t.toWarehouseId === warehouseId &&
+      t.status !== "RECIBIDA" &&
+      t.status !== "CANCELADA",
+  );
+  const outgoing = stockTransfers.filter(
+    (t) =>
+      t.fromWarehouseId === warehouseId &&
+      t.status !== "RECIBIDA" &&
+      t.status !== "CANCELADA",
+  );
+  const buys = purchaseRequests.filter(
+    (p) =>
+      p.warehouseId === warehouseId &&
+      (p.status === "SOLICITADA" || p.status === "APROBADA"),
+  );
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 text-sm">
+      <div>
+        <div className="ad-stat__label">Físico (producto)</div>
+        <div className="ad-display text-2xl">{wh?.physical ?? 0}</div>
+      </div>
+      <div>
+        <div className="ad-stat__label">Comprometido</div>
+        <div className="ad-display text-2xl">{wh?.committedActive ?? 0}</div>
+      </div>
+      <div>
+        <div className="ad-stat__label">Disponible</div>
+        <div className="ad-display text-2xl">
+          {wh?.availableOperational ?? 0}
+        </div>
+      </div>
+      <div>
+        <div className="ad-stat__label">SKUs en depósito</div>
+        <div className="ad-display text-2xl">{lines.length}</div>
+      </div>
+      <div className="text-[var(--ad-muted)]">
+        Transferencias entrantes: {incoming.length}
+      </div>
+      <div className="text-[var(--ad-muted)]">
+        Transferencias salientes: {outgoing.length}
+      </div>
+      <div className="text-[var(--ad-muted)]">
+        Compras pendientes: {buys.length}
+      </div>
+    </div>
+  );
+}

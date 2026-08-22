@@ -5,5 +5,7 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     globals: false,
+    /** Evita carreras al mutar process.env.DATABASE_URL entre suites. */
+    fileParallelism: false,
   },
 });

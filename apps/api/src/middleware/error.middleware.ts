@@ -19,6 +19,22 @@ export function errorHandler(
     return;
   }
 
+  const payloadTooLarge =
+    err &&
+    typeof err === "object" &&
+    (("type" in err &&
+      (err as { type?: string }).type === "entity.too.large") ||
+      ("status" in err && Number((err as { status?: number }).status) === 413));
+  if (payloadTooLarge) {
+    res.status(413).json({
+      error: {
+        code: "PAYLOAD_TOO_LARGE",
+        message: "Archivo muy grande (máx. 512 MB)",
+      },
+    });
+    return;
+  }
+
   if (isProduction()) {
     console.error("[api] unhandled error", err instanceof Error ? err.message : err);
   } else {
