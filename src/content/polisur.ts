@@ -41,7 +41,7 @@ export const polisurCopy = {
     title: "POLISUR",
     subtitle: "Instituto Autónomo Policía del Municipio San Francisco",
     message:
-      "Tres décadas al servicio del pueblo sanfranciscano: educar, proteger y servir con disciplina, prevención y presencia en las siete parroquias del municipio.",
+      "Tres décadas al servicio del pueblo sanfranciscano: educar, proteger y servir con disciplina.\n\nNuestro lema es Defender y Proteger a Nuestro Pueblo",
     ctaPrimary: "Conoce la institución",
     ctaSecondary: "Preinscripción",
   },
@@ -52,6 +52,14 @@ export const polisurCopy = {
       "POLISUR es el Instituto Autónomo Policía del Municipio San Francisco. Desde su fundación, el 18 de abril de 1996, la institución ha sostenido una labor continua de protección, orden público y convivencia ciudadana en la jurisdicción sanfranciscana, consolidándose como referencia de seguridad en la región zuliana.",
     history:
       "En 2026 la institución conmemoró su trigésimo aniversario, reafirmando el compromiso de hombres y mujeres que, con convicción y mística de servicio, trabajan por la tranquilidad del municipio. Con el apoyo de la Alcaldía y la comunidad, POLISUR ha fortalecido su despliegue mediante dotación de unidades patrulleras, equipos de comunicación y organización comunitaria a través de Cuadrantes de Paz.",
+  },
+  leadership: {
+    eyebrow: "Dirección general",
+    role: "Director General",
+    rank: "Primer Comisario",
+    name: "Lisimaco Alberto Quintanillo López",
+    note:
+      "Director General del Instituto Autónomo Policía Municipal de San Francisco (POLISUR).",
   },
   mission: {
     title: "Misión",
@@ -85,7 +93,7 @@ export const polisurCopy = {
       "POLISUR organiza su labor en unidades operativas, especialidades y programas de prevención y cercanía ciudadana, con despliegue en las parroquias del municipio San Francisco.",
   },
   canina: {
-    eyebrow: "Especialidad institucional",
+    eyebrow: "División",
     title: "Unidad Canina",
     body:
       "Unidad de Patrullaje Canino al servicio de la institución, orientada al apoyo operativo, la prevención y las labores especializadas donde el binomio policía-canino aporta capacidad técnica al servicio de la ciudadanía.",

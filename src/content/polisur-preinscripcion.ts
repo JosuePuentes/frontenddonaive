@@ -5,19 +5,22 @@ export const POLISUR_UNITS = [
   { id: "prevencion", label: "Prevención y cercanía" },
 ] as const;
 
-export type PolisurUnitId = (typeof POLISUR_UNITS)[number]["id"];
+export type PolisurUnitId = (typeof POLISUR_UNITS)[number]["id"] | string;
 
 export const POLISUR_UNIT_IDS = POLISUR_UNITS.map((unit) => unit.id);
 
-export function polisurUnitLabel(id: string) {
+export function polisurUnitLabel(
+  id: string,
+  units?: { id: string; label: string }[],
+) {
+  const fromDynamic = units?.find((unit) => unit.id === id)?.label;
+  if (fromDynamic) return fromDynamic;
   return POLISUR_UNITS.find((unit) => unit.id === id)?.label ?? id;
 }
 
-export function unitFromSearchParam(value: string | null): PolisurUnitId {
+export function unitFromSearchParam(value: string | null): string {
   if (value === "canina") return "unidad-canina";
-  if (POLISUR_UNIT_IDS.includes(value as PolisurUnitId)) {
-    return value as PolisurUnitId;
-  }
+  if (value && value.trim()) return value.trim();
   return "institucion";
 }
 

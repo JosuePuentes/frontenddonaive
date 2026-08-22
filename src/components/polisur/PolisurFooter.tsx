@@ -2,9 +2,27 @@ import { Link } from "react-router";
 import { usePolisurTheme } from "@/components/polisur/usePolisurTheme";
 import { POLISUR_ROUTES, polisurNavItems } from "@/constants/polisur-routes";
 import { polisurCopy } from "@/content/polisur";
+import {
+  hasPolisurSocial,
+  type PolisurSocialLinks,
+} from "@/content/polisur-site";
+import { trackPolisurClick } from "@/lib/polisur-track";
+import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
+
+const SOCIAL_LABELS: { key: keyof PolisurSocialLinks; label: string }[] = [
+  { key: "facebook", label: "Facebook" },
+  { key: "instagram", label: "Instagram" },
+  { key: "twitter", label: "X" },
+  { key: "youtube", label: "YouTube" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "whatsapp", label: "WhatsApp" },
+];
 
 function PolisurFooter() {
   const { isCanina } = usePolisurTheme();
+  const { site } = usePolisurSite();
+  const { contact, social } = site;
+  const hasSocial = hasPolisurSocial(social);
 
   return (
     <footer className="bg-[var(--ps-navy-900)]">
@@ -18,6 +36,12 @@ function PolisurFooter() {
           </p>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-[var(--ps-steel-300)]">
             {polisurCopy.brand.identification}
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)]">
+            <span className="text-[var(--ps-mint)]">
+              {polisurCopy.leadership.role}:
+            </span>{" "}
+            {polisurCopy.leadership.rank} {polisurCopy.leadership.name}
           </p>
         </div>
 
@@ -45,18 +69,63 @@ function PolisurFooter() {
                 Ir a contacto
               </Link>
             </li>
-            <li>{polisurCopy.footer.contactNote}</li>
+            {contact.phone ? (
+              <li>
+                <a
+                  href={`tel:${contact.phone.replace(/\s+/g, "")}`}
+                  className="hover:text-[var(--ps-white)]"
+                  onClick={() => trackPolisurClick("phone", "primary")}
+                >
+                  {contact.phone}
+                </a>
+              </li>
+            ) : null}
+            {contact.phoneAlt ? (
+              <li>
+                <a
+                  href={`tel:${contact.phoneAlt.replace(/\s+/g, "")}`}
+                  className="hover:text-[var(--ps-white)]"
+                  onClick={() => trackPolisurClick("phone", "alt")}
+                >
+                  {contact.phoneAlt}
+                </a>
+              </li>
+            ) : null}
+            {contact.email ? <li>{contact.email}</li> : null}
+            <li>{contact.address || polisurCopy.footer.contactNote}</li>
           </ul>
         </div>
 
         <div>
           <h3 className="ps-eyebrow">{polisurCopy.footer.attention}</h3>
           <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)]">
-            {polisurCopy.footer.attentionNote}
+            {contact.note || polisurCopy.footer.attentionNote}
           </p>
-          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)]">
-            {polisurCopy.footer.socialNote}
-          </p>
+          {hasSocial ? (
+            <ul className="mt-4 flex flex-wrap gap-x-3 gap-y-2 text-sm text-[var(--ps-steel-300)]">
+              {SOCIAL_LABELS.map(({ key, label }) => {
+                const href = social[key];
+                if (!href) return null;
+                return (
+                  <li key={key}>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="hover:text-[var(--ps-mint)]"
+                      onClick={() => trackPolisurClick("social", key)}
+                    >
+                      {label}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)]">
+              {polisurCopy.footer.socialNote}
+            </p>
+          )}
         </div>
       </div>
 

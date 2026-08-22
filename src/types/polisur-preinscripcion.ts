@@ -1,5 +1,7 @@
 import type { PolisurUnitId } from "@/content/polisur-preinscripcion";
 
+export type PolisurPreinscripcionStatus = "pendiente" | "validado";
+
 export type PolisurPreinscripcion = {
   id: string;
   nombres: string;
@@ -10,6 +12,7 @@ export type PolisurPreinscripcion = {
   unidad: PolisurUnitId;
   mensaje: string;
   createdAt: string;
+  status: PolisurPreinscripcionStatus;
 };
 
 export type PolisurPreinscripcionPayload = {

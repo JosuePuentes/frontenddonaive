@@ -1,0 +1,88 @@
+{
+  "updatedAt": "2026-08-21T08:00:11.031Z",
+  "contact": {
+    "address": "Municipio San Francisco, estado Zulia — República Bolivariana de Venezuela",
+    "phone": "04120691012",
+    "phoneAlt": "",
+    "email": "",
+    "hours": "Consulte en la institución los horarios y puntos de atención vigentes.",
+    "note": "POLISUR mantiene canales de atención y patrullaje preventivo en el municipio San Francisco. Consulte en la institución los horarios y puntos de atención vigentes."
+  },
+  "social": {
+    "facebook": "",
+    "instagram": "https://www.instagram.com/polisurenlinea?igsi=MWh6bTB2bm1wcm5tYw==",
+    "twitter": "",
+    "youtube": "",
+    "tiktok": "",
+    "whatsapp": ""
+  },
+  "banner": {
+    "title": "POLISUR",
+    "subtitle": "Instituto Autónomo Policía del Municipio San Francisco",
+    "message": "Tres décadas al servicio del pueblo sanfranciscano: Defender y Proteger a Nuestro Pueblo",
+    "ctaPrimary": "Conoce la institución",
+    "ctaSecondary": "Preinscripción",
+    "imageUrl": "/polisur/home/hero.jpg"
+  },
+  "news": [
+    {
+      "id": "noticia-mt2nerpt-0",
+      "title": "Polisur detiene dos ciudadanos tras agredir a un tercero en la urbanización La Coromoto",
+      "summary": "Oficiales de la Policía Municipal de San Francisco, realizan la localización y detención de dos ciudadanos quienes agredieron a otro, por motivos de territorialidad laboral, en la urbanización La Coromoto.",
+      "body": "Dandole cumplimiento a las instrucciones emitidas por el Primer Comisario Lisímaco Alberto Quintanillo López, Director General del Instituto Autónomo Policía del Municipio San Francisco, los oficiales de la citada Institución se mantienen en patrullajes preventivos en la municipalidad. Recibiendo el reporte, donde se les informa que se estaba suscitando un altercado entre 3 ciudadanos en plena vía pública, precisamente en la calle 171 con calle 48 de la urbanización La Coromoto, los oficiales se trasladan al sitio encontrándose con la víctima mal herida, quien les manifestó haber sido agredida físicamente por dos sujetos, impidiendole laborar en el mismo sitio de trabajo donde ellos se encontraban. Al entrevistarse con el agraviado, esté les brinda la información necesaria para que los oficiales realicen la búsqueda inmediata de los agresores; al efectuar el recorrido por las adyacencias, avistaron a dos sujetos que encajaban con la descripción física suministrada por la víctima; éstos, al ser abordados por la comisión policial asumieron una actitud de rebeldía, pero fueron controlados a través del diálogo. Los 3 ciudadanos fueron trasladados hasta el Centro de Diagnóstico Integral (C.D.I.), donde fueron valorados, arrojando que la víctima presentaba golpes en el cuerpo y el rostro; mientras que los señalados, gozaban de buena condición física. Los detenidos fueron trasladados hasta el Centro Preventivo de Resguardo y Garantías del Detenido, y serán presentados ante el Ministerio Público. ¡Para nosotros, primero es usted!",
+      "imageUrl": "/polisur/extras/nmt2nialdsax.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmt2nialdsax.jpg",
+        "/polisur/extras/nmt2nst76klr.jpg"
+      ],
+      "publishedAt": "2026-08-20T20:49:00.000Z",
+      "published": true
+    }
+  ],
+  "units": [
+    {
+      "id": "institucion",
+      "label": "POLISUR — Institución",
+      "summary": "",
+      "functions": "",
+      "imageUrl": "",
+      "showOnHome": false,
+      "showInCatalog": true,
+      "featured": false,
+      "active": true
+    },
+    {
+      "id": "unidad-canina",
+      "label": "Unidad Canina",
+      "summary": "Patrullaje canino y apoyo especializado con binomios entrenados al servicio de la institución.",
+      "functions": "Apoyo operativo, prevención y labores especializadas con el binomio policía-canino.",
+      "imageUrl": "/polisur/home/canina.jpg",
+      "showOnHome": true,
+      "showInCatalog": true,
+      "featured": false,
+      "active": true
+    },
+    {
+      "id": "unidades-operativas",
+      "label": "Unidades operativas",
+      "summary": "Patrullaje preventivo, orden público y respuesta operativa en las siete parroquias del municipio.",
+      "functions": "Patrullaje preventivo, orden público y respuesta operativa en las parroquias del municipio.",
+      "imageUrl": "/polisur/home/about.jpg",
+      "showOnHome": true,
+      "showInCatalog": true,
+      "featured": false,
+      "active": true
+    },
+    {
+      "id": "prevencion",
+      "label": "Prevención y cercanía",
+      "summary": "Vinculación comunitaria, Mesas y Cuadrantes de Paz, y prevención para la convivencia ciudadana.",
+      "functions": "Organización comunitaria, Mesas y Cuadrantes de Paz, y prevención de la convivencia ciudadana.",
+      "imageUrl": "/polisur/home/ciudadania.jpg",
+      "showOnHome": true,
+      "showInCatalog": true,
+      "featured": false,
+      "active": true
+    }
+  ]
+}

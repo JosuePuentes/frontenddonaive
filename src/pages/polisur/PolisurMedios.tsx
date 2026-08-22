@@ -3,6 +3,8 @@ import type { FormEvent } from "react";
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurCrest } from "@/components/polisur/PolisurCrest";
 import { PolisurPreinscripcionesAdmin } from "@/components/polisur/PolisurPreinscripcionesAdmin";
+import { PolisurClicksAdmin } from "@/components/polisur/PolisurClicksAdmin";
+import { PolisurSiteAdmin } from "@/components/polisur/PolisurSiteAdmin";
 import { POLISUR_ASSET_SLOTS } from "@/content/polisur-asset-slots";
 import { POLISUR_SESSION_KEY } from "@/content/polisur-preinscripcion";
 
@@ -87,9 +89,9 @@ export default function PolisurMedios() {
   const [carpeta, setCarpeta] =
     useState<(typeof CARPETAS)[number]["id"]>("logo");
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
-  const [modulo, setModulo] = useState<"documentos" | "preinscripciones">(
-    "preinscripciones",
-  );
+  const [modulo, setModulo] = useState<
+    "sitio" | "documentos" | "preinscripciones" | "clics"
+  >("sitio");
 
   const selected = useMemo(
     () => POLISUR_ASSET_SLOTS.find((s) => s.id === selectedId) ?? null,
@@ -283,8 +285,8 @@ export default function PolisurMedios() {
                   Acceso institucional
                 </h2>
                 <p className="mt-3 text-sm text-[var(--ps-steel-400)]">
-                  Ingrese la clave institucional para documentos y
-                  preinscripciones.
+                  Ingrese la clave institucional para editar el contenido del
+                  portal, documentos y preinscripciones.
                 </p>
               </div>
 
@@ -321,7 +323,11 @@ export default function PolisurMedios() {
                   <h2 className="mt-2 text-2xl text-[var(--ps-white)]">
                     {modulo === "preinscripciones"
                       ? "Preinscripciones"
-                      : "Carga de material"}
+                      : modulo === "clics"
+                        ? "Contador de clics"
+                        : modulo === "sitio"
+                          ? "Contenido de la web"
+                          : "Carga de material"}
                   </h2>
                 </div>
                 <button
@@ -333,7 +339,18 @@ export default function PolisurMedios() {
                 </button>
               </div>
 
-              <div className="flex gap-6 border-b border-[var(--ps-line)]">
+              <div className="flex flex-wrap gap-6 border-b border-[var(--ps-line)]">
+                <button
+                  type="button"
+                  onClick={() => setModulo("sitio")}
+                  className={
+                    modulo === "sitio"
+                      ? "border-b border-[var(--ps-mint)] pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-white)]"
+                      : "pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-400)]"
+                  }
+                >
+                  Sitio web
+                </button>
                 <button
                   type="button"
                   onClick={() => setModulo("preinscripciones")}
@@ -344,6 +361,17 @@ export default function PolisurMedios() {
                   }
                 >
                   Preinscripciones
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModulo("clics")}
+                  className={
+                    modulo === "clics"
+                      ? "border-b border-[var(--ps-mint)] pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-white)]"
+                      : "pb-2 text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-400)]"
+                  }
+                >
+                  Clics
                 </button>
                 <button
                   type="button"
@@ -358,9 +386,15 @@ export default function PolisurMedios() {
                 </button>
               </div>
 
+              {modulo === "sitio" ? (
+                <PolisurSiteAdmin clave={clave} />
+              ) : null}
+
               {modulo === "preinscripciones" ? (
                 <PolisurPreinscripcionesAdmin clave={clave} tone="polisur" />
               ) : null}
+
+              {modulo === "clics" ? <PolisurClicksAdmin clave={clave} /> : null}
 
               {modulo === "documentos" ? (
                 <>

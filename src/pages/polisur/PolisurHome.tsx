@@ -2,8 +2,8 @@ import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurHero } from "@/components/polisur/PolisurHero";
 import { PolisurAbout } from "@/components/polisur/PolisurAbout";
 import { PolisurDivisions } from "@/components/polisur/PolisurDivisions";
-import { PolisurCanina } from "@/components/polisur/PolisurCanina";
 import { PolisurCitizenSection } from "@/components/polisur/PolisurCitizenSection";
+import { PolisurNewsSection } from "@/components/polisur/PolisurNewsSection";
 import { PolisurPreinscriptionCTA } from "@/components/polisur/PolisurPreinscriptionCTA";
 
 export default function PolisurHome() {
@@ -16,8 +16,8 @@ export default function PolisurHome() {
       <PolisurHero />
       <PolisurAbout />
       <PolisurDivisions />
-      <PolisurCanina />
       <PolisurCitizenSection />
+      <PolisurNewsSection />
       <PolisurPreinscriptionCTA />
     </>
   );

@@ -6,14 +6,31 @@ import { dirname, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 
 export const STORE_REL = "data/polisur-preinscripciones.json";
+const SITE_REL = "data/polisur-site.json";
 const MAX_RECORDS = 5000;
 
-const UNIT_IDS = new Set([
+const FALLBACK_UNIT_IDS = new Set([
   "institucion",
   "unidad-canina",
   "unidades-operativas",
   "prevencion",
 ]);
+
+export function allowedUnitIds(root) {
+  try {
+    const file = resolve(root, SITE_REL);
+    if (!existsSync(file)) return FALLBACK_UNIT_IDS;
+    const parsed = JSON.parse(readFileSync(file, "utf8"));
+    const units = Array.isArray(parsed?.units) ? parsed.units : [];
+    const ids = units
+      .filter((u) => u && u.active !== false && u.id)
+      .map((u) => String(u.id).trim())
+      .filter(Boolean);
+    return ids.length > 0 ? new Set(ids) : FALLBACK_UNIT_IDS;
+  } catch {
+    return FALLBACK_UNIT_IDS;
+  }
+}
 
 export function sendJson(res, status, body) {
   res.statusCode = status;
@@ -57,7 +74,7 @@ function looksLikeEmail(value) {
   return at > 0 && dot > at + 1 && dot < value.length - 1;
 }
 
-export function normalizePayload(body) {
+export function normalizePayload(body, unitIds = FALLBACK_UNIT_IDS) {
   const nombres = clean(body.nombres, 80);
   const apellidos = clean(body.apellidos, 80);
   const cedula = clean(body.cedula, 24);
@@ -92,7 +109,8 @@ export function normalizePayload(body) {
     err.statusCode = 400;
     throw err;
   }
-  if (!UNIT_IDS.has(unidad)) {
+  const allowed = unitIds?.size ? unitIds : FALLBACK_UNIT_IDS;
+  if (!allowed.has(unidad)) {
     const err = new Error("Seleccione la unidad de interés.");
     err.statusCode = 400;
     throw err;
@@ -110,7 +128,30 @@ export function normalizePayload(body) {
       unidad,
       mensaje,
       createdAt: new Date().toISOString(),
+      status: "pendiente",
     },
+  };
+}
+
+export function normalizeRecord(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const id = clean(raw.id, 80);
+  if (!id) return null;
+  const status =
+    raw.status === "validado" || raw.status === "pendiente"
+      ? raw.status
+      : "pendiente";
+  return {
+    id,
+    nombres: clean(raw.nombres, 80),
+    apellidos: clean(raw.apellidos, 80),
+    cedula: clean(raw.cedula, 24),
+    correo: clean(raw.correo, 120).toLowerCase(),
+    telefono: clean(raw.telefono, 32),
+    unidad: clean(raw.unidad, 40),
+    mensaje: clean(raw.mensaje, 800),
+    createdAt: clean(raw.createdAt, 40) || new Date().toISOString(),
+    status,
   };
 }
 
@@ -130,7 +171,8 @@ export function readStore(root) {
   if (!existsSync(abs)) return [];
   try {
     const parsed = JSON.parse(readFileSync(abs, "utf8"));
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeRecord).filter(Boolean);
   } catch {
     return [];
   }
@@ -139,7 +181,8 @@ export function readStore(root) {
 export function writeStore(root, records) {
   const abs = resolveStore(root);
   mkdirSync(dirname(abs), { recursive: true });
-  writeFileSync(abs, `${JSON.stringify(records, null, 2)}\n`, "utf8");
+  const normalized = records.map(normalizeRecord).filter(Boolean);
+  writeFileSync(abs, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
 }
 
 export function appendRecord(root, record) {
@@ -149,7 +192,49 @@ export function appendRecord(root, record) {
     err.statusCode = 507;
     throw err;
   }
-  const next = [record, ...records];
+  const next = [normalizeRecord(record), ...records].filter(Boolean);
   writeStore(root, next);
-  return record;
+  return next[0];
+}
+
+export function deleteRecord(root, id) {
+  const target = clean(id, 80);
+  if (!target) {
+    const err = new Error("Indique la preinscripción a eliminar.");
+    err.statusCode = 400;
+    throw err;
+  }
+  const records = readStore(root);
+  const next = records.filter((r) => r.id !== target);
+  if (next.length === records.length) {
+    const err = new Error("Preinscripción no encontrada.");
+    err.statusCode = 404;
+    throw err;
+  }
+  writeStore(root, next);
+  return next;
+}
+
+export function setRecordStatus(root, id, status) {
+  const target = clean(id, 80);
+  const nextStatus = status === "validado" ? "validado" : "pendiente";
+  if (!target) {
+    const err = new Error("Indique la preinscripción.");
+    err.statusCode = 400;
+    throw err;
+  }
+  const records = readStore(root);
+  let found = false;
+  const next = records.map((r) => {
+    if (r.id !== target) return r;
+    found = true;
+    return { ...r, status: nextStatus };
+  });
+  if (!found) {
+    const err = new Error("Preinscripción no encontrada.");
+    err.statusCode = 404;
+    throw err;
+  }
+  writeStore(root, next);
+  return next.find((r) => r.id === target);
 }

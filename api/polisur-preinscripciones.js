@@ -1,7 +1,9 @@
 /**
  * Preinscripciones POLISUR.
- * POST action=submit  — público
- * GET  action=list    — clave institucional
+ * POST action=submit     — público
+ * GET  action=list       — clave institucional
+ * POST action=delete     — clave institucional
+ * POST action=setStatus  — clave institucional
  *
  * Secrets: POLISUR_MEDIOS_CLAVE, GITHUB_TOKEN
  * opcionales: POLISUR_MEDIOS_BRANCH, POLISUR_MEDIOS_REPO
@@ -10,8 +12,9 @@
 import { randomUUID } from "node:crypto";
 
 const STORE_PATH = "data/polisur-preinscripciones.json";
+const SITE_PATH = "data/polisur-site.json";
 const MAX_RECORDS = 5000;
-const UNIT_IDS = new Set([
+const FALLBACK_UNIT_IDS = new Set([
   "institucion",
   "unidad-canina",
   "unidades-operativas",
@@ -67,7 +70,29 @@ function looksLikeEmail(value) {
   return at > 0 && dot > at + 1 && dot < value.length - 1;
 }
 
-function normalizePayload(body) {
+function normalizeRecord(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const id = clean(raw.id, 80);
+  if (!id) return null;
+  const status =
+    raw.status === "validado" || raw.status === "pendiente"
+      ? raw.status
+      : "pendiente";
+  return {
+    id,
+    nombres: clean(raw.nombres, 80),
+    apellidos: clean(raw.apellidos, 80),
+    cedula: clean(raw.cedula, 24),
+    correo: clean(raw.correo, 120).toLowerCase(),
+    telefono: clean(raw.telefono, 32),
+    unidad: clean(raw.unidad, 40),
+    mensaje: clean(raw.mensaje, 800),
+    createdAt: clean(raw.createdAt, 40) || new Date().toISOString(),
+    status,
+  };
+}
+
+function normalizePayload(body, allowedUnitIds) {
   const nombres = clean(body.nombres, 80);
   const apellidos = clean(body.apellidos, 80);
   const cedula = clean(body.cedula, 24);
@@ -100,7 +125,8 @@ function normalizePayload(body) {
     err.statusCode = 400;
     throw err;
   }
-  if (!UNIT_IDS.has(unidad)) {
+  const allowed = allowedUnitIds?.size ? allowedUnitIds : FALLBACK_UNIT_IDS;
+  if (!allowed.has(unidad)) {
     const err = new Error("Seleccione la unidad de interés.");
     err.statusCode = 400;
     throw err;
@@ -118,6 +144,7 @@ function normalizePayload(body) {
       unidad,
       mensaje,
       createdAt: new Date().toISOString(),
+      status: "pendiente",
     },
   };
 }
@@ -137,6 +164,32 @@ async function readBody(req) {
   for await (const chunk of req) chunks.push(chunk);
   const raw = Buffer.concat(chunks).toString("utf8");
   return raw ? JSON.parse(raw) : {};
+}
+
+async function getAllowedUnitIds() {
+  const { repo, branch, token } = githubConfig();
+  if (!token) return FALLBACK_UNIT_IDS;
+  const api = `https://api.github.com/repos/${repo}/contents/${SITE_PATH}?ref=${encodeURIComponent(branch)}`;
+  try {
+    const res = await fetch(api, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+      },
+    });
+    if (!res.ok) return FALLBACK_UNIT_IDS;
+    const data = await res.json();
+    const decoded = Buffer.from(data.content || "", "base64").toString("utf8");
+    const parsed = JSON.parse(decoded);
+    const units = Array.isArray(parsed?.units) ? parsed.units : [];
+    const ids = units
+      .filter((u) => u && u.active !== false && u.id)
+      .map((u) => String(u.id).trim())
+      .filter(Boolean);
+    return ids.length > 0 ? new Set(ids) : FALLBACK_UNIT_IDS;
+  } catch {
+    return FALLBACK_UNIT_IDS;
+  }
 }
 
 async function getGitHubFile() {
@@ -167,7 +220,9 @@ async function getGitHubFile() {
   try {
     const decoded = Buffer.from(data.content || "", "base64").toString("utf8");
     const parsed = JSON.parse(decoded);
-    items = Array.isArray(parsed) ? parsed : [];
+    items = Array.isArray(parsed)
+      ? parsed.map(normalizeRecord).filter(Boolean)
+      : [];
   } catch {
     items = [];
   }
@@ -176,10 +231,11 @@ async function getGitHubFile() {
 
 async function putGitHubFile({ items, sha, message }) {
   const { repo, branch, token } = githubConfig();
+  const normalized = items.map(normalizeRecord).filter(Boolean);
   const api = `https://api.github.com/repos/${repo}/contents/${STORE_PATH}`;
-  const content = Buffer.from(`${JSON.stringify(items, null, 2)}\n`).toString(
-    "base64",
-  );
+  const content = Buffer.from(
+    `${JSON.stringify(normalized, null, 2)}\n`,
+  ).toString("base64");
   const res = await fetch(api, {
     method: "PUT",
     headers: {
@@ -204,23 +260,18 @@ async function putGitHubFile({ items, sha, message }) {
   }
 }
 
-async function appendWithRetry(record) {
+async function mutateWithRetry(mutator, message) {
   let lastErr;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
       const current = await getGitHubFile();
-      if (current.items.length >= MAX_RECORDS) {
-        const err = new Error("El registro de preinscripciones está saturado.");
-        err.statusCode = 507;
-        throw err;
-      }
-      const items = [record, ...current.items];
+      const nextItems = mutator(current.items);
       await putGitHubFile({
-        items,
+        items: nextItems,
         sha: current.sha,
-        message: `chore(polisur): preinscripción ${record.id}`,
+        message,
       });
-      return;
+      return nextItems;
     } catch (err) {
       lastErr = err;
       if (err.statusCode !== 409) throw err;
@@ -240,11 +291,19 @@ export default async function handler(req, res) {
   try {
     if (req.method === "POST" && action === "submit") {
       const body = await readBody(req);
-      const result = normalizePayload(body);
+      const allowed = await getAllowedUnitIds();
+      const result = normalizePayload(body, allowed);
       if (result.honeypot) {
         return json(res, 200, { ok: true });
       }
-      await appendWithRetry(result.record);
+      await mutateWithRetry((items) => {
+        if (items.length >= MAX_RECORDS) {
+          const err = new Error("El registro de preinscripciones está saturado.");
+          err.statusCode = 507;
+          throw err;
+        }
+        return [result.record, ...items];
+      }, `chore(polisur): preinscripción ${result.record.id}`);
       return json(res, 200, { ok: true, id: result.record.id });
     }
 
@@ -253,6 +312,56 @@ export default async function handler(req, res) {
       assertClave(clave);
       const current = await getGitHubFile();
       return json(res, 200, { ok: true, items: current.items });
+    }
+
+    if (req.method === "POST" && action === "delete") {
+      const body = await readBody(req);
+      assertClave(body.clave || url.searchParams.get("clave") || "");
+      const id = clean(body.id, 80);
+      if (!id) {
+        const err = new Error("Indique la preinscripción a eliminar.");
+        err.statusCode = 400;
+        throw err;
+      }
+      const items = await mutateWithRetry((current) => {
+        const next = current.filter((r) => r.id !== id);
+        if (next.length === current.length) {
+          const err = new Error("Preinscripción no encontrada.");
+          err.statusCode = 404;
+          throw err;
+        }
+        return next;
+      }, `chore(polisur): eliminar preinscripción ${id}`);
+      return json(res, 200, { ok: true, items });
+    }
+
+    if (req.method === "POST" && action === "setStatus") {
+      const body = await readBody(req);
+      assertClave(body.clave || url.searchParams.get("clave") || "");
+      const id = clean(body.id, 80);
+      const status = body.status === "validado" ? "validado" : "pendiente";
+      if (!id) {
+        const err = new Error("Indique la preinscripción.");
+        err.statusCode = 400;
+        throw err;
+      }
+      let updated = null;
+      const items = await mutateWithRetry((current) => {
+        let found = false;
+        const next = current.map((r) => {
+          if (r.id !== id) return r;
+          found = true;
+          updated = { ...r, status };
+          return updated;
+        });
+        if (!found) {
+          const err = new Error("Preinscripción no encontrada.");
+          err.statusCode = 404;
+          throw err;
+        }
+        return next;
+      }, `chore(polisur): ${status} preinscripción ${id}`);
+      return json(res, 200, { ok: true, item: updated, items });
     }
 
     return json(res, 404, { ok: false, error: "Acción no encontrada." });

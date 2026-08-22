@@ -1,0 +1,18 @@
+{
+  "updatedAt": "2026-08-21T21:20:20.504Z",
+  "news": {
+    "noticia-mt2nerpt-0": 3
+  },
+  "social": {
+    "facebook": 0,
+    "instagram": 1,
+    "twitter": 0,
+    "youtube": 0,
+    "tiktok": 0,
+    "whatsapp": 0
+  },
+  "phone": {
+    "primary": 1,
+    "alt": 0
+  }
+}

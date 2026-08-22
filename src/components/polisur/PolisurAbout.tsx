@@ -33,6 +33,23 @@ function PolisurAbout() {
             <p className="mt-4 text-[0.95rem] leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
               {polisurCopy.about.history}
             </p>
+
+            <aside className="mt-8 border-l-2 border-[var(--ps-yellow)] pl-4">
+              <p className="ps-eyebrow text-[var(--ps-mint)]">
+                {polisurCopy.leadership.eyebrow}
+              </p>
+              <p className="mt-2 text-lg font-semibold text-[var(--ps-white)] sm:text-xl">
+                {polisurCopy.leadership.rank}{" "}
+                {polisurCopy.leadership.name}
+              </p>
+              <p className="mt-1 text-sm text-[var(--ps-mint)]">
+                {polisurCopy.leadership.role}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--ps-steel-300)]">
+                {polisurCopy.leadership.note}
+              </p>
+            </aside>
+
             <p className="mt-6 text-xs uppercase tracking-[0.14em] text-[var(--ps-mint)]">
               {polisurCopy.brand.jurisdiction}
             </p>

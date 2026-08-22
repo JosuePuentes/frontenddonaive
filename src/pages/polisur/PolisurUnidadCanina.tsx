@@ -1,49 +1,52 @@
-import { useState } from "react";
 import { Link } from "react-router";
+import { useState } from "react";
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurMark } from "@/components/polisur/PolisurMark";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import { POLISUR_ROUTES } from "@/constants/polisur-routes";
 import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
-
-const futureSections = [
-  { key: "identidad", label: "Identidad de la división" },
-  { key: "funciones", label: "Funciones" },
-  { key: "entrenamiento", label: "Entrenamiento" },
-  { key: "especialidades", label: "Especialidades" },
-  { key: "caninos", label: "Caninos" },
-  { key: "guias", label: "Guías" },
-  { key: "galeria", label: "Galería" },
-  { key: "requisitos", label: "Requisitos para aspirantes" },
-] as const;
+import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
 export default function PolisurUnidadCanina() {
+  const { site } = usePolisurSite();
+  const unit = site.units.find((u) => u.id === "unidad-canina");
   const [binomioFailed, setBinomioFailed] = useState(false);
+
+  const summary = unit?.summary?.trim() || polisurCopy.canina.body;
+  const functions = unit?.functions?.trim() || "";
+  const imageSrc =
+    unit?.imageUrl ||
+    POLISUR_MEDIA.home.canina ||
+    POLISUR_MEDIA.unidadCanina.hero;
 
   return (
     <>
       <PageMeta
         title="Unidad Canina — POLISUR"
-        description="Unidad Canina de POLISUR: especialidad institucional, entrenamiento y servicio."
+        description={summary}
       />
 
       <section className="ps-canina-stage border-b border-[var(--ps-line)]">
         <div className="ps-container relative grid gap-8 py-12 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-end lg:gap-6 lg:py-10">
           <div className="relative z-[1] max-w-md pb-4 lg:pb-16">
-            <p className="ps-eyebrow text-[var(--ps-mint)]">POLISUR</p>
+            <p className="ps-eyebrow text-[var(--ps-mint)]">
+              {polisurCopy.canina.eyebrow}
+            </p>
             <h1 className="ps-display mt-3 text-4xl uppercase tracking-wide text-[var(--ps-white)] sm:text-6xl">
-              Unidad Canina
+              {unit?.label || "Unidad Canina"}
             </h1>
             <hr className="ps-gold-rule mt-6" />
             <p className="mt-6 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-              {polisurCopy.canina.body}
+              {summary}
             </p>
-            <Link
-              to={POLISUR_ROUTES.preinscripcionCanina}
-              className="ps-btn ps-btn-ghost mt-8"
-            >
-              Preinscripción
-            </Link>
+            {unit?.active !== false ? (
+              <Link
+                to={POLISUR_ROUTES.preinscripcionCanina}
+                className="ps-btn ps-btn-ghost mt-8"
+              >
+                Preinscripción
+              </Link>
+            ) : null}
           </div>
 
           <div className="relative">
@@ -66,7 +69,7 @@ export default function PolisurUnidadCanina() {
                 />
               ) : (
                 <PolisurMedia
-                  src={POLISUR_MEDIA.unidadCanina.hero}
+                  src={imageSrc}
                   alt="Unidad Canina POLISUR"
                   className="min-h-[18rem] w-full sm:min-h-[24rem]"
                   overlay="soft"
@@ -77,50 +80,35 @@ export default function PolisurUnidadCanina() {
         </div>
       </section>
 
-      <section className="border-b border-[var(--ps-line)] bg-[var(--ps-navy-900)]">
-        <div className="ps-container grid gap-8 py-12 sm:py-16 lg:grid-cols-2 lg:items-center">
-          <div>
-            <h2 className="text-2xl text-[var(--ps-white)] sm:text-3xl">
-              Presentación
-            </h2>
-            <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-              Esta página está preparada para recibir la identidad visual y el
-              contenido oficial de la Unidad Canina: misión de la división,
-              funciones, entrenamiento, especialidades, caninos, guías y
-              galería fotográfica.
-            </p>
+      {functions ? (
+        <section className="border-b border-[var(--ps-line)] bg-[var(--ps-navy-900)]">
+          <div className="ps-container grid gap-8 py-12 sm:py-16 lg:grid-cols-2 lg:items-center">
+            <div>
+              <p className="ps-eyebrow">Funciones</p>
+              <h2 className="mt-3 text-2xl text-[var(--ps-white)] sm:text-3xl">
+                Labor de la Unidad
+              </h2>
+              <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+                {functions}
+              </p>
+            </div>
+            <PolisurMedia
+              src={imageSrc}
+              alt="Unidad Canina POLISUR"
+              className="min-h-[14rem] sm:min-h-[18rem]"
+              overlay="soft"
+            />
           </div>
-
-          <PolisurMedia
-            src={POLISUR_MEDIA.unidadCanina.entrenamiento}
-            alt="Entrenamiento Unidad Canina"
-            className="min-h-[14rem] sm:min-h-[18rem]"
-            overlay="soft"
-          />
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section className="bg-[var(--ps-navy-950)]">
-        <div className="ps-container py-12 sm:py-16">
-          <p className="ps-eyebrow">Arquitectura de contenido</p>
-          <h2 className="mt-3 text-2xl text-[var(--ps-white)]">
-            Próximas secciones
-          </h2>
-          <ul className="mt-8 grid gap-px bg-[var(--ps-line)] sm:grid-cols-2">
-            {futureSections.map((section) => (
-              <li
-                key={section.key}
-                className="bg-[var(--ps-navy-950)] px-4 py-4 text-sm text-[var(--ps-steel-300)]"
-              >
-                {section.label}
-              </li>
-            ))}
-          </ul>
+        <div className="ps-container py-10 sm:py-12">
           <Link
-            to={POLISUR_ROUTES.home}
-            className="mt-8 inline-flex text-sm font-semibold text-[var(--ps-paper)] underline-offset-4 hover:underline"
+            to={POLISUR_ROUTES.divisiones}
+            className="inline-flex text-sm font-semibold text-[var(--ps-paper)] underline-offset-4 hover:underline"
           >
-            Volver al inicio
+            Volver a divisiones
           </Link>
         </div>
       </section>

@@ -2,14 +2,21 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { POLISUR_ROUTES } from "@/constants/polisur-routes";
 import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
+import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
 /**
  * Sección protagonista: binomio (PNG transparente) sobre composición azul marino.
  * No alterar rostros, uniformes ni el canino. Respetar fondo transparente.
  */
 function PolisurCanina() {
+  const { site } = usePolisurSite();
+  const unit = site.units.find((u) => u.id === "unidad-canina");
   const [binomioFailed, setBinomioFailed] = useState(false);
   const [sceneFailed, setSceneFailed] = useState(false);
+
+  const body = unit?.summary?.trim() || polisurCopy.canina.body;
+  const title = unit?.label || polisurCopy.canina.title;
+  const imageSrc = unit?.imageUrl || POLISUR_MEDIA.home.canina;
 
   return (
     <section
@@ -27,11 +34,11 @@ function PolisurCanina() {
               id="polisur-canina-title"
               className="mt-4 text-4xl uppercase leading-[1.05] tracking-wide text-[var(--ps-white)] sm:text-5xl"
             >
-              {polisurCopy.canina.title}
+              {title}
             </h2>
             <hr className="ps-gold-rule mt-6" />
             <p className="mt-6 text-[0.95rem] leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-              {polisurCopy.canina.body}
+              {body}
             </p>
             <Link
               to={POLISUR_ROUTES.unidadCanina}
@@ -66,7 +73,7 @@ function PolisurCanina() {
               />
             ) : !sceneFailed ? (
               <img
-                src={POLISUR_MEDIA.home.canina}
+                src={imageSrc}
                 alt="Unidad Canina de POLISUR"
                 className="h-full min-h-[18rem] w-full object-cover object-[center_35%] sm:min-h-[24rem]"
                 onError={() => setSceneFailed(true)}
