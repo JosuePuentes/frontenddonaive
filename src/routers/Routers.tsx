@@ -8,9 +8,12 @@ import { ROUTES } from "@/constants/routes";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { isPolisurHost } from "@/lib/polisur-host";
 import { isAdLicoreriaHost } from "@/lib/ad-licoreria-host";
+import { isDonaiveSoftwareHost } from "@/lib/donaive-software-host";
 import { polisurRouteTree } from "@/routers/PolisurRouteTree";
 import { adLicoreriaRouteTree } from "@/routers/AdLicoreriaRouteTree";
+import { donaiveSoftwareRouteTree } from "@/routers/DonaiveSoftwareRouteTree";
 import { AdLicoreriaLayout } from "@/components/ad-licoreria/AdLicoreriaLayout";
+import { DonaiveSoftwareLayout } from "@/components/donaive-software/DonaiveSoftwareLayout";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Empresa = lazy(() => import("@/pages/Empresa"));
@@ -79,7 +82,9 @@ const PolisurPreinscripciones = lazy(
 const AppRouter = () => {
   const onPolisurDomain = isPolisurHost();
   const onAdLicoreriaDomain = isAdLicoreriaHost();
-  const showDonaiveShell = !onPolisurDomain && !onAdLicoreriaDomain;
+  const onDonaiveSoftwareDomain = isDonaiveSoftwareHost();
+  const showDonaiveShell =
+    !onPolisurDomain && !onAdLicoreriaDomain && !onDonaiveSoftwareDomain;
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -104,7 +109,7 @@ const AppRouter = () => {
         ) : null}
 
         {/* POLISUR — dominio propio (/) + namespace /polisur en Donaive */}
-        {!onAdLicoreriaDomain ? (
+        {!onAdLicoreriaDomain && !onDonaiveSoftwareDomain ? (
           <Route element={<PolisurLayout />}>
             {onPolisurDomain ? polisurRouteTree("") : null}
             {polisurRouteTree("/polisur")}
@@ -112,10 +117,18 @@ const AppRouter = () => {
         ) : null}
 
         {/* A&D Licorería — /licoreria ahora; raíz cuando exista dominio propio */}
-        {!onPolisurDomain ? (
+        {!onPolisurDomain && !onDonaiveSoftwareDomain ? (
           <Route element={<AdLicoreriaLayout />}>
             {onAdLicoreriaDomain ? adLicoreriaRouteTree("") : null}
             {adLicoreriaRouteTree("/licoreria")}
+          </Route>
+        ) : null}
+
+        {/* Donaive Software — /software en Donaive; raíz en host propio */}
+        {!onPolisurDomain && !onAdLicoreriaDomain ? (
+          <Route element={<DonaiveSoftwareLayout />}>
+            {onDonaiveSoftwareDomain ? donaiveSoftwareRouteTree("") : null}
+            {donaiveSoftwareRouteTree("/software")}
           </Route>
         ) : null}
 

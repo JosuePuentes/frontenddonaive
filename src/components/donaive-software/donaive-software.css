@@ -1,0 +1,265 @@
+/**
+ * Donaive Software — admin práctico.
+ * Dirección visual: carbón + teal, tipografía Syne + Manrope.
+ * No reutiliza temas de Donaive marketing, Polisur ni A&D.
+ */
+
+:root {
+  --ds-ink: #e8eef2;
+  --ds-muted: #8b9aab;
+  --ds-surface: #121820;
+  --ds-panel: #18212b;
+  --ds-line: rgba(232, 238, 242, 0.1);
+  --ds-accent: #2dd4bf;
+  --ds-accent-dim: rgba(45, 212, 191, 0.14);
+  --ds-warn: #f0b429;
+  --ds-danger: #f07178;
+  --ds-ok: #7fd99a;
+  --ds-font-brand: "Syne", system-ui, sans-serif;
+  --ds-font-ui: "Manrope", system-ui, sans-serif;
+  --ds-radius: 14px;
+}
+
+.ds-root {
+  min-height: 100dvh;
+  color: var(--ds-ink);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(45, 212, 191, 0.12), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(240, 180, 41, 0.06), transparent 50%),
+    linear-gradient(180deg, #0c1117 0%, #121820 40%, #0e141b 100%);
+  font-family: var(--ds-font-ui);
+}
+
+.ds-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 3rem;
+}
+
+.ds-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.ds-brand {
+  font-family: var(--ds-font-brand);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  color: var(--ds-ink);
+  text-decoration: none;
+}
+
+.ds-brand span {
+  color: var(--ds-accent);
+}
+
+.ds-business {
+  font-size: 0.85rem;
+  color: var(--ds-muted);
+}
+
+.ds-panel {
+  background: color-mix(in srgb, var(--ds-panel) 92%, transparent);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius);
+  padding: 1.25rem;
+  backdrop-filter: blur(8px);
+}
+
+.ds-title {
+  font-family: var(--ds-font-brand);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.ds-lead {
+  margin: 0.5rem 0 0;
+  color: var(--ds-muted);
+  font-size: 1rem;
+  max-width: 36rem;
+}
+
+.ds-grid-modules {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .ds-grid-modules {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 960px) {
+  .ds-grid-modules {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.ds-module-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 1.15rem 1.2rem;
+  border-radius: var(--ds-radius);
+  border: 1px solid var(--ds-line);
+  background: var(--ds-accent-dim);
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.ds-module-card:hover {
+  border-color: color-mix(in srgb, var(--ds-accent) 55%, transparent);
+  transform: translateY(-2px);
+  background: rgba(45, 212, 191, 0.2);
+}
+
+.ds-module-card h2 {
+  font-family: var(--ds-font-brand);
+  font-size: 1.2rem;
+  margin: 0 0 0.35rem;
+}
+
+.ds-module-card p {
+  margin: 0;
+  color: var(--ds-muted);
+  font-size: 0.9rem;
+}
+
+.ds-feature-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.ds-feature {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid var(--ds-line);
+  background: rgba(0, 0, 0, 0.2);
+  text-decoration: none;
+  color: inherit;
+}
+
+.ds-feature:hover {
+  border-color: color-mix(in srgb, var(--ds-accent) 40%, transparent);
+}
+
+.ds-feature h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ds-feature p {
+  margin: 0.25rem 0 0;
+  color: var(--ds-muted);
+  font-size: 0.85rem;
+}
+
+.ds-btn {
+  appearance: none;
+  border: 1px solid var(--ds-line);
+  background: transparent;
+  color: var(--ds-ink);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ds-btn:hover {
+  border-color: var(--ds-accent);
+}
+
+.ds-btn--primary {
+  background: var(--ds-accent);
+  color: #042f2e;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.ds-btn--primary:hover {
+  filter: brightness(1.05);
+}
+
+.ds-input {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--ds-line);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--ds-ink);
+  font: inherit;
+}
+
+.ds-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ds-muted);
+}
+
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.ds-table th,
+.ds-table td {
+  text-align: left;
+  padding: 0.65rem 0.4rem;
+  border-bottom: 1px solid var(--ds-line);
+}
+
+.ds-table th {
+  color: var(--ds-muted);
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ds-muted {
+  color: var(--ds-muted);
+}
+
+.ds-stat {
+  font-family: var(--ds-font-brand);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.ds-crumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--ds-muted);
+  margin-bottom: 1rem;
+}
+
+.ds-crumb a {
+  color: var(--ds-accent);
+  text-decoration: none;
+}
