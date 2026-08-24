@@ -111,3 +111,21 @@ export function buildCashClosure(input: {
 export function methodLabel(code: string): string {
   return DS_PAYMENT_LABELS[code as DsPaymentMethod] ?? code;
 }
+
+export function nextShiftNumber(
+  sessions: { registerId: string; openedAt: string }[],
+  registerId: string,
+  date: string,
+): number {
+  return (
+    sessions.filter(
+      (s) => s.registerId === registerId && s.openedAt.slice(0, 10) === date,
+    ).length + 1
+  );
+}
+
+export function openSessionOf(
+  sessions: { status: string }[],
+): { status: string } | undefined {
+  return sessions.find((s) => s.status === "open");
+}

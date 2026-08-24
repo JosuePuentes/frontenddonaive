@@ -174,6 +174,7 @@ export type DsAccountPayment = {
   method?: string;
   reference?: string;
   note?: string;
+  bankId?: string;
 };
 
 export type DsAccountStatus =
@@ -231,6 +232,55 @@ export type DsPayment = {
   currency: "USD" | "BS";
   amount: number;
   reference?: string;
+  bankId?: string;
+};
+
+export type DsChangeLine = {
+  currency: "USD" | "BS";
+  amount: number;
+};
+
+export type DsBank = {
+  id: string;
+  name: string;
+  currency: "USD" | "BS";
+  paymentMethods: DsPaymentMethod[];
+  active: boolean;
+  createdAt: string;
+};
+
+export type DsBankMovementKind = "INCOME" | "OUTCOME";
+
+export type DsBankMovement = {
+  id: string;
+  bankId: string;
+  kind: DsBankMovementKind;
+  amount: number;
+  amountUsd: number;
+  amountBs: number;
+  method?: DsPaymentMethod;
+  reference: string;
+  note: string;
+  createdAt: string;
+  operatorId?: string;
+};
+
+export type DsCashSession = {
+  id: string;
+  registerId: string;
+  registerName: string;
+  shiftNumber: number;
+  openedAt: string;
+  openedBy: string;
+  closedAt?: string;
+  closedBy?: string;
+  openingCashUsd: number;
+  openingCashBs: number;
+  closingCashUsd?: number;
+  closingCashBs?: number;
+  status: "open" | "closed";
+  saleIds: string[];
+  notes?: string;
 };
 
 export type DsSaleLine = {
@@ -262,6 +312,16 @@ export type DsSale = {
   createdAt: string;
   createdBy?: string;
   operatorId?: string;
+  clientId?: string;
+  clientName?: string;
+  clientDocument?: string;
+  change?: DsChangeLine[];
+  creditUsdRemaining?: number;
+  returnedAt?: string;
+  originSaleId?: string;
+  creditAppliedUsd?: number;
+  sessionId?: string;
+  registerId?: string;
 };
 
 export type DsCashClosure = {
@@ -286,7 +346,7 @@ export type DsCashClosure = {
 
 export type DsStockMovement = {
   id: string;
-  type: "VENTA" | "COMPRA" | "AJUSTE";
+  type: "VENTA" | "COMPRA" | "AJUSTE" | "DEVOLUCION";
   productId: string;
   productLabel: string;
   qtyBase: number;
@@ -303,7 +363,7 @@ export type DsGeneralInventoryMovement = {
   productId: string;
   productLabel: string;
   qtyBase: number;
-  reason: "COMPRA" | "VENTA_FISCAL" | "AJUSTE";
+  reason: "COMPRA" | "VENTA_FISCAL" | "AJUSTE" | "DEVOLUCION";
   refId?: string;
   createdAt: string;
   createdBy?: string;

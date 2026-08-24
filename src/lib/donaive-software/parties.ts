@@ -215,7 +215,7 @@ export function applyAccountPayment<
 >(
   account: T,
   amount: number,
-  meta?: { method?: string; reference?: string; note?: string },
+  meta?: { method?: string; reference?: string; note?: string; bankId?: string },
 ): { ok: true; account: T } | { ok: false; error: string } {
   const pay = Math.max(0, Number(amount) || 0);
   if (!(pay > 0)) return { ok: false, error: "Indique un monto válido" };
@@ -237,6 +237,7 @@ export function applyAccountPayment<
     method: meta?.method,
     reference: meta?.reference,
     note: meta?.note,
+    bankId: meta?.bankId,
   };
   return {
     ok: true,

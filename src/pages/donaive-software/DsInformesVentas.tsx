@@ -52,6 +52,11 @@ function DsInformesVentasInner() {
         <p className="ds-lead">
           Totales, métodos de pago y productos más vendidos del período.
         </p>
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.65rem" }}>
+          <button type="button" className="ds-btn" onClick={() => window.print()}>
+            Imprimir
+          </button>
+        </div>
 
         <div className="ds-chip-row">
           {(

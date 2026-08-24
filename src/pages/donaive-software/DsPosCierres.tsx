@@ -13,8 +13,15 @@ import { formatDsMoney } from "@/lib/donaive-software/rates";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
 function DsPosCierresInner() {
-  const { sales, closures, currentUser, createCashClosure, rates } =
-    useDonaiveSoftware();
+  const {
+    sales,
+    closures,
+    currentUser,
+    createCashClosure,
+    rates,
+    cashSessions,
+    closeCashSession,
+  } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
 
   const today = new Date().toISOString().slice(0, 10);
@@ -42,7 +49,27 @@ function DsPosCierresInner() {
     return { usd, bs };
   }, [scoped]);
 
+  const openSession = cashSessions.find((s) => s.status === "open");
+
   function runClosure() {
+    if (openSession) {
+      const r = closeCashSession({
+        countedCashUsd: Number(countedUsd) || 0,
+        countedCashBs: Number(countedBs) || 0,
+        notes,
+      });
+      if (!r.ok) {
+        setMsg(r.error);
+        return;
+      }
+      setMsg(
+        `Turno ${openSession.shiftNumber} cerrado · diff USD ${formatDsNumber(r.closure.diffUsd, 2)} · Bs ${formatDsNumber(r.closure.diffBs, 2)}`,
+      );
+      setCountedUsd("");
+      setCountedBs("");
+      setNotes("");
+      return;
+    }
     const r = createCashClosure({
       countedCashUsd: Number(countedUsd) || 0,
       countedCashBs: Number(countedBs) || 0,
@@ -74,6 +101,9 @@ function DsPosCierresInner() {
       <section className="ds-panel">
         <h1 className="ds-title">Cierre de caja</h1>
         <p className="ds-lead">
+          {openSession
+            ? `Turno ${openSession.shiftNumber} abierto en ${openSession.registerName}. `
+            : "Sin turno abierto. "}
           Ventas de hoy ({today}). Efectivo esperado vs contado. BCV{" "}
           {formatDsNumber(rates.bcv, 2)}.
         </p>

@@ -132,10 +132,60 @@ export function remainingToPay(
   payments: DsPayment[],
   bcv: number,
 ) {
+  return paymentBalance(totalUsd, payments, bcv, 0);
+}
+
+export function changeUsdEquivalent(
+  change: { currency: "USD" | "BS"; amount: number }[] | undefined,
+  bcv: number,
+): number {
+  if (!change?.length) return 0;
+  const rate = bcv > 0 ? bcv : 1;
+  return change.reduce(
+    (s, c) => s + (c.currency === "USD" ? c.amount : c.amount / rate),
+    0,
+  );
+}
+
+export function paymentBalance(
+  totalUsd: number,
+  payments: DsPayment[],
+  bcv: number,
+  creditUsd = 0,
+) {
+  const dueUsd = Math.max(0, totalUsd - Math.max(0, creditUsd));
   const { paidUsdEq } = paymentsCoverage(payments, bcv);
-  const remainUsd = Math.max(0, totalUsd - paidUsdEq);
+  const remainUsd = Math.max(0, dueUsd - paidUsdEq);
+  const overUsd = Math.max(0, paidUsdEq - dueUsd);
   const remainBs = remainUsd * (bcv > 0 ? bcv : 1);
-  return { remainUsd, remainBs, covered: remainUsd < 0.01 };
+  const overBs = overUsd * (bcv > 0 ? bcv : 1);
+  return {
+    dueUsd,
+    paidUsdEq,
+    remainUsd,
+    remainBs,
+    overUsd,
+    overBs,
+    covered: remainUsd < 0.01,
+    hasChange: overUsd >= 0.01,
+  };
+}
+
+export function saleNetUsd(sale: {
+  totalUsd: number;
+  creditAppliedUsd?: number;
+}): number {
+  return Math.max(0, sale.totalUsd - (sale.creditAppliedUsd ?? 0));
+}
+
+export function saleNetBs(sale: {
+  totalUsd: number;
+  totalBs: number;
+  creditAppliedUsd?: number;
+}): number {
+  const credit = sale.creditAppliedUsd ?? 0;
+  if (credit <= 0.001 || !(sale.totalUsd > 0)) return sale.totalBs;
+  return sale.totalBs * ((sale.totalUsd - credit) / sale.totalUsd);
 }
 
 export type CompleteSaleInput = {
@@ -148,6 +198,14 @@ export type CompleteSaleInput = {
   allowShortage?: boolean;
   saleKind?: "NORMAL" | "FISCAL";
   fiscalPrinter?: "printer_1" | "printer_2";
+  clientId?: string;
+  clientName?: string;
+  clientDocument?: string;
+  change?: { currency: "USD" | "BS"; amount: number }[];
+  creditAppliedUsd?: number;
+  originSaleId?: string;
+  sessionId?: string;
+  registerId?: string;
 };
 
 export function completeSale(
@@ -160,11 +218,9 @@ export function completeSale(
       movements: DsStockMovement[];
     }
   | { ok: false; error: string } {
+  const creditUsd = Math.max(0, input.creditAppliedUsd ?? 0);
   if (!input.cart.length) {
     return { ok: false, error: "Agregue productos al carrito" };
-  }
-  if (!input.payments.length) {
-    return { ok: false, error: "Agregue al menos un pago" };
   }
 
   const lines: DsSaleLine[] = [];
@@ -208,12 +264,30 @@ export function completeSale(
   }
 
   const { totalUsd, totalBs } = cartTotals(lines);
-  const rem = remainingToPay(totalUsd, input.payments, input.bcv);
+  const rem = paymentBalance(totalUsd, input.payments, input.bcv, creditUsd);
   if (!rem.covered) {
     return {
       ok: false,
       error: `Falta por cobrar $${rem.remainUsd.toFixed(2)} (Bs ${rem.remainBs.toFixed(2)})`,
     };
+  }
+  if (!input.payments.length && rem.dueUsd > 0.01) {
+    return { ok: false, error: "Agregue al menos un pago" };
+  }
+  if (rem.hasChange) {
+    const given = changeUsdEquivalent(input.change, input.bcv);
+    if (given > rem.overUsd + 0.05) {
+      return {
+        ok: false,
+        error: `El vuelto ($${given.toFixed(2)}) supera el excedente ($${rem.overUsd.toFixed(2)})`,
+      };
+    }
+    if (given + 0.05 < rem.overUsd && !(input.change && input.change.length)) {
+      return {
+        ok: false,
+        error: `Indique el vuelto: $${rem.overUsd.toFixed(2)} / Bs ${rem.overBs.toFixed(2)}`,
+      };
+    }
   }
 
   const products = input.products.map((p) => {
@@ -261,6 +335,14 @@ export function completeSale(
     createdAt: now,
     createdBy: input.createdBy,
     operatorId: input.operatorId,
+    clientId: input.clientId,
+    clientName: input.clientName,
+    clientDocument: input.clientDocument,
+    change: input.change?.filter((c) => c.amount > 0),
+    creditAppliedUsd: creditUsd > 0 ? creditUsd : undefined,
+    originSaleId: input.originSaleId,
+    sessionId: input.sessionId,
+    registerId: input.registerId,
   };
 
   return { ok: true, sale, products, movements };

@@ -3,6 +3,7 @@
  */
 
 import { salesInRange, type DateRange } from "@/lib/donaive-software/reports";
+import { saleNetBs, saleNetUsd } from "@/lib/donaive-software/sales";
 import type {
   DsProduct,
   DsPurchase,
@@ -354,7 +355,7 @@ export function planningToCsv(groups: SupplierPlanningGroup[]): string {
 }
 
 export function downloadCsv(filename: string, content: string): void {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -389,8 +390,8 @@ export function buildDailySalesSummary(
   >();
 
   for (const s of scoped) {
-    totalUsd += s.totalUsd;
-    totalBs += s.totalBs;
+    totalUsd += saleNetUsd(s);
+    totalBs += saleNetBs(s);
     for (const pay of s.payments) {
       const m = methodMap.get(pay.method) ?? { usd: 0, bs: 0 };
       if (pay.currency === "USD") m.usd += pay.amount;

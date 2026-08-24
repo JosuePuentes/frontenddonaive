@@ -2,7 +2,7 @@
  * Informes y análisis — agregados offline sobre ventas, stock y compras.
  */
 
-import { DS_PAYMENT_LABELS } from "@/lib/donaive-software/sales";
+import { DS_PAYMENT_LABELS, saleNetBs, saleNetUsd } from "@/lib/donaive-software/sales";
 import type {
   DsPaymentMethod,
   DsProduct,
@@ -37,6 +37,51 @@ export function salesInRange(sales: DsSale[], range: DateRange): DsSale[] {
     const d = s.createdAt.slice(0, 10);
     return d >= range.from && d <= range.to;
   });
+}
+
+export function salesInClock(
+  sales: DsSale[],
+  opts: {
+    date?: string;
+    fromHour?: number;
+    toHour?: number;
+    year?: number;
+  },
+): DsSale[] {
+  return sales.filter((s) => {
+    if (s.status !== "completed") return false;
+    const created = new Date(s.createdAt);
+    if (opts.year && created.getFullYear() !== opts.year) return false;
+    if (opts.date && s.createdAt.slice(0, 10) !== opts.date) return false;
+    if (opts.fromHour != null || opts.toHour != null) {
+      const h = created.getHours();
+      const from = opts.fromHour ?? 0;
+      const to = opts.toHour ?? 23;
+      if (h < from || h > to) return false;
+    }
+    return true;
+  });
+}
+
+export function buildYearlySalesReport(sales: DsSale[], year: number) {
+  const scoped = salesInClock(sales, { year });
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    label: new Date(year, i, 1).toLocaleDateString("es-VE", { month: "short" }),
+    usd: 0,
+    tickets: 0,
+  }));
+  for (const s of scoped) {
+    const m = new Date(s.createdAt).getMonth();
+    months[m].usd += saleNetUsd(s);
+    months[m].tickets += 1;
+  }
+  return {
+    year,
+    tickets: scoped.length,
+    totalUsd: months.reduce((a, m) => a + m.usd, 0),
+    months,
+  };
 }
 
 export function salesByKind(
@@ -80,11 +125,11 @@ export function buildSalesReport(sales: DsSale[], range: DateRange): SalesReport
   >();
 
   for (const s of scoped) {
-    totalUsd += s.totalUsd;
-    totalBs += s.totalBs;
+    totalUsd += saleNetUsd(s);
+    totalBs += saleNetBs(s);
     const day = s.createdAt.slice(0, 10);
     const d = dayMap.get(day) ?? { usd: 0, tickets: 0 };
-    d.usd += s.totalUsd;
+    d.usd += saleNetUsd(s);
     d.tickets += 1;
     dayMap.set(day, d);
 

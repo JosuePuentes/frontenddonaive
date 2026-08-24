@@ -114,7 +114,14 @@ export const DS_DEFAULT_ROLE_PERMISSIONS: Record<DsRole, DsPermission[]> = {
     "license.manage",
     "pos.fiscal",
   ],
-  cajero: ["pos.sell", "pos.discount", "pos.closures", "pos.fiscal"],
+  cajero: [
+    "pos.sell",
+    "pos.refund",
+    "pos.discount",
+    "pos.closures",
+    "pos.fiscal",
+    "clients.read",
+  ],
   inventario: [
     "inventory.read",
     "inventory.adjust",
