@@ -3,6 +3,7 @@ import { Link, Navigate, Outlet, useLocation } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
 import { normalizeDonaiveSoftwarePathname } from "@/lib/donaive-software-host";
 import { DS_ROLE_LABELS } from "@/lib/donaive-software/access";
+import { DsPwaStatus } from "@/components/donaive-software/DsPwaStatus";
 import {
   DonaiveSoftwareProvider,
   useDonaiveSoftware,
@@ -55,6 +56,7 @@ function Shell() {
   return (
     <div className="ds-root">
       <FontLoader />
+      <DsPwaStatus />
       <div className="ds-shell">
         <header className="ds-topbar">
           <div>

@@ -410,3 +410,33 @@
   border-color: transparent;
   font-weight: 600;
 }
+
+.ds-pwa-stack {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ds-pwa-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
+}
+
+.ds-pwa-banner--offline {
+  background: color-mix(in srgb, var(--ds-warn) 22%, #0c1117);
+  color: #f5e6c8;
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-warn) 45%, transparent);
+}
+
+.ds-pwa-banner--update {
+  background: color-mix(in srgb, var(--ds-accent) 18%, #0c1117);
+  color: var(--ds-ink);
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-accent) 40%, transparent);
+}
