@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
+import DsRequirePermission from "@/components/donaive-software/DsRequirePermission";
 import { formatDsMoney, completeDsPrice } from "@/lib/donaive-software/rates";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
-export default function DsFinanzasTasas() {
+function DsFinanzasTasasInner() {
   const { rates, setBcv, setProtectedRate } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
   const [bcv, setBcvLocal] = useState(String(rates.bcv));
@@ -65,5 +66,13 @@ export default function DsFinanzasTasas() {
         </p>
       </section>
     </div>
+  );
+}
+
+export default function DsFinanzasTasas() {
+  return (
+    <DsRequirePermission permission="finance.rates">
+      <DsFinanzasTasasInner />
+    </DsRequirePermission>
   );
 }

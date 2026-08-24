@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
+import DsRequirePermission from "@/components/donaive-software/DsRequirePermission";
 import { formatDsMoney, completeDsPrice } from "@/lib/donaive-software/rates";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
-export default function DsFinanzasCpp() {
+function DsFinanzasCppInner() {
   const { products, rates, applyPurchaseCpp } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
   const [productId, setProductId] = useState(products[0]?.id ?? "");
@@ -120,5 +121,13 @@ export default function DsFinanzasCpp() {
         </form>
       </section>
     </div>
+  );
+}
+
+export default function DsFinanzasCpp() {
+  return (
+    <DsRequirePermission permission="finance.cpp">
+      <DsFinanzasCppInner />
+    </DsRequirePermission>
   );
 }

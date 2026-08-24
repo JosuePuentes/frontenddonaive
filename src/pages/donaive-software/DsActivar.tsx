@@ -18,7 +18,7 @@ export default function DsActivar() {
       return;
     }
     activate(name, key || undefined);
-    navigate(routes.home, { replace: true });
+    navigate(routes.login, { replace: true });
   }
 
   return (

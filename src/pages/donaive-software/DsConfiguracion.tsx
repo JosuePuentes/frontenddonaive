@@ -1,8 +1,9 @@
 import { Link } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
+import DsRequirePermission from "@/components/donaive-software/DsRequirePermission";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
-export default function DsConfiguracion() {
+function DsConfigLicenciaInner() {
   const { license, deactivate } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
 
@@ -47,5 +48,13 @@ export default function DsConfiguracion() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function DsConfiguracion() {
+  return (
+    <DsRequirePermission permission="license.manage">
+      <DsConfigLicenciaInner />
+    </DsRequirePermission>
   );
 }

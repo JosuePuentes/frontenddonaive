@@ -1,17 +1,34 @@
 import { Link, useParams } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
-import { getModuleById } from "@/lib/donaive-software/modules";
+import {
+  filterModulesForUser,
+  getModuleById,
+} from "@/lib/donaive-software/modules";
+import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
+import type { DsPermission } from "@/types/donaive-software";
 
-/** Interior de un módulo: lista solo sus funciones. */
+/** Interior de un módulo: lista solo funciones permitidas. */
 export default function DsModuleHome() {
   const { moduleId = "" } = useParams();
-  const mod = getModuleById(moduleId);
+  const { can, canAny } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
+
+  const canAccess = (permission: DsPermission | DsPermission[]) => {
+    const list = Array.isArray(permission) ? permission : [permission];
+    return list.length === 1 ? can(list[0]) : canAny(list);
+  };
+
+  const modRaw = getModuleById(moduleId);
+  const mod = modRaw
+    ? filterModulesForUser([modRaw], canAccess)[0]
+    : undefined;
 
   if (!mod) {
     return (
       <div className="ds-panel">
-        <p className="ds-muted">Módulo no encontrado.</p>
+        <p className="ds-muted">
+          Módulo no encontrado o sin permiso de acceso.
+        </p>
         <Link className="ds-btn" to={routes.home}>
           Volver al inicio
         </Link>

@@ -1,10 +1,11 @@
 import { Link } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
+import DsRequirePermission from "@/components/donaive-software/DsRequirePermission";
 import { formatDsMoney, completeDsPrice } from "@/lib/donaive-software/rates";
 import { splitStockUnits } from "@/lib/donaive-software/stock";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
-export default function DsInventarioProductos() {
+function DsInventarioProductosInner() {
   const { products, rates } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
 
@@ -67,5 +68,13 @@ export default function DsInventarioProductos() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function DsInventarioProductos() {
+  return (
+    <DsRequirePermission permission="inventory.products">
+      <DsInventarioProductosInner />
+    </DsRequirePermission>
   );
 }

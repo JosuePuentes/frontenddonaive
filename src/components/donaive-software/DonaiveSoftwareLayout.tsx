@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
 import { normalizeDonaiveSoftwarePathname } from "@/lib/donaive-software-host";
+import { DS_ROLE_LABELS } from "@/lib/donaive-software/access";
 import {
   DonaiveSoftwareProvider,
   useDonaiveSoftware,
@@ -25,23 +26,30 @@ function FontLoader() {
 }
 
 function Gate({ children }: { children: ReactNode }) {
-  const { license } = useDonaiveSoftware();
+  const { license, currentUser } = useDonaiveSoftware();
   const { pathname } = useLocation();
   const path = normalizeDonaiveSoftwarePathname(pathname);
   const routes = getDonaiveSoftwareRoutes();
   const isActivar = path === "/activar";
+  const isLogin = path === "/login";
 
   if (!license && !isActivar) {
     return <Navigate to={routes.activar} replace />;
   }
   if (license && isActivar) {
+    return <Navigate to={routes.login} replace />;
+  }
+  if (license && !currentUser && !isLogin) {
+    return <Navigate to={routes.login} replace />;
+  }
+  if (license && currentUser && isLogin) {
     return <Navigate to={routes.home} replace />;
   }
   return children;
 }
 
 function Shell() {
-  const { license, rates } = useDonaiveSoftware();
+  const { license, rates, currentUser, logout } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
 
   return (
@@ -57,11 +65,33 @@ function Shell() {
               <div className="ds-business">{license.businessName}</div>
             ) : null}
           </div>
-          {license ? (
-            <div className="ds-muted" style={{ fontSize: "0.85rem" }}>
-              BCV {rates.bcv.toLocaleString("es-VE", { maximumFractionDigits: 2 })}
-            </div>
-          ) : null}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "0.75rem",
+            }}
+          >
+            {license && currentUser ? (
+              <>
+                <span className="ds-muted" style={{ fontSize: "0.85rem" }}>
+                  {currentUser.name} · {DS_ROLE_LABELS[currentUser.role]}
+                </span>
+                <button type="button" className="ds-btn" onClick={logout}>
+                  Salir
+                </button>
+              </>
+            ) : null}
+            {license ? (
+              <div className="ds-muted" style={{ fontSize: "0.85rem" }}>
+                BCV{" "}
+                {rates.bcv.toLocaleString("es-VE", {
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+            ) : null}
+          </div>
         </header>
         <Outlet />
       </div>
