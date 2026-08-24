@@ -330,3 +330,83 @@
 .ds-line-row:last-child {
   border-bottom: none;
 }
+
+.ds-chart {
+  margin-top: 1rem;
+}
+
+.ds-chart__title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.ds-chart__bars {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.ds-chart__row {
+  display: grid;
+  grid-template-columns: minmax(72px, 110px) 1fr auto;
+  gap: 0.55rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.ds-chart__label {
+  color: var(--ds-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-chart__track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.ds-chart__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ds-accent) 70%, transparent),
+    var(--ds-accent)
+  );
+  transition: width 0.35s ease;
+}
+
+.ds-chart__value {
+  min-width: 4.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.ds-chip {
+  appearance: none;
+  border: 1px solid var(--ds-line);
+  background: transparent;
+  color: var(--ds-ink);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ds-chip--active {
+  background: var(--ds-accent);
+  color: #042f2e;
+  border-color: transparent;
+  font-weight: 600;
+}
