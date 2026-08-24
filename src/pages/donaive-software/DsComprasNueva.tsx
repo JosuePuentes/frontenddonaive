@@ -24,11 +24,17 @@ import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftware
 import type { DsExtraInvoiceTax, DsProduct } from "@/types/donaive-software";
 
 function DsComprasNuevaInner() {
-  const { products, rates, confirmPurchase, upsertProduct } = useDonaiveSoftware();
+  const { products, rates, confirmPurchase, upsertProduct, suppliers, upsertSupplier } =
+    useDonaiveSoftware();
   const navigate = useNavigate();
   const routes = getDonaiveSoftwareRoutes();
 
+  const [supplierId, setSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
+  const [paymentCondition, setPaymentCondition] = useState<"CONTADO" | "CREDITO">(
+    "CONTADO",
+  );
+  const [creditDays, setCreditDays] = useState(15);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().slice(0, 10),
@@ -50,6 +56,8 @@ function DsComprasNuevaInner() {
   const [newUpp, setNewUpp] = useState(24);
   const [newTaxable, setNewTaxable] = useState(true);
   const [newUtility, setNewUtility] = useState(30);
+  const [showNewSupplier, setShowNewSupplier] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
 
   const showInvoiceRate = currency === "BS";
 
@@ -119,12 +127,22 @@ function DsComprasNuevaInner() {
       setMsg("Indique la tasa de la factura en Bs");
       return;
     }
+    if (!supplierId && !supplierName.trim()) {
+      setMsg("Seleccione o cree un proveedor");
+      return;
+    }
     const r = confirmPurchase({
-      supplierName,
+      supplierId: supplierId || undefined,
+      supplierName:
+        supplierName ||
+        suppliers.find((s) => s.id === supplierId)?.name ||
+        "",
       invoiceNumber,
       invoiceDate,
       currency,
       invoiceRate: showInvoiceRate ? invoiceRate : undefined,
+      paymentCondition,
+      creditDays: paymentCondition === "CREDITO" ? creditDays : undefined,
       extraTaxes,
       lines,
       notes,
@@ -134,6 +152,36 @@ function DsComprasNuevaInner() {
       return;
     }
     navigate(routes.comprasHistorial, { replace: true });
+  }
+
+  function createSupplierQuick() {
+    const r = upsertSupplier({
+      name: newSupplierName,
+      defaultCurrency: currency,
+      creditDays: 15,
+      creditLimit: 0,
+      active: true,
+    });
+    if (!r.ok) {
+      setMsg(r.error);
+      return;
+    }
+    setSupplierId(r.supplier.id);
+    setSupplierName(r.supplier.name);
+    setCreditDays(r.supplier.creditDays || 15);
+    setShowNewSupplier(false);
+    setNewSupplierName("");
+    setMsg("Proveedor creado");
+  }
+
+  function onSelectSupplier(id: string) {
+    setSupplierId(id);
+    const s = suppliers.find((x) => x.id === id);
+    if (s) {
+      setSupplierName(s.name);
+      setCreditDays(s.creditDays || 15);
+      setCurrency(s.defaultCurrency);
+    }
   }
 
   function createProduct() {
@@ -182,12 +230,55 @@ function DsComprasNuevaInner() {
         >
           <label className="ds-label">
             Proveedor *
-            <input
+            <select
               className="ds-input"
-              value={supplierName}
-              onChange={(e) => setSupplierName(e.target.value)}
-            />
+              value={supplierId}
+              onChange={(e) => onSelectSupplier(e.target.value)}
+            >
+              <option value="">Seleccione…</option>
+              {suppliers
+                .filter((s) => s.active)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+            </select>
           </label>
+          <div style={{ display: "flex", alignItems: "end" }}>
+            <button
+              type="button"
+              className="ds-btn"
+              onClick={() => setShowNewSupplier((v) => !v)}
+            >
+              {showNewSupplier ? "Cancelar" : "+ Proveedor"}
+            </button>
+          </div>
+          <label className="ds-label">
+            Condición
+            <select
+              className="ds-input"
+              value={paymentCondition}
+              onChange={(e) =>
+                setPaymentCondition(e.target.value as "CONTADO" | "CREDITO")
+              }
+            >
+              <option value="CONTADO">Contado</option>
+              <option value="CREDITO">Crédito</option>
+            </select>
+          </label>
+          {paymentCondition === "CREDITO" ? (
+            <label className="ds-label">
+              Días de crédito
+              <input
+                className="ds-input"
+                type="number"
+                min={0}
+                value={creditDays}
+                onChange={(e) => setCreditDays(Number(e.target.value))}
+              />
+            </label>
+          ) : null}
           <label className="ds-label">
             Nº factura
             <input
@@ -237,6 +328,33 @@ function DsComprasNuevaInner() {
             />
           </label>
         </div>
+        {showNewSupplier ? (
+          <div
+            style={{
+              marginTop: "0.85rem",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+              alignItems: "end",
+            }}
+          >
+            <label className="ds-label" style={{ flex: "1 1 200px" }}>
+              Nombre del proveedor
+              <input
+                className="ds-input"
+                value={newSupplierName}
+                onChange={(e) => setNewSupplierName(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="ds-btn ds-btn--primary"
+              onClick={createSupplierQuick}
+            >
+              Crear proveedor
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <section className="ds-panel" style={{ marginTop: "1rem" }}>

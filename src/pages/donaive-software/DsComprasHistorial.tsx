@@ -85,6 +85,10 @@ function DsComprasHistorialInner() {
                         {pur.invoiceRate
                           ? ` · tasa ${formatDsNumber(pur.invoiceRate, 2)}`
                           : ""}
+                        {" · "}
+                        {pur.paymentCondition === "CREDITO"
+                          ? `Crédito${pur.dueDate ? ` (vence ${pur.dueDate})` : ""}`
+                          : "Contado"}
                       </div>
                     </div>
                     <div className="ds-stat" style={{ fontSize: "1.1rem" }}>

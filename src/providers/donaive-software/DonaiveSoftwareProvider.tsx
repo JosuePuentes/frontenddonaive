@@ -30,29 +30,51 @@ import {
 } from "@/lib/donaive-software/access";
 import { buildCashClosure } from "@/lib/donaive-software/closures";
 import {
+  applyAccountPayment,
+  createReceivable,
+  upsertClientInList,
+  upsertSupplierInList,
+  type UpsertClientInput,
+  type UpsertSupplierInput,
+} from "@/lib/donaive-software/parties";
+import {
   completeSale as runCompleteSale,
   type CartItem,
 } from "@/lib/donaive-software/sales";
 import {
   appendClosure,
   appendMovements,
+  appendPayable,
   appendPurchase,
+  appendReceivable,
   appendSale,
+  loadClients,
   loadClosures,
   loadMovements,
+  loadPayables,
   loadProducts,
   loadPurchases,
   loadRates,
+  loadReceivables,
   loadSales,
+  loadSuppliers,
   receiveStock,
+  saveClients,
+  savePayables,
   saveProducts,
   saveRates,
+  saveReceivables,
+  saveSuppliers,
   upsertProduct as persistUpsertProduct,
   type DsCashClosure,
+  type DsClient,
+  type DsPayable,
   type DsProduct,
   type DsRatesState,
+  type DsReceivable,
   type DsSale,
   type DsStockMovement,
+  type DsSupplier,
   type UpsertProductInput,
 } from "@/lib/donaive-software/store";
 import {
@@ -75,6 +97,10 @@ type Ctx = {
   sales: DsSale[];
   closures: DsCashClosure[];
   movements: DsStockMovement[];
+  clients: DsClient[];
+  suppliers: DsSupplier[];
+  payables: DsPayable[];
+  receivables: DsReceivable[];
   currentUser: DsUser | null;
   users: DsUser[];
   roleMatrix: Partial<Record<DsRole, DsPermission[]>>;
@@ -121,6 +147,32 @@ type Ctx = {
     notes?: string;
     date?: string;
   }) => { ok: true; closure: DsCashClosure } | { ok: false; error: string };
+  upsertClient: (
+    input: UpsertClientInput,
+  ) => { ok: true; client: DsClient } | { ok: false; error: string };
+  upsertSupplier: (
+    input: UpsertSupplierInput,
+  ) => { ok: true; supplier: DsSupplier } | { ok: false; error: string };
+  payPayable: (input: {
+    payableId: string;
+    amount: number;
+    method?: string;
+    reference?: string;
+  }) => { ok: true; payable: DsPayable } | { ok: false; error: string };
+  addReceivable: (input: {
+    clientId: string;
+    concept: string;
+    amount: number;
+    currency: "USD" | "BS";
+    dueDate?: string;
+    notes?: string;
+  }) => { ok: true; receivable: DsReceivable } | { ok: false; error: string };
+  collectReceivable: (input: {
+    receivableId: string;
+    amount: number;
+    method?: string;
+    reference?: string;
+  }) => { ok: true; receivable: DsReceivable } | { ok: false; error: string };
 };
 
 const DonaiveSoftwareContext = createContext<Ctx | null>(null);
@@ -133,6 +185,10 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
   const [sales, setSales] = useState<DsSale[]>([]);
   const [closures, setClosures] = useState<DsCashClosure[]>([]);
   const [movements, setMovements] = useState<DsStockMovement[]>([]);
+  const [clients, setClients] = useState<DsClient[]>([]);
+  const [suppliers, setSuppliers] = useState<DsSupplier[]>([]);
+  const [payables, setPayables] = useState<DsPayable[]>([]);
+  const [receivables, setReceivables] = useState<DsReceivable[]>([]);
   const [currentUser, setCurrentUser] = useState<DsUser | null>(null);
   const [users, setUsers] = useState<DsUser[]>([]);
   const [roleMatrix, setRoleMatrix] = useState<
@@ -154,6 +210,10 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     setSales(loadSales());
     setClosures(loadClosures());
     setMovements(loadMovements());
+    setClients(loadClients());
+    setSuppliers(loadSuppliers());
+    setPayables(loadPayables());
+    setReceivables(loadReceivables());
     setUsers(loadUsers());
     setRoleMatrix(loadRoleMatrix());
     setCurrentUser(resolveCurrentUser());
@@ -279,8 +339,8 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       if (!r.ok) return r;
       saveProducts(r.products);
       setProducts(r.products);
-      const list = appendPurchase(r.purchase);
-      setPurchases(list);
+      setPurchases(appendPurchase(r.purchase));
+      if (r.payable) setPayables(appendPayable(r.payable));
       const now = new Date().toISOString();
       const movs: DsStockMovement[] = r.purchase.lines.map((l) => ({
         id: `mov_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
@@ -377,6 +437,95 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     [sales, closures, currentUser],
   );
 
+  const upsertClient = useCallback((input: UpsertClientInput) => {
+    const r = upsertClientInList(clients, input);
+    if (!r.ok) return r;
+    saveClients(r.list);
+    setClients(r.list);
+    return { ok: true as const, client: r.client };
+  }, [clients]);
+
+  const upsertSupplier = useCallback((input: UpsertSupplierInput) => {
+    const r = upsertSupplierInList(suppliers, input);
+    if (!r.ok) return r;
+    saveSuppliers(r.list);
+    setSuppliers(r.list);
+    return { ok: true as const, supplier: r.supplier };
+  }, [suppliers]);
+
+  const payPayable = useCallback(
+    (input: {
+      payableId: string;
+      amount: number;
+      method?: string;
+      reference?: string;
+    }) => {
+      const idx = payables.findIndex((p) => p.id === input.payableId);
+      if (idx < 0) return { ok: false as const, error: "Cuenta no encontrada" };
+      const r = applyAccountPayment(payables[idx], input.amount, {
+        method: input.method,
+        reference: input.reference,
+      });
+      if (!r.ok) return r;
+      const next = [...payables];
+      next[idx] = r.account;
+      savePayables(next);
+      setPayables(next);
+      return { ok: true as const, payable: r.account };
+    },
+    [payables],
+  );
+
+  const addReceivable = useCallback(
+    (input: {
+      clientId: string;
+      concept: string;
+      amount: number;
+      currency: "USD" | "BS";
+      dueDate?: string;
+      notes?: string;
+    }) => {
+      const client = clients.find((c) => c.id === input.clientId);
+      if (!client) return { ok: false as const, error: "Cliente no encontrado" };
+      const r = createReceivable({
+        clientId: client.id,
+        clientName: client.name,
+        concept: input.concept,
+        amount: input.amount,
+        currency: input.currency,
+        dueDate: input.dueDate,
+        notes: input.notes,
+      });
+      if (!r.ok) return r;
+      setReceivables(appendReceivable(r.receivable));
+      return { ok: true as const, receivable: r.receivable };
+    },
+    [clients],
+  );
+
+  const collectReceivable = useCallback(
+    (input: {
+      receivableId: string;
+      amount: number;
+      method?: string;
+      reference?: string;
+    }) => {
+      const idx = receivables.findIndex((p) => p.id === input.receivableId);
+      if (idx < 0) return { ok: false as const, error: "Cuenta no encontrada" };
+      const r = applyAccountPayment(receivables[idx], input.amount, {
+        method: input.method,
+        reference: input.reference,
+      });
+      if (!r.ok) return r;
+      const next = [...receivables];
+      next[idx] = r.account;
+      saveReceivables(next);
+      setReceivables(next);
+      return { ok: true as const, receivable: r.account };
+    },
+    [receivables],
+  );
+
   const value = useMemo(
     () => ({
       license,
@@ -386,6 +535,10 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       sales,
       closures,
       movements,
+      clients,
+      suppliers,
+      payables,
+      receivables,
       currentUser,
       users,
       roleMatrix,
@@ -406,6 +559,11 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       refreshPurchases,
       completeSale: completeSaleFn,
       createCashClosure: createCashClosureFn,
+      upsertClient,
+      upsertSupplier,
+      payPayable,
+      addReceivable,
+      collectReceivable,
     }),
     [
       license,
@@ -415,6 +573,10 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       sales,
       closures,
       movements,
+      clients,
+      suppliers,
+      payables,
+      receivables,
       currentUser,
       users,
       roleMatrix,
@@ -435,6 +597,11 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       refreshPurchases,
       completeSaleFn,
       createCashClosureFn,
+      upsertClient,
+      upsertSupplier,
+      payPayable,
+      addReceivable,
+      collectReceivable,
     ],
   );
 

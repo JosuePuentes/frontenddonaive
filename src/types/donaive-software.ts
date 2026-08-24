@@ -95,11 +95,15 @@ export type DsExtraInvoiceTax = {
 
 export type DsPurchase = {
   id: string;
+  supplierId?: string;
   supplierName: string;
   invoiceNumber: string;
   invoiceDate: string;
   currency: "USD" | "BS";
   invoiceRate?: number;
+  paymentCondition: "CONTADO" | "CREDITO";
+  creditDays?: number;
+  dueDate?: string;
   extraTaxes: DsExtraInvoiceTax[];
   lines: DsPurchaseLine[];
   notes?: string;
@@ -110,6 +114,86 @@ export type DsPurchase = {
   grandTotal: number;
   createdAt: string;
   createdBy?: string;
+};
+
+export type DsClient = {
+  id: string;
+  name: string;
+  phone?: string;
+  documentId?: string;
+  email?: string;
+  address?: string;
+  creditLimitUsd: number;
+  creditDays: number;
+  notes?: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DsSupplier = {
+  id: string;
+  name: string;
+  identification?: string;
+  phone?: string;
+  contactName?: string;
+  defaultCurrency: "USD" | "BS";
+  creditDays: number;
+  creditLimit: number;
+  notes?: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DsAccountPayment = {
+  id: string;
+  amount: number;
+  paidAt: string;
+  method?: string;
+  reference?: string;
+  note?: string;
+};
+
+export type DsAccountStatus =
+  | "PENDIENTE"
+  | "PARCIAL"
+  | "PAGADA"
+  | "VENCIDA"
+  | "ANULADA";
+
+export type DsPayable = {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  purchaseId?: string;
+  invoiceNumber: string;
+  currency: "USD" | "BS";
+  amount: number;
+  paidAmount: number;
+  balance: number;
+  dueDate?: string;
+  status: DsAccountStatus;
+  issuedAt: string;
+  payments: DsAccountPayment[];
+  notes?: string;
+};
+
+export type DsReceivable = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  saleId?: string;
+  concept: string;
+  currency: "USD" | "BS";
+  amount: number;
+  paidAmount: number;
+  balance: number;
+  dueDate?: string;
+  status: DsAccountStatus;
+  issuedAt: string;
+  payments: DsAccountPayment[];
+  notes?: string;
 };
 
 export type DsPaymentMethod =

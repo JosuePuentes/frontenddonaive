@@ -4,13 +4,27 @@ import type { CppState } from "@/lib/donaive-software/cpp";
 import { applyWeightedCpp } from "@/lib/donaive-software/cpp";
 import type {
   DsCashClosure,
+  DsClient,
+  DsPayable,
   DsProduct,
   DsPurchase,
+  DsReceivable,
   DsSale,
   DsStockMovement,
+  DsSupplier,
 } from "@/types/donaive-software";
 
-export type { DsCashClosure, DsProduct, DsPurchase, DsSale, DsStockMovement };
+export type {
+  DsCashClosure,
+  DsClient,
+  DsPayable,
+  DsProduct,
+  DsPurchase,
+  DsReceivable,
+  DsSale,
+  DsStockMovement,
+  DsSupplier,
+};
 
 export type DsRatesState = {
   bcv: number;
@@ -27,6 +41,10 @@ const PURCHASES_KEY = "donaive-software-purchases-v1";
 const SALES_KEY = "donaive-software-sales-v1";
 const CLOSURES_KEY = "donaive-software-closures-v1";
 const MOVEMENTS_KEY = "donaive-software-movements-v1";
+const CLIENTS_KEY = "donaive-software-clients-v1";
+const SUPPLIERS_KEY = "donaive-software-suppliers-v1";
+const PAYABLES_KEY = "donaive-software-payables-v1";
+const RECEIVABLES_KEY = "donaive-software-receivables-v1";
 
 function uid(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -118,7 +136,12 @@ export function loadPurchases(): DsPurchase[] {
   try {
     const raw = localStorage.getItem(PURCHASES_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as DsPurchase[];
+    const parsed = JSON.parse(raw) as DsPurchase[];
+    return parsed.map((p) => ({
+      ...p,
+      paymentCondition: p.paymentCondition ?? "CONTADO",
+      extraTaxes: p.extraTaxes ?? [],
+    }));
   } catch {
     return [];
   }
@@ -268,6 +291,61 @@ export function saveMovements(movements: DsStockMovement[]): void {
 export function appendMovements(newOnes: DsStockMovement[]): DsStockMovement[] {
   const list = [...newOnes, ...loadMovements()];
   saveMovements(list);
+  return list;
+}
+
+function loadJsonArray<T>(key: string): T[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    return JSON.parse(raw) as T[];
+  } catch {
+    return [];
+  }
+}
+
+export function loadClients(): DsClient[] {
+  return loadJsonArray<DsClient>(CLIENTS_KEY);
+}
+
+export function saveClients(clients: DsClient[]): void {
+  localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
+}
+
+export function loadSuppliers(): DsSupplier[] {
+  return loadJsonArray<DsSupplier>(SUPPLIERS_KEY);
+}
+
+export function saveSuppliers(suppliers: DsSupplier[]): void {
+  localStorage.setItem(SUPPLIERS_KEY, JSON.stringify(suppliers));
+}
+
+export function loadPayables(): DsPayable[] {
+  return loadJsonArray<DsPayable>(PAYABLES_KEY);
+}
+
+export function savePayables(payables: DsPayable[]): void {
+  localStorage.setItem(PAYABLES_KEY, JSON.stringify(payables));
+}
+
+export function appendPayable(payable: DsPayable): DsPayable[] {
+  const list = [payable, ...loadPayables()];
+  savePayables(list);
+  return list;
+}
+
+export function loadReceivables(): DsReceivable[] {
+  return loadJsonArray<DsReceivable>(RECEIVABLES_KEY);
+}
+
+export function saveReceivables(receivables: DsReceivable[]): void {
+  localStorage.setItem(RECEIVABLES_KEY, JSON.stringify(receivables));
+}
+
+export function appendReceivable(receivable: DsReceivable): DsReceivable[] {
+  const list = [receivable, ...loadReceivables()];
+  saveReceivables(list);
   return list;
 }
 
