@@ -2,9 +2,15 @@
 
 import type { CppState } from "@/lib/donaive-software/cpp";
 import { applyWeightedCpp } from "@/lib/donaive-software/cpp";
-import type { DsProduct, DsPurchase } from "@/types/donaive-software";
+import type {
+  DsCashClosure,
+  DsProduct,
+  DsPurchase,
+  DsSale,
+  DsStockMovement,
+} from "@/types/donaive-software";
 
-export type { DsProduct, DsPurchase };
+export type { DsCashClosure, DsProduct, DsPurchase, DsSale, DsStockMovement };
 
 export type DsRatesState = {
   bcv: number;
@@ -18,6 +24,9 @@ export type DsProductDemo = DsProduct;
 const RATES_KEY = "donaive-software-rates-v1";
 const PRODUCTS_KEY = "donaive-software-products-v1";
 const PURCHASES_KEY = "donaive-software-purchases-v1";
+const SALES_KEY = "donaive-software-sales-v1";
+const CLOSURES_KEY = "donaive-software-closures-v1";
+const MOVEMENTS_KEY = "donaive-software-movements-v1";
 
 function uid(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -197,6 +206,69 @@ export function upsertProduct(
   const next = [...products, created];
   saveProducts(next);
   return { ok: true, products: next, product: created };
+}
+
+export function loadSales(): DsSale[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(SALES_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as DsSale[];
+  } catch {
+    return [];
+  }
+}
+
+export function saveSales(sales: DsSale[]): void {
+  localStorage.setItem(SALES_KEY, JSON.stringify(sales));
+}
+
+export function appendSale(sale: DsSale): DsSale[] {
+  const list = [sale, ...loadSales()];
+  saveSales(list);
+  return list;
+}
+
+export function loadClosures(): DsCashClosure[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CLOSURES_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as DsCashClosure[];
+  } catch {
+    return [];
+  }
+}
+
+export function saveClosures(closures: DsCashClosure[]): void {
+  localStorage.setItem(CLOSURES_KEY, JSON.stringify(closures));
+}
+
+export function appendClosure(closure: DsCashClosure): DsCashClosure[] {
+  const list = [closure, ...loadClosures()];
+  saveClosures(list);
+  return list;
+}
+
+export function loadMovements(): DsStockMovement[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(MOVEMENTS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as DsStockMovement[];
+  } catch {
+    return [];
+  }
+}
+
+export function saveMovements(movements: DsStockMovement[]): void {
+  localStorage.setItem(MOVEMENTS_KEY, JSON.stringify(movements));
+}
+
+export function appendMovements(newOnes: DsStockMovement[]): DsStockMovement[] {
+  const list = [...newOnes, ...loadMovements()];
+  saveMovements(list);
+  return list;
 }
 
 export type { CppState };

@@ -28,39 +28,67 @@ import {
   hasAnyPermission,
   hasPermission,
 } from "@/lib/donaive-software/access";
+import { buildCashClosure } from "@/lib/donaive-software/closures";
 import {
+  completeSale as runCompleteSale,
+  type CartItem,
+} from "@/lib/donaive-software/sales";
+import {
+  appendClosure,
+  appendMovements,
   appendPurchase,
+  appendSale,
+  loadClosures,
+  loadMovements,
   loadProducts,
   loadPurchases,
   loadRates,
+  loadSales,
   receiveStock,
   saveProducts,
   saveRates,
   upsertProduct as persistUpsertProduct,
+  type DsCashClosure,
   type DsProduct,
   type DsRatesState,
+  type DsSale,
+  type DsStockMovement,
   type UpsertProductInput,
 } from "@/lib/donaive-software/store";
 import {
   confirmPurchase as runConfirmPurchase,
   type ConfirmPurchaseInput,
 } from "@/lib/donaive-software/purchases";
-import type { DsPermission, DsPurchase, DsRole, DsUser } from "@/types/donaive-software";
+import type {
+  DsPayment,
+  DsPermission,
+  DsPurchase,
+  DsRole,
+  DsUser,
+} from "@/types/donaive-software";
 
 type Ctx = {
   license: DsLicense | null;
   rates: DsRatesState;
   products: DsProduct[];
   purchases: DsPurchase[];
+  sales: DsSale[];
+  closures: DsCashClosure[];
+  movements: DsStockMovement[];
   currentUser: DsUser | null;
   users: DsUser[];
   roleMatrix: Partial<Record<DsRole, DsPermission[]>>;
   activate: (businessName: string, licenseKey?: string) => void;
   deactivate: () => void;
-  login: (username: string, password: string) => { ok: true } | { ok: false; error: string };
+  login: (
+    username: string,
+    password: string,
+  ) => { ok: true } | { ok: false; error: string };
   logout: () => void;
   refreshUsers: () => void;
-  upsertUser: (input: UpsertUserInput) => { ok: true; user: DsUser } | { ok: false; error: string };
+  upsertUser: (
+    input: UpsertUserInput,
+  ) => { ok: true; user: DsUser } | { ok: false; error: string };
   setRolePermissions: (input: {
     role: DsRole;
     permissions: DsPermission[];
@@ -83,6 +111,16 @@ type Ctx = {
     },
   ) => { ok: true; purchase: DsPurchase } | { ok: false; error: string };
   refreshPurchases: () => void;
+  completeSale: (input: {
+    cart: CartItem[];
+    payments: DsPayment[];
+  }) => { ok: true; sale: DsSale } | { ok: false; error: string };
+  createCashClosure: (input: {
+    countedCashUsd: number;
+    countedCashBs: number;
+    notes?: string;
+    date?: string;
+  }) => { ok: true; closure: DsCashClosure } | { ok: false; error: string };
 };
 
 const DonaiveSoftwareContext = createContext<Ctx | null>(null);
@@ -92,6 +130,9 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
   const [rates, setRates] = useState<DsRatesState>(() => loadRates());
   const [products, setProducts] = useState<DsProduct[]>([]);
   const [purchases, setPurchases] = useState<DsPurchase[]>([]);
+  const [sales, setSales] = useState<DsSale[]>([]);
+  const [closures, setClosures] = useState<DsCashClosure[]>([]);
+  const [movements, setMovements] = useState<DsStockMovement[]>([]);
   const [currentUser, setCurrentUser] = useState<DsUser | null>(null);
   const [users, setUsers] = useState<DsUser[]>([]);
   const [roleMatrix, setRoleMatrix] = useState<
@@ -110,18 +151,24 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     setRates(loadRates());
     setProducts(loadProducts());
     setPurchases(loadPurchases());
+    setSales(loadSales());
+    setClosures(loadClosures());
+    setMovements(loadMovements());
     setUsers(loadUsers());
     setRoleMatrix(loadRoleMatrix());
     setCurrentUser(resolveCurrentUser());
     setReady(true);
   }, []);
 
-  const activate = useCallback((businessName: string, licenseKey?: string) => {
-    const next = activateLicense({ businessName, licenseKey });
-    ensureDefaultAdmin();
-    setLicense(next);
-    refreshUsers();
-  }, [refreshUsers]);
+  const activate = useCallback(
+    (businessName: string, licenseKey?: string) => {
+      const next = activateLicense({ businessName, licenseKey });
+      ensureDefaultAdmin();
+      setLicense(next);
+      refreshUsers();
+    },
+    [refreshUsers],
+  );
 
   const deactivate = useCallback(() => {
     clearLicense();
@@ -200,11 +247,14 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     setPurchases(loadPurchases());
   }, []);
 
-  const upsertProduct = useCallback((input: UpsertProductInput) => {
-    const r = persistUpsertProduct(products, input);
-    if (r.ok) setProducts(r.products);
-    return r.ok ? { ok: true as const, product: r.product } : r;
-  }, [products]);
+  const upsertProduct = useCallback(
+    (input: UpsertProductInput) => {
+      const r = persistUpsertProduct(products, input);
+      if (r.ok) setProducts(r.products);
+      return r.ok ? { ok: true as const, product: r.product } : r;
+    },
+    [products],
+  );
 
   const confirmPurchaseFn = useCallback(
     (
@@ -231,6 +281,21 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       setProducts(r.products);
       const list = appendPurchase(r.purchase);
       setPurchases(list);
+      const now = new Date().toISOString();
+      const movs: DsStockMovement[] = r.purchase.lines.map((l) => ({
+        id: `mov_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        type: "COMPRA" as const,
+        productId: l.productId,
+        productLabel: l.productLabel,
+        qtyBase:
+          (l.buyMode === "BOX" ? l.qty * Math.max(1, l.unitsPerBox) : l.qty) +
+          Math.max(0, l.qtyBonus),
+        note: `Compra ${r.purchase.invoiceNumber || r.purchase.id}`,
+        refId: r.purchase.id,
+        createdAt: now,
+        createdBy: currentUser?.name,
+      }));
+      setMovements(appendMovements(movs));
       return { ok: true as const, purchase: r.purchase };
     },
     [products, rates, currentUser],
@@ -247,12 +312,80 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const completeSaleFn = useCallback(
+    (input: { cart: CartItem[]; payments: DsPayment[] }) => {
+      const r = runCompleteSale({
+        products,
+        cart: input.cart,
+        payments: input.payments,
+        bcv: rates.bcv,
+        createdBy: currentUser?.name,
+        operatorId: currentUser?.id,
+      });
+      if (!r.ok) return r;
+      saveProducts(r.products);
+      setProducts(r.products);
+      setSales(appendSale(r.sale));
+      setMovements(appendMovements(r.movements));
+      return { ok: true as const, sale: r.sale };
+    },
+    [products, rates, currentUser],
+  );
+
+  const createCashClosureFn = useCallback(
+    (input: {
+      countedCashUsd: number;
+      countedCashBs: number;
+      notes?: string;
+      date?: string;
+    }) => {
+      const date = input.date ?? new Date().toISOString().slice(0, 10);
+      const scoped = sales.filter(
+        (s) =>
+          s.createdAt.slice(0, 10) === date &&
+          s.status === "completed" &&
+          (currentUser?.role !== "cajero" ||
+            !s.operatorId ||
+            s.operatorId === currentUser.id),
+      );
+      const already = closures.some(
+        (c) =>
+          c.date === date &&
+          (!currentUser ||
+            currentUser.role !== "cajero" ||
+            c.operatorId === currentUser.id),
+      );
+      if (already && currentUser?.role === "cajero") {
+        return {
+          ok: false as const,
+          error: "Ya registraste un cierre para hoy",
+        };
+      }
+      const closure = buildCashClosure({
+        sales: scoped,
+        allSales: sales,
+        date,
+        countedCashUsd: input.countedCashUsd,
+        countedCashBs: input.countedCashBs,
+        notes: input.notes,
+        createdBy: currentUser?.name,
+        operatorId: currentUser?.id,
+      });
+      setClosures(appendClosure(closure));
+      return { ok: true as const, closure };
+    },
+    [sales, closures, currentUser],
+  );
+
   const value = useMemo(
     () => ({
       license,
       rates,
       products,
       purchases,
+      sales,
+      closures,
+      movements,
       currentUser,
       users,
       roleMatrix,
@@ -271,12 +404,17 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       upsertProduct,
       confirmPurchase: confirmPurchaseFn,
       refreshPurchases,
+      completeSale: completeSaleFn,
+      createCashClosure: createCashClosureFn,
     }),
     [
       license,
       rates,
       products,
       purchases,
+      sales,
+      closures,
+      movements,
       currentUser,
       users,
       roleMatrix,
@@ -295,6 +433,8 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       upsertProduct,
       confirmPurchaseFn,
       refreshPurchases,
+      completeSaleFn,
+      createCashClosureFn,
     ],
   );
 

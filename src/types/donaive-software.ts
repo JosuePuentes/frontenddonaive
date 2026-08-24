@@ -111,3 +111,81 @@ export type DsPurchase = {
   createdAt: string;
   createdBy?: string;
 };
+
+export type DsPaymentMethod =
+  | "efectivo_usd"
+  | "efectivo_bs"
+  | "pago_movil"
+  | "transferencia"
+  | "zelle"
+  | "tarjeta"
+  | "otro";
+
+export type DsPayment = {
+  method: DsPaymentMethod;
+  currency: "USD" | "BS";
+  amount: number;
+  reference?: string;
+};
+
+export type DsSaleLine = {
+  key: string;
+  productId: string;
+  productLabel: string;
+  sku: string;
+  sellMode: "UNIT" | "BOX";
+  qty: number;
+  qtyBase: number;
+  unitPriceUsd: number;
+  unitPriceBs: number;
+  lineTotalUsd: number;
+  lineTotalBs: number;
+  unitCostUsd: number;
+};
+
+export type DsSale = {
+  id: string;
+  receiptNumber: string;
+  lines: DsSaleLine[];
+  payments: DsPayment[];
+  totalUsd: number;
+  totalBs: number;
+  bcvRateAtSale: number;
+  status: "completed" | "voided";
+  createdAt: string;
+  createdBy?: string;
+  operatorId?: string;
+};
+
+export type DsCashClosure = {
+  id: string;
+  date: string;
+  salesCount: number;
+  voidedCount: number;
+  totalUsd: number;
+  totalBs: number;
+  byMethod: Record<string, { usd: number; bs: number }>;
+  expectedCashUsd: number;
+  expectedCashBs: number;
+  countedCashUsd: number;
+  countedCashBs: number;
+  diffUsd: number;
+  diffBs: number;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
+  operatorId?: string;
+};
+
+export type DsStockMovement = {
+  id: string;
+  type: "VENTA" | "COMPRA" | "AJUSTE";
+  productId: string;
+  productLabel: string;
+  qtyBase: number;
+  unitCostUsd?: number;
+  note?: string;
+  refId?: string;
+  createdAt: string;
+  createdBy?: string;
+};
