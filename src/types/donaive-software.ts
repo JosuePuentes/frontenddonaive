@@ -54,3 +54,60 @@ export type DsSession = {
   role: DsRole;
   loggedInAt: string;
 };
+
+/** Producto con stock y CPP en unidades base. */
+export type DsProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  barcode?: string;
+  unitsPerBox: number;
+  taxable: boolean;
+  utilityPercent: number;
+  stock: { qtyBase: number; unitCostUsd: number };
+  saleUnitUsd?: number;
+  saleBoxUsd?: number;
+};
+
+export type DsPurchaseLine = {
+  key: string;
+  productId: string;
+  productLabel: string;
+  sku: string;
+  unitsPerBox: number;
+  buyMode: "UNIT" | "BOX";
+  qty: number;
+  qtyBonus: number;
+  costMode: "UNIT" | "PRESENTATION" | "TOTAL";
+  unitCost: number;
+  presentationCost: number;
+  lineTotal: number;
+  taxable: boolean;
+  utilityPercent: number;
+};
+
+export type DsExtraInvoiceTax = {
+  id: string;
+  name: string;
+  amountBs: number;
+  allocateToCost: boolean;
+};
+
+export type DsPurchase = {
+  id: string;
+  supplierName: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  currency: "USD" | "BS";
+  invoiceRate?: number;
+  extraTaxes: DsExtraInvoiceTax[];
+  lines: DsPurchaseLine[];
+  notes?: string;
+  subtotal: number;
+  tax: number;
+  extraTaxesTotal: number;
+  extraTaxesTotalBs: number;
+  grandTotal: number;
+  createdAt: string;
+  createdBy?: string;
+};

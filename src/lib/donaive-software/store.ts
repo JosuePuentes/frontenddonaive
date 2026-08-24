@@ -1,7 +1,10 @@
-/** Tasas y demo de productos — persistencia local offline-first. */
+/** Tasas, productos y compras — persistencia local offline-first. */
 
 import type { CppState } from "@/lib/donaive-software/cpp";
 import { applyWeightedCpp } from "@/lib/donaive-software/cpp";
+import type { DsProduct, DsPurchase } from "@/types/donaive-software";
+
+export type { DsProduct, DsPurchase };
 
 export type DsRatesState = {
   bcv: number;
@@ -9,16 +12,34 @@ export type DsRatesState = {
   updatedAt: string;
 };
 
-export type DsProductDemo = {
-  id: string;
-  name: string;
-  sku: string;
-  unitsPerBox: number;
-  stock: CppState;
-};
+/** @deprecated usar DsProduct */
+export type DsProductDemo = DsProduct;
 
 const RATES_KEY = "donaive-software-rates-v1";
 const PRODUCTS_KEY = "donaive-software-products-v1";
+const PURCHASES_KEY = "donaive-software-purchases-v1";
+
+function uid(prefix: string): string {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeProduct(raw: Partial<DsProduct> & { id: string }): DsProduct {
+  return {
+    id: raw.id,
+    name: raw.name ?? "Producto",
+    sku: raw.sku ?? raw.id,
+    barcode: raw.barcode,
+    unitsPerBox: Math.max(1, Number(raw.unitsPerBox) || 1),
+    taxable: raw.taxable ?? false,
+    utilityPercent: Number(raw.utilityPercent) || 30,
+    stock: {
+      qtyBase: Number(raw.stock?.qtyBase) || 0,
+      unitCostUsd: Number(raw.stock?.unitCostUsd) || 0,
+    },
+    saleUnitUsd: raw.saleUnitUsd,
+    saleBoxUsd: raw.saleBoxUsd,
+  };
+}
 
 export function loadRates(): DsRatesState {
   const fallback: DsRatesState = {
@@ -40,46 +61,76 @@ export function saveRates(rates: DsRatesState): void {
   localStorage.setItem(RATES_KEY, JSON.stringify(rates));
 }
 
-function defaultProducts(): DsProductDemo[] {
+function defaultProducts(): DsProduct[] {
   return [
-    {
+    normalizeProduct({
       id: "p1",
       name: "Producto demo A",
       sku: "DEMO-A",
       unitsPerBox: 24,
+      taxable: true,
+      utilityPercent: 30,
       stock: { qtyBase: 48, unitCostUsd: 1.25 },
-    },
-    {
+      saleUnitUsd: 1.79,
+      saleBoxUsd: 42.86,
+    }),
+    normalizeProduct({
       id: "p2",
       name: "Producto demo B",
       sku: "DEMO-B",
       unitsPerBox: 12,
+      taxable: false,
+      utilityPercent: 25,
       stock: { qtyBase: 10, unitCostUsd: 3.4 },
-    },
+      saleUnitUsd: 4.53,
+      saleBoxUsd: 54.4,
+    }),
   ];
 }
 
-export function loadProducts(): DsProductDemo[] {
+export function loadProducts(): DsProduct[] {
   if (typeof window === "undefined") return defaultProducts();
   try {
     const raw = localStorage.getItem(PRODUCTS_KEY);
     if (!raw) return defaultProducts();
-    return JSON.parse(raw) as DsProductDemo[];
+    const parsed = JSON.parse(raw) as Partial<DsProduct>[];
+    return parsed.map((p) => normalizeProduct(p as DsProduct));
   } catch {
     return defaultProducts();
   }
 }
 
-export function saveProducts(products: DsProductDemo[]): void {
+export function saveProducts(products: DsProduct[]): void {
   localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
 }
 
+export function loadPurchases(): DsPurchase[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(PURCHASES_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as DsPurchase[];
+  } catch {
+    return [];
+  }
+}
+
+export function savePurchases(purchases: DsPurchase[]): void {
+  localStorage.setItem(PURCHASES_KEY, JSON.stringify(purchases));
+}
+
+export function appendPurchase(purchase: DsPurchase): DsPurchase[] {
+  const list = [purchase, ...loadPurchases()];
+  savePurchases(list);
+  return list;
+}
+
 export function receiveStock(
-  products: DsProductDemo[],
+  products: DsProduct[],
   productId: string,
   qtyBase: number,
   unitCostUsd: number,
-): DsProductDemo[] {
+): DsProduct[] {
   return products.map((p) => {
     if (p.id !== productId) return p;
     return {
@@ -88,3 +139,64 @@ export function receiveStock(
     };
   });
 }
+
+export type UpsertProductInput = {
+  id?: string;
+  name: string;
+  sku: string;
+  barcode?: string;
+  unitsPerBox: number;
+  taxable: boolean;
+  utilityPercent: number;
+};
+
+export function upsertProduct(
+  products: DsProduct[],
+  input: UpsertProductInput,
+): { ok: true; products: DsProduct[]; product: DsProduct } | { ok: false; error: string } {
+  const sku = input.sku.trim().toUpperCase();
+  const name = input.name.trim();
+  if (!sku) return { ok: false, error: "Indique el SKU" };
+  if (!name) return { ok: false, error: "Indique el nombre" };
+  const upp = Math.max(1, Number(input.unitsPerBox) || 1);
+
+  const dup = products.find(
+    (p) => p.sku.toUpperCase() === sku && p.id !== input.id,
+  );
+  if (dup) return { ok: false, error: "Ya existe un producto con ese SKU" };
+
+  if (input.id) {
+    const idx = products.findIndex((p) => p.id === input.id);
+    if (idx < 0) return { ok: false, error: "Producto no encontrado" };
+    const prev = products[idx];
+    const updated = normalizeProduct({
+      ...prev,
+      name,
+      sku,
+      barcode: input.barcode?.trim() || undefined,
+      unitsPerBox: upp,
+      taxable: input.taxable,
+      utilityPercent: input.utilityPercent,
+    });
+    const next = [...products];
+    next[idx] = updated;
+    saveProducts(next);
+    return { ok: true, products: next, product: updated };
+  }
+
+  const created = normalizeProduct({
+    id: uid("p"),
+    name,
+    sku,
+    barcode: input.barcode?.trim() || undefined,
+    unitsPerBox: upp,
+    taxable: input.taxable,
+    utilityPercent: input.utilityPercent,
+    stock: { qtyBase: 0, unitCostUsd: 0 },
+  });
+  const next = [...products, created];
+  saveProducts(next);
+  return { ok: true, products: next, product: created };
+}
+
+export type { CppState };
