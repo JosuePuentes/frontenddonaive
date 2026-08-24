@@ -11,6 +11,7 @@ let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
 
 export function initPwa(onNeedRefresh?: PwaUpdateHandler): void {
   if (typeof window === "undefined") return;
+  if (import.meta.env.VITE_DONAIVE_DESKTOP === "true") return;
   if (!("serviceWorker" in navigator)) return;
 
   updateSW = registerSW({

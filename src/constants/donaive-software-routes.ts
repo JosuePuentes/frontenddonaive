@@ -12,6 +12,7 @@ export function getDonaiveSoftwareRoutes() {
     posVender: p("/m/pos/vender"),
     posCierres: p("/m/pos/cierres"),
     posFacturas: p("/m/pos/facturas"),
+    descargar: p("/descargar"),
     inventario: p("/m/inventario"),
     inventarioProductos: p("/m/inventario/productos"),
     inventarioMovimientos: p("/m/inventario/movimientos"),

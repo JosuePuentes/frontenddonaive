@@ -28,9 +28,11 @@ export default defineConfig(({ mode }) => {
   }
 
   const softwareHost = env.VITE_DONAIVE_SOFTWARE_HOST === "true";
+  const desktopBuild = env.VITE_DONAIVE_DESKTOP === "true";
   const pwaStart = softwareHost ? "/" : "/software";
 
   return {
+    base: desktopBuild ? "./" : "/",
     plugins: [
       react(),
       tailwindcss(),
@@ -40,6 +42,7 @@ export default defineConfig(({ mode }) => {
       createPolisurClicksVitePlugin(path.resolve(__dirname)),
       createDsLicensesVitePlugin(path.resolve(__dirname)),
       VitePWA({
+        disable: desktopBuild,
         registerType: "prompt",
         includeAssets: ["logo.png", "fonts.css", "vite.svg"],
         manifest: {

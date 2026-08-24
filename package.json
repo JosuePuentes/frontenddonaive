@@ -8,7 +8,11 @@
     "build": "npm exec tsc -- -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "verify:polisur-assets": "node scripts/verify-polisur-assets.mjs"
+    "verify:polisur-assets": "node scripts/verify-polisur-assets.mjs",
+    "desktop:build": "node scripts/build-donaive-desktop.mjs",
+    "desktop:build:linux": "node scripts/build-donaive-desktop.mjs --linux",
+    "desktop:build:win": "node scripts/build-donaive-desktop.mjs --win",
+    "desktop:build:dir": "node scripts/build-donaive-desktop.mjs --dir"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.1.2",

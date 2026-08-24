@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
 import type { DsActivationRequest } from "@/lib/donaive-software/license-api";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
@@ -132,6 +132,13 @@ export default function DsActivar() {
           {busy ? "Activando…" : "Activar sistema en este equipo"}
         </button>
       </form>
+
+      <p className="ds-muted" style={{ marginTop: "1.5rem", fontSize: "0.9rem" }}>
+        ¿Prefieres el programa en tu PC?{" "}
+        <Link to={routes.descargar} style={{ color: "var(--ds-accent)" }}>
+          Descargar app de escritorio
+        </Link>
+      </p>
     </div>
   );
 }

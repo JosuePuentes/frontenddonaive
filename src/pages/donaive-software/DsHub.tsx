@@ -37,6 +37,11 @@ export default function DsHub() {
             ? `Operando como ${license.businessName}. Elige un módulo; adentro están solo las funciones de ese módulo.`
             : "Elige un módulo para trabajar."}
         </p>
+        <div style={{ marginTop: "0.85rem" }}>
+          <Link className="ds-btn" to={routes.descargar}>
+            Descargar app de escritorio
+          </Link>
+        </div>
       </section>
 
       {modules.length === 0 ? (

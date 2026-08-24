@@ -28,3 +28,11 @@ dist-ssr
 
 # Preinscripciones POLISUR (PII local)
 data/polisur-preinscripciones.json
+
+# Donaive Software desktop build
+desktop/donaive-software/node_modules
+desktop/donaive-software/dist-ui
+desktop/donaive-software/release
+desktop/donaive-software/*.AppImage
+desktop/donaive-software/*.exe
+desktop/donaive-software/*.dmg

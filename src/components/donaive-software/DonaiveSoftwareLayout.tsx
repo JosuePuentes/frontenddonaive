@@ -33,6 +33,7 @@ function Gate({ children }: { children: ReactNode }) {
   const routes = getDonaiveSoftwareRoutes();
   const isActivar = path === "/activar";
   const isLogin = path === "/login";
+  const isDescargar = path === "/descargar";
 
   useEffect(() => {
     if (!license) return;
@@ -43,13 +44,13 @@ function Gate({ children }: { children: ReactNode }) {
     return () => window.clearInterval(id);
   }, [license, validateLicenseOnline]);
 
-  if (!license && !isActivar) {
+  if (!license && !isActivar && !isDescargar) {
     return <Navigate to={routes.activar} replace />;
   }
   if (license && isActivar) {
     return <Navigate to={routes.login} replace />;
   }
-  if (license && !currentUser && !isLogin) {
+  if (license && !currentUser && !isLogin && !isDescargar) {
     return <Navigate to={routes.login} replace />;
   }
   if (license && currentUser && isLogin) {

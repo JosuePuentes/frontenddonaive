@@ -1,0 +1,72 @@
+{
+  "name": "donaive-software-desktop",
+  "productName": "Donaive Software",
+  "version": "1.0.0",
+  "description": "Sistema administrativo local Donaive Software (POS, inventario, finanzas).",
+  "author": "Donaive",
+  "main": "main.cjs",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win nsis portable",
+    "dist:linux": "electron-builder --linux AppImage",
+    "dist:all": "electron-builder --win nsis portable --linux AppImage"
+  },
+  "build": {
+    "appId": "ve.com.donaive.software",
+    "productName": "Donaive Software",
+    "copyright": "Copyright © Donaive",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist-ui",
+        "to": "dist-ui"
+      }
+    ],
+    "asar": true,
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Office",
+      "artifactName": "Donaive-Software-${version}-linux.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "Donaive-Software-${version}-windows-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Donaive Software",
+      "installerLanguages": ["es_ES"],
+      "language": "3082"
+    },
+    "portable": {
+      "artifactName": "Donaive-Software-${version}-portable.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12"
+  }
+}

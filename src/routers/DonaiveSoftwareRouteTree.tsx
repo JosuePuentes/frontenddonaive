@@ -74,6 +74,7 @@ const DsConfigUsuarios = lazy(
 const DsConfigPermisos = lazy(
   () => import("@/pages/donaive-software/DsConfigPermisos"),
 );
+const DsDescargar = lazy(() => import("@/pages/donaive-software/DsDescargar"));
 
 /** Fragmentos de ruta bajo prefijo "" (dominio propio) o "/software". */
 export function donaiveSoftwareRouteTree(prefix: "" | "/software") {
@@ -88,6 +89,7 @@ export function donaiveSoftwareRouteTree(prefix: "" | "/software") {
       <Route path={p("/")} element={<DsHub />} />
       <Route path={p("/activar")} element={<DsActivar />} />
       <Route path={p("/login")} element={<DsLogin />} />
+      <Route path={p("/descargar")} element={<DsDescargar />} />
       <Route path={p("/m/:moduleId")} element={<DsModuleHome />} />
       <Route path={p("/m/pos/vender")} element={<DsPosVender />} />
       <Route path={p("/m/pos/cierres")} element={<DsPosCierres />} />

@@ -19,14 +19,25 @@ export function isDonaiveSoftwareVercelHostname(hostname: string): boolean {
 
 /**
  * Dev: VITE_DONAIVE_SOFTWARE_HOST=true simula dominio propio.
+ * Desktop: VITE_DONAIVE_DESKTOP=true o window.donaiveDesktop.
  * Producción: hostname del proyecto Vercel o lista DNS.
  */
+export function isDonaiveDesktopRuntime(): boolean {
+  if (import.meta.env.VITE_DONAIVE_DESKTOP === "true") return true;
+  if (typeof window === "undefined") return false;
+  return Boolean(
+    (window as Window & { donaiveDesktop?: { isDesktop?: boolean } })
+      .donaiveDesktop?.isDesktop,
+  );
+}
+
 export function isDonaiveSoftwareHost(
   hostname = typeof window !== "undefined" ? window.location.hostname : "",
 ): boolean {
   if (import.meta.env.VITE_DONAIVE_SOFTWARE_HOST === "true") {
     return true;
   }
+  if (isDonaiveDesktopRuntime()) return true;
   const host = hostname.trim().toLowerCase();
   if ((DONAIVE_SOFTWARE_HOSTNAMES as readonly string[]).includes(host)) {
     return true;
