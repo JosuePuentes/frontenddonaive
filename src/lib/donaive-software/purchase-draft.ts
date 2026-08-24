@@ -109,6 +109,18 @@ export function searchProducts(products: DsProduct[], term: string): DsProduct[]
   );
 }
 
+export function findProductByCode(
+  products: DsProduct[],
+  code: string,
+): DsProduct | undefined {
+  const q = code.trim().toLowerCase();
+  if (!q) return undefined;
+  return products.find(
+    (p) =>
+      (p.barcode ?? "").toLowerCase() === q || p.sku.toLowerCase() === q,
+  );
+}
+
 export function formatDsNumber(n: number, decimals = 2): string {
   return n.toLocaleString("es-VE", {
     minimumFractionDigits: decimals,

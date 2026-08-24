@@ -7,6 +7,7 @@ const DsLogin = lazy(() => import("@/pages/donaive-software/DsLogin"));
 const DsModuleHome = lazy(() => import("@/pages/donaive-software/DsModuleHome"));
 const DsPosVender = lazy(() => import("@/pages/donaive-software/DsPosVender"));
 const DsPosCierres = lazy(() => import("@/pages/donaive-software/DsPosCierres"));
+const DsPosFacturas = lazy(() => import("@/pages/donaive-software/DsPosFacturas"));
 const DsInventarioProductos = lazy(
   () => import("@/pages/donaive-software/DsInventarioProductos"),
 );
@@ -27,6 +28,9 @@ const DsFinanzasCpp = lazy(
 );
 const DsFinanzasCuentas = lazy(
   () => import("@/pages/donaive-software/DsFinanzasCuentas"),
+);
+const DsFinanzasBancos = lazy(
+  () => import("@/pages/donaive-software/DsFinanzasBancos"),
 );
 const DsClientesLista = lazy(
   () => import("@/pages/donaive-software/DsClientesLista"),
@@ -51,6 +55,9 @@ const DsPresidenteInventarios = lazy(
 );
 const DsInformesVentasDiarias = lazy(
   () => import("@/pages/donaive-software/DsInformesVentasDiarias"),
+);
+const DsInformesClientes = lazy(
+  () => import("@/pages/donaive-software/DsInformesClientes"),
 );
 const DsInformesReposicion = lazy(
   () => import("@/pages/donaive-software/DsInformesReposicion"),
@@ -84,6 +91,7 @@ export function donaiveSoftwareRouteTree(prefix: "" | "/software") {
       <Route path={p("/m/:moduleId")} element={<DsModuleHome />} />
       <Route path={p("/m/pos/vender")} element={<DsPosVender />} />
       <Route path={p("/m/pos/cierres")} element={<DsPosCierres />} />
+      <Route path={p("/m/pos/facturas")} element={<DsPosFacturas />} />
       <Route
         path={p("/m/inventario/productos")}
         element={<DsInventarioProductos />}
@@ -100,6 +108,7 @@ export function donaiveSoftwareRouteTree(prefix: "" | "/software") {
         element={<DsFinanzasCpp />}
       />
       <Route path={p("/m/finanzas/cuentas")} element={<DsFinanzasCuentas />} />
+      <Route path={p("/m/finanzas/bancos")} element={<DsFinanzasBancos />} />
       <Route path={p("/m/clientes/lista")} element={<DsClientesLista />} />
       <Route path={p("/m/proveedores/lista")} element={<DsProveedoresLista />} />
       <Route path={p("/m/informes/ventas")} element={<DsInformesVentas />} />
@@ -110,6 +119,10 @@ export function donaiveSoftwareRouteTree(prefix: "" | "/software") {
       <Route
         path={p("/m/informes/ventas-diarias")}
         element={<DsInformesVentasDiarias />}
+      />
+      <Route
+        path={p("/m/informes/clientes")}
+        element={<DsInformesClientes />}
       />
       <Route
         path={p("/m/informes/reposicion")}

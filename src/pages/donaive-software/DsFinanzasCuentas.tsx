@@ -6,12 +6,13 @@ import { formatDsNumber } from "@/lib/donaive-software/purchase-draft";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
 function DsFinanzasCuentasInner() {
-  const { payables, receivables, payPayable, collectReceivable } =
+  const { payables, receivables, payPayable, collectReceivable, banks } =
     useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
   const [tab, setTab] = useState<"cxp" | "cxc">("cxp");
   const [payId, setPayId] = useState("");
   const [amount, setAmount] = useState("");
+  const [bankId, setBankId] = useState("");
   const [msg, setMsg] = useState("");
 
   const openPayables = useMemo(
@@ -38,7 +39,11 @@ function DsFinanzasCuentasInner() {
       return;
     }
     if (tab === "cxp") {
-      const r = payPayable({ payableId: payId, amount: Number(amount) });
+      const r = payPayable({
+        payableId: payId,
+        amount: Number(amount),
+        bankId: bankId || undefined,
+      });
       if (!r.ok) {
         setMsg(r.error);
         return;
@@ -51,6 +56,7 @@ function DsFinanzasCuentasInner() {
     const r = collectReceivable({
       receivableId: payId,
       amount: Number(amount),
+      bankId: bankId || undefined,
     });
     if (!r.ok) {
       setMsg(r.error);
@@ -240,6 +246,21 @@ function DsFinanzasCuentasInner() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
+            </label>
+            <label className="ds-label">
+              Banco
+              <select
+                className="ds-input"
+                value={bankId}
+                onChange={(e) => setBankId(e.target.value)}
+              >
+                <option value="">Sin movimiento de banco</option>
+                {banks.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.currency})
+                  </option>
+                ))}
+              </select>
             </label>
             <button
               type="button"

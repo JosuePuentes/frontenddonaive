@@ -39,9 +39,16 @@ export function getDonaiveSoftwareModules(): DsModuleDef[] {
           permission: "pos.sell",
         },
         {
+          id: "facturas",
+          title: "Facturas",
+          description: "Buscar tickets y procesar devoluciones.",
+          path: r.posFacturas,
+          permission: "pos.sell",
+        },
+        {
           id: "cierres",
           title: "Cierres",
-          description: "Cerrar turno y revisar recaudación.",
+          description: "Abrir/cerrar turno y revisar recaudación.",
           path: r.posCierres,
           permission: "pos.closures",
         },
@@ -131,6 +138,13 @@ export function getDonaiveSoftwareModules(): DsModuleDef[] {
           path: r.finanzasCuentas,
           permission: "finance.accounts",
         },
+        {
+          id: "bancos",
+          title: "Bancos",
+          description: "Cuentas bancarias, métodos de pago y saldos.",
+          path: r.finanzasBancos,
+          permission: "finance.manage",
+        },
       ],
     },
     {
@@ -185,6 +199,13 @@ export function getDonaiveSoftwareModules(): DsModuleDef[] {
           description: "Tickets, totales y top del día.",
           path: r.informesVentasDiarias,
           permission: ["reports.read", "reports.daily"],
+        },
+        {
+          id: "clientes-inf",
+          title: "Clientes",
+          description: "Directorio y saldos por cliente.",
+          path: r.informesClientes,
+          permission: ["reports.read", "clients.read"],
         },
         {
           id: "inv",

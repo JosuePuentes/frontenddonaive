@@ -15,6 +15,9 @@ import type {
   DsGeneralInventoryState,
   DsGeneralInventoryMovement,
   DsFiscalSettings,
+  DsBank,
+  DsBankMovement,
+  DsCashSession,
 } from "@/types/donaive-software";
 
 export type {
@@ -54,6 +57,9 @@ const RECEIVABLES_KEY = "donaive-software-receivables-v1";
 const GENERAL_STOCK_KEY = "donaive-software-general-stock-v1";
 const GENERAL_MOVEMENTS_KEY = "donaive-software-general-movements-v1";
 const FISCAL_SETTINGS_KEY = "donaive-software-fiscal-settings-v1";
+const BANKS_KEY = "donaive-software-banks-v1";
+const BANK_MOVEMENTS_KEY = "donaive-software-bank-movements-v1";
+const CASH_SESSIONS_KEY = "donaive-software-cash-sessions-v1";
 
 function uid(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -428,6 +434,59 @@ export function loadFiscalSettings(): DsFiscalSettings {
 
 export function saveFiscalSettings(settings: DsFiscalSettings): void {
   localStorage.setItem(FISCAL_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+export function loadBanks(): DsBank[] {
+  const list = loadJsonArray<DsBank>(BANKS_KEY);
+  if (list.length) return list;
+  const seeded = [
+    {
+      id: "bank-caja-usd",
+      name: "Caja efectivo USD",
+      currency: "USD" as const,
+      paymentMethods: ["efectivo_usd" as const],
+      active: true,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "bank-caja-bs",
+      name: "Caja efectivo Bs",
+      currency: "BS" as const,
+      paymentMethods: ["efectivo_bs" as const],
+      active: true,
+      createdAt: new Date().toISOString(),
+    },
+  ];
+  if (typeof window !== "undefined") saveBanks(seeded);
+  return seeded;
+}
+
+export function saveBanks(banks: DsBank[]): void {
+  localStorage.setItem(BANKS_KEY, JSON.stringify(banks));
+}
+
+export function loadBankMovements(): DsBankMovement[] {
+  return loadJsonArray<DsBankMovement>(BANK_MOVEMENTS_KEY);
+}
+
+export function saveBankMovements(movements: DsBankMovement[]): void {
+  localStorage.setItem(BANK_MOVEMENTS_KEY, JSON.stringify(movements));
+}
+
+export function appendBankMovements(
+  extra: DsBankMovement[],
+): DsBankMovement[] {
+  const list = [...extra, ...loadBankMovements()];
+  saveBankMovements(list);
+  return list;
+}
+
+export function loadCashSessions(): DsCashSession[] {
+  return loadJsonArray<DsCashSession>(CASH_SESSIONS_KEY);
+}
+
+export function saveCashSessions(sessions: DsCashSession[]): void {
+  localStorage.setItem(CASH_SESSIONS_KEY, JSON.stringify(sessions));
 }
 
 export type { CppState };

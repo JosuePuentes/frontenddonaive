@@ -4,7 +4,8 @@ import { DsBarChart } from "@/components/donaive-software/DsBarChart";
 import DsRequirePermission from "@/components/donaive-software/DsRequirePermission";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
 import { formatDsNumber } from "@/lib/donaive-software/purchase-draft";
-import { buildDailySalesSummary } from "@/lib/donaive-software/planning";
+import { buildDailySalesSummary, downloadCsv } from "@/lib/donaive-software/planning";
+import { buildYearlySalesReport, salesInClock } from "@/lib/donaive-software/reports";
 import { DS_PAYMENT_LABELS } from "@/lib/donaive-software/sales";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 import type { DsPaymentMethod } from "@/types/donaive-software";
@@ -14,10 +15,32 @@ function DsInformesVentasDiariasInner() {
   const routes = getDonaiveSoftwareRoutes();
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
+  const [fromHour, setFromHour] = useState("0");
+  const [toHour, setToHour] = useState("23");
+  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [mode, setMode] = useState<"dia" | "horas" | "anio">("dia");
+
+  const hourSales = useMemo(
+    () =>
+      salesInClock(sales, {
+        date,
+        fromHour: Number(fromHour),
+        toHour: Number(toHour),
+      }),
+    [sales, date, fromHour, toHour],
+  );
 
   const summary = useMemo(
-    () => buildDailySalesSummary(sales, date),
-    [sales, date],
+    () =>
+      buildDailySalesSummary(
+        mode === "horas" ? hourSales : sales,
+        date,
+      ),
+    [sales, date, mode, hourSales],
+  );
+  const yearly = useMemo(
+    () => buildYearlySalesReport(sales, Number(year)),
+    [sales, year],
   );
 
   return (
@@ -46,7 +69,28 @@ function DsInformesVentasDiariasInner() {
               Tickets, recaudación y productos del día. Solo consulta.
             </p>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className={`ds-chip${mode === "dia" ? " ds-chip--active" : ""}`}
+              onClick={() => setMode("dia")}
+            >
+              Día
+            </button>
+            <button
+              type="button"
+              className={`ds-chip${mode === "horas" ? " ds-chip--active" : ""}`}
+              onClick={() => setMode("horas")}
+            >
+              Horas
+            </button>
+            <button
+              type="button"
+              className={`ds-chip${mode === "anio" ? " ds-chip--active" : ""}`}
+              onClick={() => setMode("anio")}
+            >
+              Año
+            </button>
             <label className="ds-label">
               Fecha
               <input
@@ -56,12 +100,71 @@ function DsInformesVentasDiariasInner() {
                 onChange={(e) => setDate(e.target.value)}
               />
             </label>
+            {mode === "horas" ? (
+              <>
+                <label className="ds-label">
+                  Desde hora
+                  <input
+                    className="ds-input"
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={fromHour}
+                    onChange={(e) => setFromHour(e.target.value)}
+                  />
+                </label>
+                <label className="ds-label">
+                  Hasta
+                  <input
+                    className="ds-input"
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={toHour}
+                    onChange={(e) => setToHour(e.target.value)}
+                  />
+                </label>
+              </>
+            ) : null}
+            {mode === "anio" ? (
+              <label className="ds-label">
+                Año
+                <input
+                  className="ds-input"
+                  type="number"
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                />
+              </label>
+            ) : null}
             <button
               type="button"
               className="ds-btn"
               onClick={() => window.print()}
             >
               Imprimir
+            </button>
+            <button
+              type="button"
+              className="ds-btn"
+              onClick={() =>
+                downloadCsv(
+                  `ventas-${mode}.csv`,
+                  mode === "anio"
+                    ? [
+                        "Mes,Tickets,USD",
+                        ...yearly.months.map(
+                          (m) => `${m.label},${m.tickets},${m.usd.toFixed(2)}`,
+                        ),
+                      ].join("\n")
+                    : [
+                        "Fecha,Tickets,USD,Bs,Ticket promedio",
+                        `${summary.date},${summary.tickets},${summary.totalUsd.toFixed(2)},${summary.totalBs.toFixed(2)},${summary.avgTicketUsd.toFixed(2)}`,
+                      ].join("\n"),
+                )
+              }
+            >
+              CSV
             </button>
           </div>
         </div>

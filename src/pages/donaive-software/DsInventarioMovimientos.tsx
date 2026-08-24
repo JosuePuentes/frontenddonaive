@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import DsRequirePermission from "@/components/donaive-software/DsRequirePermission";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
 import { formatDsNumber } from "@/lib/donaive-software/purchase-draft";
+import { downloadCsv } from "@/lib/donaive-software/planning";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
 function DsInventarioMovimientosInner() {
@@ -22,6 +23,27 @@ function DsInventarioMovimientosInner() {
         <p className="ds-lead">
           Kardex local: entradas por compras y salidas por ventas.
         </p>
+        {movements.length > 0 ? (
+          <button
+            type="button"
+            className="ds-btn"
+            style={{ marginTop: "0.75rem" }}
+            onClick={() =>
+              downloadCsv(
+                "movimientos-unidades.csv",
+                [
+                  "Fecha,Tipo,Producto,Cantidad,Nota",
+                  ...movements.map(
+                    (m) =>
+                      `${m.createdAt},${m.type},"${(m.productLabel ?? "").replace(/"/g, '""')}",${m.qtyBase},${(m.note ?? "").replace(/"/g, '""')}`,
+                  ),
+                ].join("\n"),
+              )
+            }
+          >
+            Exportar CSV
+          </button>
+        ) : null}
 
         {movements.length === 0 ? (
           <p className="ds-muted" style={{ marginTop: "1.25rem" }}>
