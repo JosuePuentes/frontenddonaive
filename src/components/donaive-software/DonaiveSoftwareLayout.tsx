@@ -27,12 +27,21 @@ function FontLoader() {
 }
 
 function Gate({ children }: { children: ReactNode }) {
-  const { license, currentUser } = useDonaiveSoftware();
+  const { license, currentUser, validateLicenseOnline } = useDonaiveSoftware();
   const { pathname } = useLocation();
   const path = normalizeDonaiveSoftwarePathname(pathname);
   const routes = getDonaiveSoftwareRoutes();
   const isActivar = path === "/activar";
   const isLogin = path === "/login";
+
+  useEffect(() => {
+    if (!license) return;
+    void validateLicenseOnline();
+    const id = window.setInterval(() => {
+      void validateLicenseOnline();
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(id);
+  }, [license, validateLicenseOnline]);
 
   if (!license && !isActivar) {
     return <Navigate to={routes.activar} replace />;

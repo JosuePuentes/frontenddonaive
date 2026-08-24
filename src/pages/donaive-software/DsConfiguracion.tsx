@@ -31,7 +31,7 @@ function DsConfigLicenciaInner() {
             <p className="ds-muted" style={{ marginTop: "0.5rem" }}>
               Activado:{" "}
               {new Date(license.activatedAt).toLocaleString("es-VE")}
-              {license.licenseKey ? ` · clave ${license.licenseKey}` : ""}
+              {license.licenseId ? ` · licencia ${license.licenseId}` : ""}
             </p>
           ) : null}
         </div>

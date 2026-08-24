@@ -8,11 +8,17 @@ import {
   type ReactNode,
 } from "react";
 import {
-  activateLicense,
+  activateLicenseFromServer,
   clearLicense,
   loadLicense,
   type DsLicense,
 } from "@/lib/donaive-software/license";
+import { getDeviceFingerprint } from "@/lib/donaive-software/device";
+import {
+  checkRemoteActivation,
+  redeemActivationCode,
+  requestRemoteActivation,
+} from "@/lib/donaive-software/license-api";
 import {
   ensureDefaultAdmin,
   loadRoleMatrix,
@@ -104,7 +110,13 @@ type Ctx = {
   currentUser: DsUser | null;
   users: DsUser[];
   roleMatrix: Partial<Record<DsRole, DsPermission[]>>;
-  activate: (businessName: string, licenseKey?: string) => void;
+  activateWithCode: (
+    activationCode: string,
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
+  requestActivation: () => Promise<
+    import("@/lib/donaive-software/license-api").DsActivationRequest
+  >;
+  validateLicenseOnline: () => Promise<void>;
   deactivate: () => void;
   login: (
     username: string,
@@ -220,15 +232,54 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     setReady(true);
   }, []);
 
-  const activate = useCallback(
-    (businessName: string, licenseKey?: string) => {
-      const next = activateLicense({ businessName, licenseKey });
-      ensureDefaultAdmin();
-      setLicense(next);
-      refreshUsers();
+  const activateWithCode = useCallback(
+    async (activationCode: string) => {
+      try {
+        const result = await redeemActivationCode(activationCode);
+        const next = activateLicenseFromServer({
+          businessName: result.businessName,
+          licenseId: result.licenseId,
+          activationId: result.activationId,
+          deviceFingerprint: getDeviceFingerprint(),
+        });
+        ensureDefaultAdmin();
+        setLicense(next);
+        refreshUsers();
+        return { ok: true as const };
+      } catch (err) {
+        return {
+          ok: false as const,
+          error:
+            err instanceof Error
+              ? err.message
+              : "No se pudo activar con ese código.",
+        };
+      }
     },
     [refreshUsers],
   );
+
+  const requestActivation = useCallback(async () => {
+    return requestRemoteActivation();
+  }, []);
+
+  const validateLicenseOnline = useCallback(async () => {
+    const current = loadLicense();
+    if (!current) return;
+    try {
+      const check = await checkRemoteActivation({
+        activationId: current.activationId,
+      });
+      if (!check.ok) {
+        clearLicense();
+        authLogout();
+        setLicense(null);
+        setCurrentUser(null);
+      }
+    } catch {
+      // Sin red: mantener licencia local (offline-first)
+    }
+  }, []);
 
   const deactivate = useCallback(() => {
     clearLicense();
@@ -542,7 +593,9 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       currentUser,
       users,
       roleMatrix,
-      activate,
+      activateWithCode,
+      requestActivation,
+      validateLicenseOnline,
       deactivate,
       login,
       logout,
@@ -580,7 +633,9 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       currentUser,
       users,
       roleMatrix,
-      activate,
+      activateWithCode,
+      requestActivation,
+      validateLicenseOnline,
       deactivate,
       login,
       logout,

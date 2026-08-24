@@ -1,11 +1,14 @@
-/** Licencia local del negocio (offline-first). Persistencia en localStorage. */
+/** Licencia local del negocio (offline-first, validada remotamente al activar). */
 
 export type DsLicense = {
   businessName: string;
   activatedAt: string;
   active: boolean;
-  /** Código simple de activación (placeholder hasta API real). */
-  licenseKey?: string;
+  /** ID de licencia en servidor Donaive. */
+  licenseId: string;
+  /** Activación de este equipo. */
+  activationId: string;
+  deviceFingerprint: string;
 };
 
 const STORAGE_KEY = "donaive-software-license-v1";
@@ -16,7 +19,14 @@ export function loadLicense(): DsLicense | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as DsLicense;
-    if (!parsed?.businessName || !parsed.active) return null;
+    if (
+      !parsed?.businessName ||
+      !parsed.active ||
+      !parsed.licenseId ||
+      !parsed.activationId
+    ) {
+      return null;
+    }
     return parsed;
   } catch {
     return null;
@@ -31,13 +41,17 @@ export function clearLicense(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-export function activateLicense(input: {
+export function activateLicenseFromServer(input: {
   businessName: string;
-  licenseKey?: string;
+  licenseId: string;
+  activationId: string;
+  deviceFingerprint: string;
 }): DsLicense {
   const license: DsLicense = {
     businessName: input.businessName.trim(),
-    licenseKey: input.licenseKey?.trim() || undefined,
+    licenseId: input.licenseId,
+    activationId: input.activationId,
+    deviceFingerprint: input.deviceFingerprint,
     activatedAt: new Date().toISOString(),
     active: true,
   };

@@ -16,6 +16,9 @@ import { createPolisurSiteVitePlugin } from "./scripts/polisur-site-handler.mjs"
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error módulo .mjs de herramientas locales
 import { createPolisurClicksVitePlugin } from "./scripts/polisur-clicks-handler.mjs";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error módulo .mjs de herramientas locales
+import { createDsLicensesVitePlugin } from "./scripts/ds-licenses-handler.mjs";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -35,6 +38,7 @@ export default defineConfig(({ mode }) => {
       createPolisurPreinscripcionesVitePlugin(path.resolve(__dirname)),
       createPolisurSiteVitePlugin(path.resolve(__dirname)),
       createPolisurClicksVitePlugin(path.resolve(__dirname)),
+      createDsLicensesVitePlugin(path.resolve(__dirname)),
       VitePWA({
         registerType: "prompt",
         includeAssets: ["logo.png", "fonts.css", "vite.svg"],

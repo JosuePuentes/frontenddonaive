@@ -78,6 +78,9 @@ const CrmProjects = lazy(
 const PolisurPreinscripciones = lazy(
   () => import("@/pages/dashboard/PolisurPreinscripciones"),
 );
+const DonaiveSoftwareActivaciones = lazy(
+  () => import("@/pages/dashboard/DonaiveSoftwareActivaciones"),
+);
 
 const AppRouter = () => {
   const onPolisurDomain = isPolisurHost();
@@ -202,6 +205,10 @@ const AppRouter = () => {
             <Route
               path={DASHBOARD_ROUTES.polisurPreinscripciones}
               element={<PolisurPreinscripciones />}
+            />
+            <Route
+              path={DASHBOARD_ROUTES.donaiveSoftwareActivaciones}
+              element={<DonaiveSoftwareActivaciones />}
             />
           </Route>
         ) : null}
