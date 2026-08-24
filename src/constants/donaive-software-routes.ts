@@ -28,8 +28,14 @@ export function getDonaiveSoftwareRoutes() {
     informes: p("/m/informes"),
     informesVentas: p("/m/informes/ventas"),
     informesInventario: p("/m/informes/inventario"),
+    informesReposicion: p("/m/informes/reposicion"),
+    informesVentasDiarias: p("/m/informes/ventas-diarias"),
     analisis: p("/m/analisis"),
     analisisCompras: p("/m/analisis/compras"),
+    planificacion: p("/m/planificacion"),
+    planificacionCompras: p("/m/planificacion/compras"),
+    presidente: p("/m/presidente"),
+    presidenteResumen: p("/m/presidente/resumen"),
     configuracion: p("/m/configuracion"),
     configLicencia: p("/m/configuracion/licencia"),
     configUsuarios: p("/m/configuracion/usuarios"),
@@ -46,4 +52,6 @@ export type DonaiveSoftwareModuleId =
   | "proveedores"
   | "informes"
   | "analisis"
+  | "planificacion"
+  | "presidente"
   | "configuracion";

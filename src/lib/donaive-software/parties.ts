@@ -108,6 +108,10 @@ export type UpsertSupplierInput = {
   defaultCurrency: "USD" | "BS";
   creditDays: number;
   creditLimit: number;
+  /** Días que tarda en despachar. Default 3. */
+  leadTimeDays?: number;
+  /** Productos que vende este proveedor. */
+  productIds?: string[];
   notes?: string;
   active: boolean;
 };
@@ -134,6 +138,8 @@ export function upsertSupplierInList(
       defaultCurrency: input.defaultCurrency,
       creditDays: Math.max(0, Number(input.creditDays) || 0),
       creditLimit: Math.max(0, Number(input.creditLimit) || 0),
+      leadTimeDays: Math.max(1, Number(input.leadTimeDays) || 3),
+      productIds: [...(input.productIds ?? list[idx].productIds ?? [])],
       notes: input.notes?.trim() || undefined,
       active: input.active,
       updatedAt: now,
@@ -152,6 +158,8 @@ export function upsertSupplierInList(
     defaultCurrency: input.defaultCurrency,
     creditDays: Math.max(0, Number(input.creditDays) || 0),
     creditLimit: Math.max(0, Number(input.creditLimit) || 0),
+    leadTimeDays: Math.max(1, Number(input.leadTimeDays) || 3),
+    productIds: [...(input.productIds ?? [])],
     notes: input.notes?.trim() || undefined,
     active: input.active,
     createdAt: now,

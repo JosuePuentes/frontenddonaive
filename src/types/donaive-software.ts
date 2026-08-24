@@ -5,7 +5,8 @@ export type DsRole =
   | "supervisor"
   | "cajero"
   | "inventario"
-  | "finanzas";
+  | "finanzas"
+  | "presidente";
 
 export type DsPermission =
   | "pos.sell"
@@ -15,6 +16,7 @@ export type DsPermission =
   | "inventory.read"
   | "inventory.adjust"
   | "inventory.products"
+  | "inventory.movements"
   | "purchases.create"
   | "purchases.manage"
   | "purchases.approve"
@@ -26,7 +28,10 @@ export type DsPermission =
   | "finance.accounts"
   | "finance.manage"
   | "reports.read"
+  | "reports.daily"
   | "analysis.view"
+  | "planning.view"
+  | "president.view"
   | "users.manage"
   | "settings.manage"
   | "license.manage";
@@ -53,6 +58,8 @@ export type DsSession = {
   name: string;
   role: DsRole;
   loggedInAt: string;
+  /** Usuario presidente validado en servidor Donaive (no local). */
+  remotePresident?: boolean;
 };
 
 /** Producto con stock y CPP en unidades base. */
@@ -67,6 +74,10 @@ export type DsProduct = {
   stock: { qtyBase: number; unitCostUsd: number };
   saleUnitUsd?: number;
   saleBoxUsd?: number;
+  /** Calculado por algoritmo (no editar manual). */
+  minQtyBase?: number;
+  maxQtyBase?: number;
+  preferredSupplierId?: string;
 };
 
 export type DsPurchaseLine = {
@@ -140,11 +151,17 @@ export type DsSupplier = {
   defaultCurrency: "USD" | "BS";
   creditDays: number;
   creditLimit: number;
+  /** Días de despacho / entrega del proveedor. */
+  leadTimeDays: number;
+  /** Productos que vende este proveedor. */
+  productIds: string[];
   notes?: string;
   active: boolean;
   createdAt: string;
   updatedAt: string;
 };
+
+export type DsStockUrgency = "CRITICAL" | "BUY" | "OK" | "OVER";
 
 export type DsAccountPayment = {
   id: string;

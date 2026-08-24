@@ -4,11 +4,14 @@ import {
   checkDeviceActivation,
   createActivationRequest,
   createLicense,
+  createPresidentUser,
+  deactivatePresidentUser,
   findApprovedUnusedCodeForRequest,
   generateStandaloneCode,
   getLatestRequestForDevice,
   getPendingRequestForDevice,
   mutateStore,
+  presidentLogin,
   readJsonBody,
   readStore,
   redeemActivationCode,
@@ -200,6 +203,44 @@ export async function handleDsLicensesRequest(req, res, opts) {
         "ds-licenses: suspender licencia",
       );
       sendJson(res, 200, { ok: true, store });
+      return;
+    }
+
+    if (req.method === "POST" && action === "createPresidentUser") {
+      const body = await readJsonBody(req);
+      assertAdminClave(adminClaveFrom(req, url, body));
+      const store = await mutateStore(
+        mode,
+        root,
+        (current) => createPresidentUser(current, body),
+        "ds-licenses: crear usuario presidente",
+      );
+      sendJson(res, 200, { ok: true, store });
+      return;
+    }
+
+    if (req.method === "POST" && action === "deactivatePresidentUser") {
+      const body = await readJsonBody(req);
+      assertAdminClave(adminClaveFrom(req, url, body));
+      const store = await mutateStore(
+        mode,
+        root,
+        (current) => deactivatePresidentUser(current, body),
+        "ds-licenses: desactivar presidente",
+      );
+      sendJson(res, 200, { ok: true, store });
+      return;
+    }
+
+    if (req.method === "POST" && action === "presidentLogin") {
+      const body = await readJsonBody(req);
+      const store = await readStore(mode, root);
+      const result = presidentLogin(store, body);
+      if (!result.ok) {
+        sendJson(res, 401, result);
+        return;
+      }
+      sendJson(res, 200, result);
       return;
     }
 

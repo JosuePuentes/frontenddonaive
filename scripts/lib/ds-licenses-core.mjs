@@ -45,7 +45,13 @@ function clean(value, max) {
 }
 
 function emptyStore() {
-  return { licenses: [], requests: [], codes: [], activations: [] };
+  return {
+    licenses: [],
+    requests: [],
+    codes: [],
+    activations: [],
+    presidentUsers: [],
+  };
 }
 
 export function normalizeStore(raw) {
@@ -56,6 +62,7 @@ export function normalizeStore(raw) {
     requests: Array.isArray(raw.requests) ? raw.requests : [],
     codes: Array.isArray(raw.codes) ? raw.codes : [],
     activations: Array.isArray(raw.activations) ? raw.activations : [],
+    presidentUsers: Array.isArray(raw.presidentUsers) ? raw.presidentUsers : [],
   };
 }
 
@@ -568,4 +575,106 @@ export function findApprovedUnusedCodeForRequest(store, requestId) {
   const request = store.requests.find((r) => r.id === requestId);
   if (!request?.activationCodeId) return null;
   return store.codes.find((c) => c.id === request.activationCodeId) || null;
+}
+
+export function hashPassword(password) {
+  let h = 0;
+  const salt = "donaive-software-v1";
+  const str = `${salt}:${password}`;
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  }
+  return `ds_${(h >>> 0).toString(16)}`;
+}
+
+export function createPresidentUser(store, input) {
+  const licenseId = clean(input.licenseId, 80);
+  const license = findLicense(store, licenseId);
+  if (!license || license.status !== "active") {
+    const err = new Error("Licencia no válida.");
+    err.statusCode = 400;
+    throw err;
+  }
+  const username = clean(input.username, 60).toLowerCase();
+  const name = clean(input.name, 120);
+  const password = String(input.password || "");
+  if (!username || !name) {
+    const err = new Error("Usuario y nombre requeridos.");
+    err.statusCode = 400;
+    throw err;
+  }
+  if (password.length < 6) {
+    const err = new Error("La contraseña debe tener al menos 6 caracteres.");
+    err.statusCode = 400;
+    throw err;
+  }
+  const dup = store.presidentUsers.find(
+    (u) =>
+      u.licenseId === licenseId &&
+      u.username === username &&
+      u.active !== false,
+  );
+  if (dup) {
+    const err = new Error("Ese usuario presidente ya existe en esta licencia.");
+    err.statusCode = 409;
+    throw err;
+  }
+  const user = {
+    id: `pres_${randomUUID().slice(0, 8)}`,
+    licenseId,
+    username,
+    name,
+    passwordHash: hashPassword(password),
+    active: true,
+    createdAt: new Date().toISOString(),
+  };
+  return {
+    ...store,
+    presidentUsers: [user, ...store.presidentUsers],
+  };
+}
+
+export function deactivatePresidentUser(store, input) {
+  const userId = clean(input.userId, 80);
+  const user = store.presidentUsers.find((u) => u.id === userId);
+  if (!user) {
+    const err = new Error("Usuario presidente no encontrado.");
+    err.statusCode = 404;
+    throw err;
+  }
+  return {
+    ...store,
+    presidentUsers: store.presidentUsers.map((u) =>
+      u.id === userId ? { ...u, active: false } : u,
+    ),
+  };
+}
+
+export function presidentLogin(store, input) {
+  const licenseId = clean(input.licenseId, 80);
+  const username = clean(input.username, 60).toLowerCase();
+  const password = String(input.password || "");
+  const license = findLicense(store, licenseId);
+  if (!license || license.status !== "active") {
+    return { ok: false, error: "Licencia no activa." };
+  }
+  const user = store.presidentUsers.find(
+    (u) =>
+      u.licenseId === licenseId &&
+      u.username === username &&
+      u.active !== false,
+  );
+  if (!user || user.passwordHash !== hashPassword(password)) {
+    return { ok: false, error: "Credenciales incorrectas." };
+  }
+  return {
+    ok: true,
+    user: {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: "presidente",
+      licenseId,
+    },
+  };
 }

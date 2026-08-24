@@ -16,6 +16,7 @@ import {
 import { getDeviceFingerprint } from "@/lib/donaive-software/device";
 import {
   checkRemoteActivation,
+  presidentLoginRemote,
   redeemActivationCode,
   requestRemoteActivation,
 } from "@/lib/donaive-software/license-api";
@@ -28,6 +29,7 @@ import {
   setRolePermissions as persistRolePermissions,
   upsertUser as persistUpsertUser,
   authenticate,
+  savePresidentSession,
   type UpsertUserInput,
 } from "@/lib/donaive-software/auth";
 import {
@@ -121,7 +123,7 @@ type Ctx = {
   login: (
     username: string,
     password: string,
-  ) => { ok: true } | { ok: false; error: string };
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
   logout: () => void;
   refreshUsers: () => void;
   upsertUser: (
@@ -288,11 +290,32 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
   }, []);
 
-  const login = useCallback((username: string, password: string) => {
-    const r = authenticate(username, password);
-    if (!r.ok) return r;
-    setCurrentUser(r.user);
-    return { ok: true as const };
+  const login = useCallback(async (username: string, password: string) => {
+    const local = authenticate(username, password);
+    if (local.ok) {
+      setCurrentUser(local.user);
+      return { ok: true as const };
+    }
+
+    const lic = loadLicense();
+    if (lic?.licenseId) {
+      try {
+        const remote = await presidentLoginRemote({
+          licenseId: lic.licenseId,
+          username,
+          password,
+        });
+        if (remote.ok) {
+          const user = savePresidentSession(remote.user);
+          setCurrentUser(user);
+          return { ok: true as const };
+        }
+      } catch {
+        // sin red
+      }
+    }
+
+    return { ok: false as const, error: local.error };
   }, []);
 
   const logout = useCallback(() => {

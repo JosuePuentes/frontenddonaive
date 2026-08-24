@@ -11,6 +11,7 @@ export default function DsLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   if (currentUser) {
     return <Navigate to={routes.home} replace />;
@@ -18,12 +19,16 @@ export default function DsLogin() {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    const r = login(username, password);
-    if (!r.ok) {
-      setError(r.error);
-      return;
-    }
-    navigate(routes.home, { replace: true });
+    setBusy(true);
+    setError("");
+    void login(username, password).then((r) => {
+      setBusy(false);
+      if (!r.ok) {
+        setError(r.error);
+        return;
+      }
+      navigate(routes.home, { replace: true });
+    });
   }
 
   return (
@@ -63,13 +68,14 @@ export default function DsLogin() {
             {error}
           </p>
         ) : null}
-        <button type="submit" className="ds-btn ds-btn--primary">
-          Entrar
+        <button type="submit" className="ds-btn ds-btn--primary" disabled={busy}>
+          {busy ? "Entrando…" : "Entrar"}
         </button>
       </form>
       <p className="ds-muted" style={{ marginTop: "1.25rem", fontSize: "0.8rem" }}>
         Primera activación: usuario <strong>admin</strong> · contraseña{" "}
         <strong>{DS_DEFAULT_ADMIN_PASSWORD}</strong>
+        . El presidente entra con el usuario creado en el panel Donaive.
       </p>
     </div>
   );

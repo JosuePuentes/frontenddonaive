@@ -12,6 +12,7 @@ export const DS_ALL_PERMISSIONS: DsPermission[] = [
   "inventory.read",
   "inventory.adjust",
   "inventory.products",
+  "inventory.movements",
   "purchases.create",
   "purchases.manage",
   "purchases.approve",
@@ -23,7 +24,10 @@ export const DS_ALL_PERMISSIONS: DsPermission[] = [
   "finance.accounts",
   "finance.manage",
   "reports.read",
+  "reports.daily",
   "analysis.view",
+  "planning.view",
+  "president.view",
   "users.manage",
   "settings.manage",
   "license.manage",
@@ -37,6 +41,7 @@ export const DS_PERMISSION_LABELS: Record<DsPermission, string> = {
   "inventory.read": "Inventario · consultar",
   "inventory.adjust": "Inventario · ajustar",
   "inventory.products": "Inventario · productos",
+  "inventory.movements": "Inventario · movimientos",
   "purchases.create": "Compras · crear",
   "purchases.manage": "Compras · gestionar",
   "purchases.approve": "Compras · aprobar",
@@ -48,7 +53,10 @@ export const DS_PERMISSION_LABELS: Record<DsPermission, string> = {
   "finance.accounts": "Finanzas · cuentas",
   "finance.manage": "Finanzas · gestionar",
   "reports.read": "Informes",
+  "reports.daily": "Resumen ventas diarias",
   "analysis.view": "Análisis de compras",
+  "planning.view": "Planificación de compras",
+  "president.view": "Presidencia · supervisión",
   "users.manage": "Usuarios y permisos",
   "settings.manage": "Configuración",
   "license.manage": "Licencia / negocio",
@@ -60,7 +68,14 @@ export const DS_ROLE_LABELS: Record<DsRole, string> = {
   cajero: "CAJERO",
   inventario: "INVENTARIO",
   finanzas: "FINANZAS",
+  presidente: "PRESIDENTE",
 };
+
+export const DS_READ_ONLY_ROLES: DsRole[] = ["presidente"];
+
+export function isReadOnlyRole(role: DsRole): boolean {
+  return DS_READ_ONLY_ROLES.includes(role);
+}
 
 export const DS_DEFAULT_ROLE_PERMISSIONS: Record<DsRole, DsPermission[]> = {
   admin: [...DS_ALL_PERMISSIONS],
@@ -72,6 +87,7 @@ export const DS_DEFAULT_ROLE_PERMISSIONS: Record<DsRole, DsPermission[]> = {
     "inventory.read",
     "inventory.adjust",
     "inventory.products",
+    "inventory.movements",
     "purchases.create",
     "purchases.manage",
     "purchases.approve",
@@ -83,7 +99,9 @@ export const DS_DEFAULT_ROLE_PERMISSIONS: Record<DsRole, DsPermission[]> = {
     "finance.accounts",
     "finance.manage",
     "reports.read",
+    "reports.daily",
     "analysis.view",
+    "planning.view",
     "settings.manage",
     "license.manage",
   ],
@@ -92,11 +110,14 @@ export const DS_DEFAULT_ROLE_PERMISSIONS: Record<DsRole, DsPermission[]> = {
     "inventory.read",
     "inventory.adjust",
     "inventory.products",
+    "inventory.movements",
     "purchases.create",
     "purchases.manage",
     "suppliers.manage",
     "analysis.view",
+    "planning.view",
     "reports.read",
+    "reports.daily",
   ],
   finanzas: [
     "finance.rates",
@@ -104,7 +125,17 @@ export const DS_DEFAULT_ROLE_PERMISSIONS: Record<DsRole, DsPermission[]> = {
     "finance.accounts",
     "finance.manage",
     "reports.read",
+    "reports.daily",
     "clients.read",
+  ],
+  presidente: [
+    "president.view",
+    "reports.read",
+    "reports.daily",
+    "inventory.read",
+    "inventory.movements",
+    "analysis.view",
+    "planning.view",
   ],
 };
 
@@ -154,4 +185,11 @@ export function hasAnyPermission(
   if (user.role === "admin") return true;
   const set = resolvePermissions(user, roleOverrides);
   return permissions.some((p) => set.has(p));
+}
+
+export function canWrite(
+  user: Pick<DsUser, "active" | "role"> | null | undefined,
+): boolean {
+  if (!user || !user.active) return false;
+  return !isReadOnlyRole(user.role);
 }

@@ -133,12 +133,52 @@ export function getUserById(id: string): DsUser | undefined {
 export function resolveCurrentUser(): DsUser | null {
   const session = loadSession();
   if (!session) return null;
+
+  if (session.remotePresident) {
+    return {
+      id: session.userId,
+      username: session.username,
+      name: session.name,
+      role: "presidente",
+      active: true,
+      passwordHash: "",
+      createdAt: session.loggedInAt,
+      updatedAt: session.loggedInAt,
+    };
+  }
+
   const user = getUserById(session.userId);
   if (!user || !user.active) {
     clearSession();
     return null;
   }
   return user;
+}
+
+export function savePresidentSession(user: {
+  id: string;
+  username: string;
+  name: string;
+}): DsUser {
+  const session: DsSession = {
+    userId: user.id,
+    username: user.username,
+    name: user.name,
+    role: "presidente",
+    loggedInAt: new Date().toISOString(),
+    remotePresident: true,
+  };
+  saveSession(session);
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.name,
+    role: "presidente",
+    active: true,
+    passwordHash: "",
+    createdAt: session.loggedInAt,
+    updatedAt: session.loggedInAt,
+  };
 }
 
 export type UpsertUserInput = {

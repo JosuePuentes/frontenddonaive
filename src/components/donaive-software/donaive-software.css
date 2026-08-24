@@ -440,3 +440,21 @@
   color: var(--ds-ink);
   border-bottom: 1px solid color-mix(in srgb, var(--ds-accent) 40%, transparent);
 }
+
+@media print {
+  .ds-topbar,
+  .ds-pwa-stack,
+  .ds-crumb,
+  .ds-btn {
+    display: none !important;
+  }
+  .ds-root {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .ds-panel {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}

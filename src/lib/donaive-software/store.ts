@@ -65,6 +65,9 @@ function normalizeProduct(raw: Partial<DsProduct> & { id: string }): DsProduct {
     },
     saleUnitUsd: raw.saleUnitUsd,
     saleBoxUsd: raw.saleBoxUsd,
+    minQtyBase: raw.minQtyBase,
+    maxQtyBase: raw.maxQtyBase,
+    preferredSupplierId: raw.preferredSupplierId,
   };
 }
 
@@ -313,8 +316,29 @@ export function saveClients(clients: DsClient[]): void {
   localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
 }
 
+function normalizeSupplier(raw: Partial<DsSupplier> & { id: string }): DsSupplier {
+  return {
+    id: raw.id,
+    name: raw.name ?? "Proveedor",
+    identification: raw.identification,
+    phone: raw.phone,
+    contactName: raw.contactName,
+    defaultCurrency: raw.defaultCurrency === "USD" ? "USD" : "BS",
+    creditDays: Math.max(0, Number(raw.creditDays) || 0),
+    creditLimit: Math.max(0, Number(raw.creditLimit) || 0),
+    leadTimeDays: Math.max(1, Number(raw.leadTimeDays) || 3),
+    productIds: Array.isArray(raw.productIds) ? raw.productIds : [],
+    notes: raw.notes,
+    active: raw.active !== false,
+    createdAt: raw.createdAt ?? new Date().toISOString(),
+    updatedAt: raw.updatedAt ?? new Date().toISOString(),
+  };
+}
+
 export function loadSuppliers(): DsSupplier[] {
-  return loadJsonArray<DsSupplier>(SUPPLIERS_KEY);
+  return loadJsonArray<DsSupplier>(SUPPLIERS_KEY).map((s) =>
+    normalizeSupplier(s),
+  );
 }
 
 export function saveSuppliers(suppliers: DsSupplier[]): void {

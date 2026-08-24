@@ -128,6 +128,14 @@ export type DsLicenseStore = {
     activatedAt: string;
     revoked?: boolean;
   }>;
+  presidentUsers: Array<{
+    id: string;
+    licenseId: string;
+    username: string;
+    name: string;
+    active: boolean;
+    createdAt: string;
+  }>;
 };
 
 async function adminPost(
@@ -210,4 +218,47 @@ export async function adminSuspendLicense(
   input: { licenseId: string },
 ) {
   return adminPost("suspendLicense", clave, input);
+}
+
+export async function presidentLoginRemote(input: {
+  licenseId: string;
+  username: string;
+  password: string;
+}): Promise<
+  | { ok: true; user: { id: string; username: string; name: string } }
+  | { ok: false; error: string }
+> {
+  const res = await fetch(`${BASE}?action=presidentLogin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = (await res.json()) as {
+    ok?: boolean;
+    error?: string;
+    user?: { id: string; username: string; name: string };
+  };
+  if (!res.ok || !payload.ok || !payload.user) {
+    return { ok: false, error: payload.error || "Credenciales incorrectas." };
+  }
+  return { ok: true, user: payload.user };
+}
+
+export async function adminCreatePresidentUser(
+  clave: string,
+  input: {
+    licenseId: string;
+    username: string;
+    name: string;
+    password: string;
+  },
+) {
+  return adminPost("createPresidentUser", clave, input);
+}
+
+export async function adminDeactivatePresidentUser(
+  clave: string,
+  input: { userId: string },
+) {
+  return adminPost("deactivatePresidentUser", clave, input);
 }

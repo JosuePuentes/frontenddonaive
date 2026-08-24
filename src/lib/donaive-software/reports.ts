@@ -150,7 +150,12 @@ export function buildInventoryReport(products: DsProduct[]): InventoryReport {
   const rows: InventoryReportRow[] = products.map((p) => {
     const qty = Math.max(0, p.stock.qtyBase);
     const cost = Math.max(0, p.stock.unitCostUsd);
-    const lowStock = p.unitsPerBox > 1 ? qty < p.unitsPerBox : qty < 5;
+    const lowStock =
+      (p.minQtyBase ?? 0) > 0
+        ? qty < p.minQtyBase!
+        : p.unitsPerBox > 1
+          ? qty < p.unitsPerBox
+          : qty < 5;
     return {
       productId: p.id,
       name: p.name,

@@ -1,14 +1,26 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
 import DsRequirePermission from "@/components/donaive-software/DsRequirePermission";
 import { formatDsMoney, completeDsPrice } from "@/lib/donaive-software/rates";
 import { splitStockUnits } from "@/lib/donaive-software/stock";
+import { buildProductPlanningRows } from "@/lib/donaive-software/planning";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
 function DsInventarioProductosInner() {
-  const { products, rates, upsertProduct } = useDonaiveSoftware();
+  const { products, rates, upsertProduct, sales, purchases, suppliers } =
+    useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
+  const planning = useMemo(
+    () =>
+      buildProductPlanningRows({
+        products,
+        sales,
+        purchases,
+        suppliers,
+      }),
+    [products, sales, purchases, suppliers],
+  );
 
   const [editId, setEditId] = useState<string | null>(null);
   const [sku, setSku] = useState("");
@@ -69,8 +81,8 @@ function DsInventarioProductosInner() {
       <section className="ds-panel">
         <h1 className="ds-title">Productos</h1>
         <p className="ds-lead">
-          Ficha con empaque caja/unidad, CPP y PVP. Las compras actualizan costo
-          y precios de venta.
+          Ficha con empaque caja/unidad, CPP y PVP. Mínimo y máximo los calcula
+          el sistema según ventas diarias y días de despacho del proveedor.
         </p>
         <div style={{ marginTop: "1rem", overflowX: "auto" }}>
           <table className="ds-table">
@@ -78,6 +90,7 @@ function DsInventarioProductosInner() {
               <tr>
                 <th>Producto</th>
                 <th>Stock</th>
+                <th>Mín / Máx</th>
                 <th>CPP</th>
                 <th>PVP u.</th>
                 <th />
@@ -86,6 +99,7 @@ function DsInventarioProductosInner() {
             <tbody>
               {products.map((p) => {
                 const s = splitStockUnits(p.stock.qtyBase, p.unitsPerBox);
+                const row = planning.find((x) => x.productId === p.id);
                 const cpp = completeDsPrice(
                   { usd: p.stock.unitCostUsd, bs: 0 },
                   rates.bcv,
@@ -107,6 +121,16 @@ function DsInventarioProductosInner() {
                       {s.hasBoxPack ? (
                         <div className="ds-muted" style={{ fontSize: "0.75rem" }}>
                           {s.fullBoxes} caja(s) · {s.looseUnits} suelta(s)
+                        </div>
+                      ) : null}
+                    </td>
+                    <td>
+                      {row
+                        ? `${Math.round(row.minQtyBase)} / ${Math.round(row.maxQtyBase)}`
+                        : "—"}
+                      {row ? (
+                        <div className="ds-muted" style={{ fontSize: "0.75rem" }}>
+                          {row.avgDaily.toFixed(1)} u./día
                         </div>
                       ) : null}
                     </td>

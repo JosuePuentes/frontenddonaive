@@ -18,7 +18,7 @@ function DsInventarioMovimientosInner() {
         <span>Movimientos</span>
       </nav>
       <section className="ds-panel">
-        <h1 className="ds-title">Movimientos</h1>
+        <h1 className="ds-title">Movimiento de unidades</h1>
         <p className="ds-lead">
           Kardex local: entradas por compras y salidas por ventas.
         </p>
@@ -70,7 +70,9 @@ function DsInventarioMovimientosInner() {
 
 export default function DsInventarioMovimientos() {
   return (
-    <DsRequirePermission permission="inventory.adjust">
+    <DsRequirePermission
+      permission={["inventory.adjust", "inventory.movements", "president.view"]}
+    >
       <DsInventarioMovimientosInner />
     </DsRequirePermission>
   );

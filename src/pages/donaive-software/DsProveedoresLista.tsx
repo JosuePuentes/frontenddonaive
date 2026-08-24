@@ -7,7 +7,8 @@ import { formatDsNumber } from "@/lib/donaive-software/purchase-draft";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
 function DsProveedoresListaInner() {
-  const { suppliers, payables, upsertSupplier, payPayable } = useDonaiveSoftware();
+  const { suppliers, payables, upsertSupplier, payPayable, products } =
+    useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
 
   const [editId, setEditId] = useState<string | null>(null);
@@ -17,6 +18,8 @@ function DsProveedoresListaInner() {
   const [defaultCurrency, setDefaultCurrency] = useState<"USD" | "BS">("BS");
   const [creditDays, setCreditDays] = useState(15);
   const [creditLimit, setCreditLimit] = useState(0);
+  const [leadTimeDays, setLeadTimeDays] = useState(3);
+  const [productIds, setProductIds] = useState<string[]>([]);
   const [active, setActive] = useState(true);
   const [msg, setMsg] = useState("");
 
@@ -51,6 +54,8 @@ function DsProveedoresListaInner() {
     setDefaultCurrency("BS");
     setCreditDays(15);
     setCreditLimit(0);
+    setLeadTimeDays(3);
+    setProductIds([]);
     setActive(true);
     setMsg("");
   }
@@ -65,6 +70,8 @@ function DsProveedoresListaInner() {
     setDefaultCurrency(s.defaultCurrency);
     setCreditDays(s.creditDays);
     setCreditLimit(s.creditLimit);
+    setLeadTimeDays(s.leadTimeDays || 3);
+    setProductIds(s.productIds ?? []);
     setActive(s.active);
     setSelectedId(s.id);
   }
@@ -78,6 +85,8 @@ function DsProveedoresListaInner() {
       defaultCurrency,
       creditDays,
       creditLimit,
+      leadTimeDays,
+      productIds,
       active,
     });
     setMsg(r.ok ? "Proveedor guardado" : r.error);
@@ -172,6 +181,10 @@ function DsProveedoresListaInner() {
                     <td>{s.phone ?? "—"}</td>
                     <td>
                       {s.creditDays}d · límite {formatDsNumber(s.creditLimit, 0)}
+                      <div className="ds-muted" style={{ fontSize: "0.75rem" }}>
+                        despacho {s.leadTimeDays || 3}d ·{" "}
+                        {(s.productIds ?? []).length} prod.
+                      </div>
                     </td>
                     <td>
                       <strong>{formatDsNumber(balances.get(s.id) ?? 0, 2)}</strong>
@@ -250,6 +263,51 @@ function DsProveedoresListaInner() {
               onChange={(e) => setCreditLimit(Number(e.target.value))}
             />
           </label>
+          <label className="ds-label">
+            Días de despacho *
+            <input
+              className="ds-input"
+              type="number"
+              min={1}
+              value={leadTimeDays}
+              onChange={(e) => setLeadTimeDays(Number(e.target.value) || 1)}
+            />
+          </label>
+        </div>
+        <p className="ds-muted" style={{ margin: "0.85rem 0 0.4rem", fontSize: "0.85rem" }}>
+          ¿Qué productos te vende este proveedor?
+        </p>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.5rem 1rem",
+            maxHeight: 160,
+            overflowY: "auto",
+          }}
+        >
+          {products.map((p) => (
+            <label
+              key={p.id}
+              style={{ display: "flex", gap: "0.4rem", alignItems: "center", fontSize: "0.85rem" }}
+            >
+              <input
+                type="checkbox"
+                checked={productIds.includes(p.id)}
+                onChange={(e) => {
+                  setProductIds((prev) =>
+                    e.target.checked
+                      ? [...prev, p.id]
+                      : prev.filter((id) => id !== p.id),
+                  );
+                }}
+              />
+              {p.name}
+            </label>
+          ))}
+          {products.length === 0 ? (
+            <span className="ds-muted">Crea productos en inventario primero.</span>
+          ) : null}
         </div>
         <label
           style={{

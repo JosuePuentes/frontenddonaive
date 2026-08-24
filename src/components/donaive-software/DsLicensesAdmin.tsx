@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import {
   adminApproveRequest,
   adminCreateLicense,
+  adminCreatePresidentUser,
+  adminDeactivatePresidentUser,
   adminGenerateCode,
   adminRejectRequest,
   adminRevokeActivation,
@@ -38,6 +40,11 @@ export function DsLicensesAdmin({ clave }: Props) {
   const [approveLicenseByRequest, setApproveLicenseByRequest] = useState<
     Record<string, string>
   >({});
+
+  const [presidentLicenseId, setPresidentLicenseId] = useState("");
+  const [presidentUsername, setPresidentUsername] = useState("");
+  const [presidentName, setPresidentName] = useState("");
+  const [presidentPassword, setPresidentPassword] = useState("");
 
   const reload = useCallback(async () => {
     setBusy(true);
@@ -390,6 +397,159 @@ export function DsLicensesAdmin({ clave }: Props) {
                           onClick={() => void onRevoke(act.id)}
                         >
                           Revocar
+                        </Button>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Usuarios presidente</h2>
+        <p className="text-sm text-muted-foreground">
+          El presidente solo supervisa (ventas, inventario, informes). No factura
+          ni edita. Se crea por licencia y entra en el sistema del negocio.
+        </p>
+        <form
+          className="grid max-w-xl gap-3 md:grid-cols-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void (async () => {
+              if (!presidentLicenseId) {
+                setError("Elige la licencia del negocio.");
+                return;
+              }
+              setBusy(true);
+              setError(null);
+              setMessage(null);
+              try {
+                await adminCreatePresidentUser(clave, {
+                  licenseId: presidentLicenseId,
+                  username: presidentUsername.trim(),
+                  name: presidentName.trim(),
+                  password: presidentPassword,
+                });
+                setPresidentUsername("");
+                setPresidentName("");
+                setPresidentPassword("");
+                setMessage("Usuario presidente creado.");
+                await reload();
+              } catch (err) {
+                setError(
+                  err instanceof Error ? err.message : "No se pudo crear.",
+                );
+              } finally {
+                setBusy(false);
+              }
+            })();
+          }}
+        >
+          <label className="block space-y-1 md:col-span-2">
+            <span className="text-sm font-medium">Licencia / negocio</span>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={presidentLicenseId}
+              onChange={(e) => setPresidentLicenseId(e.target.value)}
+            >
+              <option value="">Seleccionar…</option>
+              {store.licenses
+                .filter((l) => l.status === "active")
+                .map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.businessName}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium">Usuario</span>
+            <Input
+              value={presidentUsername}
+              onChange={(e) => setPresidentUsername(e.target.value)}
+              required
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium">Nombre</span>
+            <Input
+              value={presidentName}
+              onChange={(e) => setPresidentName(e.target.value)}
+              required
+            />
+          </label>
+          <label className="block space-y-1 md:col-span-2">
+            <span className="text-sm font-medium">Contraseña</span>
+            <Input
+              type="password"
+              value={presidentPassword}
+              onChange={(e) => setPresidentPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+          </label>
+          <div className="md:col-span-2">
+            <Button type="submit" disabled={busy}>
+              Crear presidente
+            </Button>
+          </div>
+        </form>
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="min-w-full text-sm">
+            <thead className="bg-surface-muted">
+              <tr>
+                <th className="px-3 py-2 text-left">Negocio</th>
+                <th className="px-3 py-2 text-left">Usuario</th>
+                <th className="px-3 py-2 text-left">Nombre</th>
+                <th className="px-3 py-2 text-left">Estado</th>
+                <th className="px-3 py-2 text-left" />
+              </tr>
+            </thead>
+            <tbody>
+              {(store.presidentUsers ?? []).map((u) => {
+                const lic = store.licenses.find((l) => l.id === u.licenseId);
+                return (
+                  <tr key={u.id} className="border-t border-border">
+                    <td className="px-3 py-2">
+                      {lic?.businessName ?? u.licenseId}
+                    </td>
+                    <td className="px-3 py-2">{u.username}</td>
+                    <td className="px-3 py-2">{u.name}</td>
+                    <td className="px-3 py-2">
+                      {u.active ? "Activo" : "Inactivo"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {u.active ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => {
+                            void (async () => {
+                              setBusy(true);
+                              setError(null);
+                              try {
+                                await adminDeactivatePresidentUser(clave, {
+                                  userId: u.id,
+                                });
+                                await reload();
+                              } catch (err) {
+                                setError(
+                                  err instanceof Error
+                                    ? err.message
+                                    : "No se pudo desactivar.",
+                                );
+                              } finally {
+                                setBusy(false);
+                              }
+                            })();
+                          }}
+                        >
+                          Desactivar
                         </Button>
                       ) : null}
                     </td>

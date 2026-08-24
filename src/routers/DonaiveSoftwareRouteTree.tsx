@@ -43,6 +43,18 @@ const DsInformesInventario = lazy(
 const DsAnalisisCompras = lazy(
   () => import("@/pages/donaive-software/DsAnalisisCompras"),
 );
+const DsPresidenteResumen = lazy(
+  () => import("@/pages/donaive-software/DsPresidenteResumen"),
+);
+const DsInformesVentasDiarias = lazy(
+  () => import("@/pages/donaive-software/DsInformesVentasDiarias"),
+);
+const DsInformesReposicion = lazy(
+  () => import("@/pages/donaive-software/DsInformesReposicion"),
+);
+const DsPlanificacionCompras = lazy(
+  () => import("@/pages/donaive-software/DsPlanificacionCompras"),
+);
 const DsConfiguracion = lazy(
   () => import("@/pages/donaive-software/DsConfiguracion"),
 );
@@ -91,6 +103,22 @@ export function donaiveSoftwareRouteTree(prefix: "" | "/software") {
       <Route
         path={p("/m/informes/inventario")}
         element={<DsInformesInventario />}
+      />
+      <Route
+        path={p("/m/informes/ventas-diarias")}
+        element={<DsInformesVentasDiarias />}
+      />
+      <Route
+        path={p("/m/informes/reposicion")}
+        element={<DsInformesReposicion />}
+      />
+      <Route
+        path={p("/m/planificacion/compras")}
+        element={<DsPlanificacionCompras />}
+      />
+      <Route
+        path={p("/m/presidente/resumen")}
+        element={<DsPresidenteResumen />}
       />
       <Route path={p("/m/analisis/compras")} element={<DsAnalisisCompras />} />
       <Route path={p("/m/configuracion/licencia")} element={<DsConfiguracion />} />

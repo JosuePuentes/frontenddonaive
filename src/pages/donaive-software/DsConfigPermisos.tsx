@@ -30,6 +30,7 @@ const MATRIX_GROUPS: { label: string; permissions: DsPermission[] }[] = [
       "inventory.read",
       "inventory.adjust",
       "inventory.products",
+      "inventory.movements",
     ],
   },
   {
@@ -55,7 +56,13 @@ const MATRIX_GROUPS: { label: string; permissions: DsPermission[] }[] = [
   },
   {
     label: "Informes / análisis",
-    permissions: ["reports.read", "analysis.view"],
+    permissions: [
+      "reports.read",
+      "reports.daily",
+      "analysis.view",
+      "planning.view",
+      "president.view",
+    ],
   },
   {
     label: "Administración",
