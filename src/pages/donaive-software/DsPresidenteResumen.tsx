@@ -149,6 +149,9 @@ function DsPresidenteResumenInner() {
           <Link className="ds-btn" to={routes.inventarioMovimientos}>
             Movimiento de unidades
           </Link>
+          <Link className="ds-btn" to={routes.presidenteInventarios}>
+            Inventarios máster/general
+          </Link>
           <Link className="ds-btn ds-btn--primary" to={routes.planificacionCompras}>
             Plan de compras
           </Link>

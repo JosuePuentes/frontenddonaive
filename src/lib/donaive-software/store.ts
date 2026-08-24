@@ -12,6 +12,9 @@ import type {
   DsSale,
   DsStockMovement,
   DsSupplier,
+  DsGeneralInventoryState,
+  DsGeneralInventoryMovement,
+  DsFiscalSettings,
 } from "@/types/donaive-software";
 
 export type {
@@ -24,6 +27,9 @@ export type {
   DsSale,
   DsStockMovement,
   DsSupplier,
+  DsGeneralInventoryState,
+  DsGeneralInventoryMovement,
+  DsFiscalSettings,
 };
 
 export type DsRatesState = {
@@ -45,6 +51,9 @@ const CLIENTS_KEY = "donaive-software-clients-v1";
 const SUPPLIERS_KEY = "donaive-software-suppliers-v1";
 const PAYABLES_KEY = "donaive-software-payables-v1";
 const RECEIVABLES_KEY = "donaive-software-receivables-v1";
+const GENERAL_STOCK_KEY = "donaive-software-general-stock-v1";
+const GENERAL_MOVEMENTS_KEY = "donaive-software-general-movements-v1";
+const FISCAL_SETTINGS_KEY = "donaive-software-fiscal-settings-v1";
 
 function uid(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -308,6 +317,17 @@ function loadJsonArray<T>(key: string): T[] {
   }
 }
 
+function loadJsonObject<T extends object>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return { ...fallback, ...(JSON.parse(raw) as T) };
+  } catch {
+    return fallback;
+  }
+}
+
 export function loadClients(): DsClient[] {
   return loadJsonArray<DsClient>(CLIENTS_KEY);
 }
@@ -371,6 +391,43 @@ export function appendReceivable(receivable: DsReceivable): DsReceivable[] {
   const list = [receivable, ...loadReceivables()];
   saveReceivables(list);
   return list;
+}
+
+export function loadGeneralInventory(): DsGeneralInventoryState {
+  const stockByProduct = loadJsonObject<Record<string, number>>(GENERAL_STOCK_KEY, {});
+  const movements = loadJsonArray<DsGeneralInventoryMovement>(GENERAL_MOVEMENTS_KEY);
+  return { stockByProduct, movements };
+}
+
+export function saveGeneralInventory(state: DsGeneralInventoryState): void {
+  localStorage.setItem(GENERAL_STOCK_KEY, JSON.stringify(state.stockByProduct));
+  localStorage.setItem(GENERAL_MOVEMENTS_KEY, JSON.stringify(state.movements));
+}
+
+export function applyGeneralInventoryMovement(
+  state: DsGeneralInventoryState,
+  movement: DsGeneralInventoryMovement,
+): DsGeneralInventoryState {
+  const current = Math.max(0, Number(state.stockByProduct[movement.productId]) || 0);
+  const nextQty = Math.max(0, current + movement.qtyBase);
+  return {
+    stockByProduct: {
+      ...state.stockByProduct,
+      [movement.productId]: nextQty,
+    },
+    movements: [movement, ...state.movements],
+  };
+}
+
+export function loadFiscalSettings(): DsFiscalSettings {
+  return loadJsonObject<DsFiscalSettings>(FISCAL_SETTINGS_KEY, {
+    pinHash: null,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export function saveFiscalSettings(settings: DsFiscalSettings): void {
+  localStorage.setItem(FISCAL_SETTINGS_KEY, JSON.stringify(settings));
 }
 
 export type { CppState };

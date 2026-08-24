@@ -240,6 +240,13 @@ export function getDonaiveSoftwareModules(): DsModuleDef[] {
           permission: ["president.view", "reports.daily"],
         },
         {
+          id: "inventarios",
+          title: "Inventario máster y general",
+          description: "Control dual, PIN fiscal y movimientos.",
+          path: r.presidenteInventarios,
+          permission: ["president.view", "inventory.master.view", "inventory.general.view"],
+        },
+        {
           id: "mov-unidades",
           title: "Movimiento de unidades",
           description: "Kardex de rotación (solo consulta).",

@@ -6,7 +6,7 @@ import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
 import { formatDsNumber } from "@/lib/donaive-software/purchase-draft";
 import { formatDsMoney } from "@/lib/donaive-software/rates";
 import {
-  buildSalesReport,
+  buildSalesReportByKind,
   rangePreset,
   type DateRange,
 } from "@/lib/donaive-software/reports";
@@ -18,6 +18,7 @@ function DsInformesVentasInner() {
   const { sales } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
   const [preset, setPreset] = useState<Preset>("7d");
+  const [saleKind, setSaleKind] = useState<"ALL" | "NORMAL" | "FISCAL">("ALL");
   const initial = rangePreset("7d");
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
@@ -31,7 +32,10 @@ function DsInformesVentasInner() {
   }
 
   const range: DateRange = useMemo(() => ({ from, to }), [from, to]);
-  const report = useMemo(() => buildSalesReport(sales, range), [sales, range]);
+  const report = useMemo(
+    () => buildSalesReportByKind(sales, range, saleKind),
+    [sales, range, saleKind],
+  );
 
   return (
     <div>
@@ -68,6 +72,22 @@ function DsInformesVentasInner() {
               {label}
             </button>
           ))}
+        </div>
+        <div style={{ marginTop: "0.85rem" }}>
+          <label className="ds-label">
+            Tipo de ventas
+            <select
+              className="ds-input"
+              value={saleKind}
+              onChange={(e) =>
+                setSaleKind(e.target.value as "ALL" | "NORMAL" | "FISCAL")
+              }
+            >
+              <option value="ALL">Todas</option>
+              <option value="NORMAL">Solo normales</option>
+              <option value="FISCAL">Solo fiscales</option>
+            </select>
+          </label>
         </div>
 
         {preset === "custom" ? (

@@ -22,7 +22,7 @@ function uidKey(): string {
 }
 
 function DsPosVenderInner() {
-  const { products, rates, completeSale } = useDonaiveSoftware();
+  const { products, rates, completeSale, can } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
 
   const [query, setQuery] = useState("");
@@ -34,6 +34,9 @@ function DsPosVenderInner() {
   const [payRef, setPayRef] = useState("");
   const [msg, setMsg] = useState("");
   const [lastTicket, setLastTicket] = useState<string | null>(null);
+  const [saleKind, setSaleKind] = useState<"NORMAL" | "FISCAL">("NORMAL");
+  const [fiscalPrinter, setFiscalPrinter] = useState<"printer_1" | "printer_2">("printer_1");
+  const [fiscalPin, setFiscalPin] = useState("");
 
   const lines = useMemo(() => {
     const out = [];
@@ -119,7 +122,13 @@ function DsPosVenderInner() {
   }
 
   function checkout() {
-    const r = completeSale({ cart, payments });
+    const r = completeSale({
+      cart,
+      payments,
+      saleKind,
+      fiscalPrinter: saleKind === "FISCAL" ? fiscalPrinter : undefined,
+      fiscalPin: saleKind === "FISCAL" ? fiscalPin : undefined,
+    });
     if (!r.ok) {
       setMsg(r.error);
       return;
@@ -127,6 +136,7 @@ function DsPosVenderInner() {
     setLastTicket(r.sale.receiptNumber);
     setCart([]);
     setPayments([]);
+    setFiscalPin("");
     setMsg(`Venta ${r.sale.receiptNumber} registrada`);
   }
 
@@ -277,6 +287,54 @@ function DsPosVenderInner() {
       {lines.length > 0 ? (
         <section className="ds-panel" style={{ marginTop: "1rem" }}>
           <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Pagos</h2>
+          <div
+            style={{
+              marginTop: "0.85rem",
+              display: "grid",
+              gap: "0.65rem",
+              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+            }}
+          >
+            <label className="ds-label">
+              Tipo de venta
+              <select
+                className="ds-input"
+                value={saleKind}
+                onChange={(e) => setSaleKind(e.target.value as "NORMAL" | "FISCAL")}
+              >
+                <option value="NORMAL">Venta normal</option>
+                {can("pos.fiscal") ? (
+                  <option value="FISCAL">Factura fiscal</option>
+                ) : null}
+              </select>
+            </label>
+            {saleKind === "FISCAL" ? (
+              <>
+                <label className="ds-label">
+                  Impresora fiscal
+                  <select
+                    className="ds-input"
+                    value={fiscalPrinter}
+                    onChange={(e) =>
+                      setFiscalPrinter(e.target.value as "printer_1" | "printer_2")
+                    }
+                  >
+                    <option value="printer_1">Impresora 1</option>
+                    <option value="printer_2">Impresora 2</option>
+                  </select>
+                </label>
+                <label className="ds-label">
+                  PIN fiscal
+                  <input
+                    className="ds-input"
+                    type="password"
+                    value={fiscalPin}
+                    onChange={(e) => setFiscalPin(e.target.value)}
+                  />
+                </label>
+              </>
+            ) : null}
+          </div>
           <div
             style={{
               marginTop: "0.85rem",

@@ -32,6 +32,10 @@ export type DsPermission =
   | "analysis.view"
   | "planning.view"
   | "president.view"
+  | "inventory.master.view"
+  | "inventory.general.view"
+  | "inventory.general.export"
+  | "pos.fiscal"
   | "users.manage"
   | "settings.manage"
   | "license.manage";
@@ -252,6 +256,8 @@ export type DsSale = {
   totalUsd: number;
   totalBs: number;
   bcvRateAtSale: number;
+  saleKind?: "NORMAL" | "FISCAL";
+  fiscalPrinter?: "printer_1" | "printer_2";
   status: "completed" | "voided";
   createdAt: string;
   createdBy?: string;
@@ -287,6 +293,28 @@ export type DsStockMovement = {
   unitCostUsd?: number;
   note?: string;
   refId?: string;
+  saleKind?: "NORMAL" | "FISCAL";
   createdAt: string;
   createdBy?: string;
+};
+
+export type DsGeneralInventoryMovement = {
+  id: string;
+  productId: string;
+  productLabel: string;
+  qtyBase: number;
+  reason: "COMPRA" | "VENTA_FISCAL" | "AJUSTE";
+  refId?: string;
+  createdAt: string;
+  createdBy?: string;
+};
+
+export type DsGeneralInventoryState = {
+  stockByProduct: Record<string, number>;
+  movements: DsGeneralInventoryMovement[];
+};
+
+export type DsFiscalSettings = {
+  pinHash: string | null;
+  updatedAt: string;
 };

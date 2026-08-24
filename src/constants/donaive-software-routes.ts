@@ -36,6 +36,7 @@ export function getDonaiveSoftwareRoutes() {
     planificacionCompras: p("/m/planificacion/compras"),
     presidente: p("/m/presidente"),
     presidenteResumen: p("/m/presidente/resumen"),
+    presidenteInventarios: p("/m/presidente/inventarios"),
     configuracion: p("/m/configuracion"),
     configLicencia: p("/m/configuracion/licencia"),
     configUsuarios: p("/m/configuracion/usuarios"),

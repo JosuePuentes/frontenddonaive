@@ -5,13 +5,16 @@ import DsRequirePermission from "@/components/donaive-software/DsRequirePermissi
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
 import { formatDsNumber } from "@/lib/donaive-software/purchase-draft";
 import { completeDsPrice, formatDsMoney } from "@/lib/donaive-software/rates";
-import { buildInventoryReport } from "@/lib/donaive-software/reports";
+import { buildInventoryReportFromStock } from "@/lib/donaive-software/reports";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
 function DsInformesInventarioInner() {
-  const { products, rates } = useDonaiveSoftware();
+  const { products, rates, generalInventory } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
-  const report = useMemo(() => buildInventoryReport(products), [products]);
+  const report = useMemo(
+    () => buildInventoryReportFromStock(products, generalInventory.stockByProduct),
+    [products, generalInventory.stockByProduct],
+  );
 
   const valueMoney = completeDsPrice(
     { usd: report.totalValueUsd, bs: 0 },
@@ -31,9 +34,28 @@ function DsInformesInventarioInner() {
       <section className="ds-panel">
         <h1 className="ds-title">Informe de inventario</h1>
         <p className="ds-lead">
-          Valorizado a costo promedio (CPP). Alertas cuando el stock baja de una
-          caja (o 5 u. si no hay empaque).
+          Inventario general (fiscal): solo compras marcadas para general y ventas fiscales.
         </p>
+        <button
+          type="button"
+          className="ds-btn"
+          style={{ marginTop: "0.75rem" }}
+          onClick={() => {
+            const lines = report.rows.map((r) =>
+              [`"${r.sku}"`, `"${r.name.replace(/"/g, '""')}"`, r.qtyBase, r.unitCostUsd.toFixed(2), r.valueUsd.toFixed(2)].join(","),
+            );
+            const content = ["SKU,Producto,Stock,CPP USD,Valor USD", ...lines].join("\n");
+            const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `inventario-general-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Descargar general CSV
+        </button>
         <div
           style={{
             marginTop: "1.25rem",

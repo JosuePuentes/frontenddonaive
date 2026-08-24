@@ -146,6 +146,8 @@ export type CompleteSaleInput = {
   createdBy?: string;
   operatorId?: string;
   allowShortage?: boolean;
+  saleKind?: "NORMAL" | "FISCAL";
+  fiscalPrinter?: "printer_1" | "printer_2";
 };
 
 export function completeSale(
@@ -229,6 +231,7 @@ export function completeSale(
   const now = new Date().toISOString();
   const saleId = uid("sale");
   const receiptNumber = `T-${Date.now().toString().slice(-8)}`;
+  const saleKind = input.saleKind ?? "NORMAL";
 
   const movements: DsStockMovement[] = lines.map((l) => ({
     id: uid("mov"),
@@ -239,6 +242,7 @@ export function completeSale(
     unitCostUsd: l.unitCostUsd,
     note: `Ticket ${receiptNumber}`,
     refId: saleId,
+    saleKind,
     createdAt: now,
     createdBy: input.createdBy,
   }));
@@ -251,6 +255,8 @@ export function completeSale(
     totalUsd,
     totalBs,
     bcvRateAtSale: input.bcv,
+    saleKind,
+    fiscalPrinter: input.fiscalPrinter,
     status: "completed",
     createdAt: now,
     createdBy: input.createdBy,

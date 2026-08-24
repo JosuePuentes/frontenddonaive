@@ -22,7 +22,7 @@ const EDITABLE_ROLES: DsRole[] = [
 const MATRIX_GROUPS: { label: string; permissions: DsPermission[] }[] = [
   {
     label: "POS",
-    permissions: ["pos.sell", "pos.refund", "pos.discount", "pos.closures"],
+    permissions: ["pos.sell", "pos.refund", "pos.discount", "pos.closures", "pos.fiscal"],
   },
   {
     label: "Inventario",
@@ -62,6 +62,9 @@ const MATRIX_GROUPS: { label: string; permissions: DsPermission[] }[] = [
       "analysis.view",
       "planning.view",
       "president.view",
+      "inventory.master.view",
+      "inventory.general.view",
+      "inventory.general.export",
     ],
   },
   {

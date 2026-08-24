@@ -43,6 +43,7 @@ function DsComprasNuevaInner() {
   const [invoiceRate, setInvoiceRate] = useState(rates.bcv);
   const [extraTaxes, setExtraTaxes] = useState<DsExtraInvoiceTax[]>([]);
   const [notes, setNotes] = useState("");
+  const [includeInGeneral, setIncludeInGeneral] = useState(false);
 
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<DsProduct[]>([]);
@@ -146,6 +147,7 @@ function DsComprasNuevaInner() {
       extraTaxes,
       lines,
       notes,
+      includeInGeneral,
     });
     if (!r.ok) {
       setMsg(r.error);
@@ -328,6 +330,22 @@ function DsComprasNuevaInner() {
             />
           </label>
         </div>
+        <label
+          style={{
+            marginTop: "0.85rem",
+            display: "flex",
+            gap: "0.5rem",
+            alignItems: "center",
+            fontSize: "0.9rem",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={includeInGeneral}
+            onChange={(e) => setIncludeInGeneral(e.target.checked)}
+          />
+          Cargar esta compra también en inventario general (fiscal)
+        </label>
         {showNewSupplier ? (
           <div
             style={{

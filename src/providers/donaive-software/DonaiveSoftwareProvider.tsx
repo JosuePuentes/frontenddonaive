@@ -22,6 +22,7 @@ import {
 } from "@/lib/donaive-software/license-api";
 import {
   ensureDefaultAdmin,
+  hashPassword,
   loadRoleMatrix,
   loadUsers,
   logout as authLogout,
@@ -50,12 +51,15 @@ import {
   type CartItem,
 } from "@/lib/donaive-software/sales";
 import {
+  applyGeneralInventoryMovement,
   appendClosure,
   appendMovements,
   appendPayable,
   appendPurchase,
   appendReceivable,
   appendSale,
+  loadFiscalSettings,
+  loadGeneralInventory,
   loadClients,
   loadClosures,
   loadMovements,
@@ -68,6 +72,8 @@ import {
   loadSuppliers,
   receiveStock,
   saveClients,
+  saveFiscalSettings,
+  saveGeneralInventory,
   savePayables,
   saveProducts,
   saveRates,
@@ -83,6 +89,8 @@ import {
   type DsSale,
   type DsStockMovement,
   type DsSupplier,
+  type DsGeneralInventoryState,
+  type DsFiscalSettings,
   type UpsertProductInput,
 } from "@/lib/donaive-software/store";
 import {
@@ -95,6 +103,7 @@ import type {
   DsPurchase,
   DsRole,
   DsUser,
+  DsGeneralInventoryMovement,
 } from "@/types/donaive-software";
 
 type Ctx = {
@@ -109,6 +118,8 @@ type Ctx = {
   suppliers: DsSupplier[];
   payables: DsPayable[];
   receivables: DsReceivable[];
+  generalInventory: DsGeneralInventoryState;
+  fiscalSettings: DsFiscalSettings;
   currentUser: DsUser | null;
   users: DsUser[];
   roleMatrix: Partial<Record<DsRole, DsPermission[]>>;
@@ -148,13 +159,19 @@ type Ctx = {
   confirmPurchase: (
     input: Omit<ConfirmPurchaseInput, "products" | "rateCtx"> & {
       rateCtx?: ConfirmPurchaseInput["rateCtx"];
+      includeInGeneral?: boolean;
     },
   ) => { ok: true; purchase: DsPurchase } | { ok: false; error: string };
   refreshPurchases: () => void;
   completeSale: (input: {
     cart: CartItem[];
     payments: DsPayment[];
+    saleKind?: "NORMAL" | "FISCAL";
+    fiscalPrinter?: "printer_1" | "printer_2";
+    fiscalPin?: string;
   }) => { ok: true; sale: DsSale } | { ok: false; error: string };
+  setFiscalPin: (pin: string) => { ok: true } | { ok: false; error: string };
+  verifyFiscalPin: (pin: string) => boolean;
   createCashClosure: (input: {
     countedCashUsd: number;
     countedCashBs: number;
@@ -203,6 +220,14 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
   const [suppliers, setSuppliers] = useState<DsSupplier[]>([]);
   const [payables, setPayables] = useState<DsPayable[]>([]);
   const [receivables, setReceivables] = useState<DsReceivable[]>([]);
+  const [generalInventory, setGeneralInventory] = useState<DsGeneralInventoryState>({
+    stockByProduct: {},
+    movements: [],
+  });
+  const [fiscalSettings, setFiscalSettings] = useState<DsFiscalSettings>({
+    pinHash: null,
+    updatedAt: new Date().toISOString(),
+  });
   const [currentUser, setCurrentUser] = useState<DsUser | null>(null);
   const [users, setUsers] = useState<DsUser[]>([]);
   const [roleMatrix, setRoleMatrix] = useState<
@@ -228,6 +253,8 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     setSuppliers(loadSuppliers());
     setPayables(loadPayables());
     setReceivables(loadReceivables());
+    setGeneralInventory(loadGeneralInventory());
+    setFiscalSettings(loadFiscalSettings());
     setUsers(loadUsers());
     setRoleMatrix(loadRoleMatrix());
     setCurrentUser(resolveCurrentUser());
@@ -381,6 +408,29 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     setPurchases(loadPurchases());
   }, []);
 
+  const verifyFiscalPin = useCallback(
+    (pin: string) =>
+      Boolean(
+        fiscalSettings.pinHash &&
+          hashPassword(pin.trim()) === fiscalSettings.pinHash,
+      ),
+    [fiscalSettings.pinHash],
+  );
+
+  const setFiscalPin = useCallback((pin: string) => {
+    const clean = pin.trim();
+    if (clean.length < 4) {
+      return { ok: false as const, error: "El PIN fiscal debe tener al menos 4 dígitos." };
+    }
+    const next: DsFiscalSettings = {
+      pinHash: hashPassword(clean),
+      updatedAt: new Date().toISOString(),
+    };
+    saveFiscalSettings(next);
+    setFiscalSettings(next);
+    return { ok: true as const };
+  }, []);
+
   const upsertProduct = useCallback(
     (input: UpsertProductInput) => {
       const r = persistUpsertProduct(products, input);
@@ -394,6 +444,7 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
     (
       input: Omit<ConfirmPurchaseInput, "products" | "rateCtx"> & {
         rateCtx?: ConfirmPurchaseInput["rateCtx"];
+        includeInGeneral?: boolean;
       },
     ) => {
       const rateCtx =
@@ -430,9 +481,31 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
         createdBy: currentUser?.name,
       }));
       setMovements(appendMovements(movs));
+
+      if (input.includeInGeneral) {
+        let nextGeneral = generalInventory;
+        for (const line of r.purchase.lines) {
+          const qtyBase =
+            (line.buyMode === "BOX" ? line.qty * Math.max(1, line.unitsPerBox) : line.qty) +
+            Math.max(0, line.qtyBonus);
+          const gm: DsGeneralInventoryMovement = {
+            id: `gmov_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+            productId: line.productId,
+            productLabel: line.productLabel,
+            qtyBase,
+            reason: "COMPRA",
+            refId: r.purchase.id,
+            createdAt: now,
+            createdBy: currentUser?.name,
+          };
+          nextGeneral = applyGeneralInventoryMovement(nextGeneral, gm);
+        }
+        saveGeneralInventory(nextGeneral);
+        setGeneralInventory(nextGeneral);
+      }
       return { ok: true as const, purchase: r.purchase };
     },
-    [products, rates, currentUser],
+    [products, rates, currentUser, generalInventory],
   );
 
   const applyPurchaseCpp = useCallback(
@@ -447,7 +520,22 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
   );
 
   const completeSaleFn = useCallback(
-    (input: { cart: CartItem[]; payments: DsPayment[] }) => {
+    (input: {
+      cart: CartItem[];
+      payments: DsPayment[];
+      saleKind?: "NORMAL" | "FISCAL";
+      fiscalPrinter?: "printer_1" | "printer_2";
+      fiscalPin?: string;
+    }) => {
+      const saleKind = input.saleKind ?? "NORMAL";
+      if (saleKind === "FISCAL") {
+        if (!input.fiscalPrinter) {
+          return { ok: false as const, error: "Seleccione impresora fiscal." };
+        }
+        if (!verifyFiscalPin(input.fiscalPin || "")) {
+          return { ok: false as const, error: "PIN fiscal inválido." };
+        }
+      }
       const r = runCompleteSale({
         products,
         cart: input.cart,
@@ -455,15 +543,35 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
         bcv: rates.bcv,
         createdBy: currentUser?.name,
         operatorId: currentUser?.id,
+        saleKind,
+        fiscalPrinter: input.fiscalPrinter,
       });
       if (!r.ok) return r;
       saveProducts(r.products);
       setProducts(r.products);
       setSales(appendSale(r.sale));
       setMovements(appendMovements(r.movements));
+      if (saleKind === "FISCAL") {
+        let nextGeneral = generalInventory;
+        for (const line of r.sale.lines) {
+          const gm: DsGeneralInventoryMovement = {
+            id: `gmov_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+            productId: line.productId,
+            productLabel: line.productLabel,
+            qtyBase: -line.qtyBase,
+            reason: "VENTA_FISCAL",
+            refId: r.sale.id,
+            createdAt: r.sale.createdAt,
+            createdBy: currentUser?.name,
+          };
+          nextGeneral = applyGeneralInventoryMovement(nextGeneral, gm);
+        }
+        saveGeneralInventory(nextGeneral);
+        setGeneralInventory(nextGeneral);
+      }
       return { ok: true as const, sale: r.sale };
     },
-    [products, rates, currentUser],
+    [products, rates, currentUser, generalInventory, verifyFiscalPin],
   );
 
   const createCashClosureFn = useCallback(
@@ -613,6 +721,8 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       suppliers,
       payables,
       receivables,
+      generalInventory,
+      fiscalSettings,
       currentUser,
       users,
       roleMatrix,
@@ -634,6 +744,8 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       confirmPurchase: confirmPurchaseFn,
       refreshPurchases,
       completeSale: completeSaleFn,
+      setFiscalPin,
+      verifyFiscalPin,
       createCashClosure: createCashClosureFn,
       upsertClient,
       upsertSupplier,
@@ -653,6 +765,8 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       suppliers,
       payables,
       receivables,
+      generalInventory,
+      fiscalSettings,
       currentUser,
       users,
       roleMatrix,
@@ -674,6 +788,8 @@ export function DonaiveSoftwareProvider({ children }: { children: ReactNode }) {
       confirmPurchaseFn,
       refreshPurchases,
       completeSaleFn,
+      setFiscalPin,
+      verifyFiscalPin,
       createCashClosureFn,
       upsertClient,
       upsertSupplier,

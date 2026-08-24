@@ -39,6 +39,14 @@ export function salesInRange(sales: DsSale[], range: DateRange): DsSale[] {
   });
 }
 
+export function salesByKind(
+  sales: DsSale[],
+  kind: "ALL" | "NORMAL" | "FISCAL",
+): DsSale[] {
+  if (kind === "ALL") return sales;
+  return sales.filter((s) => (s.saleKind ?? "NORMAL") === kind);
+}
+
 export function daysBetween(from: string, to: string): number {
   const a = new Date(from + "T12:00:00");
   const b = new Date(to + "T12:00:00");
@@ -127,6 +135,14 @@ export function buildSalesReport(sales: DsSale[], range: DateRange): SalesReport
   };
 }
 
+export function buildSalesReportByKind(
+  sales: DsSale[],
+  range: DateRange,
+  kind: "ALL" | "NORMAL" | "FISCAL",
+): SalesReport {
+  return buildSalesReport(salesByKind(sales, kind), range);
+}
+
 export type InventoryReportRow = {
   productId: string;
   name: string;
@@ -166,6 +182,34 @@ export function buildInventoryReport(products: DsProduct[]): InventoryReport {
       valueUsd: qty * cost,
       saleUnitUsd: p.saleUnitUsd ?? 0,
       lowStock,
+    };
+  });
+  rows.sort((a, b) => b.valueUsd - a.valueUsd);
+  return {
+    rows,
+    totalUnits: rows.reduce((a, r) => a + r.qtyBase, 0),
+    totalValueUsd: rows.reduce((a, r) => a + r.valueUsd, 0),
+    lowStockCount: rows.filter((r) => r.lowStock).length,
+  };
+}
+
+export function buildInventoryReportFromStock(
+  products: DsProduct[],
+  stockByProduct: Record<string, number>,
+): InventoryReport {
+  const rows: InventoryReportRow[] = products.map((p) => {
+    const qty = Math.max(0, Number(stockByProduct[p.id]) || 0);
+    const cost = Math.max(0, p.stock.unitCostUsd);
+    return {
+      productId: p.id,
+      name: p.name,
+      sku: p.sku,
+      qtyBase: qty,
+      unitsPerBox: p.unitsPerBox,
+      unitCostUsd: cost,
+      valueUsd: qty * cost,
+      saleUnitUsd: p.saleUnitUsd ?? 0,
+      lowStock: qty <= 0,
     };
   });
   rows.sort((a, b) => b.valueUsd - a.valueUsd);
