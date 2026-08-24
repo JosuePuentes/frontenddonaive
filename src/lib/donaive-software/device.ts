@@ -1,5 +1,8 @@
 /** Huella estable del equipo para activación de licencia. */
 
+import { dsGetItem, dsSetItem } from "@/lib/donaive-software/persist";
+import { isDonaiveDesktopRuntime } from "@/lib/donaive-software-host";
+
 const DEVICE_ID_KEY = "donaive-software-device-id-v1";
 
 function randomId(): string {
@@ -12,10 +15,10 @@ function randomId(): string {
 export function getDeviceFingerprint(): string {
   if (typeof window === "undefined") return "server";
   try {
-    let id = localStorage.getItem(DEVICE_ID_KEY);
+    let id = dsGetItem(DEVICE_ID_KEY);
     if (!id) {
       id = randomId();
-      localStorage.setItem(DEVICE_ID_KEY, id);
+      dsSetItem(DEVICE_ID_KEY, id);
     }
     return id;
   } catch {
@@ -25,6 +28,18 @@ export function getDeviceFingerprint(): string {
 
 export function getDeviceLabel(): string {
   if (typeof navigator === "undefined") return "Equipo desconocido";
+  if (isDonaiveDesktopRuntime()) {
+    const platform = window.donaiveDesktop?.platform ?? navigator.platform ?? "";
+    const os =
+      platform === "win32"
+        ? "Windows"
+        : platform === "linux"
+          ? "Linux"
+          : platform === "darwin"
+            ? "macOS"
+            : platform || "PC";
+    return `Donaive Software · ${os}`.slice(0, 160);
+  }
   const ua = navigator.userAgent || "";
   const platform = navigator.platform || "";
   let browser = "Navegador";

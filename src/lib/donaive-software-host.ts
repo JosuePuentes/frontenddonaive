@@ -25,10 +25,7 @@ export function isDonaiveSoftwareVercelHostname(hostname: string): boolean {
 export function isDonaiveDesktopRuntime(): boolean {
   if (import.meta.env.VITE_DONAIVE_DESKTOP === "true") return true;
   if (typeof window === "undefined") return false;
-  return Boolean(
-    (window as Window & { donaiveDesktop?: { isDesktop?: boolean } })
-      .donaiveDesktop?.isDesktop,
-  );
+  return Boolean(window.donaiveDesktop?.isDesktop);
 }
 
 export function isDonaiveSoftwareHost(

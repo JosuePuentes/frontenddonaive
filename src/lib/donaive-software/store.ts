@@ -1,5 +1,6 @@
 /** Tasas, productos y compras — persistencia local offline-first. */
 
+import { dsGetItem, dsSetItem } from "@/lib/donaive-software/persist";
 import type { CppState } from "@/lib/donaive-software/cpp";
 import { applyWeightedCpp } from "@/lib/donaive-software/cpp";
 import type {
@@ -94,7 +95,7 @@ export function loadRates(): DsRatesState {
   };
   if (typeof window === "undefined") return fallback;
   try {
-    const raw = localStorage.getItem(RATES_KEY);
+    const raw = dsGetItem(RATES_KEY);
     if (!raw) return fallback;
     return { ...fallback, ...(JSON.parse(raw) as DsRatesState) };
   } catch {
@@ -103,7 +104,7 @@ export function loadRates(): DsRatesState {
 }
 
 export function saveRates(rates: DsRatesState): void {
-  localStorage.setItem(RATES_KEY, JSON.stringify(rates));
+  dsSetItem(RATES_KEY, JSON.stringify(rates));
 }
 
 function defaultProducts(): DsProduct[] {
@@ -136,7 +137,7 @@ function defaultProducts(): DsProduct[] {
 export function loadProducts(): DsProduct[] {
   if (typeof window === "undefined") return defaultProducts();
   try {
-    const raw = localStorage.getItem(PRODUCTS_KEY);
+    const raw = dsGetItem(PRODUCTS_KEY);
     if (!raw) return defaultProducts();
     const parsed = JSON.parse(raw) as Partial<DsProduct>[];
     return parsed.map((p) => normalizeProduct(p as DsProduct));
@@ -146,13 +147,13 @@ export function loadProducts(): DsProduct[] {
 }
 
 export function saveProducts(products: DsProduct[]): void {
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
+  dsSetItem(PRODUCTS_KEY, JSON.stringify(products));
 }
 
 export function loadPurchases(): DsPurchase[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(PURCHASES_KEY);
+    const raw = dsGetItem(PURCHASES_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as DsPurchase[];
     return parsed.map((p) => ({
@@ -166,7 +167,7 @@ export function loadPurchases(): DsPurchase[] {
 }
 
 export function savePurchases(purchases: DsPurchase[]): void {
-  localStorage.setItem(PURCHASES_KEY, JSON.stringify(purchases));
+  dsSetItem(PURCHASES_KEY, JSON.stringify(purchases));
 }
 
 export function appendPurchase(purchase: DsPurchase): DsPurchase[] {
@@ -252,7 +253,7 @@ export function upsertProduct(
 export function loadSales(): DsSale[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(SALES_KEY);
+    const raw = dsGetItem(SALES_KEY);
     if (!raw) return [];
     return JSON.parse(raw) as DsSale[];
   } catch {
@@ -261,7 +262,7 @@ export function loadSales(): DsSale[] {
 }
 
 export function saveSales(sales: DsSale[]): void {
-  localStorage.setItem(SALES_KEY, JSON.stringify(sales));
+  dsSetItem(SALES_KEY, JSON.stringify(sales));
 }
 
 export function appendSale(sale: DsSale): DsSale[] {
@@ -273,7 +274,7 @@ export function appendSale(sale: DsSale): DsSale[] {
 export function loadClosures(): DsCashClosure[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(CLOSURES_KEY);
+    const raw = dsGetItem(CLOSURES_KEY);
     if (!raw) return [];
     return JSON.parse(raw) as DsCashClosure[];
   } catch {
@@ -282,7 +283,7 @@ export function loadClosures(): DsCashClosure[] {
 }
 
 export function saveClosures(closures: DsCashClosure[]): void {
-  localStorage.setItem(CLOSURES_KEY, JSON.stringify(closures));
+  dsSetItem(CLOSURES_KEY, JSON.stringify(closures));
 }
 
 export function appendClosure(closure: DsCashClosure): DsCashClosure[] {
@@ -294,7 +295,7 @@ export function appendClosure(closure: DsCashClosure): DsCashClosure[] {
 export function loadMovements(): DsStockMovement[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(MOVEMENTS_KEY);
+    const raw = dsGetItem(MOVEMENTS_KEY);
     if (!raw) return [];
     return JSON.parse(raw) as DsStockMovement[];
   } catch {
@@ -303,7 +304,7 @@ export function loadMovements(): DsStockMovement[] {
 }
 
 export function saveMovements(movements: DsStockMovement[]): void {
-  localStorage.setItem(MOVEMENTS_KEY, JSON.stringify(movements));
+  dsSetItem(MOVEMENTS_KEY, JSON.stringify(movements));
 }
 
 export function appendMovements(newOnes: DsStockMovement[]): DsStockMovement[] {
@@ -315,7 +316,7 @@ export function appendMovements(newOnes: DsStockMovement[]): DsStockMovement[] {
 function loadJsonArray<T>(key: string): T[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(key);
+    const raw = dsGetItem(key);
     if (!raw) return [];
     return JSON.parse(raw) as T[];
   } catch {
@@ -326,7 +327,7 @@ function loadJsonArray<T>(key: string): T[] {
 function loadJsonObject<T extends object>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
-    const raw = localStorage.getItem(key);
+    const raw = dsGetItem(key);
     if (!raw) return fallback;
     return { ...fallback, ...(JSON.parse(raw) as T) };
   } catch {
@@ -339,7 +340,7 @@ export function loadClients(): DsClient[] {
 }
 
 export function saveClients(clients: DsClient[]): void {
-  localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
+  dsSetItem(CLIENTS_KEY, JSON.stringify(clients));
 }
 
 function normalizeSupplier(raw: Partial<DsSupplier> & { id: string }): DsSupplier {
@@ -368,7 +369,7 @@ export function loadSuppliers(): DsSupplier[] {
 }
 
 export function saveSuppliers(suppliers: DsSupplier[]): void {
-  localStorage.setItem(SUPPLIERS_KEY, JSON.stringify(suppliers));
+  dsSetItem(SUPPLIERS_KEY, JSON.stringify(suppliers));
 }
 
 export function loadPayables(): DsPayable[] {
@@ -376,7 +377,7 @@ export function loadPayables(): DsPayable[] {
 }
 
 export function savePayables(payables: DsPayable[]): void {
-  localStorage.setItem(PAYABLES_KEY, JSON.stringify(payables));
+  dsSetItem(PAYABLES_KEY, JSON.stringify(payables));
 }
 
 export function appendPayable(payable: DsPayable): DsPayable[] {
@@ -390,7 +391,7 @@ export function loadReceivables(): DsReceivable[] {
 }
 
 export function saveReceivables(receivables: DsReceivable[]): void {
-  localStorage.setItem(RECEIVABLES_KEY, JSON.stringify(receivables));
+  dsSetItem(RECEIVABLES_KEY, JSON.stringify(receivables));
 }
 
 export function appendReceivable(receivable: DsReceivable): DsReceivable[] {
@@ -406,8 +407,8 @@ export function loadGeneralInventory(): DsGeneralInventoryState {
 }
 
 export function saveGeneralInventory(state: DsGeneralInventoryState): void {
-  localStorage.setItem(GENERAL_STOCK_KEY, JSON.stringify(state.stockByProduct));
-  localStorage.setItem(GENERAL_MOVEMENTS_KEY, JSON.stringify(state.movements));
+  dsSetItem(GENERAL_STOCK_KEY, JSON.stringify(state.stockByProduct));
+  dsSetItem(GENERAL_MOVEMENTS_KEY, JSON.stringify(state.movements));
 }
 
 export function applyGeneralInventoryMovement(
@@ -433,7 +434,7 @@ export function loadFiscalSettings(): DsFiscalSettings {
 }
 
 export function saveFiscalSettings(settings: DsFiscalSettings): void {
-  localStorage.setItem(FISCAL_SETTINGS_KEY, JSON.stringify(settings));
+  dsSetItem(FISCAL_SETTINGS_KEY, JSON.stringify(settings));
 }
 
 export function loadBanks(): DsBank[] {
@@ -462,7 +463,7 @@ export function loadBanks(): DsBank[] {
 }
 
 export function saveBanks(banks: DsBank[]): void {
-  localStorage.setItem(BANKS_KEY, JSON.stringify(banks));
+  dsSetItem(BANKS_KEY, JSON.stringify(banks));
 }
 
 export function loadBankMovements(): DsBankMovement[] {
@@ -470,7 +471,7 @@ export function loadBankMovements(): DsBankMovement[] {
 }
 
 export function saveBankMovements(movements: DsBankMovement[]): void {
-  localStorage.setItem(BANK_MOVEMENTS_KEY, JSON.stringify(movements));
+  dsSetItem(BANK_MOVEMENTS_KEY, JSON.stringify(movements));
 }
 
 export function appendBankMovements(
@@ -486,7 +487,7 @@ export function loadCashSessions(): DsCashSession[] {
 }
 
 export function saveCashSessions(sessions: DsCashSession[]): void {
-  localStorage.setItem(CASH_SESSIONS_KEY, JSON.stringify(sessions));
+  dsSetItem(CASH_SESSIONS_KEY, JSON.stringify(sessions));
 }
 
 export type { CppState };

@@ -1,5 +1,6 @@
 /** Usuarios y sesión local — offline-first. */
 
+import { dsGetItem, dsSetItem } from "@/lib/donaive-software/persist";
 import { DS_DEFAULT_ROLE_PERMISSIONS } from "@/lib/donaive-software/access";
 import type { DsPermission, DsRole, DsSession, DsUser } from "@/types/donaive-software";
 
@@ -31,7 +32,7 @@ export function verifyPassword(password: string, hash: string): boolean {
 export function loadUsers(): DsUser[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(USERS_KEY);
+    const raw = dsGetItem(USERS_KEY);
     if (!raw) return [];
     return JSON.parse(raw) as DsUser[];
   } catch {
@@ -40,7 +41,7 @@ export function loadUsers(): DsUser[] {
 }
 
 export function saveUsers(users: DsUser[]): void {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  dsSetItem(USERS_KEY, JSON.stringify(users));
 }
 
 export function loadSession(): DsSession | null {
@@ -65,7 +66,7 @@ export function clearSession(): void {
 export function loadRoleMatrix(): Partial<Record<DsRole, DsPermission[]>> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = localStorage.getItem(ROLE_MATRIX_KEY);
+    const raw = dsGetItem(ROLE_MATRIX_KEY);
     if (!raw) return {};
     return JSON.parse(raw) as Partial<Record<DsRole, DsPermission[]>>;
   } catch {
@@ -74,7 +75,7 @@ export function loadRoleMatrix(): Partial<Record<DsRole, DsPermission[]>> {
 }
 
 export function saveRoleMatrix(matrix: Partial<Record<DsRole, DsPermission[]>>): void {
-  localStorage.setItem(ROLE_MATRIX_KEY, JSON.stringify(matrix));
+  dsSetItem(ROLE_MATRIX_KEY, JSON.stringify(matrix));
 }
 
 export function ensureDefaultAdmin(): DsUser {

@@ -1,5 +1,6 @@
 /** Licencia local del negocio (offline-first, validada remotamente al activar). */
 
+import { dsGetItem, dsRemoveItem, dsSetItem } from "@/lib/donaive-software/persist";
 export type DsLicense = {
   businessName: string;
   activatedAt: string;
@@ -16,7 +17,7 @@ const STORAGE_KEY = "donaive-software-license-v1";
 export function loadLicense(): DsLicense | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = dsGetItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as DsLicense;
     if (
@@ -34,11 +35,11 @@ export function loadLicense(): DsLicense | null {
 }
 
 export function saveLicense(license: DsLicense): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(license));
+  dsSetItem(STORAGE_KEY, JSON.stringify(license));
 }
 
 export function clearLicense(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  dsRemoveItem(STORAGE_KEY);
 }
 
 export function activateLicenseFromServer(input: {

@@ -1,11 +1,18 @@
 import { Link } from "react-router";
 import { getDonaiveSoftwareRoutes } from "@/constants/donaive-software-routes";
 import DsRequirePermission from "@/components/donaive-software/DsRequirePermission";
+import { isDonaiveDesktopRuntime } from "@/lib/donaive-software-host";
+import {
+  getDesktopDataPath,
+  openDesktopDataFolder,
+} from "@/lib/donaive-software/persist";
 import { useDonaiveSoftware } from "@/providers/donaive-software/DonaiveSoftwareProvider";
 
 function DsConfigLicenciaInner() {
   const { license, deactivate } = useDonaiveSoftware();
   const routes = getDonaiveSoftwareRoutes();
+  const onDesktop = isDonaiveDesktopRuntime();
+  const dataPath = getDesktopDataPath();
 
   return (
     <div>
@@ -35,6 +42,24 @@ function DsConfigLicenciaInner() {
             </p>
           ) : null}
         </div>
+        {onDesktop ? (
+          <div style={{ marginTop: "1.25rem" }}>
+            <div className="ds-muted" style={{ fontSize: "0.8rem" }}>
+              Datos locales en este PC
+            </div>
+            <p className="ds-muted" style={{ marginTop: "0.35rem", fontSize: "0.85rem" }}>
+              {dataPath ?? "Carpeta de datos del sistema"}
+            </p>
+            <button
+              type="button"
+              className="ds-btn"
+              style={{ marginTop: "0.65rem" }}
+              onClick={() => void openDesktopDataFolder()}
+            >
+              Abrir carpeta de datos
+            </button>
+          </div>
+        ) : null}
         <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem" }}>
           <button
             type="button"
