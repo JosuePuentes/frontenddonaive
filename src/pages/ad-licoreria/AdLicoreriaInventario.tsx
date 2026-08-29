@@ -5,6 +5,7 @@ import {
   adInventarioProductoPath,
 } from "@/constants/ad-licoreria-routes";
 import { AdPriceDisplay } from "@/components/ad-licoreria/AdPriceDisplay";
+import { AdStockBreakdown } from "@/components/ad-licoreria/AdStockBreakdown";
 import { useAdBcvRate } from "@/hooks/ad-licoreria/useAdBcvRate";
 import { findUnitAndBox, pricesFromCost } from "@/lib/ad-licoreria/pack";
 import { completeAdPrice, hasAdMoney } from "@/lib/ad-licoreria/rates";
@@ -273,8 +274,8 @@ export default function AdLicoreriaInventario() {
                 <th>PVP unidad</th>
                 <th>PVP caja</th>
                 <th>U. / caja</th>
-                <th>Físico</th>
-                <th>Disponible</th>
+                <th>Físico (u. / cajas)</th>
+                <th>Disponible (u. / cajas)</th>
                 <th>Ficha</th>
               </tr>
             </thead>
@@ -329,7 +330,12 @@ export default function AdLicoreriaInventario() {
                     )}
                   </td>
                   <td>{r.unitsPerBox > 1 ? r.unitsPerBox : "—"}</td>
-                  <td>{r.physical}</td>
+                  <td>
+                    <AdStockBreakdown
+                      totalUnits={r.physical}
+                      unitsPerBox={r.unitsPerBox}
+                    />
+                  </td>
                   <td
                     className={
                       r.available <= 0
@@ -337,7 +343,15 @@ export default function AdLicoreriaInventario() {
                         : "text-[var(--ad-success)]"
                     }
                   >
-                    {r.available}
+                    <AdStockBreakdown
+                      totalUnits={r.available}
+                      unitsPerBox={r.unitsPerBox}
+                      className={
+                        r.available <= 0
+                          ? "text-[var(--ad-danger)]"
+                          : "text-[var(--ad-success)]"
+                      }
+                    />
                   </td>
                   <td>
                     <div className="flex flex-wrap gap-1">
