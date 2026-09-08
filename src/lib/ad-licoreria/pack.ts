@@ -16,6 +16,15 @@ export function findUnitAndBox<
   return { unit, box };
 }
 
+/** Margen contable % a partir de costo y PVP. */
+export function marginFromSale(unitCost: number, salePrice: number): number {
+  const cost = Math.max(0, Number(unitCost) || 0);
+  const sale = Math.max(0, Number(salePrice) || 0);
+  if (sale <= 0 || cost <= 0) return 0;
+  if (cost >= sale) return 0;
+  return Math.max(0, Math.min(99.99, (1 - cost / sale) * 100));
+}
+
 /** PVP unidad y caja: utilidad contable % (margen sobre precio de venta). */
 export function pricesFromCost(
   unitCost: number,
@@ -35,4 +44,9 @@ export function pricesFromCost(
     utilityPercent: margin,
     unitsPerBox: upp,
   };
+}
+
+/** PVP a partir de costo y margen contable % (sobre precio de venta). */
+export function saleFromMargin(unitCost: number, utilityPercent: number): number {
+  return pricesFromCost(unitCost, 1, utilityPercent).unitSale;
 }
