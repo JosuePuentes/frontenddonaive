@@ -118,12 +118,64 @@ export function PolisurSiteAdmin({ clave }: Props) {
     }));
   }
 
-  function removeNews(id: string) {
-    setDraft((prev) => ({
-      ...prev,
-      news: prev.news.filter((n) => n.id !== id),
-    }));
+  async function persistSite(
+    siteDraft: PolisurSiteContent,
+    successMessage: string,
+  ) {
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const payload = mergePolisurSiteContent(siteDraft);
+      const res = await fetch("/api/polisur-site?action=save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clave, site: payload }),
+      });
+      const text = await res.text();
+      let data: { ok?: boolean; site?: PolisurSiteContent; error?: string } = {};
+      try {
+        data = JSON.parse(text) as typeof data;
+      } catch {
+        throw new Error("El servidor no respondió correctamente.");
+      }
+      if (!res.ok || !data.ok || !data.site) {
+        throw new Error(data.error || "No se pudo guardar.");
+      }
+      const next = mergePolisurSiteContent(data.site);
+      setDraft(next);
+      setSiteLocal(next);
+      setMessage(successMessage);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar.");
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeNews(id: string) {
+    const item = draft.news.find((n) => n.id === id);
+    const label = item?.title?.trim() || "esta noticia";
+    if (
+      !window.confirm(
+        `¿Eliminar "${label}" del portal? Se guardará de inmediato en el servidor.`,
+      )
+    ) {
+      return;
+    }
+    const nextDraft: PolisurSiteContent = {
+      ...draft,
+      news: draft.news.filter((n) => n.id !== id),
+    };
+    setDraft(nextDraft);
     if (editingNewsId === id) setEditingNewsId(null);
+    try {
+      await persistSite(nextDraft, "Noticia eliminada y guardada.");
+    } catch {
+      await refresh();
+    }
   }
 
   async function uploadNewsPhotos(newsId: string, files: FileList | null) {
@@ -286,35 +338,10 @@ export function PolisurSiteAdmin({ clave }: Props) {
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
-    setBusy(true);
-    setMessage(null);
-    setError(null);
     try {
-      const payload = mergePolisurSiteContent(draft);
-      const res = await fetch("/api/polisur-site?action=save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clave, site: payload }),
-      });
-      const text = await res.text();
-      let data: { ok?: boolean; site?: PolisurSiteContent; error?: string } = {};
-      try {
-        data = JSON.parse(text) as typeof data;
-      } catch {
-        throw new Error("El servidor no respondió correctamente.");
-      }
-      if (!res.ok || !data.ok || !data.site) {
-        throw new Error(data.error || "No se pudo guardar.");
-      }
-      const next = mergePolisurSiteContent(data.site);
-      setDraft(next);
-      setSiteLocal(next);
-      setMessage("Contenido del portal guardado.");
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar.");
-    } finally {
-      setBusy(false);
+      await persistSite(draft, "Contenido del portal guardado.");
+    } catch {
+      /* persistSite ya muestra el error */
     }
   }
 
@@ -698,8 +725,9 @@ export function PolisurSiteAdmin({ clave }: Props) {
                         </label>
                         <button
                           type="button"
-                          onClick={() => removeNews(n.id)}
-                          className="text-xs uppercase tracking-[0.12em] text-red-300/80 hover:underline"
+                          disabled={busy}
+                          onClick={() => void removeNews(n.id)}
+                          className="text-xs uppercase tracking-[0.12em] text-red-300/80 hover:underline disabled:opacity-50"
                         >
                           Eliminar
                         </button>
