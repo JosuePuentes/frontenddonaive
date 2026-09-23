@@ -155,8 +155,14 @@ async function deleteGitHub({ path }) {
     },
   });
   if (!existing.ok) {
-    const err = new Error("El archivo no existe en el repositorio.");
-    err.statusCode = 404;
+    if (existing.status === 404) {
+      return { commit: null, alreadyMissing: true };
+    }
+    const text = await existing.text();
+    const err = new Error(
+      `No se pudo consultar el archivo (${existing.status}): ${text}`,
+    );
+    err.statusCode = 502;
     throw err;
   }
   const data = await existing.json();
@@ -288,6 +294,13 @@ export default async function handler(req, res) {
         });
       }
       const removed = await deleteGitHub({ path: dest });
+      if (removed.alreadyMissing) {
+        return json(res, 200, {
+          ok: true,
+          path: dest,
+          alreadyMissing: true,
+        });
+      }
       return json(res, 200, { ok: true, path: dest, ...removed });
     }
 

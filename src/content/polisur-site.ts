@@ -69,11 +69,66 @@ export type PolisurUnitItem = {
   active: boolean;
 };
 
+export type PolisurHomeLeadership = {
+  eyebrow: string;
+  rank: string;
+  name: string;
+  role: string;
+  note: string;
+};
+
+export type PolisurHomeTextBlock = {
+  title: string;
+  body: string;
+};
+
+export type PolisurHomeSectionIntro = {
+  eyebrow: string;
+  title: string;
+  body: string;
+};
+
+export type PolisurHomeAboutSection = PolisurHomeSectionIntro & {
+  history: string;
+  imageUrl: string;
+  jurisdiction: string;
+};
+
+export type PolisurHomeDivisionsSection = PolisurHomeSectionIntro & {
+  /** Alineación del encabezado sobre el mosaico de divisiones. */
+  headerAlign: "left" | "center";
+};
+
+export type PolisurHomeCitizenSection = PolisurHomeSectionIntro & {
+  pillars: string[];
+  imageUrl: string;
+};
+
+export type PolisurHomePreinscripcionSection = {
+  eyebrow: string;
+  title: string;
+  body: string;
+  cta: string;
+};
+
+export type PolisurHomeContent = {
+  about: PolisurHomeAboutSection;
+  leadership: PolisurHomeLeadership;
+  mission: PolisurHomeTextBlock;
+  vision: PolisurHomeTextBlock;
+  values: PolisurHomeTextBlock & { items: string[] };
+  functions: PolisurHomeTextBlock;
+  divisions: PolisurHomeDivisionsSection;
+  citizen: PolisurHomeCitizenSection;
+  preinscripcion: PolisurHomePreinscripcionSection;
+};
+
 export type PolisurSiteContent = {
   updatedAt: string;
   contact: PolisurContactInfo;
   social: PolisurSocialLinks;
   banner: PolisurBannerContent;
+  home: PolisurHomeContent;
   news: PolisurNewsItem[];
   units: PolisurUnitItem[];
 };
@@ -144,6 +199,60 @@ export const POLISUR_DEFAULT_UNITS: PolisurUnitItem[] = POLISUR_UNITS.map(
   },
 );
 
+export const POLISUR_HOME_DEFAULTS: PolisurHomeContent = {
+  about: {
+    eyebrow: polisurCopy.about.eyebrow,
+    title: polisurCopy.about.title,
+    body: polisurCopy.about.body,
+    history: polisurCopy.about.history,
+    imageUrl: POLISUR_MEDIA.home.about,
+    jurisdiction: polisurCopy.brand.jurisdiction,
+  },
+  leadership: {
+    eyebrow: polisurCopy.leadership.eyebrow,
+    rank: polisurCopy.leadership.rank,
+    name: polisurCopy.leadership.name,
+    role: polisurCopy.leadership.role,
+    note: polisurCopy.leadership.note,
+  },
+  mission: {
+    title: polisurCopy.mission.title,
+    body: polisurCopy.mission.body,
+  },
+  vision: {
+    title: polisurCopy.vision.title,
+    body: polisurCopy.vision.body,
+  },
+  values: {
+    title: polisurCopy.values.title,
+    body: "",
+    items: [...polisurCopy.values.items],
+  },
+  functions: {
+    title: polisurCopy.functions.title,
+    body: polisurCopy.functions.body,
+  },
+  divisions: {
+    eyebrow: polisurCopy.divisions.eyebrow,
+    title: polisurCopy.divisions.title,
+    body: polisurCopy.divisions.body,
+    headerAlign: "center",
+  },
+  citizen: {
+    eyebrow: polisurCopy.citizen.eyebrow,
+    title: polisurCopy.citizen.title,
+    body: polisurCopy.citizen.body,
+    pillars: [...polisurCopy.citizen.pillars],
+    imageUrl: POLISUR_MEDIA.home.ciudadania,
+  },
+  preinscripcion: {
+    eyebrow: "Aspirantes",
+    title: polisurCopy.preinscripcion.title,
+    body: polisurCopy.preinscripcion.body,
+    cta: polisurCopy.preinscripcion.cta,
+  },
+};
+
 export const POLISUR_SITE_DEFAULTS: PolisurSiteContent = {
   updatedAt: "",
   contact: {
@@ -177,6 +286,7 @@ export const POLISUR_SITE_DEFAULTS: PolisurSiteContent = {
     panelWidth: "standard",
   },
   news: [],
+  home: POLISUR_HOME_DEFAULTS,
   units: POLISUR_DEFAULT_UNITS,
 };
 
@@ -216,6 +326,118 @@ function cleanUrl(value: unknown, max = 400): string {
   return "";
 }
 
+function cleanTextBlock(value: unknown, max: number): string {
+  return String(value ?? "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/^\n+/, "")
+    .replace(/\n+$/, "")
+    .slice(0, max);
+}
+
+function cleanStringList(
+  value: unknown,
+  fallback: readonly string[],
+  maxItems: number,
+  maxLen: number,
+): string[] {
+  const fromArray = Array.isArray(value)
+    ? value.map((item) => cleanStr(item, maxLen)).filter(Boolean)
+    : [];
+  const fromText =
+    typeof value === "string"
+      ? value
+          .split("\n")
+          .map((line) => cleanStr(line, maxLen))
+          .filter(Boolean)
+      : [];
+  const merged = fromArray.length > 0 ? fromArray : fromText;
+  const source = merged.length > 0 ? merged : [...fallback];
+  const unique: string[] = [];
+  for (const item of source) {
+    if (!unique.includes(item)) unique.push(item);
+  }
+  return unique.slice(0, maxItems);
+}
+
+function normalizeHeaderAlign(
+  value: unknown,
+  fallback: PolisurHomeDivisionsSection["headerAlign"],
+): PolisurHomeDivisionsSection["headerAlign"] {
+  return value === "left" || value === "center" ? value : fallback;
+}
+
+function normalizePolisurHomeContent(
+  raw: Partial<PolisurHomeContent> | null | undefined,
+): PolisurHomeContent {
+  const d = POLISUR_HOME_DEFAULTS;
+  const about = raw?.about ?? d.about;
+  const leadership = raw?.leadership ?? d.leadership;
+  const mission = raw?.mission ?? d.mission;
+  const vision = raw?.vision ?? d.vision;
+  const values = raw?.values ?? d.values;
+  const functions = raw?.functions ?? d.functions;
+  const divisions = raw?.divisions ?? d.divisions;
+  const citizen = raw?.citizen ?? d.citizen;
+  const preinscripcion = raw?.preinscripcion ?? d.preinscripcion;
+
+  return {
+    about: {
+      eyebrow: cleanStr(about.eyebrow, 80) || d.about.eyebrow,
+      title: cleanStr(about.title, 160) || d.about.title,
+      body: cleanTextBlock(about.body, 4000) || d.about.body,
+      history: cleanTextBlock(about.history, 4000) || d.about.history,
+      imageUrl: cleanUrl(about.imageUrl) || d.about.imageUrl,
+      jurisdiction: cleanStr(about.jurisdiction, 160) || d.about.jurisdiction,
+    },
+    leadership: {
+      eyebrow: cleanStr(leadership.eyebrow, 80) || d.leadership.eyebrow,
+      rank: cleanStr(leadership.rank, 80) || d.leadership.rank,
+      name: cleanStr(leadership.name, 120) || d.leadership.name,
+      role: cleanStr(leadership.role, 80) || d.leadership.role,
+      note: cleanTextBlock(leadership.note, 800) || d.leadership.note,
+    },
+    mission: {
+      title: cleanStr(mission.title, 80) || d.mission.title,
+      body: cleanTextBlock(mission.body, 2000) || d.mission.body,
+    },
+    vision: {
+      title: cleanStr(vision.title, 80) || d.vision.title,
+      body: cleanTextBlock(vision.body, 2000) || d.vision.body,
+    },
+    values: {
+      title: cleanStr(values.title, 80) || d.values.title,
+      body: cleanTextBlock(values.body, 500),
+      items: cleanStringList(values.items, d.values.items, 12, 120),
+    },
+    functions: {
+      title: cleanStr(functions.title, 80) || d.functions.title,
+      body: cleanTextBlock(functions.body, 2000) || d.functions.body,
+    },
+    divisions: {
+      eyebrow: cleanStr(divisions.eyebrow, 80) || d.divisions.eyebrow,
+      title: cleanStr(divisions.title, 160) || d.divisions.title,
+      body: cleanTextBlock(divisions.body, 1200) || d.divisions.body,
+      headerAlign: normalizeHeaderAlign(divisions.headerAlign, d.divisions.headerAlign),
+    },
+    citizen: {
+      eyebrow: cleanStr(citizen.eyebrow, 80) || d.citizen.eyebrow,
+      title: cleanStr(citizen.title, 160) || d.citizen.title,
+      body: cleanTextBlock(citizen.body, 2000) || d.citizen.body,
+      pillars: cleanStringList(citizen.pillars, d.citizen.pillars, 8, 80),
+      imageUrl: cleanUrl(citizen.imageUrl) || d.citizen.imageUrl,
+    },
+    preinscripcion: {
+      eyebrow: cleanStr(preinscripcion.eyebrow, 80) || d.preinscripcion.eyebrow,
+      title: cleanStr(preinscripcion.title, 160) || d.preinscripcion.title,
+      body: cleanTextBlock(preinscripcion.body, 1200) || d.preinscripcion.body,
+      cta: cleanStr(preinscripcion.cta, 60) || d.preinscripcion.cta,
+    },
+  };
+}
+
 export function slugifyPolisurUnitId(value: string): string {
   return value
     .normalize("NFD")
@@ -250,8 +472,8 @@ export function normalizePolisurNewsItem(
   return {
     id,
     title: cleanStr(raw?.title, 160),
-    summary: cleanStr(raw?.summary, 500),
-    body: cleanStr(raw?.body, 12000),
+    summary: cleanTextBlock(raw?.summary, 800),
+    body: cleanTextBlock(raw?.body, 12000),
     imageUrl,
     imageUrls: unique.slice(0, 12),
     publishedAt: cleanStr(raw?.publishedAt, 40) || new Date().toISOString(),
@@ -354,6 +576,7 @@ export function mergePolisurSiteContent(
       .slice(0, 50)
       .map((item, i) => normalizePolisurNewsItem(item, i))
       .filter((n) => n.title),
+    home: normalizePolisurHomeContent(raw?.home),
     units: uniqueUnits,
   };
 }

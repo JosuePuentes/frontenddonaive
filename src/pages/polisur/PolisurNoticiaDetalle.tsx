@@ -82,7 +82,7 @@ export default function PolisurNoticiaDetalle() {
               {item.title}
             </h1>
             {item.summary ? (
-              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--ps-paper)]/92 sm:text-base">
+              <p className="mt-4 max-w-2xl whitespace-pre-line text-sm leading-relaxed text-[var(--ps-paper)]/92 sm:text-base">
                 {item.summary}
               </p>
             ) : null}

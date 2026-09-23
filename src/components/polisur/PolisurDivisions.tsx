@@ -4,13 +4,14 @@ import {
   adPolisurDivisionPath,
   POLISUR_ROUTES,
 } from "@/constants/polisur-routes";
-import { polisurCopy } from "@/content/polisur";
 import { homePolisurUnits } from "@/content/polisur-site";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
 function PolisurDivisions() {
   const { site } = usePolisurSite();
   const items = homePolisurUnits(site);
+  const intro = site.home.divisions;
+  const centered = intro.headerAlign === "center";
 
   return (
     <section
@@ -18,16 +19,28 @@ function PolisurDivisions() {
       aria-labelledby="polisur-divisions-title"
     >
       <div className="ps-container py-12 sm:py-16">
-        <div className="max-w-2xl">
-          <p className="ps-eyebrow">{polisurCopy.divisions.eyebrow}</p>
+        <div
+          className={
+            centered
+              ? "mx-auto max-w-3xl text-center"
+              : "max-w-2xl"
+          }
+        >
+          <p className="ps-eyebrow">{intro.eyebrow}</p>
           <h2
             id="polisur-divisions-title"
             className="mt-3 text-3xl text-[var(--ps-white)] sm:text-4xl"
           >
-            {polisurCopy.divisions.title}
+            {intro.title}
           </h2>
-          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-400)] sm:text-base">
-            {polisurCopy.divisions.body}
+          <p
+            className={
+              centered
+                ? "mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[var(--ps-steel-400)] sm:text-base"
+                : "mt-4 text-sm leading-relaxed text-[var(--ps-steel-400)] sm:text-base"
+            }
+          >
+            {intro.body}
           </p>
         </div>
       </div>

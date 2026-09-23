@@ -88,6 +88,74 @@ const DEFAULTS = {
       active: true,
     },
   ],
+  home: {
+    about: {
+      eyebrow: "Nuestra institución",
+      title: "Pilar de seguridad ciudadana en San Francisco",
+      body:
+        "POLISUR es el Instituto Autónomo Policía del Municipio San Francisco. Desde su fundación, el 18 de abril de 1996, la institución ha sostenido una labor continua de protección, orden público y convivencia ciudadana en la jurisdicción sanfranciscana, consolidándose como referencia de seguridad en la región zuliana.",
+      history:
+        "En 2026 la institución conmemoró su trigésimo aniversario, reafirmando el compromiso de hombres y mujeres que, con convicción y mística de servicio, trabajan por la tranquilidad del municipio. Con el apoyo de la Alcaldía y la comunidad, POLISUR ha fortalecido su despliegue mediante dotación de unidades patrulleras, equipos de comunicación y organización comunitaria a través de Cuadrantes de Paz.",
+      imageUrl: "/polisur/home/about.jpg",
+      jurisdiction: "Municipio San Francisco · Estado Zulia · Venezuela",
+    },
+    leadership: {
+      eyebrow: "Dirección general",
+      rank: "Primer Comisario",
+      name: "Lisimaco Alberto Quintanillo López",
+      role: "Director General",
+      note:
+        "Director General del Instituto Autónomo Policía Municipal de San Francisco (POLISUR).",
+    },
+    mission: {
+      title: "Misión",
+      body:
+        "Prestar un servicio de seguridad fundamentado en educar, proteger y servir a las comunidades; garantizando credibilidad y bienestar social, para mejorar la calidad de vida de quienes residen en el municipio San Francisco, con criterios éticos, morales y sociales.",
+    },
+    vision: {
+      title: "Visión",
+      body:
+        "Consolidarse como una institución modelo reconocida por su proactividad y calidad de servicio a las comunidades; con un alto nivel de profesionalismo, brindando respuestas eficaces en materia de defensa y apoyo social, ofreciendo valor agregado a la gestión pública municipal.",
+    },
+    values: {
+      title: "Valores institucionales",
+      body: "",
+      items: [
+        "Respeto, libertad y justicia",
+        "Imparcialidad y rectitud",
+        "Disciplina, lealtad y obediencia institucional",
+        "Dedicación y servicio oportuno",
+        "Trabajo en equipo con la comunidad",
+      ],
+    },
+    functions: {
+      title: "Funciones",
+      body:
+        "Velar por la seguridad de las personas y los bienes, el mantenimiento de la moralidad, la salubridad, el urbanismo, el turismo, la defensa del ambiente, el tránsito y el orden público en la jurisdicción municipal, con patrullaje preventivo y atención ciudadana responsable.",
+    },
+    divisions: {
+      eyebrow: "Organización",
+      title: "Nuestras divisiones",
+      body:
+        "POLISUR organiza su labor en unidades operativas, especialidades y programas de prevención y cercanía ciudadana, con despliegue en las parroquias del municipio San Francisco.",
+      headerAlign: "center",
+    },
+    citizen: {
+      eyebrow: "Ciudadanía",
+      title: "Al servicio de nuestra ciudadanía",
+      body:
+        "La relación con la comunidad se sustenta en el respeto, la información transparente y la organización en Mesas y Cuadrantes de Paz, como vía para atender necesidades de seguridad y convivencia junto a los vecinos del municipio.",
+      pillars: ["Servicio", "Prevención", "Seguridad", "Cuadrantes de Paz"],
+      imageUrl: "/polisur/home/ciudadania.jpg",
+    },
+    preinscripcion: {
+      eyebrow: "Aspirantes",
+      title: "¿Quieres formar parte de POLISUR?",
+      body:
+        "Complete el formulario institucional con sus datos de contacto y la unidad a la que desea pertenecer.",
+      cta: "Realizar preinscripción",
+    },
+  },
 };
 
 export function sendJson(res, status, body) {
@@ -124,6 +192,107 @@ function clean(value, max) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, max);
+}
+
+function cleanTextBlock(value, max) {
+  return String(value || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/^\n+/, "")
+    .replace(/\n+$/, "")
+    .slice(0, max);
+}
+
+function cleanStringList(value, fallback, maxItems, maxLen) {
+  const fromArray = Array.isArray(value)
+    ? value.map((item) => clean(item, maxLen)).filter(Boolean)
+    : [];
+  const merged =
+    fromArray.length > 0
+      ? fromArray
+      : typeof value === "string"
+        ? value
+            .split("\n")
+            .map((line) => clean(line, maxLen))
+            .filter(Boolean)
+        : [];
+  const source = merged.length > 0 ? merged : fallback;
+  const unique = [];
+  for (const item of source) {
+    if (!unique.includes(item)) unique.push(item);
+  }
+  return unique.slice(0, maxItems);
+}
+
+function normalizeHome(raw) {
+  const d = DEFAULTS.home;
+  const about = raw?.about || {};
+  const leadership = raw?.leadership || {};
+  const mission = raw?.mission || {};
+  const vision = raw?.vision || {};
+  const values = raw?.values || {};
+  const functions = raw?.functions || {};
+  const divisions = raw?.divisions || {};
+  const citizen = raw?.citizen || {};
+  const preinscripcion = raw?.preinscripcion || {};
+  return {
+    about: {
+      eyebrow: clean(about.eyebrow, 80) || d.about.eyebrow,
+      title: clean(about.title, 160) || d.about.title,
+      body: cleanTextBlock(about.body, 4000) || d.about.body,
+      history: cleanTextBlock(about.history, 4000) || d.about.history,
+      imageUrl: cleanUrl(about.imageUrl) || d.about.imageUrl,
+      jurisdiction: clean(about.jurisdiction, 160) || d.about.jurisdiction,
+    },
+    leadership: {
+      eyebrow: clean(leadership.eyebrow, 80) || d.leadership.eyebrow,
+      rank: clean(leadership.rank, 80) || d.leadership.rank,
+      name: clean(leadership.name, 120) || d.leadership.name,
+      role: clean(leadership.role, 80) || d.leadership.role,
+      note: cleanTextBlock(leadership.note, 800) || d.leadership.note,
+    },
+    mission: {
+      title: clean(mission.title, 80) || d.mission.title,
+      body: cleanTextBlock(mission.body, 2000) || d.mission.body,
+    },
+    vision: {
+      title: clean(vision.title, 80) || d.vision.title,
+      body: cleanTextBlock(vision.body, 2000) || d.vision.body,
+    },
+    values: {
+      title: clean(values.title, 80) || d.values.title,
+      body: cleanTextBlock(values.body, 500),
+      items: cleanStringList(values.items, d.values.items, 12, 120),
+    },
+    functions: {
+      title: clean(functions.title, 80) || d.functions.title,
+      body: cleanTextBlock(functions.body, 2000) || d.functions.body,
+    },
+    divisions: {
+      eyebrow: clean(divisions.eyebrow, 80) || d.divisions.eyebrow,
+      title: clean(divisions.title, 160) || d.divisions.title,
+      body: cleanTextBlock(divisions.body, 1200) || d.divisions.body,
+      headerAlign:
+        divisions.headerAlign === "left" || divisions.headerAlign === "center"
+          ? divisions.headerAlign
+          : d.divisions.headerAlign,
+    },
+    citizen: {
+      eyebrow: clean(citizen.eyebrow, 80) || d.citizen.eyebrow,
+      title: clean(citizen.title, 160) || d.citizen.title,
+      body: cleanTextBlock(citizen.body, 2000) || d.citizen.body,
+      pillars: cleanStringList(citizen.pillars, d.citizen.pillars, 8, 80),
+      imageUrl: cleanUrl(citizen.imageUrl) || d.citizen.imageUrl,
+    },
+    preinscripcion: {
+      eyebrow: clean(preinscripcion.eyebrow, 80) || d.preinscripcion.eyebrow,
+      title: clean(preinscripcion.title, 160) || d.preinscripcion.title,
+      body: cleanTextBlock(preinscripcion.body, 1200) || d.preinscripcion.body,
+      cta: clean(preinscripcion.cta, 60) || d.preinscripcion.cta,
+    },
+  };
 }
 
 function cleanUrl(value, max = 400) {
@@ -196,8 +365,8 @@ function normalizeNews(raw, index) {
   return {
     id: clean(raw?.id, 64) || `noticia-${Date.now().toString(36)}-${index}`,
     title: clean(raw?.title, 160),
-    summary: clean(raw?.summary, 500),
-    body: clean(raw?.body, 12000),
+    summary: cleanTextBlock(raw?.summary, 800),
+    body: cleanTextBlock(raw?.body, 12000),
     imageUrl: urls[0] || "",
     imageUrls: urls.slice(0, 12),
     publishedAt: clean(raw?.publishedAt, 40) || new Date().toISOString(),
@@ -260,6 +429,7 @@ export function normalizeSite(raw) {
       .slice(0, 50)
       .map((item, i) => normalizeNews(item, i))
       .filter((n) => n.title),
+    home: normalizeHome(raw?.home),
     units,
   };
 }

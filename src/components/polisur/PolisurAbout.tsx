@@ -1,7 +1,10 @@
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
-import { POLISUR_MEDIA, polisurCopy } from "@/content/polisur";
+import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
 function PolisurAbout() {
+  const { site } = usePolisurSite();
+  const { about, leadership, mission, vision, values, functions } = site.home;
+
   return (
     <section
       id="institucion"
@@ -10,7 +13,7 @@ function PolisurAbout() {
     >
       <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
         <PolisurMedia
-          src={POLISUR_MEDIA.home.about}
+          src={about.imageUrl}
           alt="Personal institucional de POLISUR"
           className="min-h-[18rem] sm:min-h-[24rem] lg:min-h-[32rem]"
           objectPosition="center 35%"
@@ -19,39 +22,38 @@ function PolisurAbout() {
 
         <div className="ps-surface-mint flex items-center px-5 py-14 sm:px-10 sm:py-16 lg:px-14">
           <div className="max-w-lg">
-            <p className="ps-eyebrow">{polisurCopy.about.eyebrow}</p>
+            <p className="ps-eyebrow">{about.eyebrow}</p>
             <h2
               id="polisur-about-title"
               className="mt-4 text-3xl leading-tight text-[var(--ps-white)] sm:text-4xl"
             >
-              {polisurCopy.about.title}
+              {about.title}
             </h2>
             <hr className="ps-gold-rule mt-6" />
-            <p className="mt-6 text-[0.95rem] leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-              {polisurCopy.about.body}
+            <p className="mt-6 whitespace-pre-line text-[0.95rem] leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+              {about.body}
             </p>
-            <p className="mt-4 text-[0.95rem] leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-              {polisurCopy.about.history}
+            <p className="mt-4 whitespace-pre-line text-[0.95rem] leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+              {about.history}
             </p>
 
             <aside className="mt-8 border-l-2 border-[var(--ps-yellow)] pl-4">
               <p className="ps-eyebrow text-[var(--ps-mint)]">
-                {polisurCopy.leadership.eyebrow}
+                {leadership.eyebrow}
               </p>
               <p className="mt-2 text-lg font-semibold text-[var(--ps-white)] sm:text-xl">
-                {polisurCopy.leadership.rank}{" "}
-                {polisurCopy.leadership.name}
+                {leadership.rank} {leadership.name}
               </p>
               <p className="mt-1 text-sm text-[var(--ps-mint)]">
-                {polisurCopy.leadership.role}
+                {leadership.role}
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--ps-steel-300)]">
-                {polisurCopy.leadership.note}
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-[var(--ps-steel-300)]">
+                {leadership.note}
               </p>
             </aside>
 
             <p className="mt-6 text-xs uppercase tracking-[0.14em] text-[var(--ps-mint)]">
-              {polisurCopy.brand.jurisdiction}
+              {about.jurisdiction}
             </p>
           </div>
         </div>
@@ -59,21 +61,21 @@ function PolisurAbout() {
 
       <div className="ps-container grid gap-px border-t border-[var(--ps-line)] bg-[var(--ps-line)] py-0 sm:grid-cols-2 lg:grid-cols-3">
         <article className="bg-[var(--ps-navy-900)] px-5 py-10 sm:px-8 sm:py-12">
-          <p className="ps-eyebrow">{polisurCopy.mission.title}</p>
-          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-            {polisurCopy.mission.body}
+          <p className="ps-eyebrow">{mission.title}</p>
+          <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+            {mission.body}
           </p>
         </article>
         <article className="bg-[var(--ps-navy-800)] px-5 py-10 sm:px-8 sm:py-12">
-          <p className="ps-eyebrow">{polisurCopy.vision.title}</p>
-          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-            {polisurCopy.vision.body}
+          <p className="ps-eyebrow">{vision.title}</p>
+          <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+            {vision.body}
           </p>
         </article>
         <article className="bg-[var(--ps-navy-900)] px-5 py-10 sm:px-8 sm:py-12 sm:col-span-2 lg:col-span-1">
-          <p className="ps-eyebrow">{polisurCopy.values.title}</p>
+          <p className="ps-eyebrow">{values.title}</p>
           <ul className="mt-4 space-y-2.5 text-sm text-[var(--ps-steel-300)]">
-            {polisurCopy.values.items.map((item) => (
+            {values.items.map((item) => (
               <li key={item} className="border-l-2 border-[var(--ps-mint)] pl-3">
                 {item}
               </li>
@@ -84,9 +86,9 @@ function PolisurAbout() {
 
       <div className="border-t border-[var(--ps-line)] bg-[var(--ps-navy-800)]">
         <div className="ps-container max-w-3xl py-10 sm:py-12">
-          <p className="ps-eyebrow">{polisurCopy.functions.title}</p>
-          <p className="mt-4 text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-            {polisurCopy.functions.body}
+          <p className="ps-eyebrow">{functions.title}</p>
+          <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
+            {functions.body}
           </p>
         </div>
       </div>

@@ -4,6 +4,7 @@ import {
   normalizePolisurNewsItem,
   normalizePolisurUnitItem,
   slugifyPolisurUnitId,
+  type PolisurHomeContent,
   type PolisurNewsItem,
   type PolisurSiteContent,
   type PolisurUnitItem,
@@ -19,7 +20,16 @@ const inputClass =
 const labelClass =
   "text-xs uppercase tracking-[0.16em] text-[var(--ps-steel-400)]";
 
-type Tab = "contacto" | "redes" | "banner" | "noticias" | "divisiones";
+type Tab =
+  | "contacto"
+  | "redes"
+  | "banner"
+  | "institucion"
+  | "organizacion"
+  | "ciudadania"
+  | "aspirantes"
+  | "noticias"
+  | "divisiones";
 
 function Field({
   label,
@@ -94,6 +104,19 @@ export function PolisurSiteAdmin({ clave }: Props) {
     }));
   }
 
+  function updateHome<K extends keyof PolisurHomeContent>(
+    section: K,
+    patch: Partial<PolisurHomeContent[K]>,
+  ) {
+    setDraft((prev) => ({
+      ...prev,
+      home: {
+        ...prev.home,
+        [section]: { ...prev.home[section], ...patch },
+      },
+    }));
+  }
+
   function addNews() {
     const item = normalizePolisurNewsItem({
       title: "Nueva noticia",
@@ -112,9 +135,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
   function updateNews(id: string, patch: Partial<PolisurNewsItem>) {
     setDraft((prev) => ({
       ...prev,
-      news: prev.news.map((n) =>
-        n.id === id ? normalizePolisurNewsItem({ ...n, ...patch }) : n,
-      ),
+      news: prev.news.map((n) => (n.id === id ? { ...n, ...patch } : n)),
     }));
   }
 
@@ -349,6 +370,10 @@ export function PolisurSiteAdmin({ clave }: Props) {
     { id: "contacto", label: "Contacto" },
     { id: "redes", label: "Redes" },
     { id: "banner", label: "Banner" },
+    { id: "institucion", label: "Institución" },
+    { id: "organizacion", label: "Organización" },
+    { id: "ciudadania", label: "Ciudadanía" },
+    { id: "aspirantes", label: "Aspirantes" },
     { id: "divisiones", label: "Divisiones" },
     { id: "noticias", label: "Noticias" },
   ];
@@ -361,9 +386,9 @@ export function PolisurSiteAdmin({ clave }: Props) {
           Contenido de la web
         </h3>
         <p className="mt-2 text-sm text-[var(--ps-steel-400)]">
-          Contactos, redes, banner y noticias del portal. Las fotos se cargan
-          en Documentos; aquí indica la URL pública (ej.{" "}
-          <code className="text-[var(--ps-mint)]">/polisur/home/hero.jpg</code>
+          Textos del home, contactos, redes, banner y noticias. Las fotos fijas
+          se suben en Documentos; aquí puede usar la URL pública (ej.{" "}
+          <code className="text-[var(--ps-mint)]">/polisur/home/about.jpg</code>
           ).
         </p>
       </div>
@@ -582,11 +607,347 @@ export function PolisurSiteAdmin({ clave }: Props) {
         </div>
       ) : null}
 
+      {tab === "institucion" ? (
+        <div className="grid gap-4">
+          <p className="text-sm text-[var(--ps-steel-400)]">
+            Sección «Nuestra institución» del home (texto junto a la foto,
+            misión, visión, valores y funciones).
+          </p>
+          <Field label="Etiqueta superior (institución)">
+            <input
+              className={inputClass}
+              value={draft.home.about.eyebrow}
+              onChange={(e) => updateHome("about", { eyebrow: e.target.value })}
+            />
+          </Field>
+          <Field label="Título principal">
+            <input
+              className={inputClass}
+              value={draft.home.about.title}
+              onChange={(e) => updateHome("about", { title: e.target.value })}
+            />
+          </Field>
+          <Field label="Primer párrafo">
+            <textarea
+              rows={4}
+              className={inputClass}
+              value={draft.home.about.body}
+              onChange={(e) => updateHome("about", { body: e.target.value })}
+            />
+          </Field>
+          <Field label="Segundo párrafo (historia)">
+            <textarea
+              rows={4}
+              className={inputClass}
+              value={draft.home.about.history}
+              onChange={(e) => updateHome("about", { history: e.target.value })}
+            />
+          </Field>
+          <Field label="Imagen lateral (URL)">
+            <input
+              className={inputClass}
+              value={draft.home.about.imageUrl}
+              onChange={(e) =>
+                updateHome("about", { imageUrl: e.target.value })
+              }
+              placeholder="/polisur/home/about.jpg"
+            />
+          </Field>
+          <Field label="Jurisdicción (pie del bloque)">
+            <input
+              className={inputClass}
+              value={draft.home.about.jurisdiction}
+              onChange={(e) =>
+                updateHome("about", { jurisdiction: e.target.value })
+              }
+            />
+          </Field>
+          <div className="border-t border-[var(--ps-line)] pt-6">
+            <p className="ps-eyebrow">Dirección</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Field label="Etiqueta">
+                <input
+                  className={inputClass}
+                  value={draft.home.leadership.eyebrow}
+                  onChange={(e) =>
+                    updateHome("leadership", { eyebrow: e.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Grado">
+                <input
+                  className={inputClass}
+                  value={draft.home.leadership.rank}
+                  onChange={(e) =>
+                    updateHome("leadership", { rank: e.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Nombre">
+                <input
+                  className={inputClass}
+                  value={draft.home.leadership.name}
+                  onChange={(e) =>
+                    updateHome("leadership", { name: e.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Cargo">
+                <input
+                  className={inputClass}
+                  value={draft.home.leadership.role}
+                  onChange={(e) =>
+                    updateHome("leadership", { role: e.target.value })
+                  }
+                />
+              </Field>
+            </div>
+            <Field label="Nota biográfica">
+              <textarea
+                rows={3}
+                className={inputClass}
+                value={draft.home.leadership.note}
+                onChange={(e) =>
+                  updateHome("leadership", { note: e.target.value })
+                }
+              />
+            </Field>
+          </div>
+          <div className="grid gap-4 border-t border-[var(--ps-line)] pt-6 sm:grid-cols-2">
+            <Field label="Título — Misión">
+              <input
+                className={inputClass}
+                value={draft.home.mission.title}
+                onChange={(e) =>
+                  updateHome("mission", { title: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Título — Visión">
+              <input
+                className={inputClass}
+                value={draft.home.vision.title}
+                onChange={(e) =>
+                  updateHome("vision", { title: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Texto — Misión">
+              <textarea
+                rows={4}
+                className={inputClass}
+                value={draft.home.mission.body}
+                onChange={(e) =>
+                  updateHome("mission", { body: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Texto — Visión">
+              <textarea
+                rows={4}
+                className={inputClass}
+                value={draft.home.vision.body}
+                onChange={(e) =>
+                  updateHome("vision", { body: e.target.value })
+                }
+              />
+            </Field>
+          </div>
+          <Field label="Título — Valores">
+            <input
+              className={inputClass}
+              value={draft.home.values.title}
+              onChange={(e) =>
+                updateHome("values", { title: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Lista de valores (una línea por ítem)">
+            <textarea
+              rows={6}
+              className={inputClass}
+              value={draft.home.values.items.join("\n")}
+              onChange={(e) =>
+                updateHome("values", {
+                  items: e.target.value.split("\n"),
+                })
+              }
+            />
+          </Field>
+          <Field label="Título — Funciones">
+            <input
+              className={inputClass}
+              value={draft.home.functions.title}
+              onChange={(e) =>
+                updateHome("functions", { title: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Texto — Funciones">
+            <textarea
+              rows={4}
+              className={inputClass}
+              value={draft.home.functions.body}
+              onChange={(e) =>
+                updateHome("functions", { body: e.target.value })
+              }
+            />
+          </Field>
+        </div>
+      ) : null}
+
+      {tab === "organizacion" ? (
+        <div className="grid gap-4">
+          <p className="text-sm text-[var(--ps-steel-400)]">
+            Encabezado sobre el mosaico «Nuestras divisiones» en el home. Las
+            tarjetas del mosaico se editan en la pestaña Divisiones.
+          </p>
+          <Field label="Etiqueta superior">
+            <input
+              className={inputClass}
+              value={draft.home.divisions.eyebrow}
+              onChange={(e) =>
+                updateHome("divisions", { eyebrow: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Título">
+            <input
+              className={inputClass}
+              value={draft.home.divisions.title}
+              onChange={(e) =>
+                updateHome("divisions", { title: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Párrafo introductorio">
+            <textarea
+              rows={4}
+              className={inputClass}
+              value={draft.home.divisions.body}
+              onChange={(e) =>
+                updateHome("divisions", { body: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Alineación del encabezado">
+            <select
+              className={inputClass}
+              value={draft.home.divisions.headerAlign}
+              onChange={(e) =>
+                updateHome("divisions", {
+                  headerAlign: e.target.value as "left" | "center",
+                })
+              }
+            >
+              <option value="center">Centrado</option>
+              <option value="left">Izquierda</option>
+            </select>
+          </Field>
+        </div>
+      ) : null}
+
+      {tab === "ciudadania" ? (
+        <div className="grid gap-4">
+          <Field label="Etiqueta superior">
+            <input
+              className={inputClass}
+              value={draft.home.citizen.eyebrow}
+              onChange={(e) =>
+                updateHome("citizen", { eyebrow: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Título">
+            <input
+              className={inputClass}
+              value={draft.home.citizen.title}
+              onChange={(e) =>
+                updateHome("citizen", { title: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Párrafo">
+            <textarea
+              rows={5}
+              className={inputClass}
+              value={draft.home.citizen.body}
+              onChange={(e) => updateHome("citizen", { body: e.target.value })}
+            />
+          </Field>
+          <Field label="Pilares (una línea por ítem: Servicio, Prevención…)">
+            <textarea
+              rows={5}
+              className={inputClass}
+              value={draft.home.citizen.pillars.join("\n")}
+              onChange={(e) =>
+                updateHome("citizen", {
+                  pillars: e.target.value.split("\n"),
+                })
+              }
+            />
+          </Field>
+          <Field label="Imagen lateral (URL)">
+            <input
+              className={inputClass}
+              value={draft.home.citizen.imageUrl}
+              onChange={(e) =>
+                updateHome("citizen", { imageUrl: e.target.value })
+              }
+              placeholder="/polisur/home/ciudadania.jpg"
+            />
+          </Field>
+        </div>
+      ) : null}
+
+      {tab === "aspirantes" ? (
+        <div className="grid gap-4">
+          <Field label="Etiqueta superior">
+            <input
+              className={inputClass}
+              value={draft.home.preinscripcion.eyebrow}
+              onChange={(e) =>
+                updateHome("preinscripcion", { eyebrow: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Título">
+            <input
+              className={inputClass}
+              value={draft.home.preinscripcion.title}
+              onChange={(e) =>
+                updateHome("preinscripcion", { title: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Texto">
+            <textarea
+              rows={3}
+              className={inputClass}
+              value={draft.home.preinscripcion.body}
+              onChange={(e) =>
+                updateHome("preinscripcion", { body: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Texto del botón">
+            <input
+              className={inputClass}
+              value={draft.home.preinscripcion.cta}
+              onChange={(e) =>
+                updateHome("preinscripcion", { cta: e.target.value })
+              }
+            />
+          </Field>
+        </div>
+      ) : null}
+
       {tab === "divisiones" ? (
         <div className="space-y-6">
           <p className="text-sm text-[var(--ps-steel-400)]">
-            Complete nombre, funciones e imagen. Marque Preinscripción, Home y
-            Divisiones según corresponda. Al final pulse Guardar contenido.
+            Tarjetas del mosaico (Unidad Canina, operativas, etc.). El título
+            «Nuestras divisiones» se edita en Organización. Al final pulse
+            Guardar contenido.
           </p>
           <button
             type="button"
@@ -826,13 +1187,17 @@ export function PolisurSiteAdmin({ clave }: Props) {
                       </Field>
                       <Field label="Cuerpo de la noticia">
                         <textarea
-                          rows={8}
+                          rows={12}
                           className={inputClass}
                           value={n.body}
                           onChange={(e) =>
                             updateNews(n.id, { body: e.target.value })
                           }
                         />
+                        <p className="mt-2 text-xs text-[var(--ps-steel-400)]">
+                          Use Enter para un párrafo nuevo. Los saltos de línea
+                          se conservan al publicar.
+                        </p>
                       </Field>
                       <Field label="Fecha de publicación">
                         <input
