@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-23T19:12:20.487Z",
+  "updatedAt": "2026-09-23T19:12:45.950Z",
   "contact": {
     "address": "Municipio San Francisco, estado Zulia — República Bolivariana de Venezuela",
     "phone": "04120691012",
@@ -24,21 +24,7 @@
     "ctaSecondary": "Preinscripción",
     "imageUrl": "/polisur/home/hero.jpg"
   },
-  "news": [
-    {
-      "id": "noticia-mueh8uny-0",
-      "title": "Nueva noticia",
-      "summary": "PRUEBA",
-      "body": "PRUEBA1",
-      "imageUrl": "/polisur/extras/nmueh9de8aa7.jpg",
-      "imageUrls": [
-        "/polisur/extras/nmueh9de8aa7.jpg",
-        "/polisur/extras/nmuehbnelpdf.webp"
-      ],
-      "publishedAt": "2026-09-23T19:09:33.116Z",
-      "published": true
-    }
-  ],
+  "news": [],
   "units": [
     {
       "id": "institucion",
