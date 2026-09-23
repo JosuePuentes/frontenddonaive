@@ -21,8 +21,7 @@ function PolisurHero() {
   const type = polisurBannerTypography(banner);
   const [photoMissing, setPhotoMissing] = useState(false);
   const imageSrc = banner.imageUrl || POLISUR_MEDIA.home.hero;
-  // Cache-bust when the file is replaced via registro documental.
-  const imageWithCache = `${imageSrc}${imageSrc.includes("?") ? "&" : "?"}v=home`;
+  const imageWithCache = imageSrc;
 
   useEffect(() => {
     setPhotoMissing(false);

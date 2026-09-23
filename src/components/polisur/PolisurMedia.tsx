@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { polisurAssetUrl } from "@/lib/polisur-asset-url";
 import { cn } from "@/lib/utils";
 
 type PolisurMediaProps = {
@@ -31,6 +32,22 @@ function PolisurMedia({
   onImageError,
 }: PolisurMediaProps) {
   const [failed, setFailed] = useState(false);
+  const [resolvedSrc, setResolvedSrc] = useState(() => polisurAssetUrl(src));
+
+  useEffect(() => {
+    setResolvedSrc(polisurAssetUrl(src));
+    setFailed(false);
+  }, [src]);
+
+  useEffect(() => {
+    function onAssetUpdated() {
+      setResolvedSrc(polisurAssetUrl(src));
+      setFailed(false);
+    }
+    window.addEventListener("polisur-asset-updated", onAssetUpdated);
+    return () =>
+      window.removeEventListener("polisur-asset-updated", onAssetUpdated);
+  }, [src]);
 
   const handleError = () => {
     setFailed(true);
@@ -41,7 +58,7 @@ function PolisurMedia({
     <div className={cn("ps-media-frame", className)}>
       {!failed ? (
         <img
-          src={src}
+          src={resolvedSrc}
           alt={alt}
           className={cn(
             fit === "contain" ? "object-contain" : "object-cover",

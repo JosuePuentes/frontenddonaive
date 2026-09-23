@@ -7,6 +7,7 @@ import { PolisurClicksAdmin } from "@/components/polisur/PolisurClicksAdmin";
 import { PolisurSiteAdmin } from "@/components/polisur/PolisurSiteAdmin";
 import { POLISUR_ASSET_SLOTS } from "@/content/polisur-asset-slots";
 import { POLISUR_SESSION_KEY } from "@/content/polisur-preinscripcion";
+import { bumpPolisurAssetRevision } from "@/lib/polisur-asset-url";
 import { preparePolisurUploadDataUrl } from "@/lib/polisur-compress-image";
 
 const SESSION_KEY = POLISUR_SESSION_KEY;
@@ -212,10 +213,13 @@ export default function PolisurMedios() {
         }
         throw new Error(data.error || "No se pudo registrar el archivo.");
       }
+      bumpPolisurAssetRevision(destinationPath);
+      const deployHint =
+        " En 1–3 min Vercel termina el despliegue; abra la página principal y pulse Ctrl+F5.";
       setMessage(
-        optimized
-          ? `Registrado (optimizado para el servidor): ${destinationPath}`
-          : `Registrado: ${destinationPath}`,
+        (optimized
+          ? `Registrado (optimizado): ${destinationPath}.`
+          : `Registrado: ${destinationPath}.`) + deployHint,
       );
       setFile(null);
       await refreshStatus(clave);
@@ -242,10 +246,20 @@ export default function PolisurMedios() {
         body: JSON.stringify({ clave, path }),
       });
       const data = await readApiJson(res);
+      if (res.status === 404) {
+        setMessage(
+          "El archivo ya no estaba en el repositorio. Lista actualizada.",
+        );
+        await refreshStatus(clave);
+        return;
+      }
       if (!res.ok || !data.ok) {
         throw new Error(data.error || "No se pudo eliminar el archivo.");
       }
-      setMessage(`Eliminado: ${path}`);
+      bumpPolisurAssetRevision(path);
+      setMessage(
+        `Eliminado: ${path}. Si aún se ve en la web, espere el despliegue y use Ctrl+F5.`,
+      );
       await refreshStatus(clave);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al eliminar.");
