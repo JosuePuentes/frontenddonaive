@@ -29,7 +29,7 @@ const PANEL: Record<PolisurBannerPanelWidth, string> = {
 };
 
 export function polisurBannerTypography(banner: PolisurBannerContent) {
-  const titleSize = banner.titleSize ?? "lg";
+  const titleSize = banner.titleSize ?? "md";
   const subtitleSize = banner.subtitleSize ?? "md";
   const messageSize = banner.messageSize ?? "md";
   const panelWidth = banner.panelWidth ?? "standard";

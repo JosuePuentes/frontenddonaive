@@ -264,7 +264,7 @@ function normalizeSite(raw) {
       ctaSecondary:
         clean(banner.ctaSecondary, 60) || DEFAULTS.banner.ctaSecondary,
       imageUrl: cleanUrl(banner.imageUrl) || DEFAULTS.banner.imageUrl,
-      titleSize: normalizeBannerSize(banner.titleSize, "lg"),
+      titleSize: normalizeBannerSize(banner.titleSize, "md"),
       subtitleSize: normalizeBannerSize(banner.subtitleSize, "md"),
       messageSize: normalizeBannerSize(banner.messageSize, "md"),
       panelWidth: normalizePanelWidth(banner.panelWidth, "standard"),

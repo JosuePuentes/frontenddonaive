@@ -493,7 +493,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
             <Field label="Tamaño del título">
               <select
                 className={inputClass}
-                value={draft.banner.titleSize ?? "lg"}
+                value={draft.banner.titleSize ?? "md"}
                 onChange={(e) =>
                   updateBanner(
                     "titleSize",
@@ -502,8 +502,8 @@ export function PolisurSiteAdmin({ clave }: Props) {
                 }
               >
                 <option value="sm">Pequeño</option>
-                <option value="md">Mediano</option>
-                <option value="lg">Grande (predeterminado)</option>
+                <option value="md">Mediano (recomendado)</option>
+                <option value="lg">Grande</option>
               </select>
             </Field>
             <Field label="Tamaño del subtítulo">
