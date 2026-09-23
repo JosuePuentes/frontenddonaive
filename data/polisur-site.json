@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-23T19:12:45.950Z",
+  "updatedAt": "2026-09-23T19:25:36.457Z",
   "contact": {
     "address": "Municipio San Francisco, estado Zulia — República Bolivariana de Venezuela",
     "phone": "04120691012",
@@ -22,7 +22,11 @@
     "message": "Tres décadas al servicio del pueblo sanfranciscano: Defender y Proteger a Nuestro Pueblo",
     "ctaPrimary": "Conoce la institución",
     "ctaSecondary": "Preinscripción",
-    "imageUrl": "/polisur/home/hero.jpg"
+    "imageUrl": "/polisur/home/hero.jpg",
+    "titleSize": "md",
+    "subtitleSize": "md",
+    "messageSize": "md",
+    "panelWidth": "standard"
   },
   "news": [],
   "units": [
