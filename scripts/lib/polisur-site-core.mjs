@@ -139,6 +139,16 @@ function cleanUrl(value, max = 400) {
   return "";
 }
 
+function normalizeBannerSize(value, fallback) {
+  return value === "sm" || value === "md" || value === "lg" ? value : fallback;
+}
+
+function normalizePanelWidth(value, fallback) {
+  return value === "compact" || value === "standard" || value === "wide"
+    ? value
+    : fallback;
+}
+
 function slugifyId(value) {
   return String(value || "")
     .normalize("NFD")
@@ -241,6 +251,10 @@ export function normalizeSite(raw) {
       ctaSecondary:
         clean(banner.ctaSecondary, 60) || DEFAULTS.banner.ctaSecondary,
       imageUrl: cleanUrl(banner.imageUrl) || DEFAULTS.banner.imageUrl,
+      titleSize: normalizeBannerSize(banner.titleSize, "lg"),
+      subtitleSize: normalizeBannerSize(banner.subtitleSize, "md"),
+      messageSize: normalizeBannerSize(banner.messageSize, "md"),
+      panelWidth: normalizePanelWidth(banner.panelWidth, "standard"),
     },
     news: newsIn
       .slice(0, 50)

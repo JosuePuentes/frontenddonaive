@@ -484,6 +484,77 @@ export function PolisurSiteAdmin({ clave }: Props) {
               onChange={(e) => updateBanner("message", e.target.value)}
             />
           </Field>
+          <p className="text-xs text-[var(--ps-steel-400)]">
+            Ajuste el tamaño del texto sobre la foto del home. Después pulse{" "}
+            <strong className="text-[var(--ps-paper)]">Guardar contenido</strong>{" "}
+            y revise la página principal.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Tamaño del título">
+              <select
+                className={inputClass}
+                value={draft.banner.titleSize ?? "lg"}
+                onChange={(e) =>
+                  updateBanner(
+                    "titleSize",
+                    e.target.value as PolisurSiteContent["banner"]["titleSize"],
+                  )
+                }
+              >
+                <option value="sm">Pequeño</option>
+                <option value="md">Mediano</option>
+                <option value="lg">Grande (predeterminado)</option>
+              </select>
+            </Field>
+            <Field label="Tamaño del subtítulo">
+              <select
+                className={inputClass}
+                value={draft.banner.subtitleSize ?? "md"}
+                onChange={(e) =>
+                  updateBanner(
+                    "subtitleSize",
+                    e.target.value as PolisurSiteContent["banner"]["subtitleSize"],
+                  )
+                }
+              >
+                <option value="sm">Pequeño</option>
+                <option value="md">Mediano</option>
+                <option value="lg">Grande</option>
+              </select>
+            </Field>
+            <Field label="Tamaño del mensaje">
+              <select
+                className={inputClass}
+                value={draft.banner.messageSize ?? "md"}
+                onChange={(e) =>
+                  updateBanner(
+                    "messageSize",
+                    e.target.value as PolisurSiteContent["banner"]["messageSize"],
+                  )
+                }
+              >
+                <option value="sm">Pequeño</option>
+                <option value="md">Mediano</option>
+                <option value="lg">Grande</option>
+              </select>
+            </Field>
+            <Field label="Ancho del bloque de texto">
+              <select
+                className={inputClass}
+                value={draft.banner.panelWidth ?? "standard"}
+                onChange={(e) =>
+                  updateBanner(
+                    "panelWidth",
+                    e.target.value as PolisurSiteContent["banner"]["panelWidth"],
+                  )
+                }
+              >
+                <option value="compact">Estrecho</option>
+                <option value="standard">Normal</option>
+                <option value="wide">Ancho</option>
+              </select>
+            </Field>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Texto botón principal">
               <input

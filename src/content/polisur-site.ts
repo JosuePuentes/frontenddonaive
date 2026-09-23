@@ -21,6 +21,9 @@ export type PolisurSocialLinks = {
   whatsapp: string;
 };
 
+export type PolisurBannerTextSize = "sm" | "md" | "lg";
+export type PolisurBannerPanelWidth = "compact" | "standard" | "wide";
+
 export type PolisurBannerContent = {
   title: string;
   subtitle: string;
@@ -28,6 +31,12 @@ export type PolisurBannerContent = {
   ctaPrimary: string;
   ctaSecondary: string;
   imageUrl: string;
+  /** Tamaño visual del título sobre la foto (default lg). */
+  titleSize?: PolisurBannerTextSize;
+  subtitleSize?: PolisurBannerTextSize;
+  messageSize?: PolisurBannerTextSize;
+  /** Ancho del bloque de texto sobre el hero. */
+  panelWidth?: PolisurBannerPanelWidth;
 };
 
 export type PolisurNewsItem = {
@@ -174,6 +183,22 @@ function cleanStr(value: unknown, max: number): string {
     .slice(0, max);
 }
 
+function normalizeBannerTextSize(
+  value: unknown,
+  fallback: PolisurBannerTextSize,
+): PolisurBannerTextSize {
+  return value === "sm" || value === "md" || value === "lg" ? value : fallback;
+}
+
+function normalizeBannerPanelWidth(
+  value: unknown,
+  fallback: PolisurBannerPanelWidth,
+): PolisurBannerPanelWidth {
+  return value === "compact" || value === "standard" || value === "wide"
+    ? value
+    : fallback;
+}
+
 function cleanUrl(value: unknown, max = 400): string {
   const raw = cleanStr(value, max);
   if (!raw) return "";
@@ -316,6 +341,10 @@ export function mergePolisurSiteContent(
         POLISUR_SITE_DEFAULTS.banner.ctaSecondary,
       imageUrl:
         cleanUrl(banner.imageUrl) || POLISUR_SITE_DEFAULTS.banner.imageUrl,
+      titleSize: normalizeBannerTextSize(banner.titleSize, "lg"),
+      subtitleSize: normalizeBannerTextSize(banner.subtitleSize, "md"),
+      messageSize: normalizeBannerTextSize(banner.messageSize, "md"),
+      panelWidth: normalizeBannerPanelWidth(banner.panelWidth, "standard"),
     },
     news: newsIn
       .slice(0, 50)

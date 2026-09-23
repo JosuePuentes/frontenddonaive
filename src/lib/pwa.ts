@@ -4,6 +4,7 @@
  */
 
 import { registerSW } from "virtual:pwa-register";
+import { isPolisurHost } from "@/lib/polisur-host";
 
 export type PwaUpdateHandler = () => void;
 
@@ -12,6 +13,8 @@ let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
 export function initPwa(onNeedRefresh?: PwaUpdateHandler): void {
   if (typeof window === "undefined") return;
   if (import.meta.env.VITE_DONAIVE_DESKTOP === "true") return;
+  // PWA Donaive Software no aplica en el dominio institucional POLISUR.
+  if (isPolisurHost()) return;
   if (!("serviceWorker" in navigator)) return;
 
   updateSW = registerSW({
