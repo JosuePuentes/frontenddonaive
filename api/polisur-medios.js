@@ -85,6 +85,7 @@ async function mediosBranch() {
   const raw =
     process.env.POLISUR_MEDIOS_BRANCH ||
     process.env.POLISUR_SITE_BRANCH ||
+    process.env.POLISUR_PREINSCRIPCIONES_BRANCH ||
     "main";
   // Evita guardar assets en ramas de feature retiradas (rompe producción).
   if (!raw || raw === "main" || raw.startsWith("cursor/")) {
@@ -187,9 +188,7 @@ async function deleteGitHub({ path }) {
 async function listRepoAssets() {
   const repo =
     process.env.POLISUR_MEDIOS_REPO || "JosuePuentes/frontenddonaive";
-  const branch =
-    process.env.POLISUR_MEDIOS_BRANCH ||
-    "cursor/polisur-portal-fotografico-335d";
+  const branch = await mediosBranch();
   const token = process.env.GITHUB_TOKEN;
   const folders = ["logo", "home", "unidad-canina", "extras"];
   const items = [];

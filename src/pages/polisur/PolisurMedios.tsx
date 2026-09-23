@@ -7,6 +7,7 @@ import { PolisurClicksAdmin } from "@/components/polisur/PolisurClicksAdmin";
 import { PolisurSiteAdmin } from "@/components/polisur/PolisurSiteAdmin";
 import { POLISUR_ASSET_SLOTS } from "@/content/polisur-asset-slots";
 import { POLISUR_SESSION_KEY } from "@/content/polisur-preinscripcion";
+import { preparePolisurUploadDataUrl } from "@/lib/polisur-compress-image";
 
 const SESSION_KEY = POLISUR_SESSION_KEY;
 const NUEVO_CONCEPTO = "__nuevo__";
@@ -41,15 +42,6 @@ type SlotState = {
   status: "MISSING" | "EMPTY" | "OK" | "UNKNOWN";
   bytes: number;
 };
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
-    reader.readAsDataURL(file);
-  });
-}
 
 async function readApiJson(res: Response): Promise<{
   ok?: boolean;
@@ -198,21 +190,33 @@ export default function PolisurMedios() {
     setError(null);
     setMessage(null);
     try {
-      const dataBase64 = await readFileAsDataUrl(file);
+      const { dataUrl, optimized } = await preparePolisurUploadDataUrl(file, {
+        destPath: destinationPath,
+        claveLength: clave.length,
+      });
       const res = await fetch("/api/polisur-medios?action=upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clave,
           path: destinationPath,
-          dataBase64,
+          dataBase64: dataUrl,
         }),
       });
       const data = await readApiJson(res);
       if (!res.ok || !data.ok) {
+        if (res.status === 413) {
+          throw new Error(
+            "El archivo supera el límite del servidor. Intente otra foto más liviana.",
+          );
+        }
         throw new Error(data.error || "No se pudo registrar el archivo.");
       }
-      setMessage(`Registrado: ${destinationPath}`);
+      setMessage(
+        optimized
+          ? `Registrado (optimizado para el servidor): ${destinationPath}`
+          : `Registrado: ${destinationPath}`,
+      );
       setFile(null);
       await refreshStatus(clave);
     } catch (err) {

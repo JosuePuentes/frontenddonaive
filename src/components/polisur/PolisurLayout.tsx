@@ -33,6 +33,8 @@ function PolisurScrollToTop() {
   return null;
 }
 
+const POLISUR_FAVICON = "/polisur/logo/escudo.png";
+
 function PolisurLayout() {
   useEffect(() => {
     const id = "polisur-fonts";
@@ -42,6 +44,25 @@ function PolisurLayout() {
     link.rel = "stylesheet";
     link.href = FONT_HREF;
     document.head.appendChild(link);
+  }, []);
+
+  useEffect(() => {
+    document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]').forEach(
+      (link) => {
+        link.type = "image/png";
+        link.href = POLISUR_FAVICON;
+      },
+    );
+
+    let apple = document.querySelector<HTMLLinkElement>(
+      'link[rel="apple-touch-icon"]',
+    );
+    if (!apple) {
+      apple = document.createElement("link");
+      apple.rel = "apple-touch-icon";
+      document.head.appendChild(apple);
+    }
+    apple.href = POLISUR_FAVICON;
   }, []);
 
   return (

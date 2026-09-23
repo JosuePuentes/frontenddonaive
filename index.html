@@ -22,6 +22,32 @@
     <script>
       (function () {
         try {
+          var host = location.hostname.toLowerCase();
+          if (host === "polisur.com.ve" || host === "www.polisur.com.ve") {
+            var escudo = "/polisur/logo/escudo.png";
+            document.querySelectorAll('link[rel="icon"]').forEach(function (el) {
+              el.type = "image/png";
+              el.href = escudo;
+            });
+            var appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+            if (!appleIcon) {
+              appleIcon = document.createElement("link");
+              appleIcon.rel = "apple-touch-icon";
+              document.head.appendChild(appleIcon);
+            }
+            appleIcon.href = escudo;
+            document.title = "POLISUR — Portal institucional";
+            var appTitle = document.querySelector(
+              'meta[name="apple-mobile-web-app-title"]',
+            );
+            if (appTitle) appTitle.content = "POLISUR";
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      (function () {
+        try {
           var key = "donaive-theme";
           var stored = localStorage.getItem(key);
           var systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;

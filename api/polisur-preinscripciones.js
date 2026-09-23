@@ -52,7 +52,11 @@ function assertClave(clave) {
 function githubConfig() {
   return {
     repo: process.env.POLISUR_MEDIOS_REPO || "JosuePuentes/frontenddonaive",
-    branch: process.env.POLISUR_PREINSCRIPCIONES_BRANCH || "main",
+    branch:
+      process.env.POLISUR_PREINSCRIPCIONES_BRANCH ||
+      process.env.POLISUR_SITE_BRANCH ||
+      process.env.POLISUR_MEDIOS_BRANCH ||
+      "main",
     token: process.env.GITHUB_TOKEN || "",
   };
 }

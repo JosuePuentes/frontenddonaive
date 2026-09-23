@@ -8,6 +8,7 @@ import {
   type PolisurSiteContent,
   type PolisurUnitItem,
 } from "@/content/polisur-site";
+import { preparePolisurUploadDataUrl } from "@/lib/polisur-compress-image";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
 type Props = { clave: string };
@@ -132,12 +133,6 @@ export function PolisurSiteAdmin({ clave }: Props) {
     try {
       const uploaded: string[] = [];
       for (const file of Array.from(files).slice(0, 8)) {
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result || ""));
-          reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
-          reader.readAsDataURL(file);
-        });
         const type = file.type || "";
         const ext = type.includes("png")
           ? "png"
@@ -145,6 +140,10 @@ export function PolisurSiteAdmin({ clave }: Props) {
             ? "webp"
             : "jpg";
         const path = `public/polisur/extras/n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}.${ext}`;
+        const { dataUrl } = await preparePolisurUploadDataUrl(file, {
+          destPath: path,
+          claveLength: clave.length,
+        });
         const res = await fetch("/api/polisur-medios?action=upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -223,12 +222,6 @@ export function PolisurSiteAdmin({ clave }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ""));
-        reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
-        reader.readAsDataURL(file);
-      });
       const type = file.type || "";
       const ext = type.includes("png")
         ? "png"
@@ -236,6 +229,10 @@ export function PolisurSiteAdmin({ clave }: Props) {
           ? "webp"
           : "jpg";
       const path = `public/polisur/extras/d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}.${ext}`;
+      const { dataUrl } = await preparePolisurUploadDataUrl(file, {
+        destPath: path,
+        claveLength: clave.length,
+      });
       const res = await fetch("/api/polisur-medios?action=upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
