@@ -117,7 +117,7 @@ export default function PolisurNoticiaDetalle() {
             {item.body ? (
               <div className="ps-news-article__body">{item.body}</div>
             ) : !item.summary ? (
-              <div className="ps-news-article__body text-[var(--ps-steel-400)]">
+              <div className="ps-news-article__body text-[var(--ps-steel-300)]">
                 Sin contenido adicional.
               </div>
             ) : null}
