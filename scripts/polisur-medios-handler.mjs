@@ -6,7 +6,9 @@ import {
   assertAuthorized,
   assertSlotPath,
   listSlotStatus,
+  mimeForPolisurPath,
   readJsonBody,
+  readSlotFile,
   sendJson,
   writeSlotFile,
   deleteSlotFile,
@@ -51,6 +53,16 @@ export async function handlePolisurMediosRequest(req, res, opts) {
       const body = await readJsonBody(req);
       assertAuthorized(body.clave);
       sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "GET" && action === "asset") {
+      const rel = assertSlotPath(url.searchParams.get("path") || "");
+      const { buffer } = readSlotFile(root, rel);
+      res.statusCode = 200;
+      res.setHeader("Content-Type", mimeForPolisurPath(rel));
+      res.setHeader("Cache-Control", "public, max-age=120, stale-while-revalidate=600");
+      res.end(buffer);
       return;
     }
 

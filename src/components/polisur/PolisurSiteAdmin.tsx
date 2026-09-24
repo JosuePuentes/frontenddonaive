@@ -9,6 +9,7 @@ import {
   type PolisurSiteContent,
   type PolisurUnitItem,
 } from "@/content/polisur-site";
+import { bumpPolisurAssetRevision } from "@/lib/polisur-asset-url";
 import { preparePolisurUploadDataUrl } from "@/lib/polisur-compress-image";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
@@ -237,6 +238,7 @@ export function PolisurSiteAdmin({ clave }: Props) {
           throw new Error(data.error || "No se pudo subir la imagen.");
         }
         const publicUrl = `/${(data.path || path).replace(/^public\//, "")}`;
+        bumpPolisurAssetRevision(publicUrl);
         uploaded.push(publicUrl);
       }
       setDraft((prev) => ({

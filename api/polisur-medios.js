@@ -191,6 +191,48 @@ async function deleteGitHub({ path }) {
   return { commit: payload.commit?.sha || null };
 }
 
+function mimeForPolisurPath(relPath) {
+  const lower = String(relPath || "").toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
+}
+
+async function readGitHubAsset(path) {
+  const repo =
+    process.env.POLISUR_MEDIOS_REPO || "JosuePuentes/frontenddonaive";
+  const branch = await mediosBranch();
+  const token = process.env.GITHUB_TOKEN;
+  const api = `https://api.github.com/repos/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`;
+  const headers = {
+    Accept: "application/vnd.github+json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  const res = await fetch(api, { headers });
+  if (!res.ok) {
+    const err = new Error("Archivo no disponible en el repositorio.");
+    err.statusCode = res.status === 404 ? 404 : 502;
+    throw err;
+  }
+  const data = await res.json();
+  if (data.content && data.encoding === "base64") {
+    return Buffer.from(data.content.replace(/\n/g, ""), "base64");
+  }
+  if (data.download_url) {
+    const dl = await fetch(data.download_url, { headers });
+    if (!dl.ok) {
+      const err = new Error("No se pudo descargar el archivo.");
+      err.statusCode = 502;
+      throw err;
+    }
+    return Buffer.from(await dl.arrayBuffer());
+  }
+  const err = new Error("Formato de archivo no soportado.");
+  err.statusCode = 502;
+  throw err;
+}
+
 async function listRepoAssets() {
   const repo =
     process.env.POLISUR_MEDIOS_REPO || "JosuePuentes/frontenddonaive";
@@ -233,6 +275,20 @@ export default async function handler(req, res) {
   const action = url.searchParams.get("action") || "health";
 
   try {
+    if (req.method === "GET" && action === "asset") {
+      const dest = assertAllowedPath(url.searchParams.get("path") || "");
+      const buffer = await readGitHubAsset(dest);
+      res.statusCode = 200;
+      res.setHeader("Content-Type", mimeForPolisurPath(dest));
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=120, stale-while-revalidate=600",
+      );
+      res.end(buffer);
+      return;
+    }
+
     if (req.method === "GET" && (action === "health" || action === "status")) {
       if (action === "health") {
         return json(res, 200, {

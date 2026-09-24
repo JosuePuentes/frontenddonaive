@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { polisurAssetUrl } from "@/lib/polisur-asset-url";
+import {
+  polisurAssetFallbackUrl,
+  polisurAssetUrl,
+} from "@/lib/polisur-asset-url";
 import { cn } from "@/lib/utils";
 
 type PolisurMediaProps = {
@@ -32,16 +35,19 @@ function PolisurMedia({
   onImageError,
 }: PolisurMediaProps) {
   const [failed, setFailed] = useState(false);
+  const [useProxyFallback, setUseProxyFallback] = useState(false);
   const [resolvedSrc, setResolvedSrc] = useState(() => polisurAssetUrl(src));
 
   useEffect(() => {
     setResolvedSrc(polisurAssetUrl(src));
+    setUseProxyFallback(false);
     setFailed(false);
   }, [src]);
 
   useEffect(() => {
     function onAssetUpdated() {
       setResolvedSrc(polisurAssetUrl(src));
+      setUseProxyFallback(false);
       setFailed(false);
     }
     window.addEventListener("polisur-asset-updated", onAssetUpdated);
@@ -49,7 +55,18 @@ function PolisurMedia({
       window.removeEventListener("polisur-asset-updated", onAssetUpdated);
   }, [src]);
 
+  useEffect(() => {
+    if (useProxyFallback) {
+      const fallback = polisurAssetFallbackUrl(src);
+      if (fallback) setResolvedSrc(fallback);
+    }
+  }, [useProxyFallback, src]);
+
   const handleError = () => {
+    if (!useProxyFallback && polisurAssetFallbackUrl(src)) {
+      setUseProxyFallback(true);
+      return;
+    }
     setFailed(true);
     onImageError?.();
   };

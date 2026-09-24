@@ -18,18 +18,48 @@ export function bumpPolisurAssetRevision(repoOrPublicPath: string): void {
   );
 }
 
-/** Evita que el navegador muestre la foto vieja tras reemplazar en GitHub. */
+/** Sirve la foto desde GitHub vía API (sin esperar deploy de Vercel). */
+export function polisurAssetProxyUrl(src: string, rev?: string): string {
+  const [base] = src.split("?");
+  const repo = polisurRepoPathFromSrc(base);
+  const params = new URLSearchParams({ action: "asset", path: repo });
+  if (rev) params.set("v", rev);
+  return `/api/polisur-medios?${params.toString()}`;
+}
+
+function revisionToken(src: string, fallbackRev?: string): string {
+  const repo = polisurRepoPathFromSrc(src.split("?")[0]);
+  if (typeof sessionStorage !== "undefined") {
+    const stored = sessionStorage.getItem(STORAGE_PREFIX + repo);
+    if (stored) return stored;
+  }
+  return fallbackRev || "";
+}
+
+/** Evita caché del navegador tras reemplazar fotos fijas del home. */
 export function polisurAssetUrl(src: string, fallbackRev?: string): string {
   if (!src || src.startsWith("http://") || src.startsWith("https://")) {
     return src;
   }
   const [base] = src.split("?");
-  const repo = polisurRepoPathFromSrc(base);
-  let rev: string | null = null;
-  if (typeof sessionStorage !== "undefined") {
-    rev = sessionStorage.getItem(STORAGE_PREFIX + repo);
+  const token = revisionToken(base, fallbackRev);
+
+  // Noticias y galería: leer directo del repo (publicación inmediata).
+  if (base.startsWith("/polisur/extras/")) {
+    return polisurAssetProxyUrl(base, token || undefined);
   }
-  const token = rev || fallbackRev || "";
+
   if (!token) return src;
   return `${base}?v=${encodeURIComponent(token)}`;
+}
+
+export function polisurAssetFallbackUrl(src: string): string | null {
+  if (!src || src.startsWith("http://") || src.startsWith("https://")) {
+    return null;
+  }
+  const [base] = src.split("?");
+  if (!base.startsWith("/polisur/")) return null;
+  if (base.startsWith("/polisur/extras/")) return null;
+  const token = revisionToken(base);
+  return polisurAssetProxyUrl(base, token || undefined);
 }
