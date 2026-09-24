@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-23T23:55:33.018Z",
+  "updatedAt": "2026-09-24T00:01:39.752Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -28,7 +28,24 @@
     "messageSize": "md",
     "panelWidth": "standard"
   },
-  "news": [],
+  "news": [
+    {
+      "id": "noticia-muerk84y-0",
+      "title": "Polisur refuerza patrullaje lacustre para alertar a pescadores sobre la llegada de la Onda Tropical N° 51",
+      "summary": "",
+      "body": "(San Francisco, 19/09/2026). - En cumplimiento de las directrices en materia de prevención y seguridad ciudadana, la Sección Especial de Patrullaje Lacustre del Instituto Autónomo Policía del Municipio San Francisco (Polisur) ha desplegado un operativo especial de concienciación a lo largo de las costas del Lago de Maracaibo.\n\nLa acción preventiva tiene como objetivo principal alertar a los pescadores y comunidades costeras sobre la inminente llegada de la Onda Tropical N° 51, la cual, según los pronósticos meteorológicos, amenaza con incidir fuertemente en las condiciones atmosféricas y marítimas en gran parte del territorio nacional en los próximos días.\n\nLlamado a la prudencia y resguardo\n\nSiguiendo las instrucciones precisas del Director General de Polisur, Primer Comisario Lisímaco Alberto Quintanillo López, los funcionarios adscritos a la Sección Especial de Patrullaje Lacustre, se han dado a la tarea de realizar recorridos, sosteniendo encuentros directos con los pescadores artesanales y comunidades costeras para exhortarlos a suspender temporalmente las labores de zarpe y pesca mientras se mantenga el riesgo meteorológico.\n\n\"Nuestra prioridad absoluta es resguardar la vida de los ciudadanos. Hacemos un llamado de profunda conciencia a nuestros pescadores para que eviten riesgos innecesarios y se mantengan resguardados durante el paso de este fenómeno natural\", destacó el Inspector Jefe Jhowan Carrasquero, Jefe de la mencionada sección policial.\n\nAcciones preventivas en detalle\n\nCarrasquero resaltó además que durante las labores de despliegue se orienta a la ciudadanía y a los gremios de pescadores sobre los riesgos de permanecer en las aguas, además del aseguramiento de embarcaciones y artes de pesca. Por otra parte informó que se trabaja de manera articulada con el resto de los cuerpos de seguridad y prevención del municipio con el objetivo de garantizar el bienestar de los sanfranciscanos.\n\nDesde Polisur se reitera el llamado a la colectividad a mantenerse atenta a los reportes oficiales emitidos por las autoridades competentes y a utilizar los canales de emergencia ante cualquier eventualidad en el área costera.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmuernwqz6wl.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmuernwqz6wl.jpg",
+        "/polisur/extras/nmuernymqqri.jpg",
+        "/polisur/extras/nmuernzq8xvh.jpg",
+        "/polisur/extras/nmuero0r0vwc.jpg",
+        "/polisur/extras/nmuero1pr11v.jpg"
+      ],
+      "publishedAt": "2026-09-19T07:58:00.000Z",
+      "published": true
+    }
+  ],
   "home": {
     "about": {
       "eyebrow": "Nuestra institución",
