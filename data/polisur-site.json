@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-24T01:33:03.560Z",
+  "updatedAt": "2026-09-24T01:35:04.131Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,19 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mueuz5ob-0",
+      "title": "Polisur detiene a ciudadano por presunta extorsión con difusión de contenido privado",
+      "summary": "",
+      "body": "(San Francisco, 23/09/2026). - En el marco de las políticas de seguridad ciudadana y bajo las directrices del Director General, Primer Comisario Lisimaco Quintanillo, en coordinación con el Comandante de la Zona Operativa de Defensa Integral (ZODI) número 11, General de División Okler Roberto Yustiz Castillo, funcionarios de Polisur lograron la aprehensión de un ciudadano por el delito de extorsión y amenazas.\n\nEl procedimiento se originó tras la denuncia interpuesta por una ciudadana, quien manifestó ser víctima de amenazas por parte de un sujeto identificado como Luis Eduardo Rivero Leblanc. Según el testimonio de la denunciante, el individuo la coaccionaba bajo amenaza de difundir material audiovisual de carácter íntimo a su actual pareja si esta no accedía a sus pretensiones. Como evidencia, la ciudadana presentó diversas notas de voz que sustentaban el hecho.\n\nTras su detención en el sector La Polar, el ciudadano fue trasladado al Centro de Diagnóstico Integral (CDI) para su evaluación médica, donde la doctora certificó que el aprehendido se encontraba en condiciones clínicas regulares, sin presentar lesiones físicas.\n\nComo parte del procedimiento de ley, se procedió a la incautación de un teléfono celular marca Redmi, modelo A5, el cual fue debidamente resguardado bajo cadena de custodia para las experticias correspondientes.\n\nEl caso fue notificado a la Fiscalía Tercera del Ministerio Público del Estado Zulia, organismo que continuará con las investigaciones pertinentes para determinar las responsabilidades penales del ciudadano detenido.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmuev07hh9s8.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmuev07hh9s8.jpg",
+        "/polisur/extras/nmuev08yd3jy.jpg"
+      ],
+      "publishedAt": "2026-09-23T05:33:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mueuwj0j-0",
       "title": "Polisur capturó a presunto implicado en hurto de ferretería en el sector La Polar",
