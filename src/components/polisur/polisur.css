@@ -273,6 +273,135 @@
   }
 }
 
+.ps-news-carousel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--ps-line-strong);
+  background: rgba(0, 35, 102, 0.55);
+  color: var(--ps-paper);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.ps-news-carousel-btn:hover {
+  border-color: var(--ps-mint);
+  color: var(--ps-mint);
+  background: rgba(0, 35, 102, 0.85);
+}
+
+.ps-news-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.25rem;
+}
+
+.ps-news-meta__label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ps-mint);
+}
+
+.ps-news-meta__date {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ps-paper);
+  text-transform: capitalize;
+}
+
+.ps-news-meta__time {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ps-steel-300);
+}
+
+.ps-news-article {
+  background: var(--ps-white);
+  color: #0a1628;
+  border: 1px solid rgba(0, 28, 85, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  padding: 1.75rem;
+}
+
+@media (min-width: 640px) {
+  .ps-news-article {
+    padding: 2.25rem 2.5rem;
+  }
+}
+
+.ps-news-article__lead {
+  margin: 0 0 1.25rem;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  font-weight: 600;
+  color: #0a1628;
+}
+
+.ps-news-article__body {
+  white-space: pre-line;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: #1a2b42;
+}
+
+.ps-contact-panel {
+  max-width: 56rem;
+  margin-inline: auto;
+  padding: 2rem;
+  background: var(--ps-paper);
+  color: var(--ps-navy-950);
+  border: 2px solid var(--ps-mint);
+  box-shadow:
+    0 0 0 1px rgba(0, 28, 85, 0.06),
+    0 20px 50px rgba(0, 0, 0, 0.28);
+}
+
+@media (min-width: 640px) {
+  .ps-contact-panel {
+    padding: 2.75rem 3rem;
+  }
+}
+
+.ps-contact-panel__item {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 28, 85, 0.1);
+}
+
+.ps-contact-panel__item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.ps-contact-panel__label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ps-green);
+}
+
+.ps-contact-panel__value {
+  margin-top: 0.5rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ps-navy-900);
+}
+
+@media (min-width: 640px) {
+  .ps-contact-panel__value {
+    font-size: 1.125rem;
+  }
+}
+
 .ps-overlay-soft {
   pointer-events: none;
   position: absolute;

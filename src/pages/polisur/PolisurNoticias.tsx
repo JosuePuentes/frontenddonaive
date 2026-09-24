@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Filter, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Search, X } from "lucide-react";
 import { PageMeta } from "@/components/page/PageMeta";
 import { PolisurMedia } from "@/components/polisur/PolisurMedia";
 import {
@@ -14,6 +14,10 @@ import {
 } from "@/content/polisur-site";
 import { usePolisurSite } from "@/providers/polisur/PolisurSiteProvider";
 
+const LIST_PAGE_SIZE = 6;
+
+type DateFilterMode = "all" | "today" | "range";
+
 function formatNewsDate(value: string) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
@@ -22,6 +26,14 @@ function formatNewsDate(value: string) {
     month: "long",
     year: "numeric",
   });
+}
+
+function isSameLocalDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 
 function NewsHeroCard({ item }: { item: PolisurNewsItem }) {
@@ -59,12 +71,15 @@ export default function PolisurNoticias() {
   const [query, setQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [dateMode, setDateMode] = useState<DateFilterMode>("all");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [listPage, setListPage] = useState(1);
 
-  const hasDateFilter = Boolean(fromDate || toDate);
+  const hasRangeFilter = dateMode === "range" && Boolean(fromDate || toDate);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const today = new Date();
     return all.filter((item) => {
       if (
         q &&
@@ -73,22 +88,58 @@ export default function PolisurNoticias() {
       ) {
         return false;
       }
-      const t = new Date(item.publishedAt).getTime();
-      if (fromDate) {
-        const from = new Date(`${fromDate}T00:00:00`).getTime();
-        if (!Number.isNaN(from) && t < from) return false;
+      const published = new Date(item.publishedAt);
+      if (dateMode === "today") {
+        if (Number.isNaN(published.getTime())) return false;
+        if (!isSameLocalDay(published, today)) return false;
       }
-      if (toDate) {
-        const to = new Date(`${toDate}T23:59:59`).getTime();
-        if (!Number.isNaN(to) && t > to) return false;
+      if (dateMode === "range") {
+        const t = published.getTime();
+        if (fromDate) {
+          const from = new Date(`${fromDate}T00:00:00`).getTime();
+          if (!Number.isNaN(from) && t < from) return false;
+        }
+        if (toDate) {
+          const to = new Date(`${toDate}T23:59:59`).getTime();
+          if (!Number.isNaN(to) && t > to) return false;
+        }
       }
       return true;
     });
-  }, [all, query, fromDate, toDate]);
+  }, [all, query, fromDate, toDate, dateMode]);
+
+  const totalListPages = Math.max(1, Math.ceil(filtered.length / LIST_PAGE_SIZE));
+  const safeListPage = Math.min(listPage, totalListPages);
+  const pageStart = (safeListPage - 1) * LIST_PAGE_SIZE;
+  const paged = filtered.slice(pageStart, pageStart + LIST_PAGE_SIZE);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [query, fromDate, toDate, dateMode]);
 
   function clearDates() {
     setFromDate("");
     setToDate("");
+    setDateMode("all");
+  }
+
+  function selectToday() {
+    setDateMode("today");
+    setFromDate("");
+    setToDate("");
+    setFilterOpen(false);
+  }
+
+  function selectAllDates() {
+    setDateMode("all");
+    setFromDate("");
+    setToDate("");
+    setFilterOpen(false);
+  }
+
+  function openRangeFilter() {
+    setDateMode("range");
+    setFilterOpen(true);
   }
 
   return (
@@ -105,7 +156,7 @@ export default function PolisurNoticias() {
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--ps-steel-300)]">
             Información oficial de la institución. Busque por título o filtre
-            por fecha.
+            por hoy, por fecha o navegue por páginas.
           </p>
 
           <div className="relative mt-8 max-w-2xl">
@@ -129,7 +180,7 @@ export default function PolisurNoticias() {
                 onClick={() => setFilterOpen((v) => !v)}
                 className={[
                   "inline-flex shrink-0 items-center gap-2 border px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em]",
-                  filterOpen || hasDateFilter
+                  filterOpen || dateMode !== "all"
                     ? "border-[var(--ps-mint)]/70 text-[var(--ps-mint)]"
                     : "border-[var(--ps-line-strong)] text-[var(--ps-paper)]",
                 ].join(" ")}
@@ -138,9 +189,48 @@ export default function PolisurNoticias() {
               >
                 <Filter size={14} aria-hidden />
                 Filtrar
-                {hasDateFilter ? (
+                {dateMode !== "all" ? (
                   <span className="h-1.5 w-1.5 rounded-full bg-[var(--ps-mint)]" />
                 ) : null}
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={selectToday}
+                className={[
+                  "border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em]",
+                  dateMode === "today"
+                    ? "border-[var(--ps-mint)] bg-[var(--ps-mint-muted)] text-[var(--ps-mint)]"
+                    : "border-[var(--ps-line-strong)] text-[var(--ps-paper)] hover:border-[var(--ps-mint)]/50",
+                ].join(" ")}
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                onClick={selectAllDates}
+                className={[
+                  "border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em]",
+                  dateMode === "all"
+                    ? "border-[var(--ps-mint)] bg-[var(--ps-mint-muted)] text-[var(--ps-mint)]"
+                    : "border-[var(--ps-line-strong)] text-[var(--ps-paper)] hover:border-[var(--ps-mint)]/50",
+                ].join(" ")}
+              >
+                Todas
+              </button>
+              <button
+                type="button"
+                onClick={openRangeFilter}
+                className={[
+                  "border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em]",
+                  dateMode === "range"
+                    ? "border-[var(--ps-mint)] bg-[var(--ps-mint-muted)] text-[var(--ps-mint)]"
+                    : "border-[var(--ps-line-strong)] text-[var(--ps-paper)] hover:border-[var(--ps-mint)]/50",
+                ].join(" ")}
+              >
+                Por fecha
               </button>
             </div>
 
@@ -151,7 +241,7 @@ export default function PolisurNoticias() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-400)]">
-                    Filtrar por fecha
+                    Rango de fechas
                   </p>
                   <button
                     type="button"
@@ -171,7 +261,10 @@ export default function PolisurNoticias() {
                       type="date"
                       className="ps-input mt-1.5 w-full"
                       value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
+                      onChange={(e) => {
+                        setDateMode("range");
+                        setFromDate(e.target.value);
+                      }}
                     />
                   </label>
                   <label className="block">
@@ -182,7 +275,10 @@ export default function PolisurNoticias() {
                       type="date"
                       className="ps-input mt-1.5 w-full"
                       value={toDate}
-                      onChange={(e) => setToDate(e.target.value)}
+                      onChange={(e) => {
+                        setDateMode("range");
+                        setToDate(e.target.value);
+                      }}
                     />
                   </label>
                 </div>
@@ -205,6 +301,13 @@ export default function PolisurNoticias() {
               </div>
             ) : null}
           </div>
+
+          {hasRangeFilter ? (
+            <p className="mt-4 text-xs text-[var(--ps-steel-400)]">
+              Mostrando noticias entre{" "}
+              {fromDate || "…"} y {toDate || "…"}
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -218,11 +321,48 @@ export default function PolisurNoticias() {
               </Link>
             </p>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {filtered.map((item) => (
-                <NewsHeroCard key={item.id} item={item} />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {paged.map((item) => (
+                  <NewsHeroCard key={item.id} item={item} />
+                ))}
+              </div>
+
+              {totalListPages > 1 ? (
+                <nav
+                  className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--ps-line)] pt-8"
+                  aria-label="Paginación de noticias"
+                >
+                  <p className="text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-400)]">
+                    Página {safeListPage} de {totalListPages}
+                    <span className="mx-2 text-[var(--ps-line-strong)]">·</span>
+                    {filtered.length} noticia{filtered.length === 1 ? "" : "s"}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={safeListPage <= 1}
+                      onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                      className="ps-news-carousel-btn disabled:opacity-40 disabled:pointer-events-none"
+                      aria-label="Página anterior"
+                    >
+                      <ChevronLeft size={20} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={safeListPage >= totalListPages}
+                      onClick={() =>
+                        setListPage((p) => Math.min(totalListPages, p + 1))
+                      }
+                      className="ps-news-carousel-btn disabled:opacity-40 disabled:pointer-events-none"
+                      aria-label="Página siguiente"
+                    >
+                      <ChevronRight size={20} aria-hidden />
+                    </button>
+                  </div>
+                </nav>
+              ) : null}
+            </>
           )}
         </div>
       </section>

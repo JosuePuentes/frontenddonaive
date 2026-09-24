@@ -14,9 +14,19 @@ function formatNewsDate(value: string) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleDateString("es-VE", {
+    weekday: "long",
     day: "2-digit",
     month: "long",
     year: "numeric",
+  });
+}
+
+function formatNewsTime(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("es-VE", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -55,6 +65,7 @@ export default function PolisurNoticiaDetalle() {
   }
 
   const cover = newsCoverUrl(item);
+  const timeLabel = formatNewsTime(item.publishedAt);
 
   return (
     <>
@@ -75,16 +86,23 @@ export default function PolisurNoticiaDetalle() {
             >
               Noticias
             </Link>
-            <p className="mt-4 text-xs uppercase tracking-[0.14em] text-[var(--ps-steel-300)]">
-              {formatNewsDate(item.publishedAt)}
-            </p>
-            <h1 className="mt-3 max-w-3xl text-3xl text-[var(--ps-white)] sm:text-5xl">
+            <h1 className="mt-4 max-w-3xl text-3xl text-[var(--ps-white)] sm:text-5xl">
               {item.title}
             </h1>
-            {item.summary ? (
-              <p className="mt-4 max-w-2xl whitespace-pre-line text-sm leading-relaxed text-[var(--ps-paper)]/92 sm:text-base">
-                {item.summary}
-              </p>
+          </div>
+        </div>
+      </section>
+
+      <section
+        className="border-b border-[var(--ps-line)] bg-[var(--ps-navy-950)]"
+        aria-label="Fecha de publicación"
+      >
+        <div className="ps-container py-5">
+          <div className="ps-news-meta">
+            <span className="ps-news-meta__label">Publicado</span>
+            <p className="ps-news-meta__date">{formatNewsDate(item.publishedAt)}</p>
+            {timeLabel ? (
+              <p className="ps-news-meta__time">{timeLabel}</p>
             ) : null}
           </div>
         </div>
@@ -92,9 +110,18 @@ export default function PolisurNoticiaDetalle() {
 
       <section className="bg-[var(--ps-navy-900)]">
         <div className="ps-container max-w-3xl py-12 sm:py-16">
-          <div className="whitespace-pre-line text-sm leading-relaxed text-[var(--ps-steel-300)] sm:text-base">
-            {item.body || item.summary}
-          </div>
+          <article className="ps-news-article">
+            {item.summary ? (
+              <p className="ps-news-article__lead">{item.summary}</p>
+            ) : null}
+            {item.body ? (
+              <div className="ps-news-article__body">{item.body}</div>
+            ) : !item.summary ? (
+              <div className="ps-news-article__body text-[var(--ps-steel-400)]">
+                Sin contenido adicional.
+              </div>
+            ) : null}
+          </article>
 
           {gallery.length > 1 ? (
             <div className="mt-12 grid gap-4 sm:grid-cols-2">
