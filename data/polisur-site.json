@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-24T01:25:47.259Z",
+  "updatedAt": "2026-09-24T01:31:10.115Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,19 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mueutqj8-0",
+      "title": "Polisur capturó a presunto implicado en hurto de ferretería en el sector La Polar",
+      "summary": "",
+      "body": "(San Francisco, 21/09/2026). - En el marco de las políticas de seguridad ciudadana y dando cumplimiento a las instrucciones emanadas por el Director General, Primer Comisario Lisimaco Alberto Quintanillo López, en coordinación con el Comandante de la Zona Operativa de Defensa Integral (ZODI) número 11, General de División Okler Roberto Yustiz Castillo, funcionarios policiales lograron la aprehensión de un ciudadano presuntamente implicado en un delito de hurto.\n\nEl procedimiento se originó tras la denuncia interpuesta por el ciudadano, propietario de la ferretería “Rojas” y luego de la viralización de un material audiovisual donde se muestra al ciudadano en cuestión extrayendo mercancía del negocio.\n\nAtendiendo al llamado, una comisión policial desplegó labores de patrullaje preventivo en la avenida 1 del Barrio Negro Primero, donde lograron avistar a un individuo con las características fisionómicas descritas en el video. El sujeto fue identificado como Juan Carlos Valcacedas Concha, de 52 años de edad.\n\nTras su detención, se procedió a la lectura de sus derechos constitucionales y a su traslado a un Centro de Diagnóstico Integral (CDI), donde el galeno de guardia, certificó que el aprehendido se encontraba en condiciones clínicas estables.\n\nDurante la inspección corporal y el registro del caso, se incautaron como evidencia dos potes de pintura de aceite (un esmalte rojo y un anticorrosivo blanco de 0.9462 litros cada uno), además de una bolsa negra y una prenda de vestir, elementos que han sido debidamente resguardadas bajo cadena de custodia.\n\nEl caso fue notificado de manera inmediata a la Fiscalía Cuadragésima Sexta del Ministerio Público del Estado Zulia, organismo que continuará con las actuaciones legales correspondientes.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmueuv721qiw.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmueuv721qiw.jpg",
+        "/polisur/extras/nmueuv887q3q.jpg"
+      ],
+      "publishedAt": "2026-09-21T05:29:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-muesupf8-0",
       "title": "Polisur lanza la campaña de concienciación \"Conductor Designado\" para promover la seguridad vial en San Francisco",
