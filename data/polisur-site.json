@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-24T01:36:56.931Z",
+  "updatedAt": "2026-09-29T19:01:57.541Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,24 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mun1fiam-0",
+      "title": "​Polisur contará con nueva frecuencia para radios y con página web",
+      "summary": "",
+      "body": "(​San Francisco, 25/09/2026) – En un acto trascendental para el fortalecimiento de la seguridad ciudadana en la región, el Instituto Autónomo Policía del Municipio San Francisco (Polisur) presentó su informe de gestión correspondiente a los primeros 100 días de la administración liderada por su Director General, el Primer Comisario Lisímaco Alberto Quintanillo López.\n\n​La presentación se llevó a cabo en la sede del Centro de Coordinación Policial (CCP), ubicada en la C1, y contó con la presencia magistral del alcalde del municipio, Héctor Soto; el presidente de la Cámara Municipal de San Francisco, Lerry Pérez, acompañado por parte de los concejales; diputados de la Asamblea Nacional; autoridades de seguridad de la región; el equipo directivo de Polisur y parte de su pie de lucha.\n\n​Innovación y conectividad\n\n​Como uno de los anuncios principales y primicia de la jornada, se dio a conocer que la institución contará próximamente con una nueva frecuencia exclusiva para radios y el lanzamiento oficial de una página web. Estas herramientas permitirán optimizar la operatividad táctica —impulsada por la dotación de 30 nuevos radios— y ofrecerán a los ciudadanos una vía directa de contacto e información institucional transparente.\n\n​La implementación de esta nueva frecuencia radial blindada representa un salto cualitativo en las comunicaciones de calle de los funcionarios, garantizando enlaces seguros, cobertura ininterrumpida y una capacidad de respuesta inmediata ante cualquier eventualidad o llamada de emergencia en los cuadrantes de paz del municipio. Este recurso tecnológico es clave para coordinar con mayor eficiencia los despliegues preventivos y las acciones tácticas ordenadas por los superiores.\n\n​Por su parte, la nueva plataforma digital y página web funcionará como un canal bidireccional moderno, donde los habitantes de San Francisco podrán reportar incidencias, consultar información oficial, conocer los servicios policiales disponibles y mantenerse al tanto de las labores preventivas. Con esta iniciativa, Polisur se adapta a los nuevos tiempos de la transformación digital, consolidando una gestión abierta, participativa y cercana a la comunidad.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmun1lklkv11.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmun1lklkv11.jpg",
+        "/polisur/extras/nmun1lmhvgsk.jpg",
+        "/polisur/extras/nmun1loh3yyr.jpg",
+        "/polisur/extras/nmun1lq0gfpf.jpg",
+        "/polisur/extras/nmun1lri4ej1.jpg",
+        "/polisur/extras/nmun1lst0h9k.jpg",
+        "/polisur/extras/nmun1lw3jk0b.jpg"
+      ],
+      "publishedAt": "2026-09-25T22:56:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mueuz5ob-0",
       "title": "Polisur detiene a ciudadano por presunta extorsión con difusión de contenido privado",
