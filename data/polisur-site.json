@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-29T19:01:57.541Z",
+  "updatedAt": "2026-09-29T19:06:05.436Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -30,6 +30,16 @@
   },
   "news": [
     {
+      "id": "noticia-mun1oa6c-0",
+      "title": "Capturado hombre tras hurtar mercancía en Farmatodo de La Coromoto",
+      "summary": "",
+      "body": "(San Francisco, 26/09/2026). - Funcionarios policiales aprehendieron a un ciudadano presuntamente implicado en un delito de hurto, tras un procedimiento registrado en la urbanización La Coromoto del municipio San Francisco.\n\nLa detención se concretó en el marco de las políticas de seguridad ciudadana instruidas por el Director General, Primer Comisario Lisimaco Alberto Quintanillo López, en coordinación con el Comandante de la ZODI Zulia número 11, General de División Okler Roberto Yustiz Castillo.\n\nEl procedimiento\nEl caso se originó luego de que el subgerente del establecimiento Farmatodo introdujera la denuncia formal, motivada por la viralización de un material audiovisual en redes sociales donde se observa al sospechoso sustrayendo mercancía del local. Atendiendo a la alerta, una comisión policial desplegó labores de patrullaje preventivo en la calle 171 con avenida 40 de La Coromoto, logrando ubicar e identificar al ciudadano como Lewin José González Parra (48).\n\nEvidencias y procedimiento legal\nDurante la inspección corporal, las autoridades incautaron como evidencia productos de higiene personal que habían sido distraídos del local comercial. Posteriormente, se le leyeron sus derechos constitucionales y fue trasladado al Hospital Doctor Manuel Noriega Trigo, donde el médico de guardia certificó que se encontraba en condiciones clínicas estables.\n\nEl caso quedó a la orden de la Fiscal Cuadragésima Sexta del Ministerio Público del Estado Zulia, instancia que se encargará de continuar con las actuaciones legales correspondientes.\n\nNota de Prensa",
+      "imageUrl": "",
+      "imageUrls": [],
+      "publishedAt": "2026-09-26T23:03:00.000Z",
+      "published": false
+    },
+    {
       "id": "noticia-mun1fiam-0",
       "title": "​Polisur contará con nueva frecuencia para radios y con página web",
       "summary": "",
@@ -40,8 +50,6 @@
         "/polisur/extras/nmun1lmhvgsk.jpg",
         "/polisur/extras/nmun1loh3yyr.jpg",
         "/polisur/extras/nmun1lq0gfpf.jpg",
-        "/polisur/extras/nmun1lri4ej1.jpg",
-        "/polisur/extras/nmun1lst0h9k.jpg",
         "/polisur/extras/nmun1lw3jk0b.jpg"
       ],
       "publishedAt": "2026-09-25T22:56:00.000Z",
