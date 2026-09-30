@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-29T19:23:41.173Z",
+  "updatedAt": "2026-09-30T14:46:03.476Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,23 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-muo7t9o8-0",
+      "title": "Polisur refuerza seguridad y estrecha lazos con empresas gubernamentales ubicadas en las riberas del Lago de Maracaibo",
+      "summary": "",
+      "body": "(San Francisco, 29/09/2026). – En el marco de los planes de resguardo institucional y protección comunal, la Policía del Municipio San Francisco (Polisur), instruidos por su Director General, a través de su Sección de Patrullaje Especial Lacustre, desplegó un operativo de vigilancia preventiva y apoyo en las riberas del Lago de Maracaibo.\nSiguiendo las orientaciones del Director General de la institución, Primer Comisario Lisímaco Alberto Quintanillo López, los funcionarios abordaron sus unidades para supervisar la seguridad e integridad de las empresas del Estado e infraestructuras estratégicas que operan en la jurisdicción del municipio San Francisco.\nEl Inspector Jefe Jhowan Carrasquero, jefe de la Sección Especial Lacustre, detalló que el despliegue contempla la inspección y acompañamiento en instalaciones clave como: Muelle José Félix Ribas, Planta Vencemos Mara, PDVSA Lago Medio, Terminal de Embarque Bajo Grande, Barrio Nuevo Tricolor, Planta Termoeléctrica del Estado, entre otras.\n\nRespuesta positiva y resguardo continuo\nDurante la jornada de inspección, representantes y miembros de las comunidades y empresas costeras, expresaron su agradecimiento por la presencia activa de la comisión lacustre de Polisur. Destacaron que el retorno de estos patrullajes contribuye significativamente a disuadir la delincuencia y garantizar la tranquilidad de los trabajadores y residentes de las zonas adyacentes al lago.\nCon estas acciones, Polisur ratifica su compromiso de mantener la presencia activa diurna y nocturna en el espacio acuático territorial, articulando esfuerzos con las demás instituciones de seguridad del Estado, para mantener la paz y tranquilidad del pueblo.\n\nNota de Prensa - Polisur",
+      "imageUrl": "/polisur/extras/nmuo7w0vztwq.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmuo7w0vztwq.jpg",
+        "/polisur/extras/nmuo7wfusyd3.jpg",
+        "/polisur/extras/nmuo7wh2rh28.jpg",
+        "/polisur/extras/nmuo7wijjy7s.jpg",
+        "/polisur/extras/nmuo7wjt29sh.jpg",
+        "/polisur/extras/nmuo7wl053yn.jpg"
+      ],
+      "publishedAt": "2026-09-29T18:43:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mun27q15-0",
       "title": "Polisur arresta a presunto implicado en hurto a vivienda en la urbanización La Coromoto",
