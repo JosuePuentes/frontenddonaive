@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-05T20:09:04.097Z",
+  "updatedAt": "2026-10-05T20:18:18.780Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,23 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-muvox34k-0",
+      "title": "​Polisur se mantiene desplegado de manera preventiva en todo el municipio San Francisco ante fuertes precipitaciones",
+      "summary": "",
+      "body": "(​San Francisco, 04/10/2026). - Ante las intensas precipitaciones registradas en los últimos días, el Instituto Autónomo Policía del Municipio San Francisco (Polisur) activó un dispositivo de seguridad, prevención y atención inmediata en toda la jurisdicción para proteger a la ciudadanía.\n\n​Siguiendo las instrucciones del Director General del organismo, Primer Comisario Lisimaco Alberto Quintanillo López, los funcionarios policiales han sido desplegados estratégicamente en las diferentes parroquias del municipio.\n\n​Este operativo especial se ejecuta en perfecta articulación con la División de Control Ambiental y la Dirección de Operaciones, trabajando de la mano con los demás cuerpos de resguardo y prevención locales. El objetivo principal de estas acciones conjuntas es mitigar riesgos, monitorear zonas vulnerables y salvaguardar la integridad de cada uno de los habitantes san franciscanos.\n\n​\"La seguridad y el bienestar de los habitantes de nuestro municipio son nuestra prioridad absoluta. Seguimos firmes y comprometidos, trabajando sin descanso frente a cualquier adversidad,\" destacó la institución a través de sus cuentas oficiales.\n\n​Desde Polisur se hace un llamado a la comunidad a mantener la calma, seguir las recomendaciones preventivas y mantenerse atenta únicamente a la información emitida por los canales oficiales. Asimismo, se recuerda a la ciudadanía la importancia de reportar cualquier situación de emergencia o riesgo en sus comunidades a través de las líneas telefónicas habilitadas para tal fin.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmuvoyinb9to.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmuvoyinb9to.jpg",
+        "/polisur/extras/nmuvoz13ytid.jpg",
+        "/polisur/extras/nmuvoz298dsb.jpg",
+        "/polisur/extras/nmuvoz38eika.jpg",
+        "/polisur/extras/nmuvoz4dagqu.jpg",
+        "/polisur/extras/nmuvoz5mwevm.jpg"
+      ],
+      "publishedAt": "2026-10-04T04:16:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-muvojf7q-0",
       "title": "Polisur reafirma su compromiso social en nueva gran jornada de atención integral para las comunidades Yukpas",
