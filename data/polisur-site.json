@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-06T19:12:01.866Z",
+  "updatedAt": "2026-10-06T19:14:21.487Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,19 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mux241lx-0",
+      "title": "Polisur aprehendió a hombre acusado por su pareja de violencia de género, amenazas de muerte y tortura",
+      "summary": "",
+      "body": "(​San Francisco, 06/10/2026) -. Funcionarios de la Unidad de Patrullaje Especial Canino del Instituto Autónomo Policía del Municipio San Francisco (Polisur) detuvieron a un ciudadano señalado por los delitos de agresión física reiterada, amenazas de muerte y tortura en contra de su pareja.\n\n​El procedimiento que se llevó a cabo la noche del pasado 5 de octubre de 2026, por los efectivos adscritos al Cuadrante de Paz C-199, está enmarcado en las directrices del Director General de Polisur, Primer Comisario Lisimaco Quintanillo, en concordancia con los lineamientos del Comandante de la ZODI Zulia número 11, General de División Okler Roberto Yustiz Castillo.\n\n​Detalles del procedimiento\n\nDe acuerdo con el reporte oficial, la víctima se presentó en la estación policial para denunciar que era víctima de agresiones físicas constantes por parte de su pareja,\nYeremil Gregorio Hurtado Esteves (24 años), quien además la mantenía bajo amenazas de muerte y la coaccionaba con torturas si no colaboraba con sus exigencias.\n\n​Ante la gravedad de la denuncia, una comisión policial se trasladó hasta la Av. 41 con calle 35D del sector Colina Bolivariana, parroquia San Francisco, dirección aportada por la afectada, donde al llegar, los funcionarios avistaron a un sujeto con las características descritas, quien intentó huir al notar la presencia de los funcionarios.\n\n​De inmediato se activaron los protocolos de apoyo táctico radial, logrando acordonar la zona y restringir al ciudadano mediante la aplicación de los niveles progresivos y diferenciados del uso de la fuerza policial.\n\n​Verificación médica y ministerial\n\n​Tras su aprehensión, al ciudadano se le leyeron sus derechos constitucionales y fue trasladado al Hospital Doctor Manuel Noriega Trigo. Allí fue evaluado constatando que presentaba condiciones clínicas regulares y sin evidencia de hematomas.\n​Posteriormente, el detenido fue ingresado en el Centro Preventivo de Resguardo y Garantías del Aprehendido.\n\nEl caso fue notificado a la Fiscalía Segunda del Ministerio Público del Estado Zulia, ente que continuará con las diligencias legales correspondientes.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmux24v61ukw.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmux24v61ukw.jpg",
+        "/polisur/extras/nmux250voyid.jpg"
+      ],
+      "publishedAt": "2026-10-06T19:13:31.941Z",
+      "published": true
+    },
     {
       "id": "noticia-mux1yory-0",
       "title": "Polisur continúa desplegado para la atención y vigilancia a las familias afectadas por los fuertes vientos del 4-OCT",
