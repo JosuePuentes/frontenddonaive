@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-06T19:14:21.487Z",
+  "updatedAt": "2026-10-06T20:06:22.228Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,19 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mux33px8-0",
+      "title": "Funcionarios policiales atienden de manera oportuna dos accidentes viales en el municipio",
+      "summary": "",
+      "body": "(San Francisco, 06/10/2026)-. Oficiales del Instituto Autónomo Policía del Municipio San Francisco, en labores de patrullaje preventivo atendieron de manera inmediata dos siniestros viales registrados en la localidad. El primer hecho ocurrió en la jurisdicción del Cuadrante de Paz 11C-201, barrio Sierra Maestra, parroquia Francisco Ochoa, donde un ciudadano fue arrollado por una motocicleta, resultando con lesiones de consideración. En el sitio se contó con el apoyo articulado de una comisión de la Guardia Nacional Bolivariana y una unidad de emergencias del Cuerpo de Bomberos del Municipio San Francisco, quienes le brindaron los primeros auxilios y trasladan al lesionado hasta el Hospital Doctor Manuel Noriega Trigo.\n\nEl segundo suceso se registró en la Doble Vía de la Zona Industrial, Cuadrante de Paz 11C-184, parroquia Marcial Hernández, tras el volcamiento de un motociclista que impactó contra el separador vial; en este caso, tras la alerta ciudadana, se activó al Cuerpo de Bomberos para la atención y traslado del herido al Hospital General Doctor Pedro Iturbe. En este caso fue notificada la División de Investigación de Accidentes de Tránsito Terrestre (DIATT) de la Policía Nacional, para el levantamiento planimétrico y atención del hecho.\n\nAmbos procedimientos destacan la capacidad de respuesta rápida, la articulación interinstitucional y el compromiso permanente de los cuerpos de seguridad del Estado al activarse de forma inmediata ante emergencias viales, coordinando el apoyo prehospitalario y los protocolos legales pertinentes junto a los bomberos y organismos competentes para resguardar la vida y la integridad de los ciudadanos afectados.\n\nEl Primer Comisario Lisímaco Alberto Quintanillo López, Director General de Polisur, ante estas situaciones imprevistas en las vías, hace el recordatorio a la importancia de conducir con prudencia y respeto a las normas de tránsito. Nuestros funcionarios se mantienen firmes y desplegados las 24 horas del día, listos para brindar apoyo, seguridad y auxilio oportuno a toda la comunidad.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmux35jfx8wf.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmux35jfx8wf.jpg",
+        "/polisur/extras/nmux35puy3z6.jpg"
+      ],
+      "publishedAt": "2026-10-06T19:41:16.412Z",
+      "published": true
+    },
     {
       "id": "noticia-mux241lx-0",
       "title": "Polisur aprehendió a hombre acusado por su pareja de violencia de género, amenazas de muerte y tortura",
