@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-05T20:18:18.780Z",
+  "updatedAt": "2026-10-06T19:12:01.866Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,21 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mux1yory-0",
+      "title": "Polisur continúa desplegado para la atención y vigilancia a las familias afectadas por los fuertes vientos del 4-OCT",
+      "summary": "",
+      "body": "(San Francisco, 05/10/2026)-. Oficiales del Instituto Autónomo Policía del Municipio San Francisco, realizan diariamente despliegues integrales en diversos sectores de la comunidad desde el pasado 4 de octubre, dicha acción se lleva a cabo para inspeccionar, focalizar y atender los daños ocasionados por las fuertes precipitaciones y vientos registrados.\n\nDurante cada jornada, las comisiones visitan las comunidades, con especial énfasis en la avenida 25B con calle 4 (sector Corazón de Jesús) y en la avenida 25 con calle 15, donde evaluaron las viviendas más afectadas, las cuales sufrieron importantes desprendimientos en sus techos y daños en las infraestructuras.\n\nAnte estas afectaciones materiales, los funcionarios actúan tes levantaron los informes de focalización correspondientes para dar un seguimiento oportuno. El objetivo principal es entrelazar los casos de las familias afectadas con los órganos competentes locales, las comunas, directivos y voceros, gestionando de manera articulada las respuestas necesarias para lograr el pronto resarcimiento de los daños estructurales sufridos en sus hogares.\n\nA su vez, Polisur reforzó las labores de seguridad ciudadana mediante patrullajes preventivos, con el fin de disuadir cualquier modalidad delictiva y fomentar la participación activa de la comunidad y transeúntes, citandolos a ser garantes de la seguridad ciudadana, mediante el aviso temprano de situaciones sospechosas que puedan poner en riesgo la tranquilidad.\n\nAnte estas circunstancias, el Primer Comisario Lisímaco Alberto Quintanillo López, Director General de Polisur, reafirma su compromiso inquebrantable con la ciudadanía, informando que los funcionarios se encuentran plenamente desplegados en las calles brindando vigilancia, acompañamiento y protección permanente a las familias afectadas.\n\nExhortamos a la comunidad a mantener la calma y a confiar en el trabajo articulado de los órganos de seguridad y poder popular, recordando que estamos trabajando unidos para garantizar el bienestar y la recuperación de cada hogar.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmux217kky3o.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmux217kky3o.jpg",
+        "/polisur/extras/nmux21gihwzo.jpg",
+        "/polisur/extras/nmux21i3wg6b.jpg",
+        "/polisur/extras/nmux21j789vv.jpg"
+      ],
+      "publishedAt": "2026-10-05T23:09:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-muvox34k-0",
       "title": "​Polisur se mantiene desplegado de manera preventiva en todo el municipio San Francisco ante fuertes precipitaciones",
