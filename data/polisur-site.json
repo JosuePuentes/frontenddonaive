@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-13T19:28:14.226Z",
+  "updatedAt": "2026-10-13T19:32:55.622Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -31,13 +31,18 @@
   "news": [
     {
       "id": "noticia-mv72paug-0",
-      "title": "Nueva noticia",
+      "title": "Polisur realiza labores de vinculación social y apoyo institucional en el sector Sierra Maestra",
       "summary": "",
-      "body": "",
-      "imageUrl": "",
-      "imageUrls": [],
-      "publishedAt": "2026-10-13T19:27:45.448Z",
-      "published": false
+      "body": "(San Francisco, 12/10/2026)-. Ante los daños causados por las fuertes lluvias y ráfagas de viento registradas en los últimos días —que afectaron postes y líneas de distribución eléctrica en varios sectores del municipio—, funcionarios del Instituto Autónomo Policía del Municipio San Francisco (Polisur) brindaron acompañamiento y apoyo preventivo en la comunidad.\n\n​Siguiendo las instrucciones del Director General de Polisur, Primer Comisario Lisímaco Alberto Quintanillo López, los efectivos policiales resguardaron a los equipos de Operaciones de la Corporación Eléctrica Nacional (CORPOELEC) durante las labores de reparación. Asimismo, mantuvieron una constante vinculación y acercamiento con los vecinos afectados del Cuadrante de Paz C-201, en el barrio Sierra Maestra (Avenida 10 con calle 20, y Avenida 18 con calle 13), Parroquia Francisco Ochoa.\n\n​Esta acción complementa el Plan de Atención Integral desplegado por el Alcalde Bolivariano, Héctor Soto, para atender las emergencias en el municipio y forma parte de las acciones en materia de apoyo institucional que brinda este instituto con el objetivo de brindar mayor bienestar al pueblo.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmv72uw53czz.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmv72uw53czz.jpg",
+        "/polisur/extras/nmv72vgal2ow.jpg",
+        "/polisur/extras/nmv72vhtypey.jpg",
+        "/polisur/extras/nmv72vjd0rgk.jpg"
+      ],
+      "publishedAt": "2026-10-12T23:27:00.000Z",
+      "published": true
     },
     {
       "id": "noticia-mv72l6tl-0",
