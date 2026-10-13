@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-06T20:06:22.228Z",
+  "updatedAt": "2026-10-13T18:54:25.362Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,21 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mv71a05z-0",
+      "title": "Oficiales de Polisur brindaron orientación sobre violencia de género a pacientes del Hospital Dr. Manuel Noriega Trigo",
+      "summary": "",
+      "body": "(San Francisco, 08/10/2026)-. En el marco de las acciones orientadas a la prevención y erradicación de la violencia contra las mujeres, oficiales del Instituto Autónomo Policía del Municipio San Francisco, llevaron a cabo una jornada de sensibilización en las instalaciones del Hospital Dr. Manuel Noriega Trigo, ubicado en la urbanización San Francisco. La actividad estuvo dirigida por la Primer Oficial Enyerlith Herrera, adscrita a la Oficina de Atención Integral a la Mujer, y contó con el acompañamiento de personal del área de Trabajo Social del centro de salud.\n\nDurante el abordaje, se ofreció orientación detallada a los pacientes presentes en el área de consultas de odontología sobre los pasos a seguir para formular denuncias, conforme a los parámetros previstos en la Ley Orgánica sobre el Derecho de las Mujeres a una Vida Libre de Violencia.\n\nDurante la jornada informativa se dió a conocer la ubicación de las distintas oficinas receptoras de denuncias y el funcionamiento de la central de comunicaciones para la atención inmediata de emergencias. Con el propósito de mantener un canal directo de contacto y respuesta oportuna con la comunidad, las autoridades pusieron a disposición de la ciudadanía sus redes sociales oficiales a través de la cuenta @polisurenlinea, reafirmando el compromiso institucional en la lucha contra la violencia de género y el resguardo de los derechos fundamentales de las mujeres en el municipio.\n\nBajo el liderazgo del Director General, Primer Comisario Lisímaco Alberto Quintanillo López y con la vocación de servicio de todo su equipo de oficiales, se mantiene el trabajo diario articulado con las comunidades para consolidar espacios seguros, fortalecer la prevención del delito, brindar atención ciudadana cercana e integral y garantizar la paz y convivencia social de todos los habitantes.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmv71hah9mra.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmv71hah9mra.jpg",
+        "/polisur/extras/nmv71hriiyf5.jpg",
+        "/polisur/extras/nmv71hsrdvb2.jpg",
+        "/polisur/extras/nmv71htrav4a.jpg"
+      ],
+      "publishedAt": "2026-10-07T22:47:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mux33px8-0",
       "title": "Funcionarios policiales atienden de manera oportuna dos accidentes viales en el municipio",
