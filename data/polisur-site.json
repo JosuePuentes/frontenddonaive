@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-13T19:02:56.572Z",
+  "updatedAt": "2026-10-13T19:08:07.223Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,19 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mv71x524-0",
+      "title": "Polisur detiene un sujeto por robo a propiedad en la urbanización El Soler",
+      "summary": "",
+      "body": "(San Francisco, 08/10/2026)-. En un despliegue operativo que tuvo lugar en la parroquia José Domingo Rus, específicamente en la Comuna Socialista Ciudad del Rey, ubicada en la calle 200 de la urbanización El Soler, tras una alerta del Centro de Operaciones Policiales sobre una situación irregular en la zona, fue aprehendido un ciudadano tras ser retenido por la comunidad y confesar la sustracción de bienes en un inmueble que se encontraba solo.\n\nTras la alerta policial que indicaba que varias personas mantenían retenido a un sujeto, una comisión se trasladó hasta el sitio indicado, donde los efectivos visualizaron a una multitud congregada quines manifestaba que el individuo retenido había entrado sin autorización en una vivienda que se encontraba sola para cometer el hecho delictivo. Tras señalar directamente al presunto autor, los funcionarios se entrevistaron con él, admitiendo su participación en los hechos. De inmediato se procedió a su aprehensión, garantizándole sus derechos constitucionales y trasladándolo al Centro de Diagnóstico Integral Los Cortijos para su valoración médica.\n\nEl detenido quedó identificado como Ender Rincón Bravo Granados, de 34 años de edad, quien fue ingresado en el Centro Preventivo de Resguardo y Garantías del Aprehendido. En el sitio del suceso se colectó como evidencia un aire acondicionado tipo Split de 12.000 BTU, marca Magic Queen, remitido bajo cadena de custodia a la Sala de Evidencias. El caso fue notificado a la Fiscal Cuadragésimo Sexto del Ministerio Público.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmv71zejdv5c.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmv71zejdv5c.jpg",
+        "/polisur/extras/nmv71zpbu10a.jpg"
+      ],
+      "publishedAt": "2026-10-08T23:05:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mv71ouwd-0",
       "title": "Patrullaje Especial Canino y Motorizado de Polisur desarticula presunto centro de distribución de drogas en Domitila Flores",
