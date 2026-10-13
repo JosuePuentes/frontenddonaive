@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-13T19:32:55.622Z",
+  "updatedAt": "2026-10-13T19:36:35.753Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,18 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mv72yzpr-0",
+      "title": "Polisur detiene a ciudadano de la tercera edad por porte ilícito de arma de fabricación artesanal",
+      "summary": "",
+      "body": "(San Francisco, 13/10/2026).- ​En cumplimiento a las instrucciones emitidas por el Director General del Instituto Autónomo Policía del Municipio San Francisco (Polisur), Primer Comisario Lisímaco Alberto Quintanillo López, funcionarios adscritos al Servicio de Vigilancia y Patrullaje ejecutaron la aprehensión de un ciudadano por el delito de porte ilícito de arma de fuego.\n\n​La actuación policial se generó tras recibir una alerta del Centro de Operaciones Policiales (COP), donde se informaba que en el cuadrante de Paz C1-199 (sector 6 de la urbanización San Felipe, parroquia San Francisco) un sujeto en presunto estado etílico se encontraba realizando disparos al aire.\n\n​Al llegar al lugar, la comisión identificó y abordó al señalado, quien responde al nombre de Geovanny Acevedo, de 65 años de edad. Durante el procedimiento se le incautó un arma de fabricación no industrializada (casera o artesanal), para su respectiva experticia técnica y balística.\n\n​El detenido y la evidencia fueron puestos a la orden del Ministerio Público para el debido proceso judicial.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmv7303763a9.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmv7303763a9.jpg"
+      ],
+      "publishedAt": "2026-10-13T19:35:17.583Z",
+      "published": true
+    },
     {
       "id": "noticia-mv72paug-0",
       "title": "Polisur realiza labores de vinculación social y apoyo institucional en el sector Sierra Maestra",
