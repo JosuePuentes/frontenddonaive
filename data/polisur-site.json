@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-13T19:15:47.764Z",
+  "updatedAt": "2026-10-13T19:24:12.461Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,20 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mv72i6jt-0",
+      "title": "Polisur realiza inspección preventiva en la Cañada \"Juan López\" de Sierra Maestra",
+      "summary": "",
+      "body": "(San Francisco 11/10/2026)-. Ante las afectaciones por las fuertes lluvias y ráfagas de vientos registradas en los últimos días en la región, por instrucciones del Director General del Instituto Autónomo Policía del Municipio San Francisco, Primer Comisario Lisímaco Alberto Quintanillo López, un equipo de funcionarios se desplegó en el Cuadrante de Paz C-201, Parroquia Francisco Ochoa, Barrio Sierra Maestra, Avenida 17, entre calle 13 y 15, para complementar el Plan de Atención desplegado por el Alcalde Bolivariano, Héctor Soto.\n\nEn esta oportunidad, los uniformados en conjunto con la comunidad, realizaron una inspección del caudal fluvial y las viviendas alrededor, con el objetivo de detectar cualquier situación de vulnerabilidad que pueda poner en riesgo a los ciudadanos.\n\nDe igual manera, se hizo énfasis con los habitantes de la comunidad para que sean portavoces y garantes en mantener el caudal libre de obstrucción por desechos y escombros, resguardado de esta manera la integridad de cada uno de ellos.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmv72jy5k4g1.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmv72jy5k4g1.jpg",
+        "/polisur/extras/nmv72ka90zvk.jpg",
+        "/polisur/extras/nmv72kcpilnz.jpg"
+      ],
+      "publishedAt": "2026-10-11T23:22:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mv7279uz-0",
       "title": "Polisur realiza jornada deportiva dirigida a adultos mayores de la parroquia Francisco Ochoa",
