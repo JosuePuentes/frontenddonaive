@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-13T19:27:34.336Z",
+  "updatedAt": "2026-10-13T19:28:14.226Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -30,6 +30,16 @@
   },
   "news": [
     {
+      "id": "noticia-mv72paug-0",
+      "title": "Nueva noticia",
+      "summary": "",
+      "body": "",
+      "imageUrl": "",
+      "imageUrls": [],
+      "publishedAt": "2026-10-13T19:27:45.448Z",
+      "published": false
+    },
+    {
       "id": "noticia-mv72l6tl-0",
       "title": "Funcionarios de Polisur atienden de manera oportuna un accidente vial en la parroquia Domitila Flores",
       "summary": "",
@@ -40,7 +50,7 @@
         "/polisur/extras/nmv72ojb7pz1.jpg"
       ],
       "publishedAt": "2026-10-12T23:24:00.000Z",
-      "published": false
+      "published": true
     },
     {
       "id": "noticia-mv72i6jt-0",
