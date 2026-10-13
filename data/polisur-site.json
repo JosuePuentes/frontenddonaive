@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-13T19:24:12.461Z",
+  "updatedAt": "2026-10-13T19:27:34.336Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,19 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mv72l6tl-0",
+      "title": "Funcionarios de Polisur atienden de manera oportuna un accidente vial en la parroquia Domitila Flores",
+      "summary": "",
+      "body": "(San Francisco, 12/10/2026)-. Oficiales del Instituto Autónomo Policía del Municipio San Francisco, durante labores de patrullaje preventivo, instruidos por el Director General, Primer Comisario Lisímaco Alberto Quintanillo López, atendieron de manera inmediata un siniestro vial registrado en la localidad sureña.\n\nEl hecho ocurrió en la jurisdicción del Cuadrante de Paz 11C-189, Parroquia Domitila Flores, Urbanización José León Mijares, Avenida 49F-3, calle 180, donde se generó una colisión entre dos motocicletas, presentando lesiones moderadas ambos conductores. posteriormente en el sitio se presentó una comisión del Cuerpo de Bomberos de San Francisco (Bomberos del Sur), quienes le brindaron los primeros auxilios a los lesionados y posteriormente los trasladaron hasta el Hospital ''Doctor Pedro Iturbe'' (General del sur).\n\nDicho procedimiento proyecta la capacidad de respuesta rápida, la articulación interinstitucional y el compromiso permanente de los cuerpos de seguridad del Estado ante emergencias viales, coordinando el apoyo prehospitalario y los protocolos legales pertinentes junto a los bomberos y organismos competentes para resguardar la vida y la integridad de los ciudadanos afectados.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmv72ohujjio.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmv72ohujjio.jpg",
+        "/polisur/extras/nmv72ojb7pz1.jpg"
+      ],
+      "publishedAt": "2026-10-12T23:24:00.000Z",
+      "published": false
+    },
     {
       "id": "noticia-mv72i6jt-0",
       "title": "Polisur realiza inspección preventiva en la Cañada \"Juan López\" de Sierra Maestra",
