@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-13T19:08:07.223Z",
+  "updatedAt": "2026-10-13T19:15:47.764Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,23 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mv7279uz-0",
+      "title": "Polisur realiza jornada deportiva dirigida a adultos mayores de la parroquia Francisco Ochoa",
+      "summary": "",
+      "body": "(San Francisco, 10/10/2026)-. El instituto Autónomo Policía del Municipio San Francisco, cumpliendo instrucciones de nuestro Director General, Primer Comisario Lisimaco Quintanillo, y a través de la Dirección de Deporte, abrió las puertas de nuestro Gimnasio Institucional para recibir al Círculo de Abuelos \"Alegría de Vivir\" de la parroquia Francisco Ochoa.\n\n​Esta jornada deportiva y recreativa busca brindarles un espacio digno, seguro y adecuado para el acondicionamiento físico y el esparcimiento de nuestros abuelos.\n​\nDurante la actividad, se concreto además el cronograma de las próximas actividades a desarrollarse con los abuelos y abuelas, donde contarán con el apoyo de nuestro personal médico para velar y resguardar la salud de todos los asistentes.\n\nEsta actuación reafirma el compromiso constante del Director General y de todo el personal adscrito a nuestro Instituto, velando diariamente por el bienestar y desarrollo de las diferentes comunidades que hacen vida en nuestro municipio.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmv728vn9uzd.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmv728vn9uzd.jpg",
+        "/polisur/extras/nmv729gw9vd7.jpg",
+        "/polisur/extras/nmv729ibznqn.jpg",
+        "/polisur/extras/nmv729k5k0m4.jpg",
+        "/polisur/extras/nmv729lop5bd.jpg",
+        "/polisur/extras/nmv729neatrh.jpg"
+      ],
+      "publishedAt": "2026-10-10T23:13:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mv71x524-0",
       "title": "Polisur detiene un sujeto por robo a propiedad en la urbanización El Soler",
