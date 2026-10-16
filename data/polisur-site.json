@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-16T16:31:18.758Z",
+  "updatedAt": "2026-10-16T16:46:24.268Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,26 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvb6yj9y-0",
+      "title": "Polisur refuerza su compromiso con la seguridad en la segunda Consulta Popular Nacional 2026",
+      "summary": "",
+      "body": "(San Francisco, 16/10/2026)-. En el marco de la preparación de la Segunda Consulta Popular Nacional 2026 bajo el lema \"Aquí manda el pueblo\", el Instituto Autónomo Policía Municipal de San Francisco (Polisur), liderado por su Director General, el Primer Comisario Lisímaco Quintanillo López, reafirma su compromiso institucional de trabajar de la mano con los cuerpos de seguridad e instituciones del Estado para asegurar el normal desarrollo de este importante evento electoral en la entidad.\n\nEsta articulación técnica y operativa se fundamenta en las directrices de la Región Estratégica de Defensa Integral (REDI) N° 1 Occidental, la Zona Operativa de Defensa Integral (ZODI-ZULIA) y el Poder Electoral, conforme a lo establecido en los artículos 5, 55, 136 y 292 de la Constitución de la República Bolivariana de Venezuela, así como en los articulados pertinentes de la Ley Orgánica de Procesos Electorales. Bajo la dirección del Primer Comisario Lisímaco Quintanillo López, los efectivos de Polisur velarán de forma irrestricta por la garantía de los derechos políticos y la seguridad integral de todos los ciudadanos que participarán en los 66 centros de votación distribuidos en el municipio San Francisco.\n\nAsimismo, brindará apoyo estratégico y operativo a la Fuerza Armada Nacional Bolivariana (FANB) y a la Oficina Regional Electoral ORE-Zulia, entes rectores del proceso. La labor conjunta abarcará el resguardo de la ciudadanía, el mantenimiento del orden público y el despliegue permanente para la custodia, traslado y protección del material e instrumentos electorales tecnológicos y no tecnológicos en todo el territorio municipal, garantizando la paz y la soberanía popular en esta cita comicial.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvb76ztlt88.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvb76ztlt88.jpg",
+        "/polisur/extras/nmvb77qzbe55.jpg",
+        "/polisur/extras/nmvb77s242s8.jpg",
+        "/polisur/extras/nmvb77t7pwk5.jpg",
+        "/polisur/extras/nmvb77ul1pr2.jpg",
+        "/polisur/extras/nmvb77vp1t69.jpg",
+        "/polisur/extras/nmvb77wr7mi6.jpg",
+        "/polisur/extras/nmvb77xymtlo.jpg",
+        "/polisur/extras/nmvb77z1h889.jpg"
+      ],
+      "publishedAt": "2026-10-16T16:37:59.446Z",
+      "published": true
+    },
     {
       "id": "noticia-mvb6drx3-0",
       "title": "Polisur dedica una tarde al valor, la salud y la unión en la lucha contra el cáncer de mama",
