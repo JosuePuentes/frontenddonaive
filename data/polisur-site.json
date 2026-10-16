@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-16T16:21:12.036Z",
+  "updatedAt": "2026-10-16T16:31:18.758Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,26 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvb6drx3-0",
+      "title": "Polisur dedica una tarde al valor, la salud y la unión en la lucha contra el cáncer de mama",
+      "summary": "",
+      "body": "(San Francisco, 16/10/2026)-. En el marco del Mes Rosa, el Instituto Autónomo Policía del Municipio San Francisco brindó una jornada especial a parte de las mujeres que día a día hacen vida en la institución, una iniciativa posible gracias a la gestión del Director General, Primer Comisario Lisímaco Alberto Quintanillo López.\n\n​Una tarde diferente y amena para reflexionar, donde se contó con la presencia de la Autoridad Única de la Mujer del estado Zulia, Lcda. Anás Viloria, la coordinadora del Instituto Nacional de la Mujer, Lisbeth Guerrero, la Concejal Municipal de las Mujeres del PSUV de San Francisco, María Eugenia Hidalgo, así como representantes de diversos cuerpos policiales e instituciones aliadas de la región.\n\n​durante la actividad las presentes compartieron vivencias y testimonios profundamente conmovedores sobre familiares, amigos y conocidos que han batallado valientemente contra el cáncer de mama, honrando también la memoria de quienes lamentablemente nos dejaron, pero cuyo ejemplo nos motiva a seguir generando conciencia: ¡la prevención salva vidas!\n\n​A través de dinámicas participativas, reforzaron el verdadero valor de la mujer y lo fundamental que es amarse y cuidarse. La autoexploración y los chequeos a tiempo son el primer paso para estar sanas y seguir brindando seguridad, protección y bienestar a nuestro municipio.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvb6mtzs8xy.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvb6mtzs8xy.jpg",
+        "/polisur/extras/nmvb6p9pjl5z.jpg",
+        "/polisur/extras/nmvb6pathp0y.jpg",
+        "/polisur/extras/nmvb6pbyvtsz.jpg",
+        "/polisur/extras/nmvb6pd4dty0.jpg",
+        "/polisur/extras/nmvb6pe3qx70.jpg",
+        "/polisur/extras/nmvb6pfiitre.jpg",
+        "/polisur/extras/nmvb6pgjvluo.jpg",
+        "/polisur/extras/nmvb6phl2qd0.jpg"
+      ],
+      "publishedAt": "2026-10-16T16:21:50.871Z",
+      "published": true
+    },
     {
       "id": "noticia-mvb6aqua-0",
       "title": "Polisur coordina acciones con cuerpos e instituciones policiales enmarcado en el Plan República \"Aquí manda el Pueblo\"",
