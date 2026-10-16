@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-13T19:36:35.753Z",
+  "updatedAt": "2026-10-16T15:54:13.910Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,23 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvb5a6gg-0",
+      "title": "Polisur refuerza el acompañamiento y la seguridad en los centros educativos de San Francisco",
+      "summary": "",
+      "body": "(San Francisco, 14/10/2026)-. Los oficiales de la Policía Municipal de San Francisco (Polisur), realizan visitas diarias a las instituciones educativas del Municipio, consolidando un despliegue preventivo constante que brinda tranquilidad a las comunidades escolares.\n\nEn el marco de estas acciones, la comisión policial abordó diversos planteles como la Unidad Educativa Nerio Adriani Rosales y el Centro de Educación Especial \"SER\", guiado bajo la premisa \"ser diferente es algo común\", además de la E.B.N. Juana Ramírez \"La Avanzadora\" y el Maternal Bolívar y Sueño. Estas inspecciones y recorridos garantizan un entorno seguro dentro de los espacios de aprendizaje para los niños y jóvenes sanfranciscanos.\n\nAsimismo, el operativo institucional mantiene un rango de acción directo a través de los Cuadrantes de Paz articulados con las comunas locales de la entidad. El abordaje preventivo ha llegado de manera efectiva a la parroquia Domitila Flores en el Cuadrante de Paz 11C-191 (Comuna Los Sueños del Gigante) y el Cuadrante 11C-195 (Comuna Despertar de un Pueblo); así como a la parroquia José Domingo Rus a través del Cuadrante de Paz 11C-187 (Comuna Vencedores del Sur) y el Cuadrante 11C-177 (Comuna Socialista Ciudad del Rey). Esta labor coordinada permite fortalecer el contacto preventivo y ciudadano con el poder popular organizado.\n\nCon este tipo de despliegues, la Policía Municipal de San Francisco y su Director General, Primer Comisario Lisímaco Alberto Quintanillo López, reafirman su firme compromiso y responsabilidad con la protección, bienestar y desarrollo integral de los niños, niñas y adolescentes del municipio sureño.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvb5bxfls7h.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvb5bxfls7h.jpg",
+        "/polisur/extras/nmvb5cat6rqs.jpg",
+        "/polisur/extras/nmvb5cbvohlg.jpg",
+        "/polisur/extras/nmvb5ccyjpsn.jpg",
+        "/polisur/extras/nmvb5ce7w86x.jpg",
+        "/polisur/extras/nmvb5cf7uuwo.jpg"
+      ],
+      "publishedAt": "2026-10-14T19:51:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mv72yzpr-0",
       "title": "Polisur detiene a ciudadano de la tercera edad por porte ilícito de arma de fabricación artesanal",
