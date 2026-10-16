@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-16T16:01:17.409Z",
+  "updatedAt": "2026-10-16T16:21:12.036Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,19 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvb6aqua-0",
+      "title": "Polisur coordina acciones con cuerpos e instituciones policiales enmarcado en el Plan República \"Aquí manda el Pueblo\"",
+      "summary": "",
+      "body": "(San Francisco, 15/10/2026)-. El jefe de operaciones de Polisur, Comisario Jafeth Molina, participó en una mesa de trabajo estratégica junto a los directores de operaciones de los distintos cuerpos e instituciones policiales de la región. Dicha reunión fue realizada en la Comandancia General del Cuerpo de Policía Bolivariana del Estado Zulia (CPBEZ).\n\nLa jornada de articulación fue presidida por el Comisario Mayor Guillermo Parra Pulido, Director de la Redip Occidental y del CCP-Zulia de la Policía Nacional Bolivariana, teniendo como objetivo central sincronizar las labores de patrullaje y resguardo de espacios públicos durante el Plan República, garantizando un dispositivo de seguridad integral durante la celebración de la Consulta Popular del próximo 18 de octubre.\n\nDurante la reunión, los voceros de las instituciones de seguridad evaluaron las rutas de vigilancia, la presencia operativa en los centros de votación y los mecanismos de respuesta rápida ante cualquier eventualidad.\n\nEl Comisario Molina de la Policía de San Francisco, ratificó el compromiso de la Institución Policial con la paz ciudadana y el trabajo en conjunto con las demás fuerzas de orden público, para asegurar que la jornada democrática transcurra en total tranquilidad.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvb6cdx8mny.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvb6cdx8mny.jpg",
+        "/polisur/extras/nmvb6clua1c9.jpg"
+      ],
+      "publishedAt": "2026-10-15T20:19:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mvb5kysa-0",
       "title": "Polisur refuerza la seguridad y convivencia escolar en San Francisco",
