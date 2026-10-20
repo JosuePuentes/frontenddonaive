@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-20T18:06:35.991Z",
+  "updatedAt": "2026-10-20T18:08:36.161Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,20 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvgzwrhq-0",
+      "title": "Polisur detiene a sujeto por violencia de género y porte ilícito de arma de fuego en el barrio 24 de Julio",
+      "summary": "",
+      "body": "(​San Francisco, 19/10/2026).- Oficiales del Instituto Autónomo Policía del Municipio San Francisco (Polisur), adscritos a la División de Patrullaje Motorizado, arrestaron a un ciudadano tras agredir físicamente a su pareja y amenazarla de muerte con un arma de fuego, en un hecho ocurrido en el barrio 24 de Julio, parroquia Domitila Flores del municipio San Francisco.\n\n​El procedimiento se ejecutó bajo los lineamientos del Director General de Polisur, Primer Comisario Lisimaco Alberto Quintanillo López, en coordinación con el Comandante de la ZODI Nro. 11 Zulia, General de División Okler Roberto Yustiz Castillo.\n\n​Durante labores de patrullaje preventivo, los funcionarios fueron alertados por el Centro de Operaciones Policiales (C.O.P.) sobre una alteración del orden público en la avenida 49B con calle 173 del referido sector, perteneciente al Cuadrante de Paz Nro. 11C-P-191 y la Comuna «Los Sueños del Gigante». En la llamada se notificó que en el lugar se desarrollaba una riña y un individuo manipulaba un arma de fuego.\n\n​Al arribar a la vivienda, la comisión policial visualizó al sospechoso, quien intentó huir hacia el interior de la residencia tras percatarse de la presencia de las autoridades. Los uniformados actuaron rápidamente, logrando restringirlo e incautarle un arma de fuego de fabricación no industrializada tipo escopeta, elaborada en material ferroso con empuñadura de polietileno y guardamanos de madera.\n\n​En el sitio, un familiar directo de la víctima informó que el detenido había llegado minutos antes de manera agresiva, propinándole golpes a su pareja, arrastrándola por el cabello e ingresándola a una habitación, donde la amenazó de muerte con la escopeta. El testigo quien resultó ser el hijo de ambos, igualmente fue agredido al intentar intervenir en defensa de la mujer.\n\n​El aprehendido fue identificado como Derwin Antonio Montero Ortega, de 48 años de edad. Tras notificarle sus derechos y garantías constitucionales, tanto el detenido como las víctimas fueron trasladados al Centro de Diagnóstico Integral (CDI) El Callao para su respectiva valoración médica.\n\n​Montero Ortega fue ingresado a la Sala de Resguardo y Garantías del Aprehendido, mientras que la evidencia incautada fue remitida bajo cadena de custodia a la Sala de Evidencias de la institución policial. El caso quedó a la orden de la Fiscalía Cuadragésima Tercera del Ministerio Público.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvgzxp5uplv.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvgzxp5uplv.jpg",
+        "/polisur/extras/nmvgzxxevza9.jpg",
+        "/polisur/extras/nmvgzy1zu4xx.jpg"
+      ],
+      "publishedAt": "2026-10-19T22:07:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mvgzsozz-0",
       "title": "Polisur detiene a un hombre por intentar agredir a su hermano con un machete en Marcial Hernández",
