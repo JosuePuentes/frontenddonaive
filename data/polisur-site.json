@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-20T18:00:54.491Z",
+  "updatedAt": "2026-10-20T18:02:43.726Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -31,19 +31,21 @@
   "news": [
     {
       "id": "noticia-mvgyqya1-0",
-      "title": "Nueva noticia",
+      "title": "Sujeto solicitado por la justicia fue aprehendido por Polisur tras agredir a su abuelo",
       "summary": "",
-      "body": "",
-      "imageUrl": "",
-      "imageUrls": [],
-      "publishedAt": "2026-10-20T17:34:45.769Z",
-      "published": false
+      "body": "(San Francisco, 18/10/2026). - Funcionarios adscritos a la División de Patrullaje Motorizado del Instituto Autónomo Policía del Municipio San Francisco detuvieron a un sujeto de 32 años de edad, tras ser señalado de haber agredido físicamente a su abuelo. El procedimiento se llevó a cabo en el barrio Carabobo, parroquia Domitila Flores (Cuadrante de Paz 11C-189 / Comuna La Fuerza del Pueblo).\n\n​Dando cumplimiento a las instrucciones del Director General, Primer Comisario Lisímaco Quintanillo, la comisión policial se desplegó tras recibir una alerta emitida por el Centro de Operaciones Policiales (C.O.P.), donde se notificaba una riña familiar en la calle 178 con avenida 49G del mencionado sector.\n​Al llegar al sitio, los oficiales se entrevistaron con la víctima (78 años), quien denunció haber sido golpeado por su nieto durante la mañana del día anterior, señalando directamente al agresor presente en el lugar.\n\n​Al momento de la intervención y verificación de los datos personales a través del Sistema Integral de Información Policial (SIIPOL), se constató que el ciudadano, identificado como Yoiker Erasmo Escalante García (32), presentaba una solicitud activa emitida por el Tribunal Cuarto de Control, Audiencias y Medidas con fecha del 5 de febrero de 2025.\n\n​Ante la comisión del delito y el requerimiento judicial, los efectivos procedieron a su arresto, informándole de sus derechos y garantías constitucionales. Escalante García fue trasladado de inmediato al Centro de Diagnóstico Integral (C.D.I.) El Callao para su valoración médica y posteriormente remitido al Centro Preventivo de Resguardo y Garantías del Aprehendido.\n\n​El caso fue puesto a la orden de la Fiscalía Cuadragésimo Sexto del Ministerio Público.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvgzqj27r5i.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvgzqj27r5i.jpg"
+      ],
+      "publishedAt": "2026-10-18T21:34:00.000Z",
+      "published": true
     },
     {
       "id": "noticia-mvgufuw0-0",
       "title": "Polisur junto al Ejercito Bolivariano y demás cuerpos de seguridad resguardan la Segunda Consulta Popular Nacional 2026 “Aquí manda el Pueblo”",
       "summary": "",
-      "body": "Tras el despliegue del Plan Republica octubre 2026, enmarcado en la Segunda Consulta Popular Nacional bajo el lema “Aquí manda el Pueblo”, funcionarios del Instituto Autónomo Policía del Municipio San Francisco, mantienen un monitoreo operativo en los centros de votación instaurados en la localidad.\n\nBajo las orientaciones de su Director General, Primer Comisario Lisímaco Alberto Quintanillo López, los uniformados han conformado comisiones mixtas con funcionarios del Ejercito Bolivariano, con quienes ejecutan patrullajes constantes, supervisión directa y permanencia en los centros electorales, con el objetivo de resguardar las instalaciones, custodiar el material y, este próximo domingo 18 de octubre, mantener el orden público.\n\nEntre los centros que están siendo custodiados y supervisados directamente por Polisur en las siete parroquias del municipio se encuentran: E.B.E 24 de Julio, U.E Jesús Enrique Lossada, U.E José Antonio Páez, Liceo Eduardo Mathias Lossada, C.E.I.N Ana Graciela Hinestroza, U.E Nerio Adrianza Rosales, Escuela Venancio, U.E.N Mgs. Servando Peña, E.B Jesús Ramón Amado, E.B Rómulo Betancourt, entre otros.\n\nCon estas acciones Polisur reafirma su compromiso con el Poder Popular en garantizar que pueda ejercer su derecho al voto en un ambiente de paz, tranquilidad y en total civismo.\n\nNota de Prensa",
+      "body": "(San francisco, 17/10/2026).- Tras el despliegue del Plan Republica octubre 2026, enmarcado en la Segunda Consulta Popular Nacional bajo el lema “Aquí manda el Pueblo”, funcionarios del Instituto Autónomo Policía del Municipio San Francisco, mantienen un monitoreo operativo en los centros de votación instaurados en la localidad.\n\nBajo las orientaciones de su Director General, Primer Comisario Lisímaco Alberto Quintanillo López, los uniformados han conformado comisiones mixtas con funcionarios del Ejercito Bolivariano, con quienes ejecutan patrullajes constantes, supervisión directa y permanencia en los centros electorales, con el objetivo de resguardar las instalaciones, custodiar el material y, este próximo domingo 18 de octubre, mantener el orden público.\n\nEntre los centros que están siendo custodiados y supervisados directamente por Polisur en las siete parroquias del municipio se encuentran: E.B.E 24 de Julio, U.E Jesús Enrique Lossada, U.E José Antonio Páez, Liceo Eduardo Mathias Lossada, C.E.I.N Ana Graciela Hinestroza, U.E Nerio Adrianza Rosales, Escuela Venancio, U.E.N Mgs. Servando Peña, E.B Jesús Ramón Amado, E.B Rómulo Betancourt, entre otros.\n\nCon estas acciones Polisur reafirma su compromiso con el Poder Popular en garantizar que pueda ejercer su derecho al voto en un ambiente de paz, tranquilidad y en total civismo.\n\nNota de Prensa",
       "imageUrl": "/polisur/extras/nmvgzjpqqbzs.jpg",
       "imageUrls": [
         "/polisur/extras/nmvgzjpqqbzs.jpg",
