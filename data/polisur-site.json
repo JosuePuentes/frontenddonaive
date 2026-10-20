@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-20T18:03:42.556Z",
+  "updatedAt": "2026-10-20T18:06:35.991Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,21 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvgzsozz-0",
+      "title": "Polisur detiene a un hombre por intentar agredir a su hermano con un machete en Marcial Hernández",
+      "summary": "",
+      "body": "(​San Francisco, 19/10/2026) .- Oficiales del Instituto Autónomo Policía del Municipio San Francisco (Polisur), adscritos a la División de Patrullaje Motorizado, arrestaron la noche de este sábado a un sujeto acusado de intentar agredir a su hermano con un arma blanca (machete), durante una discusión ocurrida en el barrio 2 de Febrero, parroquia Marcial Hernández.\n\n​El procedimiento se llevó a cabo siguiendo los lineamientos del Director General de Polisur, Primer Comisario Lisimaco Alberto Quintanillo López, en coordinación con el Comandante de la ZODI Nro. 11, General de División Okler Roberto Yustiz Castillo.\n\n​Según el reporte oficial, los funcionarios se encontraban desplegados en labores de patrullaje preventivo en el Cuadrante de Paz número 184 cuando el Centro de Operaciones Policiales (C.O.P.) alertó sobre un altercado familiar en la avenida 57 con calle 156 del sector antes mencionado.\n\n​Al llegar al sitio, la comisión entrevistó a la víctima, quien denunció que tras sostener una disputa verbal con su hermano, este intentó atacarlo utilizando un objeto punzocortante. La víctima señaló al agresor, quien al percatarse de la presencia policial intentó huir e ingresó a una vivienda cercana.\n\n​Los oficiales le dieron seguimiento e ingresaron al inmueble, donde lograron restringir al sospechoso. Tras realizarle la inspección corporal de rutina, hallaron oculto entre sus vestimentas un machete de material ferroso, de aproximadamente 59 centímetros de longitud y 5 centímetros de ancho, con empuñadura de madera.\n\n​El detenido quedó identificado como Ronaldo José Linares Yantil, de 30 años de edad. ​Posterior a la aprehensión, Linares Yantil fue trasladado al Hospital Dr. Manuel Noriega Trigo para su correspondiente valoración médica y, posteriormente, a la Sala de Resguardo y Garantías del Aprehendido de Polisur.\n\n​El arma incautada fue remitida a la Sala de Evidencias bajo cadena de custodia, mientras que el caso fue puesto a la orden de la Fiscalía Cuadragésima Sexta (46) del Ministerio Público.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvgzvctbp6v.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvgzvctbp6v.jpg",
+        "/polisur/extras/nmvgzvmh86q7.jpg",
+        "/polisur/extras/nmvgzvop1jdr.jpg",
+        "/polisur/extras/nmvgzvpxw5p6.jpg"
+      ],
+      "publishedAt": "2026-10-19T22:04:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mvgyqya1-0",
       "title": "Sujeto solicitado por la justicia fue aprehendido por Polisur tras agredir a su abuelo",
