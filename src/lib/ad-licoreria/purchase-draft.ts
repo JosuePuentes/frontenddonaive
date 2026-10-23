@@ -58,8 +58,50 @@ export function hitToDraftLine(
   };
 }
 
+/** Unidades base por presentación según modo caja/unidad de compra. */
+export function lineUnitsPerPresentation(l: DraftLine): number {
+  if (l.buyMode === "UNIT") return 1;
+  return Math.max(1, l.boxUnits || l.unitsPerPresentation || 1);
+}
+
+export function lineQtyBase(l: DraftLine): number {
+  return Math.max(0, l.qty) * lineUnitsPerPresentation(l);
+}
+
+export function formatLineQtySummary(l: DraftLine): string {
+  const base = lineQtyBase(l);
+  if (l.buyMode === "BOX") {
+    const upp = lineUnitsPerPresentation(l);
+    return `${l.qty} caja(s) × ${upp} u./caja = ${base} u. al inventario`;
+  }
+  return `${l.qty} unidad(es) suelta(s) = ${base} u. al inventario`;
+}
+
+/** Precio unitario en factura → costMode interno según cómo compró. */
+export function invoiceUnitarioCostMode(
+  buyMode: DraftLine["buyMode"],
+): "UNIT" | "PRESENTATION" {
+  return buyMode === "BOX" ? "PRESENTATION" : "UNIT";
+}
+
+export function normalizeDraftLineCostMode(line: DraftLine): DraftLine {
+  if (line.costMode === "TOTAL") return line;
+  const expected = invoiceUnitarioCostMode(line.buyMode);
+  if (line.costMode === expected) return line;
+  // Legacy: UNIT + BOX → tratar como unitario de caja (PRESENTATION)
+  if (line.buyMode === "BOX" && line.costMode === "UNIT") {
+    return {
+      ...line,
+      costMode: "PRESENTATION",
+      presentationCost: line.unitCost * lineUnitsPerPresentation(line),
+      unitCost: line.unitCost,
+    };
+  }
+  return { ...line, costMode: expected };
+}
+
 export function lineMoney(l: DraftLine) {
-  const upp = l.unitsPerPresentation || 1;
+  const upp = lineUnitsPerPresentation(l);
   let unit = l.unitCost;
   let box = l.presentationCost;
   let subtotal = 0;
@@ -75,22 +117,32 @@ export function lineMoney(l: DraftLine) {
     unit = upp > 0 ? box / upp : 0;
   }
   const tax = l.taxable ? subtotal * 0.16 : 0;
-  return { unit, box, subtotal, tax, total: subtotal + tax, upp };
+  return { unit, box, subtotal, tax, total: subtotal + tax, upp, qtyBase: l.qty * upp };
 }
 
-export function lineToApiPayload(l: DraftLine, currency: "USD" | "BS") {
+export function lineToApiPayload(
+  l: DraftLine,
+  currency: "USD" | "BS",
+  realUnit?: number,
+  realLineTotal?: number,
+) {
   const m = lineMoney(l);
+  const unit = realUnit != null && realUnit > 0 ? realUnit : m.unit;
+  const lineTotal =
+    realLineTotal != null && realLineTotal > 0 ? realLineTotal : m.subtotal;
+  const upp = lineUnitsPerPresentation(l);
+  const box = unit * upp;
   return {
     presentationId: l.presentationId,
     qty: l.qty,
     qtyBonus: l.qtyBonus,
     costMode: l.costMode,
-    unitCostUsd: currency === "USD" ? m.unit : 0,
-    unitCostBs: currency === "BS" ? m.unit : 0,
-    presentationCostUsd: currency === "USD" ? m.box : 0,
-    presentationCostBs: currency === "BS" ? m.box : 0,
-    lineTotalUsd: currency === "USD" ? m.subtotal : 0,
-    lineTotalBs: currency === "BS" ? m.subtotal : 0,
+    unitCostUsd: currency === "USD" ? unit : 0,
+    unitCostBs: currency === "BS" ? unit : 0,
+    presentationCostUsd: currency === "USD" ? box : 0,
+    presentationCostBs: currency === "BS" ? box : 0,
+    lineTotalUsd: currency === "USD" ? lineTotal : 0,
+    lineTotalBs: currency === "BS" ? lineTotal : 0,
     taxable: l.taxable,
   };
 }
