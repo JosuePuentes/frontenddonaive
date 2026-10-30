@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-30T16:48:22.587Z",
+  "updatedAt": "2026-10-30T16:52:38.889Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,19 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvv7lvnl-0",
+      "title": "Sujeto solicitado por la justicia fue aprehendido por Polisur tras alterar orden público en estado de ebriedad",
+      "summary": "",
+      "body": "(​San Francisco, 26/10/26). - Funcionarios adscritos del Instituto Autónomo Policía del Municipio San Francisco (Polisur), pertenecientes a la División de Vigilancia y Patrullaje, aprehendieron a un ciudadano tras constatarse que presentaba una solicitud activa ante los órganos de justicia.\n\n​El procedimiento se llevó a cabo este lunes 26 de octubre, mientras los efectivos realizaban labores de patrullaje preventivo correspondientes al Cuadrante de Paz 11C-199, en la parroquia San Francisco, urbanización La Coromoto (avenida 40, calle 173, adyacente al establecimiento comercial Baco).\n\n​Durante el recorrido, la comisión visualizó a un sujeto en evidente estado de ebriedad que asumió una actitud hostil y evasiva hacia los transeúntes y los funcionarios, profiriendo improperios. Tras mediar con el ciudadano mediante el diálogo, los oficiales lograron controlar la situación y le solicitaron su documentación personal.\n\n​Al verificar los datos a través del Sistema de Investigación e Información Policial (Siipol), se constató que el ciudadano, identificado como Maikel Alexánder Duarte Salas (21 años), se encontraba requerido por el Juzgado Primero de Control con Competencia Especial sobre Derecho de la Mujer a una Vida Libre de Violencia del estado Zulia, según el oficio 0843-2026 de fecha 27/05/2026.\n\n​Ante el hallazgo y al configurarse la flagrancia por la alteración del orden público, se procedió a su aprehensión inmediata, leyéndole sus derechos constitucionales.\n​Posteriormente, el detenido fue trasladado al Hospital Doctor Manuel Noriega Trigo para su respectiva valoración médica y, más tarde, recluido en el Centro Preventivo de Resguardo y Garantías del Aprehendido de la institución.\n\n​Del procedimiento se notificó de manera formal a la Fiscal Cuadragésima Sexta del Ministerio Público. Las acciones se ejecutaron en cumplimiento de las directrices del Director General de Polisur, Primer Comisario Lisímaco Alberto Quintanillo López, en concordancia con los lineamientos del Comandante de la Zona Operativa de Defensa Integral (Zodi) número 11 Zulia, G/D Okler Roberto Yustiz Castillo.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvv7nh5q4xx.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvv7nh5q4xx.jpg",
+        "/polisur/extras/nmvv7nn0lf7e.jpg"
+      ],
+      "publishedAt": "2026-10-26T20:51:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mvv73mp2-0",
       "title": "Polisur brindó atención a paciente eaquizofrenico tras altercado con su progenitora y autolesionarse en el barrio San Benito",
