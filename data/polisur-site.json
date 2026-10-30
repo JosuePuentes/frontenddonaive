@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-30T17:12:15.746Z",
+  "updatedAt": "2026-10-30T17:18:28.156Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -30,10 +30,25 @@
   },
   "news": [
     {
+      "id": "noticia-mvv8g1mi-0",
+      "title": "Detenido sujeto en flagrancia por Polisur hurtando una vivienda en Marcial Hernández",
+      "summary": "",
+      "body": "(San Francisco, 29/10/2026). - En el marco del fortalecimiento de la seguridad ciudadana y el despliegue de los Cuadrantes de Paz, efectivos de la División de Patrullaje Motorizado del Instituto Autónomo Policía del Municipio San Francisco (Polisur) aprehendieron a un ciudadano por el hurto a un inmueble en el barrio Unidad, Lucha y Batalla, calle 154 con avenida 70.\n\n​El operativo se activó gracias a la oportuna denuncia de la persona afectada, quien junto a familiares retuvo al sospechoso tras encontrarlo dentro del inmueble con los bienes sustraídos.\n\n​En el sitio se incautaron como evidencia un televisor Smart TV LED de 32 pulgadas, una licuadora y 28,5 metros de cable eléctrico conductor calibre 12 AWG. Las actuaciones fueron notificadas y puestas a disposición del Ministerio Público.\n\n​Bajo las orientaciones del Director General de Polisur, Primer Comisario Lisímaco Alberto Quintanillo López, el organismo ratifica su lucha continua contra el delito y el resguardo de la propiedad privada en cada sector del municipio San Francisco.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvv8k64dmbt.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvv8k64dmbt.jpg",
+        "/polisur/extras/nmvv8kmlox9y.jpg",
+        "/polisur/extras/nmvv8knmw6vd.jpg",
+        "/polisur/extras/nmvv8koqy0g7.jpg"
+      ],
+      "publishedAt": "2026-10-29T21:14:00.000Z",
+      "published": true
+    },
+    {
       "id": "noticia-mvv836qd-0",
       "title": "Polisur participó activamente en las actividades organizadas por el Mes Rosa",
       "summary": "",
-      "body": "En el marco de las actividades de concienciación y prevención desarrolladas durante el Mes Rosa (Mes de la Lucha contra el Cáncer de Mama), funciomarias del Instituto Autónomo Policía del Municipio San Francisco (Polisur) han mantenido una participación activa en diversas jornadas comunitarias, educativas y recreativas.\n\n​Durante el mes de octubre, las féminas de Polisur dijeron presente en las caminatas, bancadas, jornadas de autoexploración y conversatorios de prevención coordinados en todo el municipio por la Alcaldía de San Francisco y la Fundación Dama del Sur (Damasur), en alianza con organizaciones de la sociedad civil como la Fundación Amigos de la Mujer con Cáncer de Mama (Famac).\n\nTal es el caso del conversatorio que se realizó en el Auditorio de la Gran Base de Paz de Ciudad del Sol, en la parroquia San Francisco, donde se habló sobre como prevenir el cáncer de mama. Asimismo, en el ámbito de la integración interinstitucional y la promoción de la salud corporal, las funcionarias de la policía municipal participaron activamente en la bailoterapia organizada por la Policía de Maracaibo, la cual se llevó a cabo en el estacionamiento de su sede, ubicada en el Parque Vereda del Lago.\n\n​La constante presencia y participación policial no solo busca garantizar el correcto desarrollo de los puntos informativos y bancadas comunitarias donde se orienta sobre la autoexploración y el chequeo médico oportuno, sino también reforzar la proximidad social de la policía municipal con los vecinos y la comunidad, promoviendo el bienestar integral y manifestando su solidaridad con las pacientes y sobrevivientes de cáncer de mama.\n\nNota de Prensa",
+      "body": "(San Francisco, 28/10/2026)-. En el marco de las actividades de concienciación y prevención desarrolladas durante el Mes Rosa (Mes de la Lucha contra el Cáncer de Mama), funciomarias del Instituto Autónomo Policía del Municipio San Francisco (Polisur) han mantenido una participación activa en diversas jornadas comunitarias, educativas y recreativas.\n\n​Durante el mes de octubre, las féminas de Polisur dijeron presente en las caminatas, bancadas, jornadas de autoexploración y conversatorios de prevención coordinados en todo el municipio por la Alcaldía de San Francisco y la Fundación Dama del Sur (Damasur), en alianza con organizaciones de la sociedad civil como la Fundación Amigos de la Mujer con Cáncer de Mama (Famac).\n\nTal es el caso del conversatorio que se realizó en el Auditorio de la Gran Base de Paz de Ciudad del Sol, en la parroquia San Francisco, donde se habló sobre como prevenir el cáncer de mama. Asimismo, en el ámbito de la integración interinstitucional y la promoción de la salud corporal, las funcionarias de la policía municipal participaron activamente en la bailoterapia organizada por la Policía de Maracaibo, la cual se llevó a cabo en el estacionamiento de su sede, ubicada en el Parque Vereda del Lago.\n\n​La constante presencia y participación policial no solo busca garantizar el correcto desarrollo de los puntos informativos y bancadas comunitarias donde se orienta sobre la autoexploración y el chequeo médico oportuno, sino también reforzar la proximidad social de la policía municipal con los vecinos y la comunidad, promoviendo el bienestar integral y manifestando su solidaridad con las pacientes y sobrevivientes de cáncer de mama.\n\nNota de Prensa",
       "imageUrl": "/polisur/extras/nmvv8c27j4gp.jpg",
       "imageUrls": [
         "/polisur/extras/nmvv8c27j4gp.jpg",
