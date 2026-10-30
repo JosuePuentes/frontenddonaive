@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-30T16:06:09.062Z",
+  "updatedAt": "2026-10-30T16:14:01.607Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,20 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvv6516m-0",
+      "title": "Detenido adolescente tras intento de robo en residencia de la parroquia José Domingo Russ",
+      "summary": "",
+      "body": "Durante labores de patrullaje preventivo en el Cuadrante de Paz 11C-177, funcionarios del Instituto Autónomo Policía del Municipio San Francisco, capturaron en flagrancia a un adolescente de 15 años de edad, mientras ejecutaba un robo en una vivienda de la urbanización Los Samanes, en la parroquia José Domingo Russ.\n\nLa actuación se desencadenó tras una alerta emitida por el Centro de Operaciones Policiales (C.O.P.) sobre la presencia de sujetos armados dentro del inmueble ubicado en la calle 206 con avenida 49K. Al llegar a la residencia, la propietaria confirmó que dos desconocidos armados se encontraban en el interior, por lo que las comisiones procedieron a ingresar e implementar un despliegue de verificación. En el procedimiento, los oficiales detectaron prendas de vestir apiladas en el piso y hallaron al joven oculto en una de las habitaciones, logrando su captura sin registrarse heridos.\n\nEn la escena se incautó un arma de fuego tipo facsímil de color negro, modelo Beretta, calibre 9 mm (serial KJ33749793), equipada con su proveedor pero desprovista de municiones, la cual fue fijada y remitida a la Sala de Evidencias.\n\nTras recibir valoración médica en el Centro Clínico Ambulatorio Urbano II El Silencio y ser informado de sus garantías constitucionales, el detenido quedó identificado como Yoervis Jesús Montiel Montiel, de 15 años de edad, fue puesto bajo resguardo y a la orden de la Fiscalía del Ministerio Público con competencia en Niños, Niñas y Adolescentes.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvv69v6kim8.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvv69v6kim8.jpg",
+        "/polisur/extras/nmvv6a3qjgtp.jpg",
+        "/polisur/extras/nmvv6a5a8ec0.jpg"
+      ],
+      "publishedAt": "2026-10-23T20:10:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mvv5wk54-0",
       "title": "Polisur y PNB atendieron dos siniestros viales en el municipio San Francisco",
