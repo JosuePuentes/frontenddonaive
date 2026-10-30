@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-30T17:18:28.156Z",
+  "updatedAt": "2026-10-30T18:09:38.947Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,21 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvv9yqac-0",
+      "title": "Polisur participó en la Semana de la Educación Inicial en U.E.E. 19 DE Abril",
+      "summary": "",
+      "body": "(San Francisco, 30/10/2026)-. En el marco de la celebración de la Semana de la Educación Inicial, funcionarios del Instituto Autónomo Policía del Municipio San Francisco (Polisur) hicieron presencia en las instalaciones de la Unidad Educativa Estadal \"19 de Abril\", ubicada en la calle 10 con avenida 19 del sector Sierra Maestra. Durante la visita, la comisión policial sostuvo un encuentro institucional con la directora del plantel, Maritza Mejías, con el firme propósito de sumar esfuerzos y brindar una jornada amena a los más pequeños de la comunidad escolar.\n\nLa actividad estuvo orientada a la atención integral de 39 niños y niñas pertenecientes a las salas de 3, 4 y 5 años de edad específicamente, quienes disfrutaron de un ambiente lleno de alegría y esparcimiento.\n\nDurante la jornada se desarrollaron diversas dinámicas recreativas que fomentaron la cercanía entre el cuerpo policial y la infancia, culminando con una especial entrega de globos y golosinas para agasajar a los estudiantes en su semana.\n\nEl despliegue comunitario contó con la compañía y el valioso acompañamiento de la docente Jineth Montiel y la coordinadora Gladis Mojica, quienes junto al personal directivo expresaron su receptividad ante la iniciativa.\n\nCon estas acciones, Polisur reafirma su compromiso social con el fortalecimiento del vínculo entre la institución policial, los centros educativos y las familias del municipio San Francisco.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvvadvvb9fw.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvvadvvb9fw.jpg",
+        "/polisur/extras/nmvvaechqjaz.jpg",
+        "/polisur/extras/nmvvaeg7ef3h.jpg",
+        "/polisur/extras/nmvvaei8kb2v.jpg"
+      ],
+      "publishedAt": "2026-10-30T17:57:30.900Z",
+      "published": true
+    },
     {
       "id": "noticia-mvv8g1mi-0",
       "title": "Detenido sujeto en flagrancia por Polisur hurtando una vivienda en Marcial Hernández",
