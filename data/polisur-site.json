@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-20T18:13:39.630Z",
+  "updatedAt": "2026-10-30T15:43:07.436Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,19 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvv54xen-0",
+      "title": "Polisur aprehende en flagrancia a sujeto por presuntos actos lascivos contra una niña de tres años en la parroquia Domitila Flores",
+      "summary": "",
+      "body": "(San Francisco, 23/10/2026). - En el marco del fortalecimiento de los Cuadrantes de Paz y el despliegue de patrullaje preventivo permanente, funcionarios del Instituto Autónomo Policía del Municipio San Francisco (Polisur) efectuaron la aprehensión en flagrancia de un ciudadano de 41 años de edad, señalado como presunto responsable de cometer actos lascivos en perjuicio de una niña de tres años.\n\nEl procedimiento se inició durante labores de vigilancia preventiva desarrolladas en el Cuadrante de Paz 11C-199. Tras recibir la alerta transmitida desde el Centro de Operaciones Policiales (C.O.P.), la comisión se trasladó hasta el barrio Vista El Sol, en la parroquia Domitila Flores, donde se requería la presencia de la autoridad para atender una denuncia ciudadana.\nAl arribar al sitio, los efectivos policiales fueron abordados por la madre de la menor, quien manifestó que su ex pareja, Alberto José Abreu Fernández, habría cometido abusos de carácter sexual (actos lascivos) contra su hija. La situación fue visibilizada inicialmente por una vecina del sector, quien alertó oportunamente a los habitantes del lugar.\n\nEn compañía de la denunciante, los efectivos se desplazaron hasta el sitio donde se encontraba el señalado, quien al notar la presencia de la comisión policial, asumió una actitud evasiva e intentó resguardarse dentro de un inmueble; sin embargo, los uniformados actuaron rápidamente logrando su restricción y posterior aprehensión bajo la figura procesal de flagrancia, garantizando en todo momento sus derechos constitucionales.\n\nTanto la víctima como el detenido fueron trasladados, por separado, al Hospital Doctor Manuel Noriega Trigo para la respectiva evaluación médica. Posteriormente, el aprehendido quedó recluido en el Centro Preventivo de Resguardo y Garantías del Aprehendido de Polisur y puesto a orden del Ministerio Público.\n\nEl Director General de la Policía Municipal de San Francisco, Primer Comisario Lisímaco Alberto Quintanillo López, reafirmó el compromiso del cuerpo policial en la defensa de los derechos de los niños, niñas y adolescentes, así como de la tranquilidad de las familias del municipio.\n\nQuintanillo López enfatizó que dentro de la institución prevalece una política de tolerancia cero ante cualquier delito que atente contra la integridad física, psicológica y moral del pueblo. Asimismo, hizo un llamado a la ciudadanía a mantener la confianza en los Cuadrantes de Paz y a denunciar oportunamente cualquier hecho punible a través del Centro de Operaciones Policiales.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvv569w5vtp.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvv569w5vtp.jpg",
+        "/polisur/extras/nmvv56g41x09.jpg"
+      ],
+      "publishedAt": "2026-10-21T19:42:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mvgzz07i-0",
       "title": "Polisur marchó junto a la comunidad sanfranciscana en la 2da edición de la Marea Rosa por la Lucha contra el Cáncer de Mama",
