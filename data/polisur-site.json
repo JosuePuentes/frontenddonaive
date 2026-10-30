@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-30T15:43:07.436Z",
+  "updatedAt": "2026-10-30T16:06:09.062Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,21 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvv5wk54-0",
+      "title": "Polisur y PNB atendieron dos siniestros viales en el municipio San Francisco",
+      "summary": "",
+      "body": "En el marco de los patrullajes de seguridad desplegados en la jurisdicción, funcionarios del Instituto Autónomo Policía del Municipio San Francisco (Polisur), en acción conjunta con la Policía Nacional Bolivariana (PNB) y el Cuerpo de Bomberos de la localidad, atendieron dos accidentes de tránsito. El primer hecho ocurrió en el sector Sierra Maestra, cuando un vehículo Ford Zephyr impactó contra una vivienda, dejando a su conductor, Jesús Morales, atrapado con una herida en la región occipital. Los bomberos ejecutaron las maniobras de extracción y trasladaron al lesionado al Hospital General del Sur, mientras que la División de Investigación de Accidentes de Tránsito Terrestre (DIATT) asumió la inspección técnica.\n\nEl segundo siniestro se registró en la Circunvalación N.º 1, sentido Sur–Norte, donde se produjo una colisión entre un automóvil Chevrolet conducido por José Francisco Tovar, quien resultó ileso, y una motocicleta guiada por Elvis José Delgado Segundo. Producto del impacto, el motociclista sufrió diversos traumatismos en el pavimento, por lo que fue atendido por comisiones en el sitio y posteriormente evacuado por los bomberos hacia el Hospital General del Sur para recibir atención especializada, quedando las pericias de trayectoria y levantamiento a cargo de especialistas de la DIATT.\n\nAnte estos hechos, las autoridades policiales reiteraron el llamado a los conductores de automóviles y motocicletas a mantener la precaución, acatar las normas de tránsito y respetar los límites de velocidad para prevenir nuevos incidentes en las arterias viales de la localidad.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvv5zdr2ckn.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvv5zdr2ckn.jpg",
+        "/polisur/extras/nmvv5zsg5ryf.jpg",
+        "/polisur/extras/nmvv5zuil0v2.jpg",
+        "/polisur/extras/nmvv5zwqo1du.jpg"
+      ],
+      "publishedAt": "2026-10-22T20:03:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mvv54xen-0",
       "title": "Polisur aprehende en flagrancia a sujeto por presuntos actos lascivos contra una niña de tres años en la parroquia Domitila Flores",
