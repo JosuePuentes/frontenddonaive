@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-30T16:52:38.889Z",
+  "updatedAt": "2026-10-30T17:03:19.668Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,24 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvv7u9jz-0",
+      "title": "Polisur y cuerpos de seguridad atienden a familias del Barrio Universidad tras intensas lluvias y desbordamiento de la Cañada La 9",
+      "summary": "",
+      "body": "(San Francisco, 27/10/2026)-. En respuesta inmediata a las eventualidades generadas por las intensas y prolongadas precipitaciones registradas en las últimas horas en la región, funcionarios del Instituto Autónomo Policía del Municipio San Francisco (Polisur), adscritos a la Coordinación de Cuadrantes de Paz, desplegaron un operativo de monitoreo y atención directa para brindar auxilio a las comunidades afectadas.\n\n​El despliegue se focalizó en las adyacencias de la Cañada La 9, ubicada en la Avenida 49D, entre calles 196 y 196A del Barrio Universidad, perteneciente a la parroquia Domitila Flores. Las fuertes lluvias provocaron el colapso del embaulado y el posterior desbordamiento del cauce, generando anegaciones en áreas comunes, estacionamientos y viviendas, así como afectaciones en puentes peatonales y la caída de árboles en sectores aledaños.\n\n​Para hacer frente a la contingencia, un equipo multidisciplinario integrado por efectivos de Polisur, Protección Civil San Francisco y el Cuerpo de Bomberos del municipio, se desplegó en el sitio realizando minuciosos recorridos de inspección en los puntos más críticos con el objetivo de evaluar el terreno y descartar vulnerabilidades estructurales adicionales.\n\n​Las labores de asistencia y mitigación de daños se ejecutan de manera coordinada entre los cuerpos de prevención y los propios habitantes del sector, garantizando una respuesta integral y efectiva ante los estragos causados por este evento natural.\n\n​Con estas acciones, el Instituto Autónomo Policía del Municipio San Francisco reafirma su compromiso de permanecer al lado del pueblo zuliano, velando no solo por el orden público y la seguridad ciudadana, sino extendiendo su mano amiga y apoyo institucional en momentos de mayor vulnerabilidad.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvv80bunrb9.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvv80bunrb9.jpg",
+        "/polisur/extras/nmvv819my3el.jpg",
+        "/polisur/extras/nmvv81bxecfa.jpg",
+        "/polisur/extras/nmvv81dkgezq.jpg",
+        "/polisur/extras/nmvv81euro3i.jpg",
+        "/polisur/extras/nmvv81g2ib4m.jpg",
+        "/polisur/extras/nmvv81h9cjvj.jpg"
+      ],
+      "publishedAt": "2026-10-27T20:58:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mvv7lvnl-0",
       "title": "Sujeto solicitado por la justicia fue aprehendido por Polisur tras alterar orden público en estado de ebriedad",
