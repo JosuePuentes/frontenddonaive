@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-30T17:03:19.668Z",
+  "updatedAt": "2026-10-30T17:12:15.746Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -29,6 +29,26 @@
     "panelWidth": "standard"
   },
   "news": [
+    {
+      "id": "noticia-mvv836qd-0",
+      "title": "Polisur participó activamente en las actividades organizadas por el Mes Rosa",
+      "summary": "",
+      "body": "En el marco de las actividades de concienciación y prevención desarrolladas durante el Mes Rosa (Mes de la Lucha contra el Cáncer de Mama), funciomarias del Instituto Autónomo Policía del Municipio San Francisco (Polisur) han mantenido una participación activa en diversas jornadas comunitarias, educativas y recreativas.\n\n​Durante el mes de octubre, las féminas de Polisur dijeron presente en las caminatas, bancadas, jornadas de autoexploración y conversatorios de prevención coordinados en todo el municipio por la Alcaldía de San Francisco y la Fundación Dama del Sur (Damasur), en alianza con organizaciones de la sociedad civil como la Fundación Amigos de la Mujer con Cáncer de Mama (Famac).\n\nTal es el caso del conversatorio que se realizó en el Auditorio de la Gran Base de Paz de Ciudad del Sol, en la parroquia San Francisco, donde se habló sobre como prevenir el cáncer de mama. Asimismo, en el ámbito de la integración interinstitucional y la promoción de la salud corporal, las funcionarias de la policía municipal participaron activamente en la bailoterapia organizada por la Policía de Maracaibo, la cual se llevó a cabo en el estacionamiento de su sede, ubicada en el Parque Vereda del Lago.\n\n​La constante presencia y participación policial no solo busca garantizar el correcto desarrollo de los puntos informativos y bancadas comunitarias donde se orienta sobre la autoexploración y el chequeo médico oportuno, sino también reforzar la proximidad social de la policía municipal con los vecinos y la comunidad, promoviendo el bienestar integral y manifestando su solidaridad con las pacientes y sobrevivientes de cáncer de mama.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvv8c27j4gp.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvv8c27j4gp.jpg",
+        "/polisur/extras/nmvv8cml2bdp.jpg",
+        "/polisur/extras/nmvv8cnp2h6z.jpg",
+        "/polisur/extras/nmvv8coo6c8s.jpg",
+        "/polisur/extras/nmvv8cpxvcnw.jpg",
+        "/polisur/extras/nmvv8cr4mfbx.jpg",
+        "/polisur/extras/nmvv8csb5f72.jpg",
+        "/polisur/extras/nmvv8ctgkaqh.jpg",
+        "/polisur/extras/nmvv8cupkwxe.jpg"
+      ],
+      "publishedAt": "2026-10-28T21:04:00.000Z",
+      "published": true
+    },
     {
       "id": "noticia-mvv7u9jz-0",
       "title": "Polisur y cuerpos de seguridad atienden a familias del Barrio Universidad tras intensas lluvias y desbordamiento de la Cañada La 9",
