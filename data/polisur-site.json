@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-30T16:33:18.888Z",
+  "updatedAt": "2026-10-30T16:48:22.587Z",
   "contact": {
     "address": "Circunvalación Nro.1 Oficinas Plataforma Comunicacional General en Jefe Alamidien Moreno Acosta, Municipio San Francisco, estado Zulia",
     "phone": "0261-7659991 y 92",
@@ -30,6 +30,21 @@
   },
   "news": [
     {
+      "id": "noticia-mvv73mp2-0",
+      "title": "Polisur brindó atención a paciente eaquizofrenico tras altercado con su progenitora y autolesionarse en el barrio San Benito",
+      "summary": "",
+      "body": "​(San Francisco, 25/10/2026)-. Siguiendo las instrucciones del Director General del Instituto Autónomo Policía del Municipio San Francisco, Primer Comisario Lisimaco Alberto Quintanillo López, funcionarios adscritos al Servicio de Vigilancia y Patrullaje atendieron de manera inmediata una denuncia por violencia intrafamiliar en el barrio San Benito, parroquia San Francisco del municipio Sureño.\n\n​El procedimiento se activó tras la alerta recibida a través del Centro de Operaciones Policiales (C.O.P.), donde vecinos y familiares informaron sobre la conducta violenta y errática de Edgar Añez, de 30 años de edad, diagnostico con trastorno mental crónico (esquizofrenia). Al llegar al lugar, la madre de Añez manifestó a los oficiales que, tras una discusión, el ciudadano intentó quitarse la vida lanzándose reiteradamente desde el techo de la vivienda y agrediéndose físicamente con objetos punzocortantes (envases de vidrio). Asimismo, los residentes de la zona manifestaron temor ante las constantes amenazas recibidas en días previos.\n\n​Los funcionarios ubicaron al ciudadano a pocos metros del inmueble, tendido en la vía pública y con múltiples heridas. Rápidamente se aplicaron los protocolos de mediación y contención para poner a salvo a la madre y a la comunidad, evitando que el sujeto continuara autolesionándose.\n\nUna vez asegurada la escena y controlado el ciudadano, los oficiales coordinaron el apoyo con el Cuerpo de Bomberos de San Francisco (Bomberos del Sur). La unidad de emergencia brindó los primeros auxilios y realizó el posterior traslado de Añez al Hospital General del Sur \"Dr. Pedro Iturbe\" para su atención médica especializada.\n\n​Con estas acciones, Polisur reafirma su compromiso con la seguridad, el bienestar y la atención oportuna de las comunidades del municipio San Francisco.\n\nNota de Prensa",
+      "imageUrl": "/polisur/extras/nmvv7hx6t7i5.jpg",
+      "imageUrls": [
+        "/polisur/extras/nmvv7hx6t7i5.jpg",
+        "/polisur/extras/nmvv7i8loc6e.jpg",
+        "/polisur/extras/nmvv7i9r422i.jpg",
+        "/polisur/extras/nmvv7iapawkm.jpg"
+      ],
+      "publishedAt": "2026-10-25T20:37:00.000Z",
+      "published": true
+    },
+    {
       "id": "noticia-mvv6blh1-0",
       "title": "La Marea Rosa de Polisur tomó San Francisco por la salud y la prevención",
       "summary": "",
@@ -44,7 +59,8 @@
         "/polisur/extras/nmvv6wd6ug5t.jpg",
         "/polisur/extras/nmvv6wjbr408.jpg",
         "/polisur/extras/nmvv6wowm8a2.jpg",
-        "/polisur/extras/nmvv6wu8x847.jpg"
+        "/polisur/extras/nmvv6wu8x847.jpg",
+        "/polisur/extras/nmvv7gm3laku.jpg"
       ],
       "publishedAt": "2026-10-24T04:15:00.000Z",
       "published": true
