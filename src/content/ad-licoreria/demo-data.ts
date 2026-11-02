@@ -79,6 +79,16 @@ export const AD_DEMO_PAYMENT_METHODS: AdPaymentMethodConfig[] = [
     requiresBank: true,
   },
   {
+    id: "pm-tarjeta-debito-bs",
+    code: "tarjeta_debito_bs",
+    name: "Tarjeta débito Bs",
+    currency: "BS",
+    active: true,
+    requiresReference: true,
+    requiresVoucher: false,
+    requiresBank: true,
+  },
+  {
     id: "pm-zelle",
     code: "zelle",
     name: "Zelle",
